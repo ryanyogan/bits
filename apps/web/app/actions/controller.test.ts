@@ -43,7 +43,7 @@ describe('router smoke test', () => {
     assert.equal((await request(routes.health.href())).status, 200)
     // An empty POST reaches the run endpoint (422 invalid), not the 404 page.
     assert.equal((await request('/api/run', { method: 'POST' })).status, 422)
-    assert.equal((await request('/api/progress', { method: 'POST' })).status, 501)
+    assert.equal((await request(routes.api.passkey.href({ step: 'login-options' }), { method: 'POST' })).status, 501)
   })
 
   let publicPages = [
@@ -138,7 +138,6 @@ describe('router smoke test', () => {
 
   it('API and webhook endpoints answer 501', async () => {
     for (let path of [
-      routes.api.progress.href(),
       routes.api.passkey.href({ step: 'register-options' }),
       routes.webhooks.github.href(),
     ]) {

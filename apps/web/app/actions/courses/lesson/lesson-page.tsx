@@ -7,7 +7,8 @@ import type { SegmentState } from '@bits/ui/progress-bar'
 
 import { platform } from '#platform'
 
-import { pageTitle } from '../../../config.ts'
+import { APP_NAME, pageTitle } from '../../../config.ts'
+import { canonicalUrl } from '../../../ui/layout.tsx'
 import { exercisesOf, hasCode } from './content.ts'
 import { lessonAward, type LessonMode, type LessonView } from './lesson-view.ts'
 import { LessonComplete } from './public/lesson-complete.tsx'
@@ -44,6 +45,8 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[] 
         assets={platform.assets}
         title={title}
         description={`Lesson ${view.index + 1} of ${view.total} in ${course.title}.`}
+        url={view.draft ? undefined : canonicalUrl(view.href.lesson(lesson.slug))}
+        siteName={APP_NAME}
         head={<style innerHTML={unsafeHTML(pageStyles)} />}
       >
         <a href="#main" mix={skipLinkStyle}>

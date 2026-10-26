@@ -19,6 +19,8 @@ export interface LayoutProps {
   description?: string
   /** Pathname of this page, to mark the active nav link. */
   currentPath?: string
+  /** This page's own path, for the canonical URL and link previews (shareable pages only). */
+  canonicalPath?: string
   /** `sticky` for app pages, `static` over the landing hero. */
   bar?: 'static' | 'sticky'
   head?: RemixNode
@@ -46,18 +48,29 @@ const navLinks = [
 ]
 
 /**
+ * The public URL for a path, from CANONICAL_ORIGIN (production). Undefined
+ * without it, so development pages don't claim a canonical address.
+ */
+export function canonicalUrl(path: string): string | undefined {
+  let origin = platform.env.CANONICAL_ORIGIN
+  return origin && platform.env.APP_ENV === 'production' ? new URL(path, origin).href : undefined
+}
+
+/**
  * The app's page shell: the design-system Document wired to this runtime's
  * assets, plus the AppBar. Every page renders through it.
  */
 export function Layout(handle: Handle<LayoutProps>) {
   return () => {
-    let { title, description = APP_TAGLINE, currentPath, bar = 'sticky', head, viewer, bleed, children } =
+    let { title, description = APP_TAGLINE, currentPath, canonicalPath, bar = 'sticky', head, viewer, bleed, children } =
       handle.props
     let appBar = viewer !== undefined
 
     return (
       <Document
         assets={platform.assets}
+        url={canonicalPath ? canonicalUrl(canonicalPath) : undefined}
+        siteName={APP_NAME}
         title={pageTitle(title)}
         description={description}
         head={head}

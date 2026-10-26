@@ -1,6 +1,6 @@
 # 014. Lesson pages: Read, Watch, Terminal and the author preview (UI build)
 
-Status: Accepted (2026-10-26)
+Status: Accepted (2026-10-26). Superseded in part by 016 (where passes are kept) and 020 (islands keyed per lesson).
 
 ## Decision
 
@@ -25,8 +25,12 @@ Status: Accepted (2026-10-26)
   server-rendered `<html>`, so `LessonComplete` renders a hidden
   `[data-lesson-passed]` span once the checks pass, and static parts (outline
   node, progress segment) restyle via `:root:has([data-lesson-passed])`.
-  Passes are remembered per course+lesson in localStorage
-  (`bits:passed:<course>/<lesson>`) until progress is saved server-side.
+  A pass lasts only until the page changes: there is no localStorage
+  record. What persists is the saved lesson (016: D1 when signed in, the
+  session when signed out), which renders as `passed` from the server.
+  The lesson `<main>` and the XP pill are keyed per lesson
+  (`data-rmx-key`), so client navigation never carries a pass from one
+  lesson to the next (020).
 - **Quizzes in Read mode are GET forms** (`?quiz-<id>=<key>`), so they work
   without JS; Terminal mode's quiz is a TerminalLog entry with option buttons.
 - **Shared component changes (backward compatible).** `LessonBar`: `titleAs`

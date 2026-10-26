@@ -28,6 +28,7 @@ export function CoursePage(handle: Handle<CoursePageProps>) {
         description={course.desc}
         viewer={viewer}
         currentPath={routes.courses.index.href()}
+        canonicalPath={routes.courses.course.index.href({ course: course.slug })}
         bleed
       >
         <div mix={toneStyles[course.tone]}>

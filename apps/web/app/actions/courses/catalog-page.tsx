@@ -47,7 +47,13 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
     if (query.track) hidden.track = query.track
 
     return (
-      <Layout title="Courses" viewer={viewer} currentPath={routes.courses.index.href()} bleed>
+      <Layout
+        title="Courses"
+        viewer={viewer}
+        currentPath={routes.courses.index.href()}
+        canonicalPath={routes.courses.index.href()}
+        bleed
+      >
         <div mix={pageStyle}>
           <div mix={titleRow}>
             <div mix={titleBlock}>

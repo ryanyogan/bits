@@ -5,6 +5,7 @@ import { describe, it } from 'remix/test'
 import { CheckChip } from './check-chip.tsx'
 import { CourseCard } from './course-card.tsx'
 import { coverPatterns, CourseCover } from './course-cover.tsx'
+import { Document } from './document.tsx'
 import { FilterPill } from './filter-pill.tsx'
 import { Keycap } from './keycap.tsx'
 import { LessonNode, LessonNodeRow } from './lesson-node.tsx'
@@ -26,6 +27,12 @@ describe('Keycap', () => {
   it('renders a link when given href', async () => {
     let html = await renderToString(<Keycap href="/courses">Start free</Keycap>)
     assert.match(html, /<a[^>]*href="\/courses"/)
+  })
+
+  it('opts a link out of client navigation or into a download', async () => {
+    assert.match(await renderToString(<Keycap href="/auth/oauth/github" document>Connect</Keycap>), /data-rmx-document=""/)
+    assert.match(await renderToString(<Keycap href="/settings/export" download>Download</Keycap>), /download=""/)
+    assert.doesNotMatch(await renderToString(<Keycap href="/courses">Go</Keycap>), /data-rmx-document|download/)
   })
 
   it('drops the href and marks a disabled link', async () => {
@@ -206,5 +213,25 @@ describe('island logic', () => {
   it('formats player time', () => {
     assert.equal(formatTime(112), '1:52')
     assert.equal(formatTime(270), '4:30')
+  })
+})
+
+describe('Document', () => {
+  const assets = { entry: { href: '/entry.js', preloads: [], importMap: { imports: {} } }, stylesheets: [], fontPreloads: [] }
+
+  it('renders the canonical URL and link-preview meta', async () => {
+    let html = await renderToString(
+      <Document assets={assets} title="Tokens · Bits" description="Learn tokens." url="https://bits.example/courses/tokens" siteName="Bits" />,
+    )
+    assert.match(html, /<link rel="canonical" href="https:\/\/bits.example\/courses\/tokens"/)
+    assert.match(html, /<meta property="og:title" content="Tokens · Bits"/)
+    assert.match(html, /<meta property="og:description" content="Learn tokens."/)
+    assert.match(html, /<meta property="og:url" content="https:\/\/bits.example\/courses\/tokens"/)
+    assert.match(html, /<meta property="og:site_name" content="Bits"/)
+  })
+
+  it('leaves out the canonical URL when there is none', async () => {
+    let html = await renderToString(<Document assets={assets} title="Settings · Bits" />)
+    assert.doesNotMatch(html, /rel="canonical"|og:url/)
   })
 })

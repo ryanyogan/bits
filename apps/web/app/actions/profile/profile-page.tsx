@@ -48,7 +48,13 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
     let showJournal = own && tab === 'journal'
 
     return (
-      <Layout title={title} viewer={viewer} currentPath={currentPath} bleed>
+      <Layout
+        title={title}
+        viewer={viewer}
+        currentPath={currentPath}
+        canonicalPath={own ? undefined : routes.profile.index.href({ handle: profile.handle })}
+        bleed
+      >
         <section aria-label="Profile" mix={bandStyle}>
           <div mix={bandInner}>
             <GeneratedAvatar seed={profile.handle} name={profile.name.split(' ')[0]!} />

@@ -81,7 +81,6 @@ export const routes = route({
 
   // JSON endpoints: actions/api/controller.tsx
   api: route('/api', {
-    progress: post('/progress'),
     run: post('/run'),
     passkey: post('/passkey/:step'),
     authorUpload: post('/author/upload'),

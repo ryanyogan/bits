@@ -23,6 +23,13 @@ export interface DocumentProps {
   /** Full `<title>`, already including the app name. */
   title: string
   description?: string
+  /**
+   * Absolute canonical URL of the page: `<link rel="canonical">` and
+   * `og:url`. Omit for pages that shouldn't be shared (or outside production).
+   */
+  url?: string
+  /** `og:site_name`, the app's name (passed in; the UI package has no brand). */
+  siteName?: string
   /** Extra `<head>` content for the page (meta, preloads). */
   head?: RemixNode
   children?: RemixNode
@@ -39,7 +46,7 @@ const LAYER_ORDER = '@layer reset, tokens, base, rmx-reset, rmx, app;'
  */
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
-    let { assets, title, description, head, children } = handle.props
+    let { assets, title, description, url, siteName, head, children } = handle.props
     let { entry, stylesheets, fontPreloads } = assets
 
     return (
@@ -51,6 +58,14 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta name="theme-color" content="#07080D" />
           <title>{title}</title>
           {description ? <meta name="description" content={description} /> : null}
+          {url ? <link rel="canonical" href={url} /> : null}
+          {/* Link previews (Open Graph; X reads these too). */}
+          <meta property="og:type" content="website" />
+          <meta property="og:title" content={title} />
+          {description ? <meta property="og:description" content={description} /> : null}
+          {url ? <meta property="og:url" content={url} /> : null}
+          {siteName ? <meta property="og:site_name" content={siteName} /> : null}
+          <meta name="twitter:card" content="summary" />
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           <style>{LAYER_ORDER}</style>
           {fontPreloads.map((href) => (

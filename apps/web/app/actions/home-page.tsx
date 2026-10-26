@@ -13,6 +13,7 @@ import { platform } from '#platform'
 import { APP_NAME, APP_TAGLINE } from '../config.ts'
 import type { Viewer } from '../auth/identity.ts'
 import { routes } from '../routes.ts'
+import { canonicalUrl } from '../ui/layout.tsx'
 import { ClosingCta } from './home/closing-cta.tsx'
 import { Hero } from './home/hero.tsx'
 import { HowItWorks } from './home/how-it-works.tsx'
@@ -55,6 +56,8 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
       <Document
         assets={platform.assets}
         title={homeTitle}
+        url={canonicalUrl(routes.home.href())}
+        siteName={APP_NAME}
         description={`${APP_TAGLINE} Free, hands-on courses from “what's a token?” to shipping your first agent.`}
         head={
           <>

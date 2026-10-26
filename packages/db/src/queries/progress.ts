@@ -40,6 +40,15 @@ export interface LessonCompletionInput {
  * awards, the day's activity, the recomputed xp_total and the streak.
  */
 export async function recordLessonCompletion(db: D1DataTableDatabase, input: LessonCompletionInput): Promise<void> {
+  await db.batch(lessonCompletionStatements(db, input))
+}
+
+/**
+ * The statements recordLessonCompletion runs, so several completions (the
+ * anonymous merge at sign-in) can go in one batch. They run in order, so
+ * completions given oldest first build the streak day by day.
+ */
+export function lessonCompletionStatements(db: D1DataTableDatabase, input: LessonCompletionInput) {
   let { userId, courseId, lessonSlug, day, yesterday, now } = input
   let d1 = db.d1
   // The streak after today's activity: same day keeps it, the day after
@@ -49,7 +58,7 @@ export async function recordLessonCompletion(db: D1DataTableDatabase, input: Les
       when streak_last_day = ?3 then streak_days + 1
       else 1 end`
 
-  await db.batch([
+  return [
     d1
       .prepare(
         `insert into lesson_progress (user_id, course_id, lesson_slug, started_at, completed_at, updated_at)
@@ -96,7 +105,7 @@ export async function recordLessonCompletion(db: D1DataTableDatabase, input: Les
          where id = ?1`,
       )
       .bind(userId, day, yesterday, now),
-  ])
+  ]
 }
 
 export interface CompletedLesson {

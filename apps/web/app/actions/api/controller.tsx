@@ -14,7 +14,6 @@ function notImplemented(endpoint: string) {
 // JSON endpoints. The rest are 501 stubs until their milestone lands.
 export default createController(routes.api, {
   actions: {
-    progress: () => notImplemented('progress'),
     // A learner's prompt: streamed text, live or canned (decision 019).
     run: {
       middleware: [rateLimit('RL_RUNS', () => jsonError('rate_limited', 429, { retryAfter: 60 }))],

@@ -10,7 +10,9 @@ import {
   findUserById,
   listCompletedLessons,
   listPassedExercises,
+  lessonCompletionStatements,
   recordLessonCompletion,
+  type LessonCompletionInput,
   type D1DataTableDatabase,
   type User,
 } from '@bits/db'
@@ -129,8 +131,12 @@ async function recordForUser(
 
 /** One batch: progress, journal, once-only awards, activity, streak. */
 function record(db: D1DataTableDatabase, user: User, courseSlug: string, lessonSlug: string, checked: CheckedLesson, at: number) {
+  return recordLessonCompletion(db, completionInput(user, courseSlug, lessonSlug, checked, at))
+}
+
+function completionInput(user: User, courseSlug: string, lessonSlug: string, checked: CheckedLesson, at: number): LessonCompletionInput {
   let day = localDay(at, user.timezone)
-  return recordLessonCompletion(db, {
+  return {
     userId: user.id,
     courseId: courseSlug,
     lessonSlug,
@@ -144,7 +150,7 @@ function record(db: D1DataTableDatabase, user: User, courseSlug: string, lessonS
     day,
     yesterday: addDays(day, -1),
     now: at,
-  })
+  }
 }
 
 /** Awards every badge whose rule now holds; returns the ones that are new. */
@@ -176,14 +182,19 @@ export async function mergeAnonymousProgress(db: D1DataTableDatabase, session: S
   let lessons = Object.entries(anonymous).sort((a, b) => a[1].at - b[1].at)
   if (lessons.length === 0) return
   let catalog = await loadCatalog(db, contentBucket())
-  for (let [key, lesson] of lessons) {
-    let [courseSlug, lessonSlug] = key.split('/') as [string, string]
-    let content = await catalog.lessonContent(courseSlug, lessonSlug)
-    if (!content) continue
-    let checked = checkLesson(courseSlug, lessonSlug, content, lesson.submission)
-    if (!checked.ok) continue
-    await record(db, user, courseSlug, lessonSlug, checked, lesson.at)
-  }
+  // Re-check every lesson against current content, then save them all in one
+  // batch, oldest first (the statements are idempotent and build the streak
+  // in order), instead of one round trip per lesson.
+  let checked = await Promise.all(
+    lessons.map(async ([key, lesson]) => {
+      let [courseSlug, lessonSlug] = key.split('/') as [string, string]
+      let content = await catalog.lessonContent(courseSlug, lessonSlug)
+      let result = content && checkLesson(courseSlug, lessonSlug, content, lesson.submission)
+      return result?.ok ? completionInput(user, courseSlug, lessonSlug, result, lesson.at) : null
+    }),
+  )
+  let statements = checked.flatMap((input) => (input ? lessonCompletionStatements(db, input) : []))
+  if (statements.length) await db.batch(statements)
   await awardNewBadges(db, catalog, user.id, Date.now())
   session.unset(PROGRESS_KEY)
 }
