@@ -3,10 +3,12 @@ import { createController } from 'remix/router'
 
 import { routes } from '../../routes.ts'
 
-// Stub: there are no sessions yet, so signing out just goes home.
+// POST only (cross-origin POSTs are stopped by cop() in the router). Destroying
+// the session deletes its D1 row and clears the cookie.
 export default createController(routes.logout, {
   actions: {
-    action() {
+    action(context) {
+      context.session.destroy()
       return redirect(routes.home.href(), 303)
     },
   },

@@ -51,6 +51,9 @@ export interface CourseDetail extends CourseSummary {
 }
 
 export interface Viewer {
+  /** users.id; 'demo' for the sample viewer. */
+  id: string
+  role: 'learner' | 'author' | 'admin'
   name: string
   handle: string
   initials: string
@@ -182,10 +185,13 @@ export function getContinue() {
 }
 
 /**
- * The signed-in viewer for UI work. Pages render the signed-out variant when
- * `?as=anon` is in the URL so both states can be reviewed before auth lands.
+ * The sample learner whose progress, journal and courses the fixture pages
+ * show (profile sample data, landing links). The real signed-in viewer comes
+ * from the session: `getViewer(context)` in app/auth/identity.ts.
  */
 export const demoViewer: Viewer = {
+  id: 'demo',
+  role: 'author',
   name: 'Jamie Park',
   handle: 'jamie',
   initials: 'JP',
@@ -194,8 +200,4 @@ export const demoViewer: Viewer = {
   streak: 12,
   bestStreak: 19,
   isPublic: true,
-}
-
-export function getViewer(url: URL): Viewer | null {
-  return url.searchParams.get('as') === 'anon' ? null : demoViewer
 }

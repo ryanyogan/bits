@@ -3,7 +3,7 @@ import { EmptyState } from '@bits/ui/empty-state'
 import { Keycap } from '@bits/ui/keycap'
 import { createController } from 'remix/router'
 
-import { getViewer } from '../../data/fixtures.ts'
+import { getViewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
 import { Layout } from '../../ui/layout.tsx'
 import { getPublicProfile } from './data.ts'
@@ -14,7 +14,7 @@ import { ProfilePage } from './profile-page.tsx'
 export default createController(routes.profile, {
   actions: {
     index(context) {
-      let viewer = getViewer(context.url)
+      let viewer = getViewer(context)
       let profile = getPublicProfile(context.params.handle)
       if (!profile) {
         return context.render(

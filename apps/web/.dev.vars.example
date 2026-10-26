@@ -1,0 +1,13 @@
+# Copy to .dev.vars for `pnpm preview` (wrangler dev) and the Node dev server.
+# Everything here is optional outside production: missing values fall back to
+# development defaults (Turnstile test keys, a fixed session secret).
+APP_ENV=development
+SESSION_SECRET=change-me-to-a-long-random-string
+# Real Turnstile keys for a widget that allows localhost (optional).
+# TURNSTILE_SITE_KEY=
+# TURNSTILE_SECRET_KEY=
+# OAuth apps registered with callback http://localhost:44100/auth/oauth/<provider>/callback
+# GITHUB_CLIENT_ID=
+# GITHUB_CLIENT_SECRET=
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=

@@ -1,6 +1,9 @@
-// Sample account data for the Settings UI until auth and D1 land
-// (docs/design/spec/pages/Settings.md). Swap for session + D1 queries later.
-import type { Viewer } from '../../data/fixtures.ts'
+// Account data for Settings (docs/design/spec/pages/Settings.md), read from
+// D1: linked identities and live sessions. Passkeys land with the passkey
+// milestone, so the list never has passkey rows yet.
+import { listIdentities, listUserSessions, type D1DataTableDatabase, type User } from '@bits/db'
+
+import { sha256Hex } from '../../auth/crypto.ts'
 
 export type MethodKind = 'email' | 'github' | 'google' | 'passkey'
 
@@ -27,36 +30,81 @@ export interface AccountSettings {
   export: { size: string; prompts: number }
 }
 
-export function getAccountSettings(viewer: Viewer): AccountSettings {
+export async function getAccountSettings(
+  db: D1DataTableDatabase,
+  user: User,
+  currentSessionId: string,
+): Promise<AccountSettings> {
+  let now = Date.now()
+  let [identities, sessions, currentHash] = await Promise.all([
+    listIdentities(db, user.id),
+    listUserSessions(db, user.id, now),
+    sha256Hex(currentSessionId),
+  ])
+  let provider = (kind: 'github' | 'google', name: string): SignInMethod => {
+    let identity = identities.find((row) => row.provider === kind)
+    return {
+      id: kind,
+      kind,
+      name,
+      meta: identity ? [identity.email, `connected ${monthYear(identity.created_at)}`].filter(Boolean).join(' · ') : '',
+      connected: Boolean(identity),
+    }
+  }
   return {
-    verified: true,
+    verified: user.email_verified_at != null,
     methods: [
-      { id: 'email', kind: 'email', name: 'Email link + code', meta: viewer.email, connected: true },
-      { id: 'github', kind: 'github', name: 'GitHub', meta: '@jamiepark · connected Mar 2026', connected: true },
-      { id: 'google', kind: 'google', name: 'Google', meta: '', connected: false },
-      {
-        id: 'pk_macbook',
-        kind: 'passkey',
-        name: 'Passkey',
-        meta: 'MacBook · iCloud Keychain · added 12 Oct 2026 · last used today',
-        connected: true,
-      },
-      {
-        id: 'pk_iphone',
-        kind: 'passkey',
-        name: 'Passkey',
-        meta: 'iPhone · iCloud Keychain · added 3 Sep 2026 · last used 2 days ago',
-        connected: true,
-      },
+      { id: 'email', kind: 'email', name: 'Email link + code', meta: user.email, connected: true },
+      provider('github', 'GitHub'),
+      provider('google', 'Google'),
     ],
-    sessions: [
-      { label: 'Chrome on macOS', when: 'active now', current: true },
-      { label: 'Safari on iPhone', when: '2 days ago' },
-      { label: 'Firefox on Linux', when: '3 weeks ago' },
-    ],
-    export: { size: 'About 40 KB', prompts: 37 },
+    sessions: sessions.map((session) => ({
+      label: deviceLabel(session.user_agent),
+      when: session.id === currentHash ? 'active now' : relativeTime(session.last_seen_at, now),
+      current: session.id === currentHash,
+    })),
+    // Progress and the prompt journal join the export with progress tracking.
+    export: { size: 'Under 1 KB', prompts: 0 },
   }
 }
 
-/** Handles nobody may take (stub for the uniqueness check). */
-export const takenHandles = ['admin', 'bits', 'settings', 'taken', 'demo']
+/** "Chrome on macOS" from a user agent, or a generic label. */
+export function deviceLabel(userAgent: string | null): string {
+  if (!userAgent) return 'Unknown device'
+  let browser = /Edg\//.test(userAgent)
+    ? 'Edge'
+    : /Firefox\//.test(userAgent)
+      ? 'Firefox'
+      : /Chrome\//.test(userAgent)
+        ? 'Chrome'
+        : /Safari\//.test(userAgent)
+          ? 'Safari'
+          : 'Browser'
+  let os = /iPhone|iPad/.test(userAgent)
+    ? 'iPhone'
+    : /Android/.test(userAgent)
+      ? 'Android'
+      : /Mac OS X/.test(userAgent)
+        ? 'macOS'
+        : /Windows/.test(userAgent)
+          ? 'Windows'
+          : /Linux/.test(userAgent)
+            ? 'Linux'
+            : null
+  return os ? `${browser} on ${os}` : browser
+}
+
+function relativeTime(at: number, now: number): string {
+  let minutes = Math.round((now - at) / 60_000)
+  if (minutes < 5) return 'active now'
+  if (minutes < 60) return `${minutes} minutes ago`
+  let hours = Math.round(minutes / 60)
+  if (hours < 24) return hours === 1 ? '1 hour ago' : `${hours} hours ago`
+  let days = Math.round(hours / 24)
+  if (days < 14) return days === 1 ? 'yesterday' : `${days} days ago`
+  return `${Math.round(days / 7)} weeks ago`
+}
+
+function monthYear(at: number): string {
+  return new Date(at).toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' })
+}

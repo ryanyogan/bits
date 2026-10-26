@@ -1,6 +1,7 @@
 import { createController } from 'remix/router'
 
-import { getCourse, getViewer } from '../../../data/fixtures.ts'
+import { getCourse } from '../../../data/fixtures.ts'
+import { getViewer } from '../../../auth/identity.ts'
 import { routes } from '../../../routes.ts'
 import { trackSlug } from '../catalog.ts'
 import { buildCourseView } from './course-data.ts'
@@ -10,10 +11,8 @@ import { CoursePage } from './course-page.tsx'
 export default createController(routes.courses.course, {
   actions: {
     index(context) {
-      let viewer = getViewer(context.url)
-      // Keep the signed-out preview (`?as=anon`) on every link out of the page.
-      let preview = viewer ? undefined : { as: 'anon' }
-      let coursesHref = routes.courses.index.href(undefined, { searchParams: preview })
+      let viewer = getViewer(context)
+      let coursesHref = routes.courses.index.href()
       let course = getCourse(context.params.course)
 
       if (!course) {
@@ -26,7 +25,7 @@ export default createController(routes.courses.course, {
       let view = buildCourseView(course, viewer, (lesson, mode) =>
         routes.courses.lesson.index.href(
           { course: course.slug, lesson },
-          { searchParams: { ...(mode ? { mode } : {}), ...preview } },
+          { searchParams: mode ? { mode } : undefined },
         ),
       )
 
@@ -36,7 +35,7 @@ export default createController(routes.courses.course, {
           viewer={viewer}
           coursesHref={coursesHref}
           trackHref={routes.courses.index.href(undefined, {
-            searchParams: { track: trackSlug(course.track), ...preview },
+            searchParams: { track: trackSlug(course.track) },
           })}
         />,
       )

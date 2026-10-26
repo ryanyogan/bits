@@ -154,7 +154,7 @@ const profiles: Record<string, Profile> = {
   [demoViewer.handle]: profileFor(demoViewer),
   // A learner who keeps their profile private: /u/sam-r is a 404.
   'sam-r': profileFor(
-    { name: 'Sam Rivera', handle: 'sam-r', initials: 'SR', email: 'sam@example.com', xp: 310, streak: 2, bestStreak: 6, isPublic: false },
+    { id: 'sample-sam', role: 'learner', name: 'Sam Rivera', handle: 'sam-r', initials: 'SR', email: 'sam@example.com', xp: 310, streak: 2, bestStreak: 6, isPublic: false },
     { level: 3, levelName: 'Token counter', levelPct: 40, toNextLevel: 180, goal: undefined },
   ),
 }

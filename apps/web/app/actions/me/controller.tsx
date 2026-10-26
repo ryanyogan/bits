@@ -1,7 +1,6 @@
-import { redirect } from 'remix/response/redirect'
 import { createController } from 'remix/router'
 
-import { getViewer } from '../../data/fixtures.ts'
+import { requireUser, toViewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
 import { getOwnProfile } from '../profile/data.ts'
 import { ProfilePage } from '../profile/profile-page.tsx'
@@ -9,12 +8,10 @@ import { ProfilePage } from '../profile/profile-page.tsx'
 // The private profile dashboard. `?tab=journal` shows the whole prompt
 // journal (resolutions §10: no separate route).
 export default createController(routes.me, {
+  middleware: [requireUser()],
   actions: {
     index(context) {
-      let viewer = getViewer(context.url)
-      if (!viewer) {
-        return redirect(routes.login.index.href(undefined, { searchParams: { next: routes.me.index.href() } }), 303)
-      }
+      let viewer = toViewer(context.auth.identity)
       let profile = getOwnProfile(viewer)
       let tab: 'journal' | 'overview' = context.url.searchParams.get('tab') === 'journal' ? 'journal' : 'overview'
       return context.render(

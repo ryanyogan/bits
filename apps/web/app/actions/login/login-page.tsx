@@ -9,14 +9,24 @@ import { routes } from '../../routes.ts'
 import { PasskeyButton } from './public/passkey-button.tsx'
 import { PendingSubmit } from './public/pending-submit.tsx'
 import { TimezoneField } from './public/timezone-field.tsx'
+import { TurnstileWidget } from './public/turnstile-widget.tsx'
 import { issueFor, signupGoals, type FormIssue, type LoginMode, type SignupGoal } from './schema.ts'
 import { AuthShell, formHeadingStyle, headingGroupStyle, riseStyle, subStyle } from './ui/auth-shell.tsx'
+
+export interface LoginNotice {
+  tone: 'ok' | 'warning' | 'danger'
+  text: string
+}
 
 export interface LoginPageProps {
   mode: LoginMode
   next?: string
   values?: { email?: string; displayName?: string; goals?: readonly SignupGoal[] }
   issues?: readonly FormIssue[]
+  /** A message above the providers: OAuth errors, rate limits, sign-out confirmations. */
+  notice?: LoginNotice
+  /** Public Turnstile key; null when the bot check is off (tests). */
+  turnstileSiteKey?: string | null
 }
 
 const copy = {
@@ -37,7 +47,7 @@ const copy = {
 /** `/login` and `/login?mode=signup` (Auth spec, states A and B). */
 export function LoginPage(handle: Handle<LoginPageProps>) {
   return () => {
-    let { mode, next, values = {}, issues } = handle.props
+    let { mode, next, values = {}, issues, notice, turnstileSiteKey } = handle.props
     let signup = mode === 'signup'
     let text = copy[mode]
     let nextParam = next ? { next } : {}
@@ -52,6 +62,12 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
             <h1 mix={formHeadingStyle}>{text.heading}</h1>
             <p mix={subStyle}>{text.sub}</p>
           </div>
+
+          {notice ? (
+            <Callout tone={notice.tone} role={notice.tone === 'ok' ? 'status' : 'alert'} compact>
+              {notice.text}
+            </Callout>
+          ) : null}
 
           <div mix={providersStyle}>
             <PasskeyButton optionsUrl={routes.api.passkey.href({ step: 'login-options' })} next={next} />
@@ -131,8 +147,14 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
               </fieldset>
             ) : null}
             {signup ? <TimezoneField /> : null}
-            {/* Turnstile (invisible) mounts here when the auth milestone lands (handoff). */}
-            <div data-turnstile-slot="" hidden />
+            {turnstileSiteKey ? (
+              <>
+                <TurnstileWidget siteKey={turnstileSiteKey} action="login" />
+                <noscript>
+                  <p mix={noteStyle}>Email sign-in needs JavaScript for a quick bot check.</p>
+                </noscript>
+              </>
+            ) : null}
             <div mix={submitWrapStyle}>
               <PendingSubmit label={text.cta} pendingLabel="Sending…" block />
             </div>

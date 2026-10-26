@@ -51,6 +51,7 @@ describe('D1 data-table driver', () => {
     await db.create(sessions, {
       id: 'hash',
       user_id: user.id,
+      data: '[{},{}]',
       expires_at: Date.now() + 1000,
       created_at: Date.now(),
       last_seen_at: Date.now(),

@@ -76,3 +76,29 @@ export async function createUser(db: Database, input: CreateUserInput): Promise<
   )
   return toUser(row)
 }
+
+/** Handles that would read as official or collide with app words. */
+export const reservedHandles = new Set(['admin', 'bits', 'me', 'settings', 'author', 'support', 'help', 'api', 'root'])
+
+/**
+ * Picks a free handle from a name or email: the normalized base if it is
+ * free, otherwise the base plus a short random number.
+ */
+export async function availableHandle(db: Database, source: string): Promise<string> {
+  let base = normalizeHandle(source).slice(0, 27)
+  for (let attempt = 0; attempt < 6; attempt++) {
+    let candidate = attempt === 0 ? base : `${base}_${randomDigits(attempt < 3 ? 2 : 4)}`
+    if (reservedHandles.has(candidate)) continue
+    if (!(await findUserByHandle(db, candidate))) return candidate
+  }
+  return `${base}_${randomDigits(6)}`
+}
+
+function randomDigits(length: number): string {
+  let bytes = crypto.getRandomValues(new Uint8Array(length))
+  return Array.from(bytes, (byte) => String(byte % 10)).join('')
+}
+
+export async function markEmailVerified(db: Database, userId: string, at: number): Promise<User> {
+  return toUser(await db.update(users, userId, { email_verified_at: at }))
+}

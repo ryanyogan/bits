@@ -1,10 +1,12 @@
 import * as assert from 'remix/assert'
+import { users } from '@bits/db'
 import { after, describe, it } from 'remix/test'
 
 import { disposePlatform } from '#platform'
 
 import { router } from '../../router.ts'
 import { routes } from '../../routes.ts'
+import { fetchAs, signIn, testDb } from '../../test/auth.ts'
 import { agentLessonHref, lessonOneHref } from './links.ts'
 
 after(() => disposePlatform())
@@ -84,10 +86,12 @@ describe('landing page', () => {
   })
 
   it('shows Sign in / Start free signed out and the XP pill signed in', async () => {
-    let anon = await page(`${routes.home.href()}?as=anon`)
+    let anon = await page(routes.home.href())
     assert.match(anon.html, />Sign in<\/a>/)
     assert.match(anon.html, />Start free<\/a>/)
-    let signedIn = await page(routes.home.href())
+    let { cookie, user } = await signIn('home@example.com')
+    await testDb.update(users, user.id, { xp_total: 1240 })
+    let signedIn = { html: await (await fetchAs(cookie, routes.home.href())).text() }
     assert.match(signedIn.html, /1,240<\/span><span class="sr-only"> neurons/)
     assert.match(signedIn.html, /aria-label="Your profile"/)
   })

@@ -5,6 +5,7 @@ import { disposePlatform } from '#platform'
 
 import { router } from '../router.ts'
 import { routes } from '../routes.ts'
+import { fetchAs, signIn } from '../test/auth.ts'
 
 after(() => disposePlatform())
 
@@ -43,27 +44,42 @@ describe('router smoke test', () => {
     assert.equal((await request('/api/run', { method: 'POST' })).status, 501)
   })
 
-  let pages = [
+  let publicPages = [
     routes.courses.index.href(),
     routes.courses.course.index.href({ course: 'tokens-and-temperature' }),
     routes.courses.lesson.index.href({ course: 'tokens-and-temperature', lesson: 'temperature' }),
     routes.login.index.href(),
     routes.login.check.index.href(),
-    routes.me.index.href(),
     routes.profile.index.href({ handle: 'jamie' }),
-    routes.settings.index.href(),
-    routes.author.index.href(),
-    routes.author.course.index.href({ course: 'tokens-and-temperature' }),
-    routes.author.course.preview.href({ course: 'tokens-and-temperature', lesson: 'temperature' }),
   ]
 
-  for (let path of pages) {
+  for (let path of publicPages) {
     it(`GET ${path} renders a page`, async () => {
       let response = await request(path)
       assert.equal(response.status, 200)
       assert.match(await response.text(), /<main id="main"/)
     })
   }
+
+  let signedInPages = [
+    routes.me.index.href(),
+    routes.settings.index.href(),
+    routes.author.index.href(),
+    routes.author.course.index.href({ course: 'tokens-and-temperature' }),
+    routes.author.course.preview.href({ course: 'tokens-and-temperature', lesson: 'temperature' }),
+  ]
+
+  it('signed-in pages send anonymous visitors to /login and render for an admin', async () => {
+    let { cookie } = await signIn('smoke-admin@example.com', { role: 'admin' })
+    for (let path of signedInPages) {
+      let anonymous = await request(path)
+      assert.equal(anonymous.status, 303, path)
+      assert.match(anonymous.headers.get('Location')!, /^\/login\?next=/, path)
+      let response = await fetchAs(cookie, path)
+      assert.equal(response.status, 200, path)
+      assert.match(await response.text(), /<main id="main"/, path)
+    }
+  })
 
   it('GET /styleguide renders the design system, noindex', async () => {
     let response = await request(routes.styleguide.index.href())
@@ -114,8 +130,9 @@ describe('router smoke test', () => {
   it('POST /auth/verify validates the 6-digit code', async () => {
     let bad = await request(routes.auth.verify.action.href(), form({ email: 'a@b.co', code: '12' }))
     assert.equal(bad.status, 422)
-    let ok = await request(routes.auth.verify.action.href(), form({ email: 'a@b.co', code: '123 456' }))
-    assert.equal(ok.status, 501)
+    let unknown = await request(routes.auth.verify.action.href(), form({ email: 'a@b.co', code: '123 456' }))
+    assert.equal(unknown.status, 422)
+    assert.match(await unknown.text(), /expired or had too many tries/)
   })
 
   it('API and webhook endpoints answer 501', async () => {

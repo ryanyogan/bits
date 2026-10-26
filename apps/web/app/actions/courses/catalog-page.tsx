@@ -33,7 +33,6 @@ export interface CatalogPageProps {
   results: CourseSummary[]
   counts: Record<TrackSlug | 'all', number>
   continueTarget?: ContinueTarget
-  /** Builds a course href, carrying `?as=anon` while previewing signed out. */
   courseHref(slug: string): string
 }
 
@@ -45,7 +44,6 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
     let { viewer, query, results, counts, continueTarget, courseHref } = handle.props
     let hidden: Record<string, string> = {}
     if (query.track) hidden.track = query.track
-    if (query.anon) hidden.as = 'anon'
 
     return (
       <Layout title="Courses" viewer={viewer} currentPath={routes.courses.index.href()} bleed>
@@ -88,7 +86,7 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
               {trackFilters.map((filter) => (
                 <FilterPill
                   key={filter.label}
-                  href={catalogHref({ track: filter.slug, q: query.q, anon: query.anon })}
+                  href={catalogHref({ track: filter.slug, q: query.q })}
                   dot={filter.dot}
                   count={counts[filter.slug ?? 'all']}
                   selected={filter.slug === query.track}
@@ -135,7 +133,7 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
                 title={query.q ? `0 results for “${query.q}”` : '0 results'}
                 hint="Try “agents”, “tokens” or clear the filter."
                 action={
-                  <Keycap variant="ghost" size="sm" href={catalogHref({ anon: query.anon })}>
+                  <Keycap variant="ghost" size="sm" href={catalogHref({})}>
                     Clear filters
                   </Keycap>
                 }

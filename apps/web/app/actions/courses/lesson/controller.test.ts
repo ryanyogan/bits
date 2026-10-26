@@ -3,13 +3,11 @@ import { after, describe, it } from 'remix/test'
 
 import { disposePlatform } from '#platform'
 
-import { router } from '../../../router.ts'
 import { routes } from '../../../routes.ts'
+import { fetchAs, signIn } from '../../../test/auth.ts'
 
-after(() => disposePlatform())
-
-async function page(path: string) {
-  let response = await router.fetch(new Request(new URL(path, 'http://localhost')))
+async function page(path: string, cookie: string | null = null) {
+  let response = await fetchAs(cookie, path)
   return { status: response.status, headers: response.headers, html: await response.text() }
 }
 
@@ -24,7 +22,11 @@ function lessonHref(params: { course: string; lesson: string }, mode?: string) {
   return routes.courses.lesson.index.href(params, mode ? { searchParams: { mode } } : undefined)
 }
 
-describe('lesson page', () => {
+// One flat suite: remix test runs after() around every describe, and D1 must
+// stay up until the last test.
+describe('lesson page and author preview', () => {
+  after(() => disposePlatform())
+
   it('renders Read mode by default with one h1, landmarks and the lesson text', async () => {
     let { status, html } = await page(lessonHref(temperature))
     assert.equal(status, 200)
@@ -69,21 +71,21 @@ describe('lesson page', () => {
     assert.match(html, /Complete lesson/)
   })
 
-  it('keeps ?as=anon on mode links for the signed-out variant', async () => {
-    let { status, html } = await page(routes.courses.lesson.index.href(temperature, { searchParams: { as: 'anon' } }))
+  it('links modes without extra query params', async () => {
+    let { status, html } = await page(lessonHref(temperature))
     assert.equal(status, 200)
-    assert.match(html, /mode=terminal&amp;as=anon|as=anon&amp;mode=terminal/)
+    assert.match(html, /href="\/courses\/tokens-and-temperature\/temperature\?mode=terminal"/)
+    assert.doesNotMatch(html, /as=anon/)
   })
 
   it('404s an unknown lesson or course', async () => {
     assert.equal((await page(lessonHref({ course: 'tokens-and-temperature', lesson: 'nope' }))).status, 404)
     assert.equal((await page(lessonHref({ course: 'nope', lesson: 'temperature' }))).status, 404)
   })
-})
 
-describe('author lesson preview', () => {
-  it('renders the same lesson under a Draft banner', async () => {
-    let { status, html } = await page(routes.author.course.preview.href(temperature))
+  it('renders the same lesson under a Draft banner for an admin', async () => {
+    let { cookie } = await signIn('preview-admin@example.com', { role: 'admin' })
+    let { status, html } = await page(routes.author.course.preview.href(temperature), cookie)
     assert.equal(status, 200)
     assert.match(html, /DRAFT · v\d+ preview — not visible to learners/)
     assert.match(html, /Back to validation/)
@@ -92,9 +94,7 @@ describe('author lesson preview', () => {
   })
 
   it('sends signed-out visitors to log in', async () => {
-    let response = await router.fetch(
-      new Request(new URL(routes.author.course.preview.href(temperature, { searchParams: { as: 'anon' } }), 'http://localhost')),
-    )
+    let response = await fetchAs(null, routes.author.course.preview.href(temperature))
     assert.equal(response.status, 303)
     assert.match(response.headers.get('Location') ?? '', /\/login/)
   })

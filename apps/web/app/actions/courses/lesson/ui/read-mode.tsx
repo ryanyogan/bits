@@ -131,7 +131,6 @@ function Quiz(handle: Handle<{ view: LessonView; block: QuizBlock }>) {
           action={
             <>
               {view.mode !== 'read' ? <input type="hidden" name="mode" value={view.mode} /> : null}
-              {view.viewer ? null : <input type="hidden" name="as" value="anon" />}
               <Keycap type="submit" size="md" mix={attrs({ formMethod: 'get' })}>
                 {answered ? 'Check again' : 'Check'}
               </Keycap>

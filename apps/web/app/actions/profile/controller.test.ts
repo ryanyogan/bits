@@ -3,18 +3,26 @@ import { after, describe, it } from 'remix/test'
 
 import { disposePlatform } from '#platform'
 
-import { router } from '../../router.ts'
 import { routes } from '../../routes.ts'
-
-after(() => disposePlatform())
+import { fetchAs, signIn } from '../../test/auth.ts'
 
 function get(path: string) {
-  return router.fetch(new Request(new URL(path, 'http://localhost')))
+  return fetchAs(null, path)
 }
 
-describe('/me', () => {
+let jamie: Promise<string> | undefined
+async function getSignedIn(path: string) {
+  jamie ??= signIn('jamie@example.com', { displayName: 'Jamie Park' }).then((session) => session.cookie)
+  return fetchAs(await jamie, path)
+}
+
+// One flat suite: remix test runs after() around every describe, and D1 must
+// stay up until the last test.
+describe('/me and /u/:handle', () => {
+  after(() => disposePlatform())
+
   it('renders the private profile with journal and account card', async () => {
-    let response = await get(routes.me.index.href())
+    let response = await getSignedIn(routes.me.index.href())
     assert.equal(response.status, 200)
     let html = await response.text()
     assert.match(html, /<title>Your profile · Bits<\/title>/)
@@ -34,7 +42,7 @@ describe('/me', () => {
   })
 
   it('?tab=journal lists the whole prompt journal', async () => {
-    let response = await get(routes.me.index.href(undefined, { searchParams: { tab: 'journal' } }))
+    let response = await getSignedIn(routes.me.index.href(undefined, { searchParams: { tab: 'journal' } }))
     assert.equal(response.status, 200)
     let html = await response.text()
     assert.match(html, /<title>Prompt journal · Bits<\/title>/)
@@ -42,13 +50,11 @@ describe('/me', () => {
   })
 
   it('sends signed-out visitors to sign in', async () => {
-    let response = await get(`${routes.me.index.href()}?as=anon`)
+    let response = await get(routes.me.index.href())
     assert.equal(response.status, 303)
     assert.match(response.headers.get('Location') ?? '', /^\/login\?next=%2Fme/)
   })
-})
 
-describe('/u/:handle', () => {
   it('renders a public profile without email, journal, account or Edit', async () => {
     let response = await get(routes.profile.index.href({ handle: 'jamie' }))
     assert.equal(response.status, 200)

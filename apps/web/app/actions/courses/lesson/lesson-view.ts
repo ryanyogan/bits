@@ -2,7 +2,7 @@
 // lesson fixtures, the compiled content, the mode, and every href. Shared by
 // /courses/:course/:lesson and the author preview /author/:course/preview/:lesson.
 import type { CourseDetail, LessonSummary, Viewer } from '../../../data/fixtures.ts'
-import { getLesson, getViewer } from '../../../data/fixtures.ts'
+import { getLesson } from '../../../data/fixtures.ts'
 import { routes } from '../../../routes.ts'
 import { exercisesOf, type LessonContent } from './content.ts'
 import { getLessonContent, resumeAt } from './fixtures.ts'
@@ -44,6 +44,8 @@ export interface LessonView {
 export interface LessonViewOptions {
   /** Render as the author's draft preview. */
   draft?: { version: string }
+  /** The signed-in viewer, or null. */
+  viewer?: Viewer | null
 }
 
 const MODES: LessonMode[] = ['read', 'watch', 'terminal']
@@ -58,15 +60,8 @@ export function buildLessonView(courseSlug: string, lessonSlug: string, url: URL
   let mode: LessonMode = requested && MODES.includes(requested) ? requested : 'read'
   if (mode === 'watch' && !content.video) mode = 'read'
   let preview = Boolean(options.draft)
-  // Keep the signed-out preview (`?as=anon`) on every link out of the page.
-  let keep: Record<string, string> = url.searchParams.get('as') === 'anon' ? { as: 'anon' } : {}
-  let withKeep = (params: Record<string, string> = {}) => {
-    let all = { ...params, ...keep }
-    return Object.keys(all).length ? all : undefined
-  }
-
   let lessonHref = (slug: string, m?: LessonMode) => {
-    let searchParams = withKeep(m ? { mode: m } : {})
+    let searchParams = m ? { mode: m } : undefined
     return preview
       ? routes.author.course.preview.href({ course: course.slug, lesson: slug }, { searchParams })
       : routes.courses.lesson.index.href({ course: course.slug, lesson: slug }, { searchParams })
@@ -91,7 +86,7 @@ export function buildLessonView(courseSlug: string, lessonSlug: string, url: URL
     next,
     content,
     mode,
-    viewer: getViewer(url),
+    viewer: options.viewer ?? null,
     resumeAt: resumeAt[`${course.slug}/${lesson.slug}`],
     answers,
     draft: options.draft
@@ -102,7 +97,7 @@ export function buildLessonView(courseSlug: string, lessonSlug: string, url: URL
       lesson: (slug) => lessonHref(slug),
       back: preview
         ? routes.author.course.index.href({ course: course.slug })
-        : routes.courses.course.index.href({ course: course.slug }, { searchParams: withKeep() }),
+        : routes.courses.course.index.href({ course: course.slug }),
       login: routes.login.index.href(undefined, { searchParams: { next: url.pathname + url.search } }),
       self,
     },

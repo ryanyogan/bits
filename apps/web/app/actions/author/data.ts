@@ -50,6 +50,8 @@ export interface AuthorCourse {
   videos: VideoUpload[]
   /** The file shown in the Source pane (latest build), when there is one. */
   source?: { tree: TreeNode[]; file: string; markdown: string }
+  /** users.id of the authors who own it. The samples have none, so only admins see them. */
+  ownerIds?: string[]
 }
 
 export const repo = { name: 'jamie-park/courses', branch: 'main', connected: true }
@@ -205,6 +207,17 @@ const authored: AuthorCourse[] = [
 
 export function getAuthoredCourses(): AuthorCourse[] {
   return authored
+}
+
+/** Authors manage the courses they own; admins manage every course (handoff, Roles). */
+export function canManageCourse(user: { id: string; role: string }, item: AuthorCourse): boolean {
+  if (user.role === 'admin') return true
+  return user.role === 'author' && (item.ownerIds ?? []).includes(user.id)
+}
+
+/** The courses this user may open in /author. */
+export function getManagedCourses(user: { id: string; role: string }): AuthorCourse[] {
+  return authored.filter((item) => canManageCourse(user, item))
 }
 
 export function getAuthoredCourse(slug: string): AuthorCourse | undefined {

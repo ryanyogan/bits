@@ -1,6 +1,7 @@
 import { createController } from 'remix/router'
 
-import { getContinue, getViewer } from '../../data/fixtures.ts'
+import { getContinue } from '../../data/fixtures.ts'
+import { getViewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
 import { filterCourses, parseCatalogQuery } from './catalog.ts'
 import { CatalogPage, type ContinueTarget } from './catalog-page.tsx'
@@ -8,10 +9,9 @@ import { CatalogPage, type ContinueTarget } from './catalog-page.tsx'
 export default createController(routes.courses, {
   actions: {
     index(context) {
-      let viewer = getViewer(context.url)
+      let viewer = getViewer(context)
       let query = parseCatalogQuery(context.url)
       let { results, counts } = filterCourses(query)
-      let preview = query.anon ? { as: 'anon' } : undefined
 
       // Signed-in progress renders on the server. Anonymous (local) progress
       // will be filled in by a ProgressStore island later; render nothing now.
@@ -39,7 +39,7 @@ export default createController(routes.courses, {
           results={results}
           counts={counts}
           continueTarget={continueTarget}
-          courseHref={(slug) => routes.courses.course.index.href({ course: slug }, { searchParams: preview })}
+          courseHref={(slug) => routes.courses.course.index.href({ course: slug })}
         />,
       )
     },

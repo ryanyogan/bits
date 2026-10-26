@@ -29,15 +29,13 @@ export function trackSlug(track: Track): TrackSlug {
 export interface CatalogQuery {
   track?: TrackSlug
   q: string
-  /** Signed-out preview (`?as=anon`), preserved across filter links. */
-  anon: boolean
 }
 
 export function parseCatalogQuery(url: URL): CatalogQuery {
   let rawTrack = url.searchParams.get('track')?.toLowerCase()
   let track = trackFilters.find((filter) => filter.slug && filter.slug === rawTrack)?.slug
   let q = (url.searchParams.get('q') ?? '').trim().slice(0, 100)
-  return { track, q, anon: url.searchParams.get('as') === 'anon' }
+  return { track, q }
 }
 
 function matchesQuery(course: CourseSummary, q: string): boolean {
@@ -64,7 +62,6 @@ export function catalogHref(query: Partial<CatalogQuery>): string {
   let searchParams: Record<string, string> = {}
   if (query.track) searchParams.track = query.track
   if (query.q) searchParams.q = query.q
-  if (query.anon) searchParams.as = 'anon'
   return routes.courses.index.href(undefined, { searchParams })
 }
 

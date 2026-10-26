@@ -120,7 +120,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                     prefix="bits.dev/u/"
                     value={val('profile', 'handle', viewer.handle)}
                     error={err('profile', 'handle')}
-                    hint="Letters, numbers and dashes. Changing it breaks old links."
+                    hint="Letters, numbers, dashes and underscores. Changing it breaks old links."
                     autoFocus={Boolean(err('profile', 'handle')) && !err('profile', 'name')}
                   />
                   <div mix={visibilityStyle}>
@@ -237,7 +237,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
               <Section
                 id="sessions"
                 title="Sessions"
-                description={`You're signed in on ${account.sessions.length} devices.`}
+                description={account.sessions.length === 1 ? "You're signed in on 1 device." : `You're signed in on ${account.sessions.length} devices.`}
               >
                 <KeyValueList
                   items={account.sessions.map((session) => ({

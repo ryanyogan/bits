@@ -32,8 +32,28 @@
     }
   ],
 
+  // Sign-in email (Cloudflare Email Sending, beta). bits.yogan.dev is
+  // onboarded with SPF/DKIM; the binding may only send from this address.
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "allowed_sender_addresses": ["signin@bits.yogan.dev"]
+    }
+  ],
+
+  // Non-secret config. Secrets (SESSION_SECRET, TURNSTILE_SECRET_KEY,
+  // GITHUB_CLIENT_ID/SECRET, GOOGLE_CLIENT_ID/SECRET) are set with
+  // `wrangler secret put`, and locally in .dev.vars (see .dev.vars.example).
   "vars": {
-    "APP_ENV": "production"
+    "APP_ENV": "production",
+    "EMAIL_FROM": "signin@bits.yogan.dev",
+    "TURNSTILE_SITE_KEY": "",
+    "TURNSTILE_HOSTNAMES": "bits.ryanyogan.workers.dev"
+  },
+
+  // Daily housekeeping: delete expired sessions and email tokens (worker.ts).
+  "triggers": {
+    "crons": ["17 4 * * *"]
   },
 
   "observability": {

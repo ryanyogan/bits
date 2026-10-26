@@ -75,13 +75,16 @@ export type Identity = TableRow<typeof identities>
 export const sessions = table({
   name: 'sessions',
   columns: {
-    /** SHA-256 hex of the opaque cookie token. */
+    /** SHA-256 hex of the session id in the signed cookie. */
     id: c.text(),
-    user_id: c.text(),
+    /** Null until the browser signs in. */
+    user_id: c.text().nullable(),
+    /** remix/session data, JSON `[values, flash]`. */
+    data: c.text(),
+    user_agent: c.text().nullable(),
     expires_at: c.integer(),
     created_at: c.integer(),
     last_seen_at: c.integer(),
-    user_agent: c.text().nullable(),
   },
 })
 
@@ -99,6 +102,10 @@ export const emailTokens = table({
     used_at: c.integer().nullable(),
     next_path: c.text().nullable(),
     created_at: c.integer(),
+    /** SHA-256 hex of the requesting IP (per-IP rate limit). */
+    ip_hash: c.text().nullable(),
+    /** Sign-up answers as JSON text, applied when the user row is created. */
+    signup: c.text().nullable(),
   },
 })
 

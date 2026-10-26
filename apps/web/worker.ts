@@ -3,6 +3,10 @@
 // Requests for files in build/client (fingerprinted /assets/*, favicon, ...)
 // are answered by Workers Static Assets before this code runs; everything
 // else reaches the router.
+import { createD1Database, deleteExpiredAuthRows } from '@bits/db'
+
+import { platform } from '#platform'
+
 import { router } from './app/router.ts'
 
 export default {
@@ -24,5 +28,10 @@ export default {
       )
       return new Response('Internal Server Error', { status: 500 })
     }
+  },
+
+  // Daily cron (wrangler.jsonc triggers): drop expired sessions and email tokens.
+  async scheduled(): Promise<void> {
+    await deleteExpiredAuthRows(createD1Database(platform.env.DB), Date.now())
   },
 }

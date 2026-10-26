@@ -6,6 +6,7 @@ import { Keycap } from '@bits/ui/keycap'
 
 import { routes } from '../../../routes.ts'
 import { PendingSubmit } from '../public/pending-submit.tsx'
+import { TurnstileWidget } from '../public/turnstile-widget.tsx'
 import { issueFor, type FormIssue, type LoginMode } from '../schema.ts'
 import { AuthShell, formHeadingStyle, headingGroupStyle, riseStyle, subStyle } from '../ui/auth-shell.tsx'
 
@@ -15,6 +16,8 @@ export interface CheckEmailPageProps {
   next?: string
   code?: string
   issues?: readonly FormIssue[]
+  /** "Send again" posts to /login, so it carries its own bot check. */
+  turnstileSiteKey?: string | null
 }
 
 /**
@@ -23,7 +26,7 @@ export interface CheckEmailPageProps {
  */
 export function CheckEmailPage(handle: Handle<CheckEmailPageProps>) {
   return () => {
-    let { email, mode = 'signin', next, code, issues } = handle.props
+    let { email, mode = 'signin', next, code, issues, turnstileSiteKey } = handle.props
     let nextParam = next ? { next } : {}
     let error = issueFor(issues, 'code')?.message ?? issueFor(issues, 'email')?.message
 
@@ -65,6 +68,7 @@ export function CheckEmailPage(handle: Handle<CheckEmailPageProps>) {
               <input type="hidden" name="email" value={email} />
               <input type="hidden" name="mode" value={mode} />
               {next ? <input type="hidden" name="next" value={next} /> : null}
+              {turnstileSiteKey ? <TurnstileWidget siteKey={turnstileSiteKey} action="login" /> : null}
               Didn't get it?{' '}
               <button type="submit" mix={linkButtonStyle}>
                 Send again

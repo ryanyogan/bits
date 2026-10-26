@@ -1,6 +1,6 @@
 # 011. Auth and Settings UI choices
 
-Status: Accepted (2026-10-26), provisional until the auth milestone
+Status: Accepted (2026-10-26); auth behaviour superseded by 015
 
 ## Decision
 

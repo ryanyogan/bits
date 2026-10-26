@@ -40,6 +40,8 @@ apps/web/                 @bits/web: the Remix app and Worker
   app/actions/**/public/  browser modules (clientEntry components, entry.ts)
   app/ui/                 app-level shared UI: Layout, PlaceholderPage
   app/middleware/         database.ts puts the data-table db on context.db
+  app/auth/               sessions, identity, email sign-in, OAuth, Turnstile, mailer (server-only)
+  app/test/auth.ts        test helpers: signIn, fetchAs, requestCode
   app/platform/           runtime seam: `#platform` → platform.node.ts | platform.worker.ts
   scripts/build.ts        asset crawl into build/client + esbuild Worker bundle
   worker.ts               Workers entry; server.ts / hmr.ts are the Node entries
@@ -173,6 +175,26 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   `docs/decisions/003-data-table-on-d1.md`).
 - Typed query helpers go in `src/queries/<area>.ts` and take the `Database`
   as their first argument.
+
+## Auth (decision 015)
+
+- Who is signed in: `currentUser(context)` / `getViewer(context)` from
+  `app/auth/identity.ts`. Protect a controller with
+  `middleware: [requireUser()]`; then `context.auth.identity` is the user.
+- Session data: `context.session` (`remix/session`, stored in D1). Sign in
+  only through `startUserSession`, which rotates the id. Sign out with
+  `context.session.destroy()`.
+- CSRF is `remix/middleware/cop` in `router.ts`. Plain same-origin form
+  POSTs just work. Do not add token fields.
+- Mail: `sendMail` from `app/auth/mailer.ts`. Outside production it lands
+  in `outbox` (dev also logs `[mail]` with the code).
+- Tests: sign in with `signIn(email, { role })` and request with
+  `fetchAs(cookie, path)`. `remix test` runs `after` around every
+  `describe`, so a file that touches D1 keeps **one flat describe** with
+  `after(() => disposePlatform())` inside it.
+- Secrets: `SESSION_SECRET` (required in production),
+  `TURNSTILE_SECRET_KEY`, `GITHUB_CLIENT_ID/SECRET` and
+  `GOOGLE_CLIENT_ID/SECRET`. See `apps/web/.dev.vars.example`.
 
 ## Runtime rules
 

@@ -1,23 +1,29 @@
 import { redirect } from 'remix/response/redirect'
 import { createController } from 'remix/router'
 
-import { getViewer } from '../../data/fixtures.ts'
+import { canAuthor, requireUser, toViewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
+import { ForbiddenPage } from '../../ui/not-found-page.tsx'
 import { AuthorPage } from './author-page.tsx'
-import { getAuthoredCourses } from './data.ts'
+import { getManagedCourses } from './data.ts'
 
-// Authoring home. Requires the author role once auth lands; the UI build
-// shows the demo viewer's courses.
+// Authoring home: authors see the courses they own, admins see every course.
+// Learners get a 403 (authoring is invite-only in v1).
 export default createController(routes.author, {
+  middleware: [requireUser()],
   actions: {
     index(context) {
-      let viewer = getViewer(context.url)
-      if (!viewer) {
-        return redirect(routes.login.index.href(undefined, { searchParams: { next: routes.author.index.href() } }), 303)
+      let user = context.auth.identity
+      let viewer = toViewer(user)
+      if (!canAuthor(user)) {
+        return context.render(
+          <ForbiddenPage viewer={viewer} hint="Writing courses is invite-only for now. Ask an admin for the author role." />,
+          { status: 403 },
+        )
       }
       return context.render(
         <AuthorPage
-          courses={getAuthoredCourses()}
+          courses={getManagedCourses(user)}
           viewer={viewer}
           currentPath={context.url.pathname}
           repoSaved={context.url.searchParams.get('repo') === 'saved'}
@@ -25,7 +31,8 @@ export default createController(routes.author, {
       )
     },
     // Stub: saving sync settings lands with the GitHub webhook milestone.
-    repo() {
+    repo(context) {
+      if (!canAuthor(context.auth.identity)) return new Response('Forbidden', { status: 403 })
       return redirect(routes.author.index.href(undefined, { searchParams: { repo: 'saved' } }), 303)
     },
   },

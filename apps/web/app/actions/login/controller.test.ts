@@ -32,7 +32,6 @@ describe('/login', () => {
     assert.match(html, /href="\/auth\/oauth\/google\?next=%2Fcourses"/)
     assert.ok(html.indexOf('Use a passkey') < html.indexOf('Continue with GitHub'), 'passkey comes first')
     assert.match(html, /<input type="hidden" name="next" value="\/courses"/)
-    assert.match(html, /data-turnstile-slot/)
     assert.match(html, /<main id="main"/)
     assert.doesNotMatch(html, /name="goals"/)
   })

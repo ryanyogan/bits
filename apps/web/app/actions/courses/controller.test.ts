@@ -1,17 +1,18 @@
 import * as assert from 'remix/assert'
-import { after, describe, it } from 'remix/test'
+import { after, before, describe, it } from 'remix/test'
 
 import { disposePlatform } from '#platform'
 
 import { courses } from '../../data/fixtures.ts'
-import { router } from '../../router.ts'
 import { routes } from '../../routes.ts'
+import { fetchAs, signIn } from '../../test/auth.ts'
 import { catalogHref, filterCourses, parseCatalogQuery, resultLabel } from './catalog.ts'
 
-after(() => disposePlatform())
+let cookie: string | null = null
 
-async function page(path: string) {
-  let response = await router.fetch(new Request(new URL(path, 'http://localhost')))
+/** Fetches a page signed in (progress shows), or signed out with `{ anonymous: true }`. */
+async function page(path: string, options: { anonymous?: boolean } = {}) {
+  let response = await fetchAs(options.anonymous ? null : cookie, path)
   return { status: response.status, html: await response.text() }
 }
 
@@ -19,7 +20,14 @@ function count(html: string, pattern: RegExp) {
   return html.match(new RegExp(pattern.source, 'g'))?.length ?? 0
 }
 
-describe('catalog filtering', () => {
+// One flat suite: remix test runs before/after around every describe, and
+// the platform (D1) must stay up until the last test.
+describe('catalog and course pages', () => {
+  before(async () => {
+    ;({ cookie } = await signIn('catalog@example.com'))
+  })
+  after(() => disposePlatform())
+
   it('parses track and q from the URL and ignores unknown tracks', () => {
     let query = parseCatalogQuery(new URL('http://x/courses?track=Agents&q=%20rag%20'))
     assert.equal(query.track, 'agents')
@@ -47,13 +55,11 @@ describe('catalog filtering', () => {
 
   it('builds clean filter hrefs and result labels', () => {
     assert.equal(catalogHref({}), routes.courses.index.href())
-    assert.match(catalogHref({ track: 'tools', q: 'rag', anon: true }), /track=tools&q=rag&as=anon/)
+    assert.match(catalogHref({ track: 'tools', q: 'rag' }), /track=tools&q=rag$/)
     assert.equal(resultLabel(1), '1 course · all free')
     assert.equal(resultLabel(8), '8 courses · all free')
   })
-})
 
-describe('GET /courses', () => {
   it('renders the catalog with every course, the write card and the continue banner', async () => {
     let { status, html } = await page(routes.courses.index.href())
     assert.equal(status, 200)
@@ -96,15 +102,12 @@ describe('GET /courses', () => {
   })
 
   it('hides the continue banner and progress when signed out', async () => {
-    let { html } = await page(`${routes.courses.index.href()}?as=anon`)
+    let { html } = await page(routes.courses.index.href(), { anonymous: true })
     assert.doesNotMatch(html, /Up next:/)
     assert.match(html, /Sign in/)
-    assert.match(html, /href="\/courses\/tokens-and-temperature\?as=anon"/)
-    assert.match(html, /name="as" value="anon"/)
+    assert.match(html, /href="\/courses\/tokens-and-temperature"/)
   })
-})
 
-describe('GET /courses/:course', () => {
   let path = routes.courses.course.index.href({ course: 'tokens-and-temperature' })
 
   it('renders the syllabus with lesson states and the resume callout', async () => {
@@ -131,7 +134,7 @@ describe('GET /courses/:course', () => {
   })
 
   it('renders the signed-out variant with nothing started', async () => {
-    let { html } = await page(`${path}?as=anon`)
+    let { html } = await page(path, { anonymous: true })
     assert.equal(count(html, /— not started/), 8)
     assert.equal(count(html, /— completed/), 0)
     assert.doesNotMatch(html, /aria-current="step"/)

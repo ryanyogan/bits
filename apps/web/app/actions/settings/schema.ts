@@ -15,8 +15,8 @@ export const profileForm = f.object({
     trimmed
       .transform((value) => value.toLowerCase())
       .refine(
-        (value) => /^[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])?$/.test(value) && value.length >= 2,
-        'Use 2–30 letters, numbers and dashes.',
+        (value) => /^[a-z0-9](?:[a-z0-9_-]{0,30}[a-z0-9])?$/.test(value) && value.length >= 2,
+        'Use 2–32 letters, numbers, dashes or underscores.',
       ),
   ),
   visibility: f.field(s.defaulted(s.enum_(['public', 'private'] as const), 'public')),

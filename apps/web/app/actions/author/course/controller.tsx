@@ -2,25 +2,27 @@ import { redirect } from 'remix/response/redirect'
 import { createController } from 'remix/router'
 import { EmptyState } from '@bits/ui/empty-state'
 
+import type { User } from '@bits/db'
+
 import type { AppContext } from '../../../router.ts'
-import { getViewer } from '../../../data/fixtures.ts'
+import { requireUser, toViewer } from '../../../auth/identity.ts'
 import { routes } from '../../../routes.ts'
 import { Layout } from '../../../ui/layout.tsx'
-import { counts, firstLessonSlug, getAuthoredCourse, plural, type AuthorCourse } from '../data.ts'
+import { ForbiddenPage } from '../../../ui/not-found-page.tsx'
+import { canManageCourse, counts, firstLessonSlug, getAuthoredCourse, plural, type AuthorCourse } from '../data.ts'
 import { CourseBuildPage } from './course-build-page.tsx'
 import { LessonPage } from '../../courses/lesson/lesson-page.tsx'
 import { buildLessonView } from '../../courses/lesson/lesson-view.ts'
 
+// Every action needs a signed-in user who manages this course (owner or
+// admin); everyone else gets the same 404 an unknown course gets, except
+// signed-in non-owners of a real course, who get a 403.
 export default createController(routes.author.course, {
+  middleware: [requireUser()],
   actions: {
     index(context) {
-      let viewer = getViewer(context.url)
-      if (!viewer) {
-        let next = routes.author.course.index.href({ course: context.params.course })
-        return redirect(routes.login.index.href(undefined, { searchParams: { next } }), 303)
-      }
-      let item = getAuthoredCourse(context.params.course)
-      if (!item) return notFound(context)
+      let item = managedCourse(context, context.auth.identity)
+      if (item instanceof Response) return item
       let params = context.url.searchParams
       let live = Number(params.get('live'))
       // UI build: publish/rollback "flip the pointer" by redirecting with ?live=N.
@@ -39,14 +41,14 @@ export default createController(routes.author.course, {
           item={item}
           previewHref={routes.author.course.preview.href({ course: item.course.slug, lesson: firstLessonSlug(item.course.slug) })}
           notice={notice}
-          viewer={getViewer(context.url)}
+          viewer={toViewer(context.auth.identity)}
         />,
       )
     },
     // Stubs until the build pipeline lands: they validate, then redirect with the new live pointer.
     publish(context) {
-      let item = getAuthoredCourse(context.params.course)
-      if (!item) return notFound(context)
+      let item = managedCourse(context, context.auth.identity)
+      if (item instanceof Response) return item
       let { errors } = counts(item.items)
       if (errors) {
         return context.render(
@@ -54,7 +56,7 @@ export default createController(routes.author.course, {
             item={item}
             previewHref={routes.author.course.preview.href({ course: item.course.slug, lesson: firstLessonSlug(item.course.slug) })}
             notice={{ tone: 'error', text: `v${item.build} has ${plural(errors, 'error')}. Fix them and push again to publish.` }}
-            viewer={getViewer(context.url)}
+            viewer={toViewer(context.auth.identity)}
           />,
           { status: 422 },
         )
@@ -65,8 +67,8 @@ export default createController(routes.author.course, {
       )
     },
     rollback(context) {
-      let item = getAuthoredCourse(context.params.course)
-      if (!item) return notFound(context)
+      let item = managedCourse(context, context.auth.identity)
+      if (item instanceof Response) return item
       let version = Number(context.formData.get('version'))
       if (!item.versions.some((v) => v.n === version)) {
         return redirect(routes.author.course.index.href({ course: item.course.slug }), 303)
@@ -78,19 +80,32 @@ export default createController(routes.author.course, {
     },
     // The lesson page (courses/lesson) rendering the draft build under a Draft banner.
     preview(context) {
-      if (!getViewer(context.url)) {
-        let next = routes.author.course.preview.href({ course: context.params.course, lesson: context.params.lesson })
-        return redirect(routes.login.index.href(undefined, { searchParams: { next } }), 303)
-      }
-      let build = getAuthoredCourse(context.params.course)?.build
+      let item = managedCourse(context, context.auth.identity)
+      if (item instanceof Response) return item
       let view = buildLessonView(context.params.course, context.params.lesson, context.url, {
-        draft: { version: build ? `v${build}` : 'draft' },
+        draft: { version: `v${item.build}` },
+        viewer: toViewer(context.auth.identity),
       })
-      if (!view) return notFound(context)
+      if (!view) return notFound(context, context.auth.identity)
       return context.render(<LessonPage view={view} />)
     },
   },
 })
+
+type CourseContext = Pick<AppContext, 'render'> & { params: { course: string } }
+
+/** The course if this user manages it; otherwise the 404 or 403 response to send. */
+function managedCourse(context: CourseContext, user: User): AuthorCourse | Response {
+  let item = getAuthoredCourse(context.params.course)
+  if (!item) return notFound(context, user)
+  if (!canManageCourse(user, item)) {
+    return context.render(
+      <ForbiddenPage viewer={toViewer(user)} hint="Only this course's authors and admins can open its builds and drafts." />,
+      { status: 403 },
+    )
+  }
+  return item
+}
 
 function withLive(item: AuthorCourse, live: number): AuthorCourse {
   return {
@@ -103,9 +118,9 @@ function withLive(item: AuthorCourse, live: number): AuthorCourse {
   }
 }
 
-function notFound(context: AppContext) {
+function notFound(context: CourseContext, user: User) {
   return context.render(
-    <Layout title="Course not found" viewer={getViewer(context.url)} currentPath="/author">
+    <Layout title="Course not found" viewer={toViewer(user)} currentPath="/author">
       <h1 class="sr-only">Course not found</h1>
       <EmptyState title="No course with that name." hint="It may have been renamed in the repo." />
     </Layout>,

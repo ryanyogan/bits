@@ -1,3 +1,5 @@
+import { createD1Database } from '@bits/db'
+import { cop } from 'remix/middleware/cop'
 import { formData } from 'remix/middleware/form-data'
 import { render } from 'remix/middleware/render'
 import { createRouter, type RouterContext } from 'remix/router'
@@ -23,14 +25,24 @@ import profileController from './actions/profile/controller.tsx'
 import settingsController from './actions/settings/controller.tsx'
 import styleguideController from './actions/styleguide/controller.tsx'
 import webhooksController from './actions/webhooks/controller.tsx'
+import { loadAuth } from './auth/identity.ts'
+import { loadSession } from './auth/session.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { routes } from './routes.ts'
+
+// One data-table wrapper per isolate; it holds no per-request state.
+const db = createD1Database(platform.env.DB)
 
 export const router = createRouter({
   middleware: [
     platform.middleware,
-    loadDatabase(platform.env.DB),
+    // Rejects cross-origin POSTs (Sec-Fetch-Site, then Origin). Webhooks are
+    // server-to-server and verify their own signatures. See decision 015.
+    cop({ insecureBypassPatterns: ['POST /webhooks/{provider}'] }),
+    loadDatabase(db),
+    loadSession(db),
     formData(),
+    loadAuth(db),
     render({ assets: platform.assets }),
   ],
 })

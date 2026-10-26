@@ -1,4 +1,4 @@
-import type { Handle } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 import { Eyebrow } from '@bits/ui/eyebrow'
 import { Keycap } from '@bits/ui/keycap'
@@ -17,14 +17,58 @@ export function NotFoundPage(handle: Handle<NotFoundPageProps>) {
   return () => {
     let { path, viewer } = handle.props
     return (
-      <Layout title="Page not found" viewer={viewer} bleed>
+      <StatusPage
+        title="Page not found"
+        eyebrow="404 · nothing here"
+        heading="That page isn't here."
+        viewer={viewer}
+        hint={
+          <>
+            Nothing lives at <code mix={codeStyle}>{path}</code>. It may have moved, or the link has a typo.
+          </>
+        }
+      />
+    )
+  }
+}
+
+export interface ForbiddenPageProps {
+  viewer: Viewer | null
+  /** What the viewer was trying to reach, in a sentence. */
+  hint: string
+}
+
+/** 403 for signed-in viewers without the role or ownership a page needs. */
+export function ForbiddenPage(handle: Handle<ForbiddenPageProps>) {
+  return () => (
+    <StatusPage
+      title="No access"
+      eyebrow="403 · not yours"
+      heading="You can't open this one."
+      viewer={handle.props.viewer}
+      hint={handle.props.hint}
+    />
+  )
+}
+
+interface StatusPageProps {
+  title: string
+  eyebrow: string
+  heading: string
+  hint: RemixNode
+  viewer: Viewer | null
+}
+
+function StatusPage(handle: Handle<StatusPageProps>) {
+  return () => {
+    let { title, eyebrow, heading, hint, viewer } = handle.props
+    return (
+      <Layout title={title} viewer={viewer} bleed>
         <div mix={pageStyle}>
           <div mix={boxStyle}>
-            <Eyebrow tone="ion">404 · nothing here</Eyebrow>
-            <h1 mix={h1Style}>That page isn't here.</h1>
-            <p mix={hintStyle}>
-              Nothing lives at <code mix={codeStyle}>{path}</code>. It may have moved, or the link has a typo.
-            </p>
+            <Eyebrow tone="ion">{eyebrow}</Eyebrow>
+            <h1 mix={h1Style}>{heading}</h1>
+            <p mix={hintStyle}>{hint}</p>
             <div mix={actionsStyle}>
               <Keycap size="lg" href={routes.courses.index.href()}>
                 Browse courses →

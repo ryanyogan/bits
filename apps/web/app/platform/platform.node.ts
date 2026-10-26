@@ -50,6 +50,12 @@ const proxy = await getPlatformProxy<Env>({
   persist: isTest ? false : { path: path.join(appDir, '.wrangler/state/v3') },
 })
 
+// Tests start from an empty in-memory D1; give it the real schema.
+if (isTest) {
+  let { applyMigrations } = await import('@bits/db/test/migrations')
+  await applyMigrations(proxy.env.DB)
+}
+
 export const platform: Platform = {
   runtime: 'node',
   env: Object.assign(Object.create(proxy.env) as Env, { APP_ENV: nodeEnv }),

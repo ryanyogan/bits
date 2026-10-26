@@ -16,3 +16,8 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 008 | [Schema conventions and migrations](008-schema-conventions.md) |
 | 009 | [Route maps and controllers](009-routes-and-controllers.md) |
 | 010 | [Component library: static by default, small islands](010-component-library.md) |
+| 011 | [Auth and Settings UI choices](011-auth-and-settings-ui.md) |
+| 012 | [Landing field (three.js)](012-landing-field-three.md) |
+| 013 | [Profile and authoring UI](013-profile-and-authoring-ui.md) |
+| 014 | [Lesson pages: Read, Watch, Terminal](014-lesson-pages-ui.md) |
+| 015 | [Auth: D1 sessions, email link + code, OAuth, cop](015-auth.md) |

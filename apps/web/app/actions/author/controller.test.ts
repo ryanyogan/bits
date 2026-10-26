@@ -3,13 +3,14 @@ import { after, describe, it } from 'remix/test'
 
 import { disposePlatform } from '#platform'
 
-import { router } from '../../router.ts'
 import { routes } from '../../routes.ts'
+import { fetchAs, signIn } from '../../test/auth.ts'
 
-after(() => disposePlatform())
-
-function request(path: string, init?: RequestInit) {
-  return router.fetch(new Request(new URL(path, 'http://localhost'), init))
+// Admins manage every course; the sample courses have no owners yet.
+let admin: Promise<string> | undefined
+async function request(path: string, init?: RequestInit) {
+  admin ??= signIn('author-admin@example.com', { role: 'admin' }).then((session) => session.cookie)
+  return fetchAs(await admin, path, init)
 }
 
 function post(path: string, fields: Record<string, string> = {}) {
@@ -18,7 +19,11 @@ function post(path: string, fields: Record<string, string> = {}) {
   return request(path, { method: 'POST', body })
 }
 
-describe('/author', () => {
+// One flat suite: remix test runs after() around every describe, and D1 must
+// stay up until the last test.
+describe('/author and /author/:course', () => {
+  after(() => disposePlatform())
+
   it('renders upload, repo sync, the course list and the block reference', async () => {
     let response = await request(routes.author.index.href())
     assert.equal(response.status, 200)
@@ -41,9 +46,7 @@ describe('/author', () => {
     assert.equal(response.status, 303)
     assert.equal(response.headers.get('Location'), '/author?repo=saved')
   })
-})
 
-describe('/author/:course', () => {
   it('shows the validation report with Preview draft and Publish', async () => {
     let response = await request(routes.author.course.index.href({ course: 'tokens-and-temperature' }))
     assert.equal(response.status, 200)
@@ -78,5 +81,38 @@ describe('/author/:course', () => {
   it('unknown courses are a 404', async () => {
     let response = await request(routes.author.course.index.href({ course: 'nope' }))
     assert.equal(response.status, 404)
+  })
+
+  it('anonymous visitors go to /login; learners and non-owning authors get 403', async () => {
+    let paths = [
+      routes.author.index.href(),
+      routes.author.course.index.href({ course: 'tokens-and-temperature' }),
+      routes.author.course.preview.href({ course: 'tokens-and-temperature', lesson: 'temperature' }),
+    ]
+    for (let path of paths) {
+      let anonymous = await fetchAs(null, path)
+      assert.equal(anonymous.status, 303, path)
+      assert.equal(anonymous.headers.get('Location'), `/login?next=${encodeURIComponent(path)}`)
+    }
+
+    let learner = await signIn('learner@example.com')
+    for (let path of paths) {
+      let response = await fetchAs(learner.cookie, path)
+      assert.equal(response.status, 403, path)
+      assert.match(await response.text(), /You can(?:'|&#39;)t open this one\./)
+    }
+
+    // An author who doesn't own the course sees an empty /author and 403s on it.
+    let author = await signIn('other-author@example.com', { role: 'author' })
+    let home = await fetchAs(author.cookie, routes.author.index.href())
+    assert.equal(home.status, 200)
+    assert.doesNotMatch(await home.text(), /href="\/author\/tokens-and-temperature"/)
+    for (let path of paths.slice(1)) {
+      assert.equal((await fetchAs(author.cookie, path)).status, 403, path)
+    }
+    let publish = await fetchAs(author.cookie, routes.author.course.publish.href({ course: 'tokens-and-temperature' }), {
+      method: 'POST',
+    })
+    assert.equal(publish.status, 403)
   })
 })
