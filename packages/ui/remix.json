@@ -1,0 +1,11 @@
+{
+  "$schema": "../../node_modules/remix/schema/remix.json",
+  // Run from the repo root (see package.json "test"): the browser runner
+  // serves its harness from the root node_modules/.pnpm, which must sit
+  // inside the runner's root directory (the working directory).
+  "test": {
+    "files": ["src/**/*.test{,.browser}.{ts,tsx}"],
+    "browserFiles": ["src/**/*.test.browser.{ts,tsx}"],
+    "exclude": ["node_modules/**"]
+  }
+}
