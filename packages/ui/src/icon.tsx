@@ -1,4 +1,5 @@
 import type { Handle, RemixNode } from 'remix/component'
+import { css } from 'remix/component'
 
 /**
  * The icon set from components.md §2, copied verbatim and re-coloured through
@@ -236,9 +237,14 @@ export function Icon(handle: Handle<IconProps>) {
         aria-label={label}
         aria-hidden={label ? undefined : 'true'}
         focusable="false"
+        mix={iconStyle}
       >
         {def.draw(color ?? def.color)}
       </svg>
     )
   }
 }
+
+// Icons keep their drawn size inside tight flex rows (e.g. the XP pill in a
+// 360px app bar) instead of being squeezed to a sliver.
+const iconStyle = css({ flex: 'none' })
