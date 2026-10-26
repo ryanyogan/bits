@@ -30,6 +30,19 @@ describe('router smoke test', () => {
     assert.match(html, /type="importmap"/)
   })
 
+  it('GET an unknown path renders the app-styled 404', async () => {
+    let response = await request('/definitely/not/a/page')
+    assert.equal(response.status, 404)
+    let html = await response.text()
+    assert.match(html, /<title>Page not found · Bits<\/title>/)
+    assert.match(html, /<h1[^>]*>That page isn't here\.<\/h1>/)
+  })
+
+  it('the catch-all does not shadow real routes or POST endpoints', async () => {
+    assert.equal((await request(routes.health.href())).status, 200)
+    assert.equal((await request('/api/run', { method: 'POST' })).status, 501)
+  })
+
   let pages = [
     routes.courses.index.href(),
     routes.courses.course.index.href({ course: 'tokens-and-temperature' }),

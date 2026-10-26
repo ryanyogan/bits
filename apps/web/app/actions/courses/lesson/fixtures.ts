@@ -291,9 +291,9 @@ const theLoop: LessonContent = {
       pointsAt: 'agent.ts',
       paragraphs: [
         [
-          'Every reply comes with a reason the model stopped talking.\nIf it’s ',
+          'Every reply comes with a reason the model stopped talking. If it’s ',
           { code: '"tool_use"' },
-          ', it wants you to run a tool and hand back\nthe result. Anything else means it’s finished.',
+          ', it wants you to run a tool and hand back the result. Anything else means it’s finished.',
         ],
       ],
     },
@@ -324,7 +324,7 @@ const theLoop: LessonContent = {
       type: 'markdown',
       paragraphs: [
         [
-          'Two turns: one to ask for the weather, one to answer.\nNow break it on purpose. Delete ',
+          'Two turns: one to ask for the weather, one to answer. Now break it on purpose. Delete ',
           { mark: 'line 31' },
           ' and run it again.',
         ],

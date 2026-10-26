@@ -5,6 +5,7 @@ import { platform } from '#platform'
 import { routes } from '../routes.ts'
 import { getViewer } from '../data/fixtures.ts'
 import { HomePage } from './home-page.tsx'
+import { NotFoundPage } from '../ui/not-found-page.tsx'
 
 export default createController(routes, {
   actions: {
@@ -32,6 +33,11 @@ export default createController(routes, {
     },
     home(context) {
       return context.render(<HomePage viewer={getViewer(context.url)} />)
+    },
+    notFound(context) {
+      return context.render(<NotFoundPage path={context.url.pathname} viewer={getViewer(context.url)} />, {
+        status: 404,
+      })
     },
   },
 })

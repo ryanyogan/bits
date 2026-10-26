@@ -92,4 +92,8 @@ export const routes = route({
     github: post('/github'),
     video: post('/video'),
   }),
+
+  // Catch-all GET for unknown pages: the least specific pattern, so every
+  // route above wins. Renders the app-styled 404 (root controller).
+  notFound: get('/*path'),
 })
