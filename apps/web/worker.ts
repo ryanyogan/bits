@@ -7,6 +7,7 @@ import { createD1Database, deleteExpiredAuthRows, deleteOldAnonymousRuns } from 
 
 import { platform } from '#platform'
 
+import { errorFields, log } from './app/log.ts'
 import { router } from './app/router.ts'
 
 /** Signed-out runs are only needed for the hourly limits and the run checks. */
@@ -35,28 +36,23 @@ export default {
     try {
       return await router.fetch(request)
     } catch (error) {
-      console.error(
-        JSON.stringify({
-          level: 'error',
-          message: 'Unhandled request error',
-          url: request.url,
-          method: request.method,
-          error:
-            error instanceof Error
-              ? { name: error.name, message: error.message, stack: error.stack }
-              : String(error),
-        }),
-      )
+      log('error', 'Unhandled request error', { url: request.url, method: request.method, ...errorFields(error) })
       return new Response('Internal Server Error', { status: 500 })
     }
   },
 
   // Daily cron (wrangler.jsonc triggers): drop expired sessions and email
   // tokens, and signed-out prompt runs older than a week (decision 019).
-  async scheduled(): Promise<void> {
+  async scheduled(controller: { cron: string }): Promise<void> {
     let db = createD1Database(platform.env.DB)
     let now = Date.now()
-    await deleteExpiredAuthRows(db, now)
-    await deleteOldAnonymousRuns(db, now - ANONYMOUS_RUNS_KEPT_MS)
+    try {
+      await deleteExpiredAuthRows(db, now)
+      await deleteOldAnonymousRuns(db, now - ANONYMOUS_RUNS_KEPT_MS)
+      log('info', 'Cleanup cron finished', { cron: controller.cron, ms: Date.now() - now })
+    } catch (error) {
+      log('error', 'Cleanup cron failed', { cron: controller.cron, ...errorFields(error) })
+      throw error
+    }
   },
 }

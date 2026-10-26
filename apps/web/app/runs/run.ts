@@ -23,6 +23,7 @@ import { offeredTemperatures } from '../actions/courses/lesson/ui/exercise.ts'
 import { sha256Hex } from '../auth/crypto.ts'
 import { currentUser } from '../auth/identity.ts'
 import { getCatalog } from '../content/request.ts'
+import { log } from '../log.ts'
 import { getDatabase } from '../middleware/database.ts'
 import { ModelError, runModel, runsLive, type ModelEnv, type ModelFailure } from './model.ts'
 
@@ -178,7 +179,7 @@ async function runLive(db: D1DataTableDatabase, id: string, input: RunRequest, e
     await markRunFallback(db, id, output)
     if (!(error instanceof ModelError)) throw error
     if (reason !== 'unconfigured') {
-      console.warn(JSON.stringify({ level: 'warn', message: 'Model run fell back', reason }))
+      log('warn', 'Model run fell back', { reason })
     }
     return textResponse(output, 'fallback', reason)
   }

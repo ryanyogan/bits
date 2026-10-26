@@ -2,6 +2,7 @@ import { createController } from 'remix/router'
 
 import { platform } from '#platform'
 
+import { errorFields, log } from '../log.ts'
 import { routes } from '../routes.ts'
 import { getViewer } from '../auth/identity.ts'
 import { HomePage } from './home-page.tsx'
@@ -23,7 +24,7 @@ export default createController(routes, {
       try {
         await context.db.d1.prepare('select 1').first()
       } catch (error) {
-        console.error('health: D1 check failed', error)
+        log('error', 'Health check: D1 failed', errorFields(error))
         database = 'error'
       }
       return Response.json(

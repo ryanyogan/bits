@@ -10,10 +10,17 @@
   // production run the same runtime semantics. Bump with wrangler upgrades.
   "compatibility_date": "2026-10-19",
   "workers_dev": true,
-  "preview_urls": true,
+  // Off: a preview URL would be a second full host on the production D1, R2,
+  // email and secrets (decision 020). Turn it on only with separate
+  // preview resources.
+  "preview_urls": false,
+  // Run near D1 (ENAM, no read replicas) rather than near the visitor: a
+  // page makes several sequential D1 round trips (decision 020). Static
+  // assets never invoke the Worker, so they are unaffected.
+  "placement": { "mode": "smart" },
   // The public address. Cloudflare creates the DNS record and certificate
   // (yogan.dev is a zone on this account). The workers.dev host stays on
-  // for version previews and 301s to here (worker.ts, LEGACY_HOSTS).
+  // and 301s to here (worker.ts, LEGACY_HOSTS).
   "routes": [{ "pattern": "bits.yogan.dev", "custom_domain": true }],
 
   // Fingerprinted browser modules, CSS and fonts compiled ahead of time by

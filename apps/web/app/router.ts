@@ -27,6 +27,7 @@ import styleguideController from './actions/styleguide/controller.tsx'
 import webhooksController from './actions/webhooks/controller.tsx'
 import { loadAuth } from './auth/identity.ts'
 import { loadSession } from './auth/session.ts'
+import { errorFields, log } from './log.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { responseHeaders } from './middleware/headers.ts'
 import { routes } from './routes.ts'
@@ -48,7 +49,12 @@ export const router = createRouter({
     // the DropZone sends media as names only, so videos never come through here).
     formData({ maxFiles: 300, maxFileSize: 1024 * 1024, maxTotalSize: 8 * 1024 * 1024 }),
     loadAuth(db),
-    render({ assets: platform.assets }),
+    // Streaming render failures happen after the first byte, past worker.ts's
+    // catch, so they are reported here (guide 12).
+    render({
+      assets: platform.assets,
+      onError: (error) => log('error', 'Render failed', errorFields(error)),
+    }),
   ],
 })
 
