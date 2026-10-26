@@ -251,6 +251,26 @@ const stableImportMetaUrl: esbuild.Plugin = {
 }
 
 /**
+ * Packages only islands use. esbuild would otherwise inline them into the
+ * Worker through the islands' dynamic imports (three is ~750 KiB that the
+ * server never runs, paid on every isolate start). On the server they
+ * resolve to a module that throws if it is ever evaluated.
+ */
+const BROWSER_ONLY = ['three']
+
+const browserOnly: esbuild.Plugin = {
+  name: 'browser-only',
+  setup(build) {
+    let filter = new RegExp(`^(${BROWSER_ONLY.join('|')})(/|$)`)
+    build.onResolve({ filter }, (args) => ({ path: args.path, namespace: 'browser-only' }))
+    build.onLoad({ filter: /.*/, namespace: 'browser-only' }, (args) => ({
+      contents: `throw new Error(${JSON.stringify(`${args.path} is browser-only and isn't in the Worker bundle`)})`,
+      loader: 'js',
+    }))
+  },
+}
+
+/**
  * The Anthropic SDK keeps its Node built-ins (file uploads, local tools) in
  * `node.mjs` modules and swaps them for throwing `node.browser.mjs` shims via
  * its package.json `browser` field. esbuild honours that map only for
@@ -295,7 +315,7 @@ async function buildWorker(manifest: AssetManifest) {
       __BITS_ASSET_MANIFEST__: JSON.stringify(manifest),
       'process.env.NODE_ENV': '"production"',
     },
-    plugins: [stableImportMetaUrl, anthropicNodeShims],
+    plugins: [stableImportMetaUrl, anthropicNodeShims, browserOnly],
     logLevel: 'warning',
   })
 
@@ -305,6 +325,12 @@ async function buildWorker(manifest: AssetManifest) {
       if (imported.external && imported.path.startsWith('node:')) nodeImports.add(imported.path)
     }
   }
+  // For bundle analysis (esbuild's metafile format).
+  await fs.writeFile(path.join(buildDir, 'worker-meta.json'), JSON.stringify(result.metafile))
+  let leaked = Object.keys(result.metafile.inputs).filter((input) =>
+    BROWSER_ONLY.some((name) => input.includes(`/node_modules/${name}/`)),
+  )
+  if (leaked.length) throw new Error(`Browser-only packages leaked into the Worker: ${leaked.slice(0, 3).join(', ')}`)
   let size = (await fs.stat(path.join(workerDir, 'index.js'))).size
   console.log(`worker: ${(size / 1024).toFixed(0)} KiB`)
   if (nodeImports.size) console.log(`worker node: imports: ${[...nodeImports].join(', ')}`)
