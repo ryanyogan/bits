@@ -14,10 +14,13 @@
   // email and secrets (decision 020). Turn it on only with separate
   // preview resources.
   "preview_urls": false,
-  // Run near D1 (ENAM, no read replicas) rather than near the visitor: a
-  // page makes several sequential D1 round trips (decision 020). Static
-  // assets never invoke the Worker, so they are unaffected.
-  "placement": { "mode": "smart" },
+  // Run near D1 rather than near the visitor: a page makes several
+  // sequential D1 round trips (decision 020). The primary is ENAM, served
+  // from ORD (`wrangler d1 execute --json` meta.served_by_colo), so hint
+  // Chicago (Azure North Central US). Not "smart": it needs steady traffic
+  // from many locations before it moves anything, so it never left the edge.
+  // Static assets never invoke the Worker, so they are unaffected.
+  "placement": { "region": "azure:northcentralus" },
   // The public address. Cloudflare creates the DNS record and certificate
   // (yogan.dev is a zone on this account). The workers.dev host stays on
   // and 301s to here (worker.ts, LEGACY_HOSTS).
