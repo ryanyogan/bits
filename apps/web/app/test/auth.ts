@@ -1,5 +1,5 @@
 // Test support: sign in through the real email + code flow and get back the
-// session cookie. Tests run with APP_ENV=test, so Turnstile is off and mail
+// session cookie. Tests run with APP_ENV=test, so mail
 // lands in `outbox` instead of being sent.
 import { createD1Database, users, type User, type UserRole } from '@bits/db'
 

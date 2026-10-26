@@ -40,7 +40,7 @@ apps/web/                 @bits/web: the Remix app and Worker
   app/actions/**/public/  browser modules (clientEntry components, entry.ts)
   app/ui/                 app-level shared UI: Layout, PlaceholderPage
   app/middleware/         database.ts puts the data-table db on context.db
-  app/auth/               sessions, identity, email sign-in, OAuth, Turnstile, mailer (server-only)
+  app/auth/               sessions, identity, email sign-in, OAuth, mailer (server-only)
   app/progress/           lesson checks, progress store + anonymous merge, badges, levels, days
   app/test/auth.ts        test helpers: signIn, fetchAs, requestCode
   app/platform/           runtime seam: `#platform` → platform.node.ts | platform.worker.ts
@@ -194,7 +194,7 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   `describe`, so a file that touches D1 keeps **one flat describe** with
   `after(() => disposePlatform())` inside it.
 - Secrets: `SESSION_SECRET` (required in production),
-  `TURNSTILE_SECRET_KEY`, `GITHUB_CLIENT_ID/SECRET` and
+  `GITHUB_CLIENT_ID/SECRET` and
   `GOOGLE_CLIENT_ID/SECRET`. See `apps/web/.dev.vars.example`.
 
 ## Progress (decision 016)

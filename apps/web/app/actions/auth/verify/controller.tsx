@@ -3,7 +3,6 @@ import { redirect } from 'remix/response/redirect'
 import { createController } from 'remix/router'
 
 import { peekMagicLink, redeemCode, redeemMagicLink } from '../../../auth/email-sign-in.ts'
-import { turnstileSiteKey } from '../../../auth/turnstile.ts'
 import { parseSignup, startUserSession, userForVerifiedEmail } from '../../../auth/users.ts'
 import { routes } from '../../../routes.ts'
 import { CheckEmailPage } from '../../login/check/check-email-page.tsx'
@@ -41,7 +40,6 @@ export default createController(routes.auth.verify, {
               next={next}
               code={readText(context.formData, 'code')}
               issues={parsed.success ? [{ message, path: ['code'] }] : parsed.issues}
-              turnstileSiteKey={turnstileSiteKey()}
             />,
             { status: 422 },
           )

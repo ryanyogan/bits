@@ -1,6 +1,6 @@
 # 015. Auth: D1 sessions, email link + code, OAuth, cross-origin protection
 
-Status: Accepted (2026-10-26). Supersedes the provisional parts of 011.
+Status: Accepted (2026-10-26). Supersedes the provisional parts of 011. Turnstile removed by 017.
 
 ## Context
 

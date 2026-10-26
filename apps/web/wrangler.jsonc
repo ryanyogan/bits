@@ -41,14 +41,12 @@
     }
   ],
 
-  // Non-secret config. Secrets (SESSION_SECRET, TURNSTILE_SECRET_KEY,
+  // Non-secret config. Secrets (SESSION_SECRET,
   // GITHUB_CLIENT_ID/SECRET, GOOGLE_CLIENT_ID/SECRET) are set with
   // `wrangler secret put`, and locally in .dev.vars (see .dev.vars.example).
   "vars": {
     "APP_ENV": "production",
-    "EMAIL_FROM": "signin@bits.yogan.dev",
-    "TURNSTILE_SITE_KEY": "",
-    "TURNSTILE_HOSTNAMES": "bits.ryanyogan.workers.dev"
+    "EMAIL_FROM": "signin@bits.yogan.dev"
   },
 
   // Daily housekeeping: delete expired sessions and email tokens (worker.ts).

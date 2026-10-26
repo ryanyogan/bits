@@ -12,7 +12,6 @@ declare global {
   // Optional because development and tests run without them (app/auth/config.ts).
   interface Env {
     SESSION_SECRET?: string
-    TURNSTILE_SECRET_KEY?: string
     GITHUB_CLIENT_ID?: string
     GITHUB_CLIENT_SECRET?: string
     GOOGLE_CLIENT_ID?: string

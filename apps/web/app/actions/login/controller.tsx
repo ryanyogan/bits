@@ -4,7 +4,6 @@ import { createController } from 'remix/router'
 
 import { requestEmailSignIn, type EmailRequestResult } from '../../auth/email-sign-in.ts'
 import { currentUser } from '../../auth/identity.ts'
-import { TURNSTILE_FIELD, turnstileSiteKey, verifyTurnstile } from '../../auth/turnstile.ts'
 import { routes } from '../../routes.ts'
 import { LoginPage, type LoginNotice } from './login-page.tsx'
 import { issueField, loginForm, readGoals, readText, safeNextPath, type FormIssue, type LoginMode } from './schema.ts'
@@ -21,14 +20,13 @@ export default createController(routes.login, {
         <LoginPage
           mode={mode}
           next={next}
-          turnstileSiteKey={turnstileSiteKey()}
           notice={noticeFor(params.get('notice') ?? params.get('error'))}
         />,
       )
     },
 
-    // Request a magic link + code: Turnstile, then the per-email and per-IP
-    // limits, then store the hashed token and send the email (decision 015).
+    // Request a magic link + code: the per-email and per-IP limits, then
+    // store the hashed token and send the email (decisions 015, 017).
     async action(context) {
       let parsed = s.parseSafe(loginForm, context.formData)
       let mode: LoginMode = readText(context.formData, 'mode') === 'signup' ? 'signup' : 'signin'
@@ -42,7 +40,6 @@ export default createController(routes.login, {
               displayName: readText(context.formData, 'displayName'),
               goals: readGoals(context.formData),
             }}
-            turnstileSiteKey={turnstileSiteKey()}
             {...extra}
           />,
           { status },
@@ -51,12 +48,6 @@ export default createController(routes.login, {
       if (!parsed.success) return rerender(422, { issues: parsed.issues.map(friendlyIssue) })
 
       let ip = context.headers.get('CF-Connecting-IP')
-      let human = await verifyTurnstile(context.formData.get(TURNSTILE_FIELD), { action: 'login', remoteIp: ip })
-      if (!human) {
-        return rerender(422, {
-          notice: { tone: 'danger', text: 'We couldn’t confirm you’re a person. Wait for the check to finish, then try again.' },
-        })
-      }
 
       let { email, mode: parsedMode, next, displayName, goals, timezone } = parsed.value
       let result = await requestEmailSignIn(context.db, {

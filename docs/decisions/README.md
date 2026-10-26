@@ -22,3 +22,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 014 | [Lesson pages: Read, Watch, Terminal](014-lesson-pages-ui.md) |
 | 015 | [Auth: D1 sessions, email link + code, OAuth, cop](015-auth.md) |
 | 016 | [Progress: D1 ledger, "complete lesson" form, session-held anonymous progress](016-progress.md) |
+| 017 | [No Turnstile on email sign-in (for now)](017-no-turnstile.md) |

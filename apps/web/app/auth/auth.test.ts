@@ -155,7 +155,10 @@ describe('auth', () => {
     let tampered = await fetchAs('__Host-session=not-a-signed-value', routes.me.index.href())
     assert.equal(tampered.status, 303)
     let { cookie } = await signIn('rotate@example.com')
-    let forged = cookie.replace(/.$/, (c) => (c === 'A' ? 'B' : 'A'))
+    // Flip a character inside the signature (not the last one: its low bits
+    // are padding, so some swaps decode to the same bytes).
+    let i = cookie.length - 6
+    let forged = cookie.slice(0, i) + (cookie[i] === 'A' ? 'B' : 'A') + cookie.slice(i + 1)
     assert.equal((await fetchAs(forged, routes.me.index.href())).status, 303)
   })
 

@@ -1,6 +1,5 @@
 import { createController } from 'remix/router'
 
-import { turnstileSiteKey } from '../../../auth/turnstile.ts'
 import { routes } from '../../../routes.ts'
 import { safeNextPath } from '../schema.ts'
 import { CheckEmailPage } from './check-email-page.tsx'
@@ -14,7 +13,6 @@ export default createController(routes.login.check, {
           email={params.get('email') ?? ''}
           mode={params.get('mode') === 'signup' ? 'signup' : 'signin'}
           next={safeNextPath(params.get('next'))}
-          turnstileSiteKey={turnstileSiteKey()}
         />,
       )
     },

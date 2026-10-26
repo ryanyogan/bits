@@ -9,7 +9,6 @@ import { routes } from '../../routes.ts'
 import { PasskeyButton } from './public/passkey-button.tsx'
 import { PendingSubmit } from './public/pending-submit.tsx'
 import { TimezoneField } from './public/timezone-field.tsx'
-import { TurnstileWidget } from './public/turnstile-widget.tsx'
 import { issueFor, signupGoals, type FormIssue, type LoginMode, type SignupGoal } from './schema.ts'
 import { AuthShell, formHeadingStyle, headingGroupStyle, riseStyle, subStyle } from './ui/auth-shell.tsx'
 
@@ -25,8 +24,6 @@ export interface LoginPageProps {
   issues?: readonly FormIssue[]
   /** A message above the providers: OAuth errors, rate limits, sign-out confirmations. */
   notice?: LoginNotice
-  /** Public Turnstile key; null when the bot check is off (tests). */
-  turnstileSiteKey?: string | null
 }
 
 const copy = {
@@ -47,7 +44,7 @@ const copy = {
 /** `/login` and `/login?mode=signup` (Auth spec, states A and B). */
 export function LoginPage(handle: Handle<LoginPageProps>) {
   return () => {
-    let { mode, next, values = {}, issues, notice, turnstileSiteKey } = handle.props
+    let { mode, next, values = {}, issues, notice } = handle.props
     let signup = mode === 'signup'
     let text = copy[mode]
     let nextParam = next ? { next } : {}
@@ -147,14 +144,6 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
               </fieldset>
             ) : null}
             {signup ? <TimezoneField /> : null}
-            {turnstileSiteKey ? (
-              <>
-                <TurnstileWidget siteKey={turnstileSiteKey} action="login" />
-                <noscript>
-                  <p mix={noteStyle}>Email sign-in needs JavaScript for a quick bot check.</p>
-                </noscript>
-              </>
-            ) : null}
             <div mix={submitWrapStyle}>
               <PendingSubmit label={text.cta} pendingLabel="Sending…" block />
             </div>

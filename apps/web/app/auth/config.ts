@@ -22,41 +22,6 @@ export function sessionSecrets(): string[] {
   return ['bits-development-session-secret']
 }
 
-// Cloudflare's published Turnstile test keys: always pass, no challenge.
-const TEST_SITE_KEY = '1x00000000000000000000AA'
-const TEST_SECRET_KEY = '1x0000000000000000000000000000000AA'
-
-export interface TurnstileConfig {
-  siteKey: string
-  secretKey: string
-  /** Hostnames siteverify must report; empty skips the check (test keys report none). */
-  hostnames: string[]
-}
-
-/**
- * Turnstile for the email form. Production uses the real widget and fails
- * closed if it is not configured; development uses the test keys; the test
- * suite (APP_ENV=test) skips the check entirely.
- */
-export function turnstileConfig(): TurnstileConfig | null {
-  if (appEnv === 'test') return null
-  if (!isProduction) {
-    return {
-      siteKey: env.TURNSTILE_SITE_KEY && env.TURNSTILE_SECRET_KEY ? env.TURNSTILE_SITE_KEY : TEST_SITE_KEY,
-      secretKey: env.TURNSTILE_SITE_KEY && env.TURNSTILE_SECRET_KEY ? env.TURNSTILE_SECRET_KEY : TEST_SECRET_KEY,
-      hostnames: [],
-    }
-  }
-  return {
-    siteKey: env.TURNSTILE_SITE_KEY ?? '',
-    secretKey: env.TURNSTILE_SECRET_KEY ?? '',
-    hostnames: (env.TURNSTILE_HOSTNAMES ?? '')
-      .split(',')
-      .map((hostname) => hostname.trim())
-      .filter(Boolean),
-  }
-}
-
 /** The From address for sign-in mail; must be on a domain onboarded to Email Sending. */
 export function emailFrom(): { email: string; name: string } {
   return { email: env.EMAIL_FROM ?? 'signin@bits.yogan.dev', name: 'Bits' }
