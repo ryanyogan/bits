@@ -8,7 +8,8 @@ import { routes } from '../../../routes.ts'
 import { Layout } from '../../../ui/layout.tsx'
 import { counts, firstLessonSlug, getAuthoredCourse, plural, type AuthorCourse } from '../data.ts'
 import { CourseBuildPage } from './course-build-page.tsx'
-import { PlaceholderPage } from '../../../ui/placeholder-page.tsx'
+import { LessonPage } from '../../courses/lesson/lesson-page.tsx'
+import { buildLessonView } from '../../courses/lesson/lesson-view.ts'
 
 export default createController(routes.author.course, {
   actions: {
@@ -77,15 +78,16 @@ export default createController(routes.author.course, {
     },
     // The lesson page (courses/lesson) rendering the draft build under a Draft banner.
     preview(context) {
-      return context.render(
-        <PlaceholderPage
-          title={`Draft: ${context.params.course} / ${context.params.lesson}`}
-          pattern="/author/:course/preview/:lesson"
-          artboard="Lesson"
-          summary="Renders a draft version of the lesson under a Draft banner. Requires the author role."
-          currentPath={context.url.pathname}
-        />,
-      )
+      if (!getViewer(context.url)) {
+        let next = routes.author.course.preview.href({ course: context.params.course, lesson: context.params.lesson })
+        return redirect(routes.login.index.href(undefined, { searchParams: { next } }), 303)
+      }
+      let build = getAuthoredCourse(context.params.course)?.build
+      let view = buildLessonView(context.params.course, context.params.lesson, context.url, {
+        draft: { version: build ? `v${build}` : 'draft' },
+      })
+      if (!view) return notFound(context)
+      return context.render(<LessonPage view={view} />)
     },
   },
 })

@@ -34,6 +34,8 @@ export interface PromptComposerProps {
   id: string
   task: string
   placeholder?: string
+  /** Starting draft (rendered with JS off; a saved draft replaces it). */
+  defaultDraft?: string
   checks: PromptCheck[]
   temperatures?: TemperatureOption[]
   /** Canned outputs per temperature value, cycled per run (example output, no model). */
@@ -83,7 +85,7 @@ export const PromptComposer = clientEntry(
   import.meta.url,
   function PromptComposer(handle: Handle<PromptComposerProps>) {
     let hydrated = false
-    let draft = ''
+    let draft = handle.props.defaultDraft ?? ''
     let temperature = (handle.props.temperatures ?? DEFAULT_TEMPS)[0]!
     let runs: Run[] = []
     let ranAt = new Set<number>()
@@ -96,9 +98,9 @@ export const PromptComposer = clientEntry(
 
     handle.queueTask(() => {
       try {
-        draft = window.localStorage.getItem(storageKey()) ?? ''
+        draft = window.localStorage.getItem(storageKey()) ?? handle.props.defaultDraft ?? ''
       } catch {
-        draft = ''
+        draft = handle.props.defaultDraft ?? ''
       }
       hydrated = true
       handle.update()
@@ -287,6 +289,8 @@ const textareaStyle = css({
   fontSize: 'var(--fs-16)',
   lineHeight: 1.6,
   outline: 'none',
+  // The composer border shows focus (focus-within); no ring on the textarea itself.
+  '&:focus-visible': { outline: 'none', boxShadow: 'none' },
   '&::placeholder': { color: 'var(--dim)' },
 })
 const footerStyle = css({

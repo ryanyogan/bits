@@ -33,7 +33,7 @@ describe('router smoke test', () => {
   let pages = [
     routes.courses.index.href(),
     routes.courses.course.index.href({ course: 'tokens-and-temperature' }),
-    routes.courses.lesson.index.href({ course: 'prompting-101', lesson: 'what-is-a-token' }),
+    routes.courses.lesson.index.href({ course: 'tokens-and-temperature', lesson: 'temperature' }),
     routes.login.index.href(),
     routes.login.check.index.href(),
     routes.me.index.href(),
@@ -41,7 +41,7 @@ describe('router smoke test', () => {
     routes.settings.index.href(),
     routes.author.index.href(),
     routes.author.course.index.href({ course: 'tokens-and-temperature' }),
-    routes.author.course.preview.href({ course: 'prompting-101', lesson: 'what-is-a-token' }),
+    routes.author.course.preview.href({ course: 'tokens-and-temperature', lesson: 'temperature' }),
   ]
 
   for (let path of pages) {

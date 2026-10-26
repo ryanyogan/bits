@@ -2,12 +2,15 @@ import type { Handle, RemixNode } from 'remix/component'
 import { clientEntry, css, on } from 'remix/component'
 
 import { Keycap } from './keycap.tsx'
+import { TEMPERATURE_EVENT } from './odds-bars.tsx'
+import { checkPasses, type PromptCheck, type TemperatureOption } from './prompt-composer.tsx'
+import { announceReward, type RewardNext } from './reward-toast.tsx'
+import { ToolButton } from './tool-button.tsx'
 
 export type TerminalTone = 'text' | 'muted' | 'quiet' | 'ion' | 'volt' | 'synapse'
 
 /** A coloured run of terminal text. */
 export type TerminalPart = [tone: TerminalTone, text: string]
-
 /**
  * Entries cross the island boundary as data: `body`/`pointer` JSX may use
  * plain elements (`<code>`, `<mark>`, `<strong>`), never `mix` or components.
@@ -16,6 +19,16 @@ export type TerminalEntry =
   | { kind: 'learner'; text: string }
   | { kind: 'tutor'; body: RemixNode; pointer?: RemixNode }
   | { kind: 'command'; command: string; output: TerminalPart[][]; summary?: string }
+  /** A `:::quiz` in Terminal mode: tutor text plus lettered option buttons (components §6.4). */
+  | { kind: 'quiz'; body?: RemixNode; options: TerminalQuizOption[] }
+
+export interface TerminalQuizOption {
+  /** Letter shown in brackets, e.g. "a". */
+  key: string
+  label: string
+  /** Tutor reply appended when the option is picked. */
+  reply: string
+}
 
 export interface TerminalReplies {
   /** Reply when the learner's line contains "hint". */
@@ -24,33 +37,118 @@ export interface TerminalReplies {
   fallback: string
 }
 
+/**
+ * A `:::prompt` exercise in Terminal mode (components §10.15): the input
+ * becomes the prompt input with the checks listed above it as `○` / `✓`
+ * lines. It shares the PromptComposer's draft (same `id`, same storage key),
+ * so switching modes keeps the learner's prompt.
+ */
+export interface TerminalPrompt {
+  id: string
+  /** Accessible label for the input (the task). */
+  label: string
+  checks: PromptCheck[]
+  temperatures?: TemperatureOption[]
+  /** Canned outputs per temperature value (T × 100), cycled per run. */
+  examples?: Record<string, string[]>
+  defaultDraft?: string
+  placeholder?: string
+  reward?: { xp: number; message: string; next?: RewardNext }
+}
+
 export interface TerminalLogProps {
   /** e.g. "~/first-agent-loop". */
   path: string
   /** e.g. "lesson 4/10 · 18% →". */
   progress?: string
   entries: TerminalEntry[]
-  replies: TerminalReplies
+  /** Canned tutor replies for the free-text input (ignored in prompt mode). */
+  replies?: TerminalReplies
+  /** Turns the input into a prompt exercise. */
+  prompt?: TerminalPrompt
   placeholder?: string
   /** Appended entries kept on screen. */
   keepAppended?: number
 }
 
+type AppendedEntry =
+  | (TerminalEntry & { id: number })
+  | { kind: 'model'; id: number; temperature: string; text: string }
+  | { kind: 'reward'; id: number; xp: number; message: string; next?: RewardNext }
+
+const DEFAULT_REPLIES: TerminalReplies = {
+  hint: 'Re-read the last tutor message: the answer is in there.',
+  fallback: 'Good thinking. Keep going.',
+}
+
+const DEFAULT_TEMPS: TemperatureOption[] = [
+  { value: 0, label: '0' },
+  { value: 70, label: '0.7' },
+  { value: 100, label: '1.0' },
+]
+
 /**
  * Terminal-mode lesson (components §10.15): a `role="log"` of learner lines,
- * tutor blocks and command output, and a prompt input. Server-rendered
- * entries read in order with JS off; as a client entry the input appends the
- * learner's line and a canned tutor reply. Client entry.
+ * tutor blocks, command output and quizzes, and a prompt input.
+ * Server-rendered entries read in order with JS off; as a client entry the
+ * input appends the learner's line and a canned tutor reply, quiz options
+ * append the pick and its reply, and with `prompt` the input runs the
+ * exercise (live checks, example output, reward). Client entry.
  */
 export const TerminalLog = clientEntry(
   import.meta.url,
   function TerminalLog(handle: Handle<TerminalLogProps>) {
-    let appended: (TerminalEntry & { id: number })[] = []
+    let appended: AppendedEntry[] = []
     let count = 0
-    let value = ''
+    let value = handle.props.prompt?.defaultDraft ?? ''
+    let hydrated = false
+    let temperature = (handle.props.prompt?.temperatures ?? DEFAULT_TEMPS)[0]!
+    let ranAt = new Set<number>()
+    let runs = 0
+    let rewarded = false
+
+    let storageKey = () => `bits:draft:${handle.props.prompt?.id ?? ''}`
+
+    handle.queueTask(() => {
+      let prompt = handle.props.prompt
+      if (prompt) {
+        try {
+          value = window.localStorage.getItem(storageKey()) ?? prompt.defaultDraft ?? ''
+        } catch {
+          // Storage unavailable: keep the default draft.
+        }
+      }
+      hydrated = true
+      handle.update()
+    })
+
+    function append(...entries: AppendedEntry[]) {
+      appended = [...appended, ...entries].slice(-(handle.props.keepAppended ?? 6))
+      handle.update()
+    }
+
+    function runPrompt(prompt: TerminalPrompt, text: string) {
+      let examples = prompt.examples?.[String(temperature.value)] ?? []
+      runs++
+      let output = examples.length ? examples[(runs - 1) % examples.length]! : 'A bright idea, brewed under moonlight.'
+      ranAt.add(temperature.value)
+      let entries: AppendedEntry[] = [
+        { kind: 'learner', text, id: ++count },
+        { kind: 'model', temperature: temperature.label, text: output, id: ++count },
+      ]
+      window.dispatchEvent(new CustomEvent('bits:run', { detail: { prompt: text, temperature: temperature.value } }))
+      if (prompt.reward && !rewarded && prompt.checks.every((check) => checkPasses(check, value, ranAt))) {
+        rewarded = true
+        entries.push({ kind: 'reward', id: ++count, ...prompt.reward })
+        announceReward(prompt.reward)
+      }
+      append(...entries)
+    }
 
     return () => {
-      let { path, progress, entries, replies, placeholder = 'answer, ask, or type “hint”', keepAppended = 6 } = handle.props
+      let { path, progress, entries, replies = DEFAULT_REPLIES, prompt, keepAppended = 6 } = handle.props
+      let placeholder = handle.props.placeholder ?? prompt?.placeholder ?? 'answer, ask, or type “hint”'
+      let inputId = prompt ? `${prompt.id}-terminal` : 'terminal-input'
       return (
         <section aria-label="Lesson" mix={termStyle}>
           <div mix={titleRow}>
@@ -60,12 +158,57 @@ export const TerminalLog = clientEntry(
           </div>
           <div role="log" aria-live="polite" mix={logStyle}>
             {entries.map((entry, index) => (
-              <TerminalEntryView key={`s${index}`} entry={entry} />
+              <TerminalEntryView
+                key={`s${index}`}
+                entry={entry}
+                onPick={(option) =>
+                  append(
+                    { kind: 'learner', text: `[${option.key}] ${option.label}`, id: ++count },
+                    { kind: 'tutor', body: option.reply, id: ++count },
+                  )
+                }
+              />
             ))}
             {appended.map((entry) => (
               <TerminalEntryView key={`a${entry.id}`} entry={entry} rise />
             ))}
           </div>
+          {prompt ? (
+            <div mix={promptTools}>
+              <ul id={`${inputId}-checks`} aria-label="Checks" mix={checkLines}>
+                {prompt.checks.map((check) => {
+                  let passed = hydrated && checkPasses(check, value, ranAt)
+                  return (
+                    <li key={check.label} data-passed={passed ? 'true' : 'false'} mix={checkLine}>
+                      <span aria-hidden="true">{passed ? '✓ ' : '○ '}</span>
+                      {check.label}
+                      <span class="sr-only">{passed ? ', passed' : ', not yet'}</span>
+                    </li>
+                  )
+                })}
+              </ul>
+              <fieldset mix={tempsRow}>
+                <legend mix={tempsLegend}>run at</legend>
+                {(prompt.temperatures ?? DEFAULT_TEMPS).map((option) => (
+                  <label key={option.value} mix={tempChip}>
+                    <input
+                      type="radio"
+                      name={`${inputId}-temperature`}
+                      value={String(option.value)}
+                      checked={option.value === temperature.value}
+                      class="sr-only"
+                      mix={on('change', () => {
+                        temperature = option
+                        window.dispatchEvent(new CustomEvent(TEMPERATURE_EVENT, { detail: option.value }))
+                        handle.update()
+                      })}
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </fieldset>
+            </div>
+          ) : null}
           <form
             mix={[
               inputRow,
@@ -73,32 +216,40 @@ export const TerminalLog = clientEntry(
                 event.preventDefault()
                 let text = value.trim()
                 if (!text) return
+                if (prompt) {
+                  runPrompt(prompt, text)
+                  return
+                }
                 let reply = /hint/i.test(text) ? replies.hint : replies.fallback
-                appended = [
-                  ...appended,
-                  { kind: 'learner' as const, text, id: ++count },
-                  { kind: 'tutor' as const, body: reply, id: ++count },
-                ].slice(-keepAppended)
                 value = ''
-                handle.update()
+                append({ kind: 'learner', text, id: ++count }, { kind: 'tutor', body: reply, id: ++count })
               }),
             ]}
           >
             <span aria-hidden="true" mix={tones.volt}>
               ›
             </span>
-            <label class="sr-only" for="terminal-input">
-              Answer or ask the tutor
+            <label class="sr-only" for={inputId}>
+              {prompt ? prompt.label : 'Answer or ask the tutor'}
             </label>
             <input
-              id="terminal-input"
+              id={inputId}
               autocomplete="off"
               placeholder={placeholder}
               value={value}
+              aria-describedby={prompt ? `${inputId}-checks` : undefined}
+              aria-keyshortcuts={prompt ? 'Enter' : undefined}
               mix={[
                 inputStyle,
                 on('input', (event) => {
                   value = event.currentTarget.value
+                  if (!prompt) return
+                  try {
+                    window.localStorage.setItem(storageKey(), value)
+                  } catch {
+                    // Storage unavailable (private mode): the draft just isn't kept.
+                  }
+                  handle.update()
                 }),
               ]}
             />
@@ -106,15 +257,18 @@ export const TerminalLog = clientEntry(
               ↵
             </span>
           </form>
+          {prompt && !hydrated ? <p mix={noJsStyle}>Turn on JavaScript to run prompts.</p> : null}
         </section>
       )
     }
   },
 )
 
-function TerminalEntryView(handle: Handle<{ entry: TerminalEntry; rise?: boolean }>) {
+function TerminalEntryView(
+  handle: Handle<{ entry: AppendedEntry | TerminalEntry; rise?: boolean; onPick?: (option: TerminalQuizOption) => void }>,
+) {
   return () => {
-    let { entry, rise } = handle.props
+    let { entry, rise, onPick } = handle.props
     let riseMix = rise ? riseStyle : undefined
     if (entry.kind === 'learner') {
       return (
@@ -133,6 +287,47 @@ function TerminalEntryView(handle: Handle<{ entry: TerminalEntry; rise?: boolean
           <span mix={tones.volt}>◆ tutor</span>
           <div mix={tutorBody}>{entry.body}</div>
           {entry.pointer ? <div mix={pointerStyle}>{entry.pointer}</div> : null}
+        </div>
+      )
+    }
+    if (entry.kind === 'quiz') {
+      return (
+        <div mix={[tutorStyle, riseMix]}>
+          <span mix={tones.volt}>◆ tutor</span>
+          {entry.body ? <div mix={tutorBody}>{entry.body}</div> : null}
+          <div role="group" aria-label="Answers" mix={quizRow}>
+            {entry.options.map((option) => (
+              <ToolButton key={option.key} variant="quiz" mix={on('click', () => onPick?.(option))}>
+                {`[${option.key}] ${option.label}`}
+              </ToolButton>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    if (entry.kind === 'model') {
+      return (
+        <div mix={[tutorStyle, riseMix]}>
+          <span mix={tones.ion}>
+            <span aria-hidden="true">→ </span>
+            {`example output · T=${entry.temperature}`}
+          </span>
+          <div mix={[tutorBody, tones.text]}>{entry.text}</div>
+        </div>
+      )
+    }
+    if (entry.kind === 'reward') {
+      return (
+        <div mix={[tutorStyle, riseMix]}>
+          <span mix={tones.volt}>{`✓ all checks passed · +${entry.xp} neurons`}</span>
+          <div mix={tutorBody}>{entry.message}</div>
+          {entry.next ? (
+            <div mix={pointerStyle}>
+              <a href={entry.next.href} mix={nextLink}>
+                {entry.next.label}
+              </a>
+            </div>
+          ) : null}
         </div>
       )
     }
@@ -331,6 +526,43 @@ const inputStyle = css({
   '&::placeholder': { color: 'var(--dim)' },
 })
 const enterHint = css({ fontSize: 'var(--fs-12)', color: 'var(--dim)' })
+const quizRow = css({ paddingLeft: 'var(--space-4_5)', display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' })
+const nextLink = css({ color: 'var(--volt)' })
+const promptTools = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'var(--space-2)',
+  padding: 'var(--space-3) var(--space-5) 0',
+  borderTop: '1px solid var(--line-bar)',
+  fontSize: 'var(--fs-13)',
+  '@media (max-width: 480px)': { padding: 'var(--space-3) var(--space-3_5) 0' },
+})
+const checkLines = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', columnGap: 'var(--space-5)', rowGap: 'var(--space-1)' })
+const checkLine = css({
+  color: 'var(--muted)',
+  transition: 'color var(--duration-focus)',
+  '&[data-passed="true"]': { color: 'var(--volt-soft)' },
+})
+const tempsRow = css({ margin: 0, padding: 0, border: 0, minWidth: 0, display: 'flex', alignItems: 'center', gap: 'var(--space-1_5)', flexWrap: 'wrap' })
+const tempsLegend = css({ float: 'left', padding: 0, marginRight: 'var(--space-2)', fontSize: 'var(--fs-12)', color: 'var(--dim)' })
+const tempChip = css({
+  position: 'relative',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: '36px',
+  minWidth: '48px',
+  padding: '0 var(--space-2_5)',
+  borderRadius: 'var(--radius-9)',
+  border: '1px solid var(--line-control)',
+  color: 'var(--text-quiet)',
+  cursor: 'pointer',
+  '&::before': { content: '""', position: 'absolute', inset: '-4px 0' },
+  '&:hover': { borderColor: 'var(--line-node-next)' },
+  '&:has(:checked)': { background: 'var(--ion)', borderColor: 'var(--ion)', color: 'var(--ink)' },
+  '&:has(:focus-visible)': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+})
+const noJsStyle = css({ margin: '0 var(--space-4) var(--space-3)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
 
 const panelStyle = css({
   borderRadius: 'var(--radius-xl)',

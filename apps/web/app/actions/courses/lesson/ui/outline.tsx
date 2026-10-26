@@ -1,0 +1,160 @@
+import type { Handle } from 'remix/component'
+import { css } from 'remix/component'
+import { LessonNode } from '@bits/ui/lesson-node'
+
+import type { LessonView } from '../lesson-view.ts'
+import { PASSED_ROOT } from '../public/lesson-state.ts'
+
+const stateText = { done: 'completed', current: 'in progress', next: 'not started' } as const
+
+/** Matches inside a page whose checks just passed (set by the lesson islands). */
+const PASSED = `${PASSED_ROOT} &`
+
+/** The course's lessons (components §10.4) as an ordered list of links. Static. */
+function OutlineList(handle: Handle<{ view: LessonView }>) {
+  return () => {
+    let { view } = handle.props
+    return (
+      <ol mix={listStyle}>
+        {view.lessons.map((lesson) => {
+          let viewing = lesson.slug === view.lesson.slug
+          // The open lesson's node turns into a ✓ once its checks pass.
+          let canPass = viewing && lesson.state !== 'done'
+          return (
+            <li key={lesson.slug}>
+              <a
+                href={view.href.lesson(lesson.slug)}
+                aria-current={viewing ? 'page' : undefined}
+                data-state={lesson.state}
+                mix={itemStyle}
+              >
+                {canPass ? (
+                  <>
+                    <span mix={pendingOnly}>
+                      <LessonNode size={20} state={lesson.state} n={lesson.n} />
+                    </span>
+                    <span mix={passedOnly}>
+                      <LessonNode size={20} state="current" passed />
+                    </span>
+                  </>
+                ) : (
+                  <LessonNode size={20} state={lesson.state} n={lesson.n} />
+                )}
+                <span mix={titleStyle}>
+                  {lesson.title}
+                  <span mix={canPass ? pendingOnly : undefined}>
+                    <span class="sr-only">{`, ${stateText[lesson.state]}`}</span>
+                  </span>
+                  {canPass ? (
+                    <span mix={passedOnly}>
+                      <span class="sr-only">, completed</span>
+                    </span>
+                  ) : null}
+                </span>
+              </a>
+            </li>
+          )
+        })}
+      </ol>
+    )
+  }
+}
+
+/** Desktop sidebar (≥760px). */
+export function OutlineNav(handle: Handle<{ view: LessonView }>) {
+  return () => (
+    <nav aria-label="Lessons" mix={navStyle}>
+      <h2 mix={headingStyle}>In this course</h2>
+      <OutlineList view={handle.props.view} />
+    </nav>
+  )
+}
+
+/** Mobile (<760px, resolutions §8): a closed-by-default disclosure above the content. No JS. */
+export function OutlineDisclosure(handle: Handle<{ view: LessonView }>) {
+  return () => {
+    let { view } = handle.props
+    return (
+      <nav aria-label="Lessons" mix={disclosureNav}>
+        <details mix={detailsStyle}>
+          <summary mix={summaryStyle}>
+            <span>{`Lesson ${view.index + 1} of ${view.total} · In this course`}</span>
+            <span aria-hidden="true" mix={chevronStyle}>
+              ▾
+            </span>
+          </summary>
+          <OutlineList view={view} />
+        </details>
+      </nav>
+    )
+  }
+}
+
+const MOBILE = '@media (max-width: 759px)'
+
+const navStyle = css({
+  flex: '1 1 260px',
+  maxWidth: '320px',
+  padding: 'var(--space-7) var(--space-4)',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'var(--space-1)',
+  borderRight: '1px solid var(--line-hair)',
+  alignSelf: 'stretch',
+  [MOBILE]: { display: 'none' },
+})
+const headingStyle = css({
+  margin: 0,
+  padding: '0 var(--space-3) var(--space-2_5)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-12)',
+  fontWeight: 400,
+  lineHeight: 'normal',
+  letterSpacing: 'var(--tracking-eyebrow-s)',
+  textTransform: 'uppercase',
+  color: 'var(--dim)',
+})
+const listStyle = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' })
+const itemStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--space-3)',
+  minHeight: 'var(--touch-target)',
+  padding: 'var(--space-1_5) var(--space-3)',
+  borderRadius: 'var(--radius-10)',
+  textDecoration: 'none',
+  fontSize: 'var(--fs-14)',
+  color: 'var(--text-quiet)',
+  transition: 'background-color var(--duration-fast)',
+  '&[data-state="done"]': { color: 'var(--muted)' },
+  '&:hover': { background: 'var(--fill-hover)', color: 'var(--text)' },
+  '&[aria-current="page"], &[aria-current="page"]:hover': { background: 'var(--ion-a08)', color: 'var(--text)' },
+})
+const titleStyle = css({ minWidth: 0 })
+const pendingOnly = css({ display: 'contents', [PASSED]: { display: 'none' } })
+const passedOnly = css({ display: 'none', [PASSED]: { display: 'contents' } })
+
+const disclosureNav = css({ display: 'none', [MOBILE]: { display: 'block' } })
+const detailsStyle = css({
+  borderRadius: 'var(--radius-md)',
+  background: 'var(--surface)',
+  border: '1px solid var(--line)',
+  '&[open]': { paddingBottom: 'var(--space-2)' },
+  '&[open] > summary > span:last-child': { transform: 'rotate(180deg)' },
+})
+const summaryStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 'var(--space-3)',
+  minHeight: 'var(--touch-target)',
+  padding: '0 var(--space-4)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-13)',
+  color: 'var(--muted)',
+  cursor: 'pointer',
+  listStyle: 'none',
+  '&::-webkit-details-marker': { display: 'none' },
+  '&:hover': { color: 'var(--text)' },
+})
+const chevronStyle = css({ transition: 'transform var(--duration-fast)' })
