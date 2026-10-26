@@ -1,0 +1,25 @@
+{
+  "name": "@bits/db",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./d1": "./src/d1/database.ts",
+    "./tables": "./src/tables.ts"
+  },
+  "scripts": {
+    "test": "NODE_ENV=test remix test",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "remix": "^3.1.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261026.1",
+    "@types/node": "^24.6.0",
+    "miniflare": "5.20261019.2-beta",
+    "remix": "^3.1.0",
+    "typescript": "^7.0.2"
+  }
+}
