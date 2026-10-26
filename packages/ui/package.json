@@ -1,0 +1,27 @@
+{
+  "name": "@bits/ui",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./assets": "./src/assets.ts",
+    "./styles/*.css": "./src/styles/*.css",
+    "./fonts/*": "./src/fonts/*",
+    "./*": "./src/*.tsx"
+  },
+  "scripts": {
+    "fonts": "node scripts/copy-fonts.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "remix": "^3.1.0"
+  },
+  "devDependencies": {
+    "@fontsource/geist": "^5.3.0",
+    "@fontsource/geist-mono": "^5.3.0",
+    "@fontsource/unbounded": "^5.3.0",
+    "@types/node": "^24.6.0",
+    "remix": "^3.1.0",
+    "typescript": "^7.0.2"
+  }
+}

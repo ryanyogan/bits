@@ -1,0 +1,147 @@
+/*
+ * Bits design tokens. Dark only (v1).
+ *
+ * Source of truth: docs/design/artboards/System.dc.html and the "Frontend"
+ * section of docs/handoff.md. Components read these through var(--token);
+ * never hard-code a hex value in a component.
+ *
+ * Cascade layer order is declared once here and again inline at the top of
+ * <head> by Document, so it is established before Remix's generated `rmx`
+ * styles are injected:
+ *   reset < tokens < base < rmx-reset < rmx < app
+ * Component css() mixins land in `rmx` and override base; `app` is for the
+ * rare deliberate override of a component.
+ */
+@layer reset, tokens, base, rmx-reset, rmx, app;
+
+@layer tokens {
+  :root {
+    color-scheme: dark;
+
+    /* ---- Color: core palette (System.dc.html "Color") ---- */
+    --ink: #07080d; /* page ground, never pure black */
+    --surface: #0e1018; /* cards, panels, inputs */
+    --raised: #151826; /* dark keycaps, selected tabs */
+    --text: #eceef5; /* headlines, primary copy */
+    --muted: #9aa0b4; /* secondary body, descriptions */
+    --dim: #7a8098; /* hints and meta; lightest grey allowed for text (4.9:1) */
+    --volt: #c6ff3d; /* primary action, "your turn", success */
+    --volt-edge: #6e9116; /* keycap shadow under volt only */
+    --ion: #3de3ff; /* model output, in progress, video */
+    --synapse: #9d85ff; /* 3D field and Tools track only */
+
+    /* ---- Color: supporting values used across the artboards ---- */
+    --on-volt: #0a0c05; /* text and icons on volt */
+    --volt-hover: #d4ff66; /* keycap hover fill */
+    --volt-link-hover: #e2ff8f; /* link hover */
+    --volt-soft-text: #e4ff9e; /* text on a volt-tinted chip */
+    --synapse-soft: #b9a6ff;
+    --text-body: #d5d8e3; /* long-form lesson copy */
+    --text-nav: #b4b9ca; /* nav links, inactive chips */
+    --text-code-meta: #c6cad6; /* hex labels, code meta */
+    --composer: #0a0c14; /* prompt composer well */
+    --raised-2: #1c2030;
+    --keycap-dark-edge: #020305; /* shadow under dark keycaps */
+    --glass: rgb(12 14 22 / 0.78); /* #0C0E16 @ 78% */
+    --glass-blur: 14px;
+    --scrim: rgb(7 8 13 / 0.82); /* sticky bars over content */
+
+    /* Hairlines and fills are white at fixed alphas. */
+    --line-faint: rgb(255 255 255 / 0.06);
+    --line-soft: rgb(255 255 255 / 0.07);
+    --line: rgb(255 255 255 / 0.08);
+    --line-strong: rgb(255 255 255 / 0.12);
+    --line-ghost: rgb(255 255 255 / 0.14);
+    --line-dashed: rgb(255 255 255 / 0.3);
+    --fill-faint: rgb(255 255 255 / 0.05);
+    --fill-selected: rgb(255 255 255 / 0.1);
+
+    /* Accent tints. */
+    --volt-tint: rgb(198 255 61 / 0.12);
+    --volt-tint-border: rgb(198 255 61 / 0.35);
+    --volt-glow: rgb(198 255 61 / 0.25);
+    --volt-border-active: rgb(198 255 61 / 0.6);
+    --ion-tint: rgb(61 227 255 / 0.12);
+    --ion-tint-border: rgb(61 227 255 / 0.35);
+    --synapse-tint: rgb(157 133 255 / 0.14);
+    --synapse-tint-border: rgb(157 133 255 / 0.4);
+
+    /* ---- Type ---- */
+    --font-display: 'Unbounded', ui-sans-serif, system-ui, sans-serif; /* 500 / 700 / 800 */
+    --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif; /* 400–600 */
+    --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace; /* 400 / 500 */
+
+    /* Scale from System.dc.html "Type". */
+    --type-display-xl-size: clamp(46px, 9vw, 124px);
+    --type-display-xl-leading: 0.95;
+    --type-display-xl-tracking: -0.045em;
+    --type-h2-size: clamp(34px, 5vw, 64px);
+    --type-h2-leading: 1.02;
+    --type-h2-tracking: -0.035em;
+    --type-h3-size: 22px;
+    --type-h3-leading: 1.15;
+    --type-h3-tracking: -0.02em;
+    --type-body-size: 17px;
+    --type-body-leading: 1.7;
+    --type-body-measure: 68ch;
+    --type-ui-size: 15px;
+    --type-small-size: 13px;
+    --type-mono-size: 15px;
+    --type-mono-leading: 1.75;
+    --type-eyebrow-size: 13px;
+    --type-eyebrow-tracking: 0.14em;
+    --type-wordmark-size: 20px;
+    --type-wordmark-tracking: -0.02em;
+
+    /* ---- Shape ---- */
+    --radius-xs: 6px; /* inline keycap hints, small badges */
+    --radius-sm: 8px;
+    --radius-md: 11px;
+    --radius-lg: 14px;
+    --radius-xl: 18px;
+    --radius-2xl: 22px;
+    --radius-pill: 999px;
+    --radius-keycap: 12px; /* System keycap sample */
+
+    /* ---- Space (4-pt grid) ---- */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px; /* card padding */
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-section: 120px;
+    --page-max: 1280px;
+    --page-gutter: clamp(16px, 4vw, 32px);
+    --touch-target: 44px; /* minimum hit area */
+
+    /* ---- Elevation ---- */
+    --shadow-keycap-volt: 0 4px 0 var(--volt-edge), inset 0 1px 0 rgb(255 255 255 / 0.55);
+    --shadow-keycap-volt-hover: 0 5px 0 var(--volt-edge), 0 12px 30px var(--volt-glow),
+      inset 0 1px 0 rgb(255 255 255 / 0.55);
+    --shadow-keycap-volt-pressed: 0 1px 0 var(--volt-edge);
+    --shadow-keycap-dark: 0 4px 0 var(--keycap-dark-edge);
+    --shadow-keycap-dark-pressed: 0 1px 0 var(--keycap-dark-edge);
+    --shadow-toast: 0 20px 60px var(--volt-glow);
+    --shadow-float: 0 30px 80px rgb(0 0 0 / 0.5);
+
+    /* ---- Focus: 4px volt glow ---- */
+    --focus-ring: 0 0 0 4px rgb(198 255 61 / 0.45);
+    --focus-ring-color: var(--volt);
+
+    /* ---- Motion ---- */
+    --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --ease: ease;
+    --duration-press: 120ms; /* keycap press */
+    --keycap-travel: 3px;
+    --duration-fast: 150ms; /* hover color */
+    --duration-card: 250ms; /* card lift */
+    --duration-reveal: 400ms; /* reveals */
+    --reveal-rise: 8px;
+    --morph-lerp: 0.055; /* 3D field ease per frame */
+  }
+}
