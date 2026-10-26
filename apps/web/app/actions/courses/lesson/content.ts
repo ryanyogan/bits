@@ -101,6 +101,8 @@ export interface TokenizerBlock {
   type: 'tokenizer'
   sample: string
   tokens: [text: string, id: string][]
+  /** The ids (and splits) are made up to teach, not a real tokenizer's. */
+  illustrative?: boolean
 }
 
 /** `:::terminal`: a scripted command log. */
@@ -113,7 +115,55 @@ export interface TerminalBlock {
   summary?: string
 }
 
-export type Block = MarkdownBlock | PromptBlock | CodeBlock | QuizBlock | OddsBlock | TokenizerBlock | TerminalBlock
+// ---- Lesson toys (decision 021) ----
+// `illustrative` (block attribute, or `illustrative: true` in the lesson
+// frontmatter) labels made-up numbers as such.
+
+/** `:::nexttoken`: a reply forming one token at a time, with each step's odds. */
+export interface NextTokenBlock {
+  type: 'nexttoken'
+  prompt: string
+  /** One per generated token: the pick, its probability (0–1) and the runners-up. */
+  steps: { token: string; p: number; alternatives: [token: string, p: number][] }[]
+  illustrative?: boolean
+}
+
+/** `:::training`: what a model writes for one prompt at points in training. */
+export interface TrainingBlock {
+  type: 'training'
+  prompt: string
+  /** In step order. */
+  snapshots: { step: number; loss: number; text: string }[]
+  illustrative?: boolean
+}
+
+/** `:::attention`: which earlier tokens each token attends to (0-based indexes). */
+export interface AttentionBlock {
+  type: 'attention'
+  caption?: string
+  tokens: string[]
+  links: { from: number; to: number; weight: number }[]
+  illustrative?: boolean
+}
+
+/** `:::compare`: the same prompt answered two ways (static). */
+export interface CompareBlock {
+  type: 'compare'
+  left: string
+  right: string
+  rows: { prompt?: string; left: string; right: string }[]
+  illustrative?: boolean
+}
+
+/** `:::rabbithole`: up to three links to the best sources (static, https only). */
+export interface RabbitHoleBlock {
+  type: 'rabbithole'
+  links: { kind: 'video' | 'read'; title: string; by: string; url: string; mins?: number; deep?: boolean }[]
+}
+
+export type ToyBlock = NextTokenBlock | TrainingBlock | AttentionBlock | CompareBlock | RabbitHoleBlock
+
+export type Block = MarkdownBlock | PromptBlock | CodeBlock | QuizBlock | OddsBlock | TokenizerBlock | TerminalBlock | ToyBlock
 
 export interface LessonVideo {
   /** Seconds. */

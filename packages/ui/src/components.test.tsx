@@ -2,19 +2,24 @@ import * as assert from 'remix/assert'
 import { renderToString } from 'remix/component/server'
 import { describe, it } from 'remix/test'
 
+import { AttentionMap } from './attention-map.tsx'
 import { CheckChip } from './check-chip.tsx'
+import { ComparePanel } from './compare-panel.tsx'
 import { CourseCard } from './course-card.tsx'
 import { coverPatterns, CourseCover } from './course-cover.tsx'
 import { Document } from './document.tsx'
 import { FilterPill } from './filter-pill.tsx'
 import { Keycap } from './keycap.tsx'
 import { LessonNode, LessonNodeRow } from './lesson-node.tsx'
+import { NextTokenPlayer, stepRows } from './next-token.tsx'
 import { oddsAt, temperatureNote } from './odds-bars.tsx'
 import { ProgressBar } from './progress-bar.tsx'
 import { ProgressRing } from './progress-ring.tsx'
+import { RabbitHole } from './rabbit-hole.tsx'
 import { checkPasses, draftTokens } from './prompt-composer.tsx'
 import { SegmentedTabs } from './segmented-tabs.tsx'
 import { TextField } from './text-field.tsx'
+import { sparkPoints, TrainingScrubber } from './training-scrubber.tsx'
 import { formatTime } from './video-player.tsx'
 
 describe('Keycap', () => {
@@ -233,5 +238,69 @@ describe('Document', () => {
   it('leaves out the canonical URL when there is none', async () => {
     let html = await renderToString(<Document assets={assets} title="Settings · Bits" />)
     assert.doesNotMatch(html, /rel="canonical"|og:url/)
+  })
+})
+
+describe('lesson toys (server render = the no-JS fallback)', () => {
+  it('NextTokenPlayer renders the final sentence and a table of steps', async () => {
+    let html = await renderToString(
+      <NextTokenPlayer prompt="The capital of France is" steps={[{ token: ' Paris', p: 0.92, alternatives: [[' the', 0.03]] }]} illustrative />,
+    )
+    assert.match(html, /The capital of France is<\/span> Paris/)
+    assert.match(html, /<table/)
+    assert.match(html, /␣Paris.*92%.*␣the 3\.0%/s)
+    assert.match(html, /illustrative/)
+    assert.doesNotMatch(html, /<button/)
+  })
+
+  it('stepRows sorts the pick in among its runners-up', () => {
+    let rows = stepRows({ token: ' a', p: 0.2, alternatives: [[' the', 0.5], [' an', 0.1]] })
+    assert.deepEqual(rows.map((row) => [row.token, row.picked ?? false]), [
+      [' the', false],
+      [' a', true],
+      [' an', false],
+    ])
+  })
+
+  it('TrainingScrubber renders an ordered list of snapshots', async () => {
+    let html = await renderToString(
+      <TrainingScrubber
+        id="t"
+        prompt="Once upon a"
+        snapshots={[
+          { step: 0, loss: 10.8, text: 'qz#' },
+          { step: 5000, loss: 2.1, text: 'time' },
+        ]}
+      />,
+    )
+    assert.match(html, /<ol aria-label="Training snapshots"/)
+    assert.match(html, /step 5,000 · loss 2\.10/)
+    assert.doesNotMatch(html, /type="range"/)
+    let points = sparkPoints([10, 5, 0])
+    assert.ok(points[0]![1] < points[2]![1], 'higher loss draws higher')
+  })
+
+  it('AttentionMap renders a from → to table', async () => {
+    let html = await renderToString(<AttentionMap tokens={['The', ' cat', ' it']} links={[{ from: 2, to: 1, weight: 0.7 }]} />)
+    assert.match(html, /<table/)
+    assert.match(html, /␣it<\/td><td[^>]*>␣cat<\/td><td[^>]*>0\.70/)
+  })
+
+  it('ComparePanel renders both sides with their labels, no JS', async () => {
+    let html = await renderToString(<ComparePanel left="Base model" right="Assistant" rows={[{ prompt: 'Hi?', left: 'Hi? Hi?', right: 'Hello!' }]} />)
+    assert.match(html, /Base model<\/figcaption>/)
+    assert.match(html, /Assistant<\/figcaption>/)
+    assert.match(html, /Hello!/)
+    assert.doesNotMatch(html, /rmx-hydrat|<script/)
+  })
+
+  it('RabbitHole links open in a new tab outside client navigation', async () => {
+    let html = await renderToString(
+      <RabbitHole links={[{ kind: 'video', title: 'But what is a GPT?', by: '3Blue1Brown', mins: 27, url: 'https://example.com/v', deep: true }]} />,
+    )
+    assert.match(html, /Down the rabbit hole/)
+    assert.match(html, /<a href="https:\/\/example.com\/v" target="_blank" rel="noopener noreferrer" data-rmx-document=""/)
+    assert.match(html, /3Blue1Brown · video · 27 min · deep dive/)
+    assert.match(html, /opens in a new tab/)
   })
 })

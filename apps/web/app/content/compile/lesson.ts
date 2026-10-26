@@ -15,19 +15,24 @@ import { unified } from 'unified'
 import type { TerminalPart, TerminalTone } from '@bits/ui/terminal'
 
 import type {
+  AttentionBlock,
   Block,
   CodeBlock,
   CodeBlockFile,
+  CompareBlock,
   Inline,
   LessonContent,
   LessonVideo,
   MarkdownBlock,
+  NextTokenBlock,
   OddsBlock,
   Paragraph,
   PromptBlock,
   QuizBlock,
+  RabbitHoleBlock,
   TerminalBlock,
   TokenizerBlock,
+  TrainingBlock,
 } from '../../actions/courses/lesson/content.ts'
 import { approximateTokens } from '../../actions/courses/lesson/public/tokenizer-toy.tsx'
 import { temperatureLabel } from '../../actions/courses/lesson/ui/exercise.ts'
@@ -87,7 +92,7 @@ export function compileLesson(file: SourceFile, context: LessonContext): Compile
   }
 
   let stats: CompiledLesson['stats'] = { prompts: 0, patterns: 0 }
-  let blocks = compileBlocks(body, lines, report, stats)
+  let blocks = compileBlocks(body, lines, report, stats, { illustrative: meta?.illustrative === true })
   if (!meta) return undefined
 
   let slug = meta.slug ?? lessonSlugFromPath(file.path)
@@ -154,9 +159,32 @@ const normalize = (text: string) => text.replace(/\r\n?/g, '\n')
 
 // ---- Blocks -----------------------------------------------------------------
 
-const BLOCK_NAMES = ['prompt', 'code', 'quiz', 'odds', 'tokenizer', 'terminal'] as const
+const BLOCK_NAMES = [
+  'prompt',
+  'code',
+  'quiz',
+  'odds',
+  'tokenizer',
+  'terminal',
+  'nexttoken',
+  'training',
+  'attention',
+  'compare',
+  'rabbithole',
+] as const
 
-function compileBlocks(nodes: RootContent[], lines: string[], report: FileReport, stats: CompiledLesson['stats']): Block[] {
+/** Lesson-wide defaults for blocks (from the frontmatter). */
+interface BlockDefaults {
+  illustrative: boolean
+}
+
+function compileBlocks(
+  nodes: RootContent[],
+  lines: string[],
+  report: FileReport,
+  stats: CompiledLesson['stats'],
+  defaults: BlockDefaults = { illustrative: false },
+): Block[] {
   let blocks: Block[] = []
   let turn: MarkdownBlock | undefined
   let ids = new Map<string, number>()
@@ -204,7 +232,7 @@ function compileBlocks(nodes: RootContent[], lines: string[], report: FileReport
           break
         }
         closeTurn()
-        let block = compileDirective(node, lines, report, stats)
+        let block = compileDirective(node, lines, report, stats, defaults)
         if (!block) break
         if ('id' in block) claimId(block.id, line)
         if (block.type === 'code') {
@@ -270,7 +298,13 @@ function describe(type: string): string {
   return names[type] ?? `"${type}" markdown`
 }
 
-function compileDirective(node: Directive, lines: string[], report: FileReport, stats: CompiledLesson['stats']): Block | undefined {
+function compileDirective(
+  node: Directive,
+  lines: string[],
+  report: FileReport,
+  stats: CompiledLesson['stats'],
+  defaults: BlockDefaults,
+): Block | undefined {
   let line = node.position?.start.line ?? 1
   let body = node.type === 'containerDirective' ? rawBody(node, lines, report) : { lines: [], first: line + 1 }
   switch (node.name) {
@@ -284,9 +318,19 @@ function compileDirective(node: Directive, lines: string[], report: FileReport, 
     case 'odds':
       return compileOdds(node, body, report)
     case 'tokenizer':
-      return compileTokenizer(node, body, report)
+      return compileTokenizer(node, body, report, defaults)
     case 'terminal':
       return compileTerminal(node, body, report)
+    case 'nexttoken':
+      return compileNextToken(node, body, report, defaults)
+    case 'training':
+      return compileTraining(node, body, report, defaults)
+    case 'attention':
+      return compileAttention(node, body, report, defaults)
+    case 'compare':
+      return compileCompare(node, body, report, defaults)
+    case 'rabbithole':
+      return compileRabbitHole(node, body, report)
   }
   return undefined
 }
@@ -654,8 +698,8 @@ function compileOdds(node: Directive, raw: RawBody, report: FileReport): OddsBlo
   return { type: 'odds', prompt, blank: attrs.string('blank') ?? '“___', slider, candidates }
 }
 
-function compileTokenizer(node: Directive, raw: RawBody, report: FileReport): TokenizerBlock {
-  let attrs = attributes(node, ['sample'], report)
+function compileTokenizer(node: Directive, raw: RawBody, report: FileReport, defaults: BlockDefaults): TokenizerBlock {
+  let attrs = attributes(node, ['sample', 'illustrative'], report)
   let sample = attrs.string('sample') ?? 'Unbelievably, the cat fetched.'
   let tokens: [string, string][] = []
   raw.lines.forEach((text, i) => {
@@ -670,7 +714,9 @@ function compileTokenizer(node: Directive, raw: RawBody, report: FileReport): To
   if (tokens.length && tokens.map(([t]) => t).join('') !== sample) {
     report.error('the tokenizer lines don’t join up to the sample text', node.position?.start.line)
   }
-  return { type: 'tokenizer', sample, tokens: tokens.length ? tokens : approximateTokens(sample) }
+  let block: TokenizerBlock = { type: 'tokenizer', sample, tokens: tokens.length ? tokens : approximateTokens(sample) }
+  if (attrs.flag('illustrative', defaults.illustrative)) block.illustrative = true
+  return block
 }
 
 const TONES: TerminalTone[] = ['text', 'muted', 'quiet', 'ion', 'volt', 'synapse']
@@ -704,6 +750,334 @@ export function terminalLine(text: string): TerminalPart[] {
   }
   if (last < text.length) parts.push([tone, text.slice(last)])
   return parts
+}
+
+// ---- Lesson toys: :::nexttoken, :::training, :::attention, :::compare, :::rabbithole
+// (decision 021). Bodies are plain lines, like :::odds. Quoted strings take
+// \" and \\ escapes, and \n for a line break.
+
+const NUMBER = String.raw`(-?\d+(?:\.\d+)?|-?\.\d+)`
+const unescapeText = (text: string) => text.replace(/\\(.)/g, (_, c: string) => (c === 'n' ? '\n' : c))
+const EPSILON = 0.005
+
+function illustrativeOf(attrs: ReturnType<typeof attributes>, defaults: BlockDefaults): boolean {
+  return attrs.flag('illustrative', defaults.illustrative)
+}
+
+/** Non-blank body lines with their source line numbers. */
+function bodyLines(raw: RawBody): { text: string; at: number }[] {
+  return raw.lines.map((text, i) => ({ text: text.trim(), at: raw.first + i })).filter((line) => line.text)
+}
+
+const MAX_STEPS = 60
+
+function compileNextToken(node: Directive, raw: RawBody, report: FileReport, defaults: BlockDefaults): NextTokenBlock | undefined {
+  let line = node.position?.start.line ?? 1
+  let attrs = attributes(node, ['prompt', 'illustrative'], report)
+  let prompt = attrs.string('prompt')
+  if (!prompt) report.error(':::nexttoken needs a prompt, like :::nexttoken{prompt="The capital of France is"}', line)
+  let steps: NextTokenBlock['steps'] = []
+  let shape = new RegExp(`^${QUOTED}\\s+${NUMBER}\\s*(?:\\|\\s*(.*))?$`)
+  let alternative = new RegExp(`\\s*${QUOTED}\\s*:\\s*${NUMBER}`, 'y')
+  for (let { text, at } of bodyLines(raw)) {
+    let match = shape.exec(text)
+    if (!match) {
+      report.error('nexttoken lines are the picked token, its odds, then | and the runners-up, like: " Paris" 0.92 | " the":0.03 " a":0.02', at)
+      continue
+    }
+    let token = unescapeText(match[1]!)
+    let p = Number(match[2])
+    let alternatives: [string, number][] = []
+    let rest = (match[3] ?? '').trimEnd()
+    alternative.lastIndex = 0
+    let alt: RegExpExecArray | null
+    while (rest && alternative.lastIndex < rest.length && (alt = alternative.exec(rest))) {
+      alternatives.push([unescapeText(alt[1]!), Number(alt[2])])
+    }
+    if (rest && alternative.lastIndex < rest.length) {
+      report.error(`runners-up look like " the":0.03 " a":0.02 (couldn’t read “${rest.slice(alternative.lastIndex).trim()}”)`, at)
+      continue
+    }
+    let all: [string, number][] = [[token, p], ...alternatives]
+    let bad = all.find(([, odds]) => !(odds >= 0 && odds <= 1))
+    if (bad) {
+      report.error(`odds ${bad[1]} for "${bad[0]}" are outside 0–1`, at)
+      continue
+    }
+    let sum = all.reduce((total, [, odds]) => total + odds, 0)
+    if (sum > 1 + EPSILON) report.error(`the odds on this line add up to ${sum.toFixed(2)}, more than 1`, at)
+    let tokens = all.map(([t]) => t)
+    let duplicate = tokens.find((t, i) => tokens.indexOf(t) !== i)
+    if (duplicate !== undefined) report.error(`"${duplicate}" is listed twice on this line`, at)
+    if (!token) report.error('the picked token is empty', at)
+    steps.push({ token, p, alternatives })
+  }
+  if (!steps.length) report.error(':::nexttoken needs at least one step line', line)
+  if (steps.length > MAX_STEPS) report.error(`:::nexttoken has ${steps.length} steps; keep it to ${MAX_STEPS}`, line)
+  if (!prompt || !steps.length) return undefined
+  let block: NextTokenBlock = { type: 'nexttoken', prompt, steps }
+  if (illustrativeOf(attrs, defaults)) block.illustrative = true
+  return block
+}
+
+const MAX_SNAPSHOTS = 20
+
+function compileTraining(node: Directive, raw: RawBody, report: FileReport, defaults: BlockDefaults): TrainingBlock | undefined {
+  let line = node.position?.start.line ?? 1
+  let attrs = attributes(node, ['prompt', 'illustrative'], report)
+  let prompt = attrs.string('prompt')
+  if (!prompt) report.error(':::training needs a prompt, like :::training{prompt="Once upon a"}', line)
+  let snapshots: TrainingBlock['snapshots'] = []
+  let shape = new RegExp(`^[-*]\\s+step\\s+([\\d,_]+)\\s+loss\\s*=\\s*${NUMBER}\\s+${QUOTED}$`)
+  for (let { text, at } of bodyLines(raw)) {
+    let match = shape.exec(text)
+    if (!match) {
+      report.error('training lines look like: - step 500 loss=6.1 "the model’s output at that step"', at)
+      continue
+    }
+    let step = Number(match[1]!.replace(/[,_]/g, ''))
+    let loss = Number(match[2])
+    if (!Number.isSafeInteger(step)) {
+      report.error(`step ${match[1]} isn’t a whole number`, at)
+      continue
+    }
+    if (!(loss >= 0)) {
+      report.error(`loss=${match[2]} can’t be negative`, at)
+      continue
+    }
+    let previous = snapshots[snapshots.length - 1]
+    if (previous && step <= previous.step) report.error(`step ${step} comes after step ${previous.step}: list steps in increasing order`, at)
+    snapshots.push({ step, loss, text: unescapeText(match[3]!) })
+  }
+  if (snapshots.length < 2) report.error(':::training needs at least two - step lines', line)
+  if (snapshots.length > MAX_SNAPSHOTS) report.error(`:::training has ${snapshots.length} snapshots; keep it to ${MAX_SNAPSHOTS}`, line)
+  if (!prompt || snapshots.length < 2) return undefined
+  let block: TrainingBlock = { type: 'training', prompt, snapshots }
+  if (illustrativeOf(attrs, defaults)) block.illustrative = true
+  return block
+}
+
+const MAX_ATTENTION_TOKENS = 40
+
+function compileAttention(node: Directive, raw: RawBody, report: FileReport, defaults: BlockDefaults): AttentionBlock | undefined {
+  let line = node.position?.start.line ?? 1
+  let attrs = attributes(node, ['caption', 'illustrative'], report)
+  let tokens: string[] | undefined
+  let links: AttentionBlock['links'] = []
+  let seen = new Set<string>()
+  let token = new RegExp(`\\s*${QUOTED}`, 'y')
+  let linkShape = new RegExp(`^[-*]\\s+from\\s*=\\s*(\\S+)\\s+to\\s*=\\s*(\\S+)\\s+w\\s*=\\s*(\\S+)$`)
+  for (let { text, at } of bodyLines(raw)) {
+    let row = /^(?:[-*]\s+)?tokens\s+(.*)$/.exec(text)
+    if (row) {
+      if (tokens) {
+        report.error(':::attention has more than one tokens line', at)
+        continue
+      }
+      let rest = row[1]!.trimEnd()
+      let list: string[] = []
+      token.lastIndex = 0
+      let match: RegExpExecArray | null
+      while (token.lastIndex < rest.length && (match = token.exec(rest))) list.push(unescapeText(match[1]!))
+      if (token.lastIndex < rest.length || !list.length) {
+        report.error('the tokens line is quoted tokens, like: tokens "The" " animal" " was" " tired"', at)
+        continue
+      }
+      tokens = list
+      if (list.length < 2) report.error(':::attention needs at least two tokens', at)
+      if (list.length > MAX_ATTENTION_TOKENS) report.error(`:::attention has ${list.length} tokens; keep it to ${MAX_ATTENTION_TOKENS}`, at)
+      continue
+    }
+    let match = linkShape.exec(text)
+    if (!match) {
+      report.error('attention lines look like: - from=7 to=1 w=0.62 (after a tokens "…" "…" line)', at)
+      continue
+    }
+    if (!tokens) {
+      report.error('put the tokens line before the - from= lines', at)
+      continue
+    }
+    let [from, to, weight] = [Number(match[1]), Number(match[2]), Number(match[3])]
+    let count = tokens.length
+    let index = (value: number) => Number.isInteger(value) && value >= 0 && value < count
+    if (!index(from) || !index(to)) {
+      report.error(`from=${match[1]} to=${match[2]}: indexes count from 0 and must be below ${count} (the number of tokens)`, at)
+      continue
+    }
+    if (to > from) {
+      report.error(`from=${from} to=${to}: a token only attends to itself and earlier tokens (to ≤ from)`, at)
+      continue
+    }
+    if (!(weight >= 0 && weight <= 1)) {
+      report.error(`w=${match[3]} is outside 0–1`, at)
+      continue
+    }
+    let key = `${from}:${to}`
+    if (seen.has(key)) {
+      report.error(`from=${from} to=${to} is listed twice`, at)
+      continue
+    }
+    seen.add(key)
+    links.push({ from, to, weight })
+  }
+  if (!tokens) report.error(':::attention needs a tokens line, like: tokens "The" " animal" " was" " tired"', line)
+  else if (!links.length) report.error(':::attention needs at least one - from=… to=… w=… line', line)
+  let sums = new Map<number, number>()
+  for (let link of links) sums.set(link.from, (sums.get(link.from) ?? 0) + link.weight)
+  for (let [from, sum] of sums) {
+    if (sum > 1 + EPSILON) report.warning(`the weights from token ${from} add up to ${sum.toFixed(2)}; attention weights sum to at most 1`, line)
+  }
+  if (!tokens || !links.length) return undefined
+  let block: AttentionBlock = { type: 'attention', tokens, links }
+  let caption = attrs.string('caption')
+  if (caption) block.caption = caption
+  if (illustrativeOf(attrs, defaults)) block.illustrative = true
+  return block
+}
+
+const MAX_COMPARE_ROWS = 4
+
+/** Body items that start with `- `; following lines continue a quoted string. */
+function bodyItems(raw: RawBody): { text: string; at: number }[] {
+  let items: { text: string; at: number }[] = []
+  let open = false
+  raw.lines.forEach((source, i) => {
+    let text = source.trim()
+    let current = items[items.length - 1]
+    if (open && current) {
+      current.text += `\n${text}`
+    } else if (!text) {
+      return
+    } else {
+      items.push({ text, at: raw.first + i })
+      current = items[items.length - 1]!
+    }
+    // Inside a quoted string when the unescaped quotes so far are odd.
+    open = ((current.text.replace(/\\./g, '').match(/"/g) ?? []).length & 1) === 1
+  })
+  return items
+}
+
+function compileCompare(node: Directive, raw: RawBody, report: FileReport, defaults: BlockDefaults): CompareBlock | undefined {
+  let line = node.position?.start.line ?? 1
+  let attrs = attributes(node, ['left', 'right', 'illustrative'], report)
+  let left = attrs.string('left')
+  let right = attrs.string('right')
+  if (!left || !right) report.error(':::compare needs both labels, like :::compare{left="Base model" right="Assistant"}', line)
+  let rows: (Partial<CompareBlock['rows'][number]> & { at: number })[] = []
+  let shape = new RegExp(`^[-*]\\s+(prompt|left|right)\\s+${QUOTED}$`)
+  for (let { text, at } of bodyItems(raw)) {
+    let match = shape.exec(text)
+    if (!match) {
+      report.error('compare lines look like: - prompt "…", - left "…" or - right "…" (a string can run over several lines)', at)
+      continue
+    }
+    let key = match[1] as 'prompt' | 'left' | 'right'
+    let value = unescapeText(match[2]!).trim()
+    let row = rows[rows.length - 1]
+    // A prompt starts a row; so does a second left or right.
+    if (!row || key === 'prompt' || row[key] !== undefined) rows.push((row = { at }))
+    if (!value) report.error(`- ${key} is empty`, at)
+    row![key] = value
+  }
+  let complete: CompareBlock['rows'] = []
+  for (let row of rows) {
+    if (row.left === undefined || row.right === undefined) {
+      report.error('each compare row needs a - left and a - right line', row.at)
+      continue
+    }
+    complete.push(row.prompt ? { prompt: row.prompt, left: row.left, right: row.right } : { left: row.left, right: row.right })
+  }
+  if (!rows.length) report.error(':::compare needs - left "…" and - right "…" lines', line)
+  if (rows.length > MAX_COMPARE_ROWS) report.error(`:::compare has ${rows.length} rows; keep it to ${MAX_COMPARE_ROWS}`, line)
+  if (!left || !right || !complete.length) return undefined
+  let block: CompareBlock = { type: 'compare', left, right, rows: complete }
+  if (illustrativeOf(attrs, defaults)) block.illustrative = true
+  return block
+}
+
+export const MAX_RABBIT_HOLES = 3
+/** Longer than this is a deep dive, flag or not. */
+const DEEP_MINUTES = 30
+
+function compileRabbitHole(node: Directive, raw: RawBody, report: FileReport): RabbitHoleBlock | undefined {
+  let line = node.position?.start.line ?? 1
+  attributes(node, [], report)
+  let links: RabbitHoleBlock['links'] = []
+  let head = new RegExp(`^[-*]\\s+(\\w+)\\s+${QUOTED}(.*)$`)
+  let field = new RegExp(`\\s*([a-z]+)(?:\\s*=\\s*(?:${QUOTED}|([^\\s"]+)))?`, 'y')
+  let example = 'rabbit hole lines look like: - video "Title" by="3Blue1Brown" mins=8 url="https://…" (or - read …; add deep for long pieces)'
+  for (let { text, at } of bodyLines(raw)) {
+    let match = head.exec(text)
+    if (!match) {
+      report.error(example, at)
+      continue
+    }
+    let kind = match[1]!
+    if (kind !== 'video' && kind !== 'read') {
+      report.error(`unknown rabbit hole kind "${kind}" (use video or read)`, at)
+      continue
+    }
+    let title = unescapeText(match[2]!).trim()
+    let rest = match[3]!.trimEnd()
+    let fields = new Map<string, string | true>()
+    field.lastIndex = 0
+    let f: RegExpExecArray | null
+    while (field.lastIndex < rest.length && (f = field.exec(rest))) {
+      fields.set(f[1]!, f[2] !== undefined ? unescapeText(f[2]) : (f[3] ?? true))
+    }
+    if (field.lastIndex < rest.length) {
+      report.error(`couldn’t read “${rest.slice(field.lastIndex).trim()}”: ${example}`, at)
+      continue
+    }
+    for (let name of fields.keys()) {
+      if (!['by', 'mins', 'url', 'deep'].includes(name)) report.warning(`unknown rabbit hole field "${name}" (known: by, mins, url, deep)`, at)
+    }
+    let by = fields.get('by')
+    let url = fields.get('url')
+    let mins = fields.get('mins')
+    let ok = true
+    if (!title) {
+      report.error('a rabbit hole needs a title', at)
+      ok = false
+    }
+    if (typeof by !== 'string' || !by.trim()) {
+      report.error('a rabbit hole needs its author: by="3Blue1Brown"', at)
+      ok = false
+    }
+    if (typeof url !== 'string' || !isHttpsUrl(url)) {
+      report.error(`a rabbit hole needs an https link: url="https://…"${typeof url === 'string' ? ` (got “${url}”)` : ''}`, at)
+      ok = false
+    }
+    let minutes: number | undefined
+    if (mins !== undefined) {
+      minutes = Number(mins)
+      if (mins === true || !Number.isFinite(minutes) || minutes <= 0 || minutes > 600) {
+        report.error(`mins=${mins === true ? '' : mins} should be the length in minutes, like mins=8`, at)
+        ok = false
+      }
+    }
+    if (!ok) continue
+    let link: RabbitHoleBlock['links'][number] = { kind, title, by: (by as string).trim(), url: url as string }
+    if (minutes !== undefined) link.mins = Math.round(minutes)
+    let deep = fields.get('deep')
+    if ((deep !== undefined && deep !== 'false') || (minutes ?? 0) > DEEP_MINUTES) link.deep = true
+    if (links.some((other) => other.url === link.url)) report.warning('this link is already in the list', at)
+    links.push(link)
+  }
+  if (!links.length && !bodyLines(raw).length) report.error(':::rabbithole needs at least one - video or - read line', line)
+  if (links.length > MAX_RABBIT_HOLES) report.error(`:::rabbithole has ${links.length} links; pick the best ${MAX_RABBIT_HOLES}`, line)
+  if (!links.length) return undefined
+  return { type: 'rabbithole', links: links.slice(0, MAX_RABBIT_HOLES) }
+}
+
+function isHttpsUrl(text: string): boolean {
+  try {
+    let url = new URL(text)
+    return url.protocol === 'https:' && Boolean(url.hostname) && !url.username && !url.password
+  } catch {
+    return false
+  }
 }
 
 // ---- Inline markdown -----------------------------------------------------------

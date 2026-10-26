@@ -8,6 +8,8 @@ export interface TokenizerToyProps {
   sample: string
   /** The sample, tokenized at build time (shown with JS off). */
   tokens: [text: string, id: string][]
+  /** Label the ids as illustrative. */
+  illustrative?: boolean
 }
 
 /**
@@ -24,7 +26,7 @@ export const TokenizerToy = clientEntry(
     let text = handle.props.sample
 
     return () => {
-      let { id, sample, tokens } = handle.props
+      let { id, sample, tokens, illustrative } = handle.props
       let shown = text === sample ? tokens : approximateTokens(text, tokens)
       return (
         <div mix={toyStyle}>
@@ -46,7 +48,7 @@ export const TokenizerToy = clientEntry(
             ]}
           />
           <div aria-live="polite">
-            <TokenizerPanel tokens={shown} />
+            <TokenizerPanel tokens={shown} illustrative={illustrative} />
           </div>
         </div>
       )

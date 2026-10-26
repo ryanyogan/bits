@@ -1,6 +1,7 @@
 import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
+import { IllustrativeTag } from './toy-panel.tsx'
 import { modelPanelStyle } from './tutor.tsx'
 
 export interface TokenPillProps {
@@ -57,18 +58,23 @@ export const tokenListStyle = css({ listStyle: 'none', margin: 0, padding: 0, di
 
 export interface TokenizerPanelProps {
   tokens: [text: string, id: string][]
+  /** Shows the "illustrative" tag: made-up ids. */
+  illustrative?: boolean
   mix?: MixInput<HTMLElement>
 }
 
 /** `:::tokenizer` block (components §10.11): ion panel + token pills with ids. Static for fixed samples. */
 export function TokenizerPanel(handle: Handle<TokenizerPanelProps>) {
   return () => {
-    let { tokens, mix } = handle.props
+    let { tokens, illustrative, mix } = handle.props
     let chars = tokens.reduce((sum, [text]) => sum + text.length, 0)
     return (
       <div mix={[modelPanelStyle, panelStyle, mix]}>
         <p mix={headerStyle}>
-          <span>tokenizer</span>
+          <span mix={tagRow}>
+            tokenizer
+            {illustrative ? <IllustrativeTag /> : null}
+          </span>
           <span>{`${tokens.length} tokens · ${chars} characters`}</span>
         </p>
         <ol aria-label="Tokens" mix={tokenListStyle}>
@@ -81,6 +87,7 @@ export function TokenizerPanel(handle: Handle<TokenizerPanelProps>) {
   }
 }
 
+const tagRow = css({ display: 'inline-flex', alignItems: 'baseline', gap: 'var(--space-2)' })
 const panelStyle = css({ padding: 'var(--space-4)', gap: 'var(--space-3)' })
 const headerStyle = css({
   margin: 0,

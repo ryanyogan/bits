@@ -1,6 +1,8 @@
 import type { Handle } from 'remix/component'
 import { clientEntry, css, on } from 'remix/component'
 
+import { OddsList } from './odds-list.tsx'
+
 export const TEMPERATURE_EVENT = 'bits:temperature'
 
 export interface OddsBarsProps {
@@ -64,23 +66,7 @@ export const OddsBars = clientEntry(
             </span>
             <span mix={labelStyle}>next-token odds</span>
           </div>
-          <ul aria-label="Next-token probabilities" mix={barsStyle}>
-            {candidates.map(([token], index) => {
-              let p = probs[index] ?? 0
-              return (
-                <li key={token} mix={rowStyle}>
-                  <span mix={tokenStyle}>{token}</span>
-                  <span aria-hidden="true" mix={trackStyle}>
-                    <span
-                      mix={[fillStyle, index === 0 ? topFill : otherFill]}
-                      style={{ width: `${Math.max(1, p * 100).toFixed(1)}%` }}
-                    />
-                  </span>
-                  <span mix={pctStyle}>{`${(p * 100).toFixed(p >= 0.1 || p === 0 ? 0 : 1)}%`}</span>
-                </li>
-              )
-            })}
-          </ul>
+          <OddsList rows={candidates.map(([token], index) => ({ token, p: probs[index] ?? 0 }))} />
           <div mix={sliderRow}>
             <label for={id} mix={sliderLabel}>
               temperature
@@ -136,26 +122,6 @@ const headerStyle = css({
 const contextStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--muted)' })
 const blankStyle = css({ color: 'var(--text)' })
 const labelStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--ion)' })
-const barsStyle = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-2_5)' })
-const rowStyle = css({
-  display: 'grid',
-  gridTemplateColumns: '88px 1fr 56px',
-  gap: 'var(--space-3)',
-  alignItems: 'center',
-  [NARROW]: { gridTemplateColumns: '64px 1fr 44px' },
-})
-const tokenStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-15)', whiteSpace: 'pre', color: 'var(--text)' })
-const trackStyle = css({ display: 'block', height: '22px', borderRadius: 'var(--radius-xs)', background: 'var(--fill-seg)', overflow: 'hidden' })
-const fillStyle = css({
-  display: 'block',
-  height: '100%',
-  borderRadius: 'var(--radius-xs)',
-  transition: 'width var(--duration-sigil) var(--ease-out)',
-  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-})
-const topFill = css({ background: 'var(--ion)' })
-const otherFill = css({ background: 'var(--ion-a45)' })
-const pctStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--text-quiet)', textAlign: 'right' })
 const sliderRow = css({
   display: 'flex',
   alignItems: 'center',

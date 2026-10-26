@@ -2,9 +2,23 @@ import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 import { CodeEditor } from '@bits/ui/code-editor'
 import { oddsAt, temperatureNote } from '@bits/ui/odds-bars'
+import { formatOdds, showToken } from '@bits/ui/odds-list'
+import { linkMeta } from '@bits/ui/rabbit-hole'
 import { OutputPanel, TerminalLog, type TerminalEntry, type TerminalPart, type TerminalPrompt, type TerminalTone } from '@bits/ui/terminal'
 
-import type { Block, CodeBlock, OddsBlock, Paragraph, PromptBlock, TokenizerBlock } from '../content.ts'
+import type {
+  AttentionBlock,
+  Block,
+  CodeBlock,
+  CompareBlock,
+  NextTokenBlock,
+  OddsBlock,
+  Paragraph,
+  PromptBlock,
+  RabbitHoleBlock,
+  TokenizerBlock,
+  TrainingBlock,
+} from '../content.ts'
 import type { LessonView } from '../lesson-view.ts'
 import { codeEditorProps, exerciseProps } from './exercise.ts'
 import { inlineNodes } from './inline.tsx'
@@ -14,8 +28,9 @@ import { inlineNodes } from './inline.tsx'
  * code editor and its output panel beside it when the lesson has code.
  * Mapping (components §10.15): markdown → `◆ tutor`, `:::quiz` → lettered
  * options, `:::prompt` → the input runs the exercise with `○`/`✓` check
- * lines, `:::terminal` → `$ cmd` + output, `:::odds` and `:::tokenizer` →
- * their CLI equivalents, `:::code` → the editor pane (pointed at from the
+ * lines, `:::terminal` → `$ cmd` + output, `:::odds`, `:::tokenizer` and
+ * the toys (`:::nexttoken`, `:::training`, `:::attention`, `:::compare`) →
+ * their CLI equivalents, `:::rabbithole` → a tutor turn with the links, `:::code` → the editor pane (pointed at from the
  * tutor's `↳ highlighted …` line).
  */
 export function TerminalMode(handle: Handle<{ view: LessonView }>) {
@@ -117,6 +132,21 @@ export function terminalEntries(blocks: Block[]): TerminalEntry[] {
       case 'tokenizer':
         entries.push(tokenizerEntry(block))
         break
+      case 'nexttoken':
+        entries.push(nextTokenEntry(block))
+        break
+      case 'training':
+        entries.push(trainingEntry(block))
+        break
+      case 'attention':
+        entries.push(attentionEntry(block))
+        break
+      case 'compare':
+        entries.push(compareEntry(block))
+        break
+      case 'rabbithole':
+        entries.push(rabbitHoleEntry(block))
+        break
       case 'prompt':
         entries.push({
           kind: 'tutor',
@@ -166,6 +196,85 @@ function tokenizerEntry(block: TokenizerBlock): TerminalEntry {
       [['muted', block.tokens.map(([, id]) => id).join(' ')]],
     ],
     summary: `${block.tokens.length} tokens · ${chars} characters`,
+  }
+}
+
+const ILLUSTRATIVE = 'illustrative numbers, not a real model’s'
+
+function nextTokenEntry(block: NextTokenBlock): TerminalEntry {
+  let width = Math.max(...block.steps.map((step) => showToken(step.token).length)) + 2
+  return {
+    kind: 'command',
+    command: `generate --show-odds "${block.prompt}"`,
+    output: block.steps.map((step, i): TerminalPart[] => [
+      ['quiet', `${String(i + 1).padStart(2)}  `],
+      ['volt', showToken(step.token).padEnd(width)],
+      ['ion', formatOdds(step.p).padStart(5)],
+      ['muted', step.alternatives.length ? `   ${step.alternatives.map(([t, p]) => `${showToken(t)} ${formatOdds(p)}`).join('  ')}` : ''],
+    ]),
+    summary: `${block.prompt}${block.steps.map((step) => step.token).join('')}${block.illustrative ? `  (${ILLUSTRATIVE})` : ''}`,
+  }
+}
+
+function trainingEntry(block: TrainingBlock): TerminalEntry {
+  let width = Math.max(...block.snapshots.map((s) => s.step.toLocaleString('en-US').length))
+  return {
+    kind: 'command',
+    command: `sample --checkpoints "${block.prompt}"`,
+    output: block.snapshots.map((s): TerminalPart[] => [
+      ['quiet', `step ${s.step.toLocaleString('en-US').padStart(width)}  `],
+      ['ion', `loss ${s.loss.toFixed(2).padStart(5)}  `],
+      ['text', `${block.prompt} ${s.text}`.replace(/\n/g, ' ')],
+    ]),
+    summary: block.illustrative ? ILLUSTRATIVE : undefined,
+  }
+}
+
+function attentionEntry(block: AttentionBlock): TerminalEntry {
+  let name = (i: number) => showToken(block.tokens[i] ?? '')
+  return {
+    kind: 'command',
+    command: `attention "${block.tokens.join('')}"`,
+    output: [...block.links]
+      .sort((a, b) => a.from - b.from || b.weight - a.weight)
+      .map((link): TerminalPart[] => [
+        ['volt', name(link.from)],
+        ['muted', ' → '],
+        ['ion', name(link.to)],
+        ['quiet', `  ${link.weight.toFixed(2)}`],
+      ]),
+    summary: [block.caption, block.illustrative ? ILLUSTRATIVE : undefined].filter(Boolean).join(' · ') || undefined,
+  }
+}
+
+function compareEntry(block: CompareBlock): TerminalEntry {
+  let output: TerminalPart[][] = []
+  for (let row of block.rows) {
+    if (row.prompt) output.push([['muted', '› '], ['text', row.prompt]])
+    output.push([['muted', `[${block.left}] `], ['text', row.left]])
+    output.push([['ion', `[${block.right}] `], ['text', row.right]])
+  }
+  return {
+    kind: 'command',
+    command: `compare "${block.left}" "${block.right}"`,
+    output,
+    summary: block.illustrative ? ILLUSTRATIVE : undefined,
+  }
+}
+
+function rabbitHoleEntry(block: RabbitHoleBlock): TerminalEntry {
+  return {
+    kind: 'tutor',
+    body: [
+      'Down the rabbit hole:',
+      ...block.links.flatMap((link) => [
+        '\n↗ ',
+        <a href={link.url} target="_blank" rel="noopener noreferrer" data-rmx-document="">
+          {link.title}
+        </a>,
+        ` · ${link.by} · ${linkMeta(link)}`,
+      ]),
+    ],
   }
 }
 

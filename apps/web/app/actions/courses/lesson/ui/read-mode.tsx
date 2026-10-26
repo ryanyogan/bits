@@ -1,11 +1,16 @@
 import type { Handle } from 'remix/component'
 import { attrs, css } from 'remix/component'
+import { AttentionMap } from '@bits/ui/attention-map'
 import { CodeEditor } from '@bits/ui/code-editor'
+import { ComparePanel } from '@bits/ui/compare-panel'
 import { Keycap } from '@bits/ui/keycap'
+import { NextTokenPlayer } from '@bits/ui/next-token'
 import { OddsBars } from '@bits/ui/odds-bars'
 import { PromptComposer } from '@bits/ui/prompt-composer'
 import { QuizChoice, type QuizOption } from '@bits/ui/quiz-choice'
+import { RabbitHole } from '@bits/ui/rabbit-hole'
 import { OutputPanel } from '@bits/ui/terminal'
+import { TrainingScrubber } from '@bits/ui/training-scrubber'
 import { attachedBlock, LearnerBubble, TutorMessage } from '@bits/ui/tutor'
 
 import type { Block, QuizBlock } from '../content.ts'
@@ -17,7 +22,7 @@ import { inlineNodes } from './inline.tsx'
 /**
  * Read mode (Lesson artboard): the chat-style tutor. Every block renders on
  * the server; only the interactive blocks (odds, prompt, code, terminal,
- * tokenizer) hydrate as islands.
+ * tokenizer, nexttoken, training, attention) hydrate as islands.
  */
 export function ReadMode(handle: Handle<{ view: LessonView }>) {
   return () => {
@@ -93,7 +98,37 @@ function ReadBlock(handle: Handle<{ view: LessonView; block: Block; index: numbe
       case 'tokenizer':
         return (
           <div mix={attachedBlock}>
-            <TokenizerToy id={`tokenizer-${index}`} sample={block.sample} tokens={block.tokens} />
+            <TokenizerToy id={`tokenizer-${index}`} sample={block.sample} tokens={block.tokens} illustrative={block.illustrative} />
+          </div>
+        )
+      case 'nexttoken':
+        return (
+          <div mix={attachedBlock}>
+            <NextTokenPlayer prompt={block.prompt} steps={block.steps} illustrative={block.illustrative} />
+          </div>
+        )
+      case 'training':
+        return (
+          <div mix={attachedBlock}>
+            <TrainingScrubber id={`training-${index}`} prompt={block.prompt} snapshots={block.snapshots} illustrative={block.illustrative} />
+          </div>
+        )
+      case 'attention':
+        return (
+          <div mix={attachedBlock}>
+            <AttentionMap tokens={block.tokens} links={block.links} caption={block.caption} illustrative={block.illustrative} />
+          </div>
+        )
+      case 'compare':
+        return (
+          <div mix={attachedBlock}>
+            <ComparePanel left={block.left} right={block.right} rows={block.rows} illustrative={block.illustrative} />
+          </div>
+        )
+      case 'rabbithole':
+        return (
+          <div mix={attachedBlock}>
+            <RabbitHole id={`rabbit-hole-${index}`} links={block.links} />
           </div>
         )
     }

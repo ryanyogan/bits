@@ -196,7 +196,12 @@ export const blocks = [
   { name: ':::prompt', attrs: 'id, xp, model?, temperature?', what: 'The “Your turn” composer. Each “- check” line is a live goal; “- run” requires specific runs before it passes.' },
   { name: ':::code', attrs: 'file, lang, copy, type-mode, highlight="12-32"', what: 'The editor: tabs, syntax highlighting, copy button, optional retype-it mode.' },
   { name: ':::quiz', attrs: 'id, xp, multiple?', what: 'Single or multiple choice, marked with [x]. Explanations go under each option.' },
-  { name: ':::odds / :::tokenizer', attrs: 'prompt, slider / sample?', what: 'Built-in toys: next-token probability bars, live tokenizer.' },
+  { name: ':::odds / :::tokenizer', attrs: 'prompt, slider / sample?, illustrative?', what: 'Built-in toys: next-token probability bars, live tokenizer.' },
   { name: ':::terminal', attrs: 'cmd', what: 'A scripted run log shown in the output panel.' },
+  { name: ':::nexttoken', attrs: 'prompt, illustrative?', what: 'A reply forming token by token. One line per step: " Paris" 0.92 | " the":0.03 " a":0.02' },
+  { name: ':::training', attrs: 'prompt, illustrative?', what: 'A scrubber over training snapshots with a loss sparkline. Lines: - step 500 loss=6.1 "output"' },
+  { name: ':::attention', attrs: 'caption?, illustrative?', what: 'Click a token to see what it attends to. A tokens "The" " cat" … line, then - from=7 to=1 w=0.62 (0-based).' },
+  { name: ':::compare', attrs: 'left, right, illustrative?', what: 'Two answers side by side. Lines: - prompt "…", - left "…", - right "…".' },
+  { name: ':::rabbithole', attrs: '—', what: 'Up to 3 links: - video "Title" by="3Blue1Brown" mins=8 url="https://…" (or - read …; deep for long pieces).' },
   { name: 'video: (frontmatter)', attrs: 'path, chapters?', what: 'Turns on the Watch tab. Lessons without it stay text-only.' },
 ]
