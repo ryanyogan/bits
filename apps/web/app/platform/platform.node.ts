@@ -67,7 +67,13 @@ if (isTest) {
 
 export const platform: Platform = {
   runtime: 'node',
-  env: Object.assign(Object.create(proxy.env) as Env, { APP_ENV: nodeEnv }),
+  env: Object.assign(
+    Object.create(proxy.env) as Env,
+    { APP_ENV: nodeEnv },
+    // Tests never reach a real provider, whatever .dev.vars holds: live-run
+    // tests set these themselves and stub the gateway (app/runs/run.test.ts).
+    isTest ? { ANTHROPIC_API_KEY: undefined, CF_AIG_TOKEN: undefined } : {},
+  ),
   assets,
   middleware: staticFiles(path.join(appDir, 'public'), { index: false }),
   waitUntil(promise) {
