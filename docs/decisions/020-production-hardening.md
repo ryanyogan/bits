@@ -89,20 +89,21 @@ three.js. A security review then found two more problems:
   escapes, simple classes, groups, `|`, anchors and at most 4 `?`. There is
   no repetition, and at most 64 paths. `check.ts` re-validates stored
   patterns.
-- **Placement pinned next to D1.** D1 is in ENAM with no read replicas,
-  and a page makes several D1 round trips one after another. Static assets
-  never invoke the Worker, so placement can't slow them down.
-  - *Revised 2026-10-26.* Smart Placement never moved the Worker
-    (`cf-placement: local-*`), because it needs steady traffic from many
-    locations first.
+- **Smart Placement on.** D1 is in ENAM with no read replicas, and a page
+  makes several D1 round trips one after another. Static assets never
+  invoke the Worker, so placement can't slow them down.
+  - *Checked 2026-10-26.* It hasn't moved yet (`cf-placement: local-*`):
+    it needs steady traffic from many locations first.
   - The primary is served from ORD (`wrangler d1 execute --remote --json`,
     `meta.served_by_colo`).
-  - The config is now `placement.region: "azure:northcentralus"`, which is
-    Chicago. Every request shows `cf-placement: remote-ORD`.
-  - A first try with `aws:us-east-1` placed the Worker in IAD, which was
-    slower than the edge: `/health` went from about 80 ms to 150–460 ms.
-    Point the hint at the colo D1 actually reports, and check it again if
-    the database moves.
+  - We tried explicit hints and kept Smart:
+    - `aws:us-east-1` put the Worker in IAD, which was slower than the
+      edge (`/health` went from ~80 ms to 150–460 ms);
+    - `azure:northcentralus` put it in ORD, at about the edge's speed for
+      a Chicago-area visitor.
+  - If far-away visitors turn out slow before Smart Placement kicks in,
+    `placement.region: "azure:northcentralus"` is the tested fallback.
+  - Revert if the status becomes `UNSUPPORTED_APPLICATION`.
 - **`preview_urls: false`.** A preview URL would be a second full host on
   the production D1, R2, email and secrets. Turn previews back on only
   with separate preview resources.
@@ -129,7 +130,7 @@ three.js. A security review then found two more problems:
 - Deploying needs no new remote resources: the rate-limit namespaces exist
   once the config is deployed. Migrations 0004 and 0005 still need
   `pnpm db:migrate:remote` (unchanged by this decision).
-- After deploying, check that `cf-placement` reads `remote-ORD`.
+- After deploying, watch Smart Placement's status and latency.
 - Not done:
   - a strict `script-src` CSP (needs nonces);
   - an `og:image` (needs a designed PNG);
