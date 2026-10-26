@@ -61,6 +61,9 @@
     --danger: #ff7a6b; /* 7.86:1 on ink */
     --danger-tint: rgb(255 122 107 / 0.12);
     --danger-line: rgb(255 122 107 / 0.4);
+    --danger-edge: #8f3a31; /* keycap edge under the danger face (Settings, proposed) */
+    --danger-a04: rgb(255 122 107 / 0.04); /* danger-zone card fill (Settings, proposed) */
+    --danger-a35: rgb(255 122 107 / 0.35); /* danger-zone dashed border (Settings, proposed) */
 
     /* 1.10 Semantic aliases */
     --success: var(--volt);
@@ -332,6 +335,8 @@
     --shadow-keycap-dark-pressed: 0 1px 0 var(--key-dark-edge);
     --shadow-keycap-ion: 0 var(--keycap-edge) 0 var(--ion-edge);
     --shadow-keycap-ion-pressed: 0 1px 0 var(--ion-edge);
+    --shadow-keycap-danger: 0 var(--keycap-edge) 0 var(--danger-edge), inset 0 1px 0 rgb(255 255 255 / 0.4);
+    --shadow-keycap-danger-pressed: 0 1px 0 var(--danger-edge);
     --shadow-kbd: 0 2px 0 var(--kbd-edge);
     --shadow-prompt-bar: 0 30px 80px var(--shadow-a50);
     --shadow-float: 0 40px 120px var(--shadow-a55);

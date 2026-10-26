@@ -4,7 +4,7 @@ import { createController } from 'remix/router'
 
 import { routes } from '../../routes.ts'
 import { LoginPage } from './login-page.tsx'
-import { loginForm, readText, safeNextPath, type LoginMode } from './schema.ts'
+import { issueField, loginForm, readGoals, readText, safeNextPath, type FormIssue, type LoginMode } from './schema.ts'
 
 export default createController(routes.login, {
   actions: {
@@ -27,20 +27,32 @@ export default createController(routes.login, {
             values={{
               email: readText(context.formData, 'email'),
               displayName: readText(context.formData, 'displayName'),
+              goals: readGoals(context.formData),
             }}
-            issues={parsed.issues}
+            issues={parsed.issues.map(friendlyIssue)}
           />,
           { status: 422 },
         )
       }
 
-      let { email, next } = parsed.value
+      let { email, mode, next } = parsed.value
       return redirect(
         routes.login.check.index.href(undefined, {
-          searchParams: { email, ...(next ? { next } : {}) },
+          searchParams: { email, ...(mode === 'signup' ? { mode } : {}), ...(next ? { next } : {}) },
         }),
         303,
       )
     },
   },
 })
+
+const friendly: Record<string, string> = {
+  email: 'Enter an email address like you@somewhere.dev.',
+  displayName: 'Keep your name under 60 characters.',
+}
+
+function friendlyIssue(issue: FormIssue): FormIssue {
+  let field = issueField(issue)
+  let message = typeof field === 'string' ? friendly[field] : undefined
+  return message ? { ...issue, message } : issue
+}

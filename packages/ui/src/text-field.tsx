@@ -18,6 +18,8 @@ export interface TextFieldProps {
   inputMode?: 'text' | 'email' | 'numeric' | 'url' | 'tel' | 'search'
   pattern?: string
   maxLength?: number
+  /** Focus on load, e.g. the first invalid field after a 422 re-render. */
+  autoFocus?: boolean
   /** Geist Mono 15px (emails, codes) instead of Geist 16px. */
   mono?: boolean
   /** Authoring compact variant: 44px, label above in 13px muted. */

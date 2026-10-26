@@ -3,7 +3,7 @@ import { css } from 'remix/component'
 
 import { ACTIVE, DISABLED, FOCUS, HOVER, type ForcedState } from './lib/states.ts'
 
-export type KeycapVariant = 'primary' | 'dark' | 'ghost' | 'ghost-mono' | 'inverse' | 'ion'
+export type KeycapVariant = 'primary' | 'dark' | 'ghost' | 'ghost-mono' | 'inverse' | 'ion' | 'danger'
 export type KeycapSize = 'sm' | 'md' | 'lg'
 
 export interface KeycapProps {
@@ -11,7 +11,8 @@ export interface KeycapProps {
    * `primary` is the volt "do this" key, `dark` the secondary key, `ghost`
    * (Geist) and `ghost-mono` (Geist Mono) are flat outline buttons, `inverse`
    * is the dark key on a volt surface (reward toast), `ion` is the
-   * "Copied ✓" confirmation face.
+   * "Copied ✓" confirmation face, `danger` the delete-account key
+   * (Settings, proposed danger recipe, resolutions §1).
    */
   variant?: KeycapVariant
   /**
@@ -249,6 +250,18 @@ const variantStyles: Record<KeycapVariant, ReturnType<typeof css>> = {
       boxShadow: 'var(--shadow-keycap-ion-pressed)',
     },
     [FOCUS]: { boxShadow: 'var(--shadow-keycap-ion), var(--focus-ring)' },
+    [DISABLED]: { background: 'var(--selected)', color: 'var(--muted)', boxShadow: 'var(--shadow-keycap-dark)', transform: 'none', filter: 'none' },
+  }),
+  danger: css({
+    background: 'var(--danger)',
+    color: 'var(--on-volt)',
+    boxShadow: 'var(--shadow-keycap-danger)',
+    [HOVER]: { transform: 'translateY(-1px)', filter: 'brightness(1.06)' },
+    [ACTIVE]: {
+      transform: 'translateY(var(--keycap-travel))',
+      boxShadow: 'var(--shadow-keycap-danger-pressed)',
+    },
+    [FOCUS]: { boxShadow: 'var(--shadow-keycap-danger), var(--focus-ring)' },
     [DISABLED]: { background: 'var(--selected)', color: 'var(--muted)', boxShadow: 'var(--shadow-keycap-dark)', transform: 'none', filter: 'none' },
   }),
 }

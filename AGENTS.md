@@ -38,7 +38,7 @@ apps/web/                 @bits/web: the Remix app and Worker
   app/config.ts           APP_NAME ("bits"), tagline, pageTitle(); the only place the name lives
   app/actions/            controllers: controller.tsx (root) and <area>/.../controller.tsx
   app/actions/**/public/  browser modules (clientEntry components, entry.ts)
-  app/ui/                 app-level shared UI: Layout, PlaceholderPage, FormField
+  app/ui/                 app-level shared UI: Layout, PlaceholderPage
   app/middleware/         database.ts puts the data-table db on context.db
   app/platform/           runtime seam: `#platform` → platform.node.ts | platform.worker.ts
   scripts/build.ts        asset crawl into build/client + esbuild Worker bundle

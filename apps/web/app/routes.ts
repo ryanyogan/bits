@@ -54,6 +54,12 @@ export const routes = route({
 
   settings: route('/settings', {
     index: get('/'), // actions/settings/controller.tsx
+    export: get('/export'), // JSON download
+    profile: post('/profile'),
+    email: post('/email'),
+    methods: post('/methods'),
+    sessions: post('/sessions'),
+    deleteAccount: post('/delete'),
   }),
 
   // Design-system style guide (noindex; available in production for review).

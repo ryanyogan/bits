@@ -14,6 +14,16 @@ const trimmed = s.defaulted(s.string(), '').transform((value) => value.trim())
 export const loginModes = ['signin', 'signup'] as const
 export type LoginMode = (typeof loginModes)[number]
 
+/** "What brings you here?" on sign-up (Auth spec, state B). */
+export const signupGoals = [
+  { id: 'curious', label: 'Curious about AI' },
+  { id: 'work', label: 'Use AI at work' },
+  { id: 'code', label: 'Build with code' },
+  { id: 'teach', label: 'Teach others' },
+] as const
+export type SignupGoal = (typeof signupGoals)[number]['id']
+const goalIds = signupGoals.map((goal) => goal.id) as [SignupGoal, ...SignupGoal[]]
+
 /** POST /login: request a magic link + 6-digit code. */
 export const loginForm = f.object({
   email: f.field(
@@ -24,6 +34,9 @@ export const loginForm = f.object({
   ),
   mode: f.field(s.defaulted(s.enum_(loginModes), 'signin')),
   displayName: f.field(trimmed.pipe(checks.maxLength(60))),
+  goals: f.fields(s.array(s.enum_(goalIds))),
+  /** IANA zone filled in by the browser (TimezoneField); stored at sign-up. */
+  timezone: f.field(trimmed.pipe(checks.maxLength(64))),
   next: f.field(s.defaulted(s.string(), '').transform(safeNextPath)),
 })
 
@@ -45,15 +58,23 @@ export const verifyCodeForm = f.object({
 
 export type FormIssue = { message: string; path?: ReadonlyArray<PropertyKey | { key: PropertyKey }> }
 
+export function issueField(issue: FormIssue): PropertyKey | undefined {
+  let first = issue.path?.[0]
+  return typeof first === 'object' && first !== null ? first.key : first
+}
+
 export function issueFor(issues: readonly FormIssue[] | undefined, name: string) {
-  return issues?.find((issue) => {
-    let first = issue.path?.[0]
-    let key = typeof first === 'object' && first !== null ? first.key : first
-    return key === name
-  })
+  return issues?.find((issue) => issueField(issue) === name)
 }
 
 export function readText(formData: FormData | undefined, name: string): string {
   let value = formData?.get(name)
   return typeof value === 'string' ? value : ''
+}
+
+export function readGoals(formData: FormData | undefined): SignupGoal[] {
+  let ids: readonly string[] = goalIds
+  return (formData?.getAll('goals') ?? []).filter(
+    (value): value is SignupGoal => typeof value === 'string' && ids.includes(value),
+  )
 }
