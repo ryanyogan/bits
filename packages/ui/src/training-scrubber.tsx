@@ -159,7 +159,9 @@ const outputBox = css({
   border: '1px solid var(--line-panel)',
 })
 const chartRow = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' })
-const sparkStyle = css({ flex: 1, minWidth: 0, height: '56px', maxWidth: '360px', overflow: 'visible' })
+// width: 100% drops the SVG's default 300px intrinsic width, which otherwise
+// sets the lesson column's minimum and overflows a 360px screen.
+const sparkStyle = css({ flex: 1, minWidth: 0, width: '100%', height: '56px', maxWidth: '360px', overflow: 'visible' })
 const lineStyle = css({ fill: 'none', stroke: 'var(--ion-a60)', strokeWidth: 2, strokeLinejoin: 'round', strokeLinecap: 'round' })
 const dotStyle = css({
   fill: 'var(--volt)',

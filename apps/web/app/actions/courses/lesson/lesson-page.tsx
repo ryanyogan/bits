@@ -222,5 +222,16 @@ const footerStyle = css({
   gap: 'var(--space-3)',
   paddingTop: 'var(--space-6)',
   borderTop: '1px solid var(--line-hair)',
+  // Keycaps don't wrap by default; "Next: <long lesson title> →" must, or it
+  // overflows a 360px screen.
+  [MOBILE]: {
+    '& :is(a, button)': {
+      maxWidth: '100%',
+      whiteSpace: 'normal',
+      lineHeight: 1.3,
+      textAlign: 'center',
+      paddingBlock: 'var(--space-2)',
+    },
+  },
 })
 const prevStyle = css({ maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })
