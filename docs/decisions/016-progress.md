@@ -1,6 +1,6 @@
 # 016. Progress: D1 ledger, one "complete lesson" form, session-held anonymous progress
 
-Status: Accepted (2026-10-26)
+Status: Accepted (2026-10-26). The `run` check now counts journalled runs (019).
 
 ## Context
 

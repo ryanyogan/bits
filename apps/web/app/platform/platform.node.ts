@@ -70,6 +70,9 @@ export const platform: Platform = {
   env: Object.assign(Object.create(proxy.env) as Env, { APP_ENV: nodeEnv }),
   assets,
   middleware: staticFiles(path.join(appDir, 'public'), { index: false }),
+  waitUntil(promise) {
+    promise.catch((error: unknown) => console.error(error))
+  },
 }
 
 /** Releases the asset watcher and the local workerd behind the bindings. */

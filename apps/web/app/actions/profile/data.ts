@@ -148,9 +148,10 @@ async function journalEntry(catalog: Catalog, attempt: ExerciseAttempt): Promise
   let content = found ? await catalog.lessonContent(attempt.course_id, attempt.lesson_slug) : undefined
   let block = content ? exercisesOf(content).find((e) => e.id === attempt.exercise_id) : undefined
   let checks = block ? promptChecks(block).length : 0
-  if (attempt.temperatures.length && !attempt.passed) {
-    let temps = attempt.temperatures.map((t) => `T=${temperatureLabel(t)}`).join(' and ')
-    return { prompt: attempt.prompt, lesson: where, result: `ran at ${temps}`, tone: 'runs' }
+  if (attempt.source !== 'submit') {
+    // A run (decision 019): live, or the lesson's example output.
+    let at = `ran at T=${temperatureLabel((attempt.temperature ?? 0) / 100)}`
+    return { prompt: attempt.prompt, lesson: where, result: attempt.source === 'live' ? at : `${at} · example`, tone: 'runs' }
   }
   return {
     prompt: attempt.prompt,

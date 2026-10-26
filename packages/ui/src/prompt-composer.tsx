@@ -3,6 +3,7 @@ import { clientEntry, css, on, ref } from 'remix/component'
 
 import { CheckChip, checkListStyle } from './check-chip.tsx'
 import { Keycap } from './keycap.tsx'
+import { runNote, streamRun, type RunEndpoint } from './lib/run-stream.ts'
 import { FOCUS_WITHIN } from './lib/states.ts'
 import { TEMPERATURE_EVENT } from './odds-bars.tsx'
 import { announceReward, RewardToast, type RewardNext } from './reward-toast.tsx'
@@ -24,27 +25,27 @@ export interface PromptCheck {
 }
 
 /**
- * Mirrors the exercise into another form on the page (the lesson's "complete"
- * form) as hidden fields, via the `form` attribute: the draft as `prompt`,
- * one `ran` field per temperature run at. The server re-checks them.
+ * Mirrors the draft into another form on the page (the lesson's "complete"
+ * form) as a hidden field, via the `form` attribute. The server re-checks
+ * it; runs are counted from the server's own journal, never sent here.
  */
 export interface SubmitFields {
   /** id of the form to submit with. */
   form: string
   prompt: string
-  ran: string
 }
 
-export function submitFieldInputs(fields: SubmitFields | undefined, draft: string, ranAt: Set<number>) {
+export function submitFieldInputs(fields: SubmitFields | undefined, draft: string) {
   if (!fields) return null
-  return (
-    <>
-      <input type="hidden" form={fields.form} name={fields.prompt} value={draft} />
-      {[...ranAt].map((t) => (
-        <input key={t} type="hidden" form={fields.form} name={fields.ran} value={String(t)} />
-      ))}
-    </>
-  )
+  return <input type="hidden" form={fields.form} name={fields.prompt} value={draft} />
+}
+
+export type { RunEndpoint }
+
+/** Canned output for a temperature, cycled per run (no server). */
+export function cannedOutput(examples: Record<string, string[]> | undefined, temperature: number, n: number): string {
+  let list = examples?.[String(temperature)] ?? []
+  return list.length ? list[(n - 1) % list.length]! : 'A bright idea, brewed under moonlight.'
 }
 
 export interface TemperatureOption {
@@ -70,15 +71,22 @@ export interface PromptComposerProps {
   keepRuns?: number
   /** Style-guide only: render the focused composer look. */
   forceFocus?: boolean
-  /** Also submit the draft and runs with another form (see SubmitFields). */
+  /** Also submit the draft with another form (see SubmitFields). */
   submit?: SubmitFields
+  /**
+   * Run through the server (`/api/run`): a streamed live reply or the
+   * server's canned output, journalled. Without it, runs show `examples`.
+   */
+  run?: RunEndpoint
 }
 
 interface Run {
   id: number
   prompt: string
   temperature: TemperatureOption
-  output?: string
+  output: string
+  state: 'streaming' | 'done' | 'example' | 'error'
+  note?: string
   tokens: number
 }
 
@@ -101,8 +109,9 @@ const DEFAULT_TEMPS: TemperatureOption[] = [
 /**
  * The prompt exercise (components §10.9): textarea, live CheckChips, the
  * "run at" temperature radiogroup, a token estimate and the Run key. Enter
- * runs, Shift+Enter adds a newline. Runs append a LearnerBubble + example
- * ModelOutput (last four kept); when every check passes a RewardToast pops
+ * runs, Shift+Enter adds a newline. Runs append a LearnerBubble + ModelOutput
+ * (last four kept): streamed from `run` (/api/run; a rerun aborts the one in
+ * flight), or the canned `examples` without it. When every check passes a RewardToast pops
  * above the composer and `bits:reward` fires. The draft is kept in
  * localStorage. With JS off the composer renders with Run disabled and a
  * note. Client entry.
@@ -144,24 +153,66 @@ export const PromptComposer = clientEntry(
       return handle.props.checks.every((check) => checkPasses(check, draft, ranAt))
     }
 
+    // The run in flight; running again aborts it (and the server stops the model).
+    let inflight: AbortController | undefined
+    handle.signal.addEventListener('abort', () => inflight?.abort())
+
+    /** Server run: streams into the entry; canned output if the server can't answer. */
+    async function serverRun(endpoint: RunEndpoint, entry: Run): Promise<boolean> {
+      inflight?.abort()
+      let controller = (inflight = new AbortController())
+      let result
+      try {
+        result = await streamRun(endpoint, { prompt: entry.prompt, temperature: entry.temperature.value }, {
+          signal: controller.signal,
+          onText(text) {
+            entry.output = text
+            handle.update()
+          },
+        })
+      } catch {
+        // Aborted by a rerun (or removal): keep what arrived.
+        entry.state = 'done'
+        entry.note = 'Stopped: you ran it again.'
+        return false
+      } finally {
+        if (inflight === controller) inflight = undefined
+      }
+      entry.output = result.text || cannedOutput(handle.props.examples, entry.temperature.value, entry.id)
+      entry.state = result.source === 'live' ? 'done' : result.source === 'error' ? 'error' : 'example'
+      entry.note = runNote(result)
+      return result.counted
+    }
+
     async function run() {
       let prompt = draft.trim()
-      if (!prompt || running) return
+      let endpoint = handle.props.run
+      if (!prompt || (running && !endpoint)) return
       running = true
       let id = ++runCount
-      let examples = handle.props.examples?.[String(temperature.value)] ?? []
-      let entry: Run = { id, prompt, temperature, tokens: 0 }
+      let entry: Run = { id, prompt, temperature, output: '', state: 'streaming', tokens: 0 }
       runs = [...runs, entry].slice(-(handle.props.keepRuns ?? 4))
       await handle.update()
-      await new Promise((resolve) => setTimeout(resolve, 450))
-      // Only removal cancels a run: other updates (picking a temperature,
-      // typing) mid-run must not leave it stuck on "Running…".
+      let counted: boolean
+      if (endpoint) {
+        counted = await serverRun(endpoint, entry)
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 450))
+        // Only removal cancels a run: other updates (picking a temperature,
+        // typing) mid-run must not leave it stuck on "Running…".
+        if (handle.signal.aborted) return
+        entry.output = cannedOutput(handle.props.examples, entry.temperature.value, id)
+        entry.state = 'example'
+        counted = true
+      }
       if (handle.signal.aborted) return
-      let output = examples.length ? examples[(id - 1) % examples.length]! : 'A bright idea, brewed under moonlight.'
-      entry.output = output
-      entry.tokens = draftTokens(output)
+      entry.tokens = draftTokens(entry.output)
+      if (id === runCount) running = false
+      if (!counted) {
+        await handle.update()
+        return
+      }
       ranAt.add(entry.temperature.value)
-      running = false
       window.dispatchEvent(new CustomEvent('bits:run', { detail: { prompt, temperature: entry.temperature.value } }))
       let reward = handle.props.reward
       if (reward && !rewarded && allPassed()) {
@@ -177,6 +228,8 @@ export const PromptComposer = clientEntry(
       let empty = draft.trim() === ''
       let fieldId = `${id}-prompt`
       let tokens = draftTokens(draft)
+      // A server run can be rerun mid-stream (the old one is aborted); a canned one can't.
+      let locked = running && !handle.props.run
       return (
         <div mix={wrapStyle}>
           {runs.length ? (
@@ -187,9 +240,10 @@ export const PromptComposer = clientEntry(
                   <ModelOutput
                     temperature={entry.temperature.label}
                     tokens={entry.tokens}
-                    state={entry.output === undefined ? 'streaming' : 'example'}
+                    state={entry.state}
+                    note={entry.note}
                   >
-                    {entry.output ?? ''}
+                    {entry.output}
                   </ModelOutput>
                 </li>
               ))}
@@ -220,7 +274,7 @@ export const PromptComposer = clientEntry(
               rows={3}
               placeholder={placeholder}
               value={draft}
-              readOnly={running}
+              readOnly={locked}
               aria-describedby={`${id}-checks`}
               mix={[
                 textareaStyle,
@@ -274,14 +328,14 @@ export const PromptComposer = clientEntry(
               <Keycap
                 type="submit"
                 size="md"
-                disabled={!hydrated || running}
+                disabled={!hydrated || locked}
                 mix={[runKeyStyle, empty && hydrated ? emptyKeyStyle : undefined]}
               >
-                {running ? 'Running…' : 'Run ↵'}
+                {locked ? 'Running…' : running ? 'Run again ↵' : 'Run ↵'}
               </Keycap>
             </div>
             {hydrated ? null : <p mix={noJsStyle}>Turn on JavaScript to run prompts.</p>}
-            {submitFieldInputs(handle.props.submit, draft, ranAt)}
+            {submitFieldInputs(handle.props.submit, draft)}
           </form>
         </div>
       )

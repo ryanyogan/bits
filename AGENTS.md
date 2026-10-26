@@ -45,6 +45,7 @@ apps/web/                 @bits/web: the Remix app and Worker
   app/auth/               sessions, identity, email sign-in, OAuth, mailer (server-only)
   app/progress/           lesson checks, progress store + anonymous merge, badges, levels, days
   app/content/            published courses: compile/ (markdown → JSON), store.ts (R2 + D1), catalog.ts, request.ts
+  app/runs/               /api/run: model.ts (the only provider call), run.ts (limits, journal, fallback)
   app/test/auth.ts        test helpers: signIn, fetchAs, requestCode
   app/platform/           runtime seam: `#platform` → platform.node.ts | platform.worker.ts
   scripts/build.ts        asset crawl into build/client + esbuild Worker bundle
@@ -154,7 +155,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | ProgressRing | progress-ring.tsx | pct, size 96/132, color, caption, label | static |
 | LessonNode / LessonNodeRow | lesson-node.tsx | state done/current/next, size, n, passed / state, badge | static |
 | LessonBar | lesson-bar.tsx | backHref, context, title, segments, modes, neurons | static |
-| TutorAvatar / TutorMessage / LearnerBubble / ModelOutput | tutor.tsx | size / variant / variant / temperature, tokens, state done/streaming/example/error | static |
+| TutorAvatar / TutorMessage / LearnerBubble / ModelOutput | tutor.tsx | size / variant / variant / temperature, tokens, state done/streaming/example/error, note | static |
 | CheckChip | check-chip.tsx | passed, compact | static |
 | TokenPill / TokenizerPanel | token-pill.tsx | text, id, index / tokens | static |
 | HexBadge / BadgeTile / BadgeChip | hex-badge.tsx | name, glyph, color, variant earned/locked/preview/chip | static |
@@ -162,7 +163,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | RewardToast | reward-toast.tsx | xp, message, next, variant lesson/system | static |
 | RewardRegion | reward-toast.tsx | dismissAfter; shows toasts from `announceReward()` (`bits:reward`) | island |
 | OddsBars | odds-bars.tsx | context, candidates, defaultValue (follows `bits:temperature`) | island |
-| PromptComposer | prompt-composer.tsx | id, task, checks, temperatures, examples, reward, keepRuns | island (Enter runs, Shift+Enter newline) |
+| PromptComposer | prompt-composer.tsx | id, task, checks, temperatures, examples, reward, keepRuns, submit, run (/api/run) | island (Enter runs, Shift+Enter newline) |
 | CodeEditor | code-editor.tsx | files, highlight, focusLine, typeMode | island (@remix-run/ui tabs) |
 | TerminalLog | terminal.tsx | path, entries, replies, placeholder | island |
 | TerminalOutput | terminal.tsx | lines | static |
@@ -236,6 +237,32 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   version. Builds with errors are recorded as `failed` (report only).
 - Tests: the test platform uploads and publishes every folder in
   `content/courses/` at startup, so a broken course fails every test run.
+
+## Live prompts (decision 019)
+
+- `POST /api/run` (FormData: course, lesson, exercise, prompt,
+  temperature × 100) streams plain text. `X-Run-Source` is `live`,
+  `example` or `fallback`; `X-Run-Reason` says why a fallback happened.
+  The islands call it through `packages/ui/src/lib/run-stream.ts` when they
+  get a `run` prop (`exerciseProps` sets it); a rerun aborts the one in
+  flight.
+- Only `app/runs/model.ts` talks to a provider (Claude Haiku 5.5 through
+  AI Gateway, `@anthropic-ai/sdk`). It owns `runModel`, `ModelError` and
+  `liveTemperatures` (only T=1.0 is live: the API takes no sampling
+  parameters). Don't import the SDK anywhere else, and don't hard-code
+  which temperatures are live.
+- `app/runs/run.ts` does the limits, the journal and the fallback. Every
+  run is an `exercise_attempts` row (`packages/db/src/queries/runs.ts`);
+  signed-out runs carry the session's `visitor` id and move to the user
+  at sign-in. Limits live in `runLimits`; the daily live cap is the
+  `RUN_DAILY_LIVE_CAP` var.
+- "Ran at 0 and 1.0" is checked against journalled runs, never form
+  fields. Tests: `runAt(cookie, exercise, [0, 100])` or
+  `runPrompt(cookie, input)` from `app/test/auth.ts`. Without
+  `ANTHROPIC_API_KEY` (dev, tests) runs fall back to the examples; live
+  tests stub `globalThis.fetch` for the gateway URL (`app/runs/run.test.ts`).
+- Secrets: `ANTHROPIC_API_KEY`, `CF_AIG_TOKEN`. Vars:
+  `AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_ID`, `RUN_DAILY_LIVE_CAP`.
 
 ## Runtime rules
 

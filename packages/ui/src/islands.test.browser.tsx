@@ -72,4 +72,64 @@ describe('PromptComposer', () => {
     assert.equal($$('[aria-label="Your runs"] > li').length, 1)
     assert.match($('[aria-label="Your runs"]')?.textContent ?? '', /Brew among the stars/)
   })
+
+  it('streams a server run, labels canned output, and only then ticks the run check', async (t) => {
+    try {
+      window.localStorage.removeItem('bits:draft:t-live')
+    } catch {}
+    let realFetch = window.fetch
+    let sent: FormData[] = []
+    window.fetch = async (_input, init) => {
+      let body = init?.body as FormData
+      sent.push(body)
+      if (body.get('temperature') === '100') {
+        let stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('Lunar '))
+            controller.enqueue(new TextEncoder().encode('lattes.'))
+            controller.close()
+          },
+        })
+        return new Response(stream, { headers: { 'X-Run-Source': 'live' } })
+      }
+      return new Response('Brewed beyond gravity.', { headers: { 'X-Run-Source': 'fallback', 'X-Run-Reason': 'limit' } })
+    }
+    t.after(() => (window.fetch = realFetch))
+    let { $, $$, act, cleanup } = render(
+      <PromptComposer
+        id="t-live"
+        task="Write it"
+        defaultDraft="Write a tagline"
+        checks={[{ label: 'Ran at 0 and 1.0', ranAt: [0, 100] }]}
+        temperatures={[
+          { value: 0, label: '0' },
+          { value: 100, label: '1.0' },
+        ]}
+        run={{ action: '/api/run', fields: { course: 'c', lesson: 'l', exercise: 'e' } }}
+      />,
+    )
+    t.after(cleanup)
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+    let settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 50)))
+
+    await act(() => ($('form') as HTMLFormElement).requestSubmit())
+    await settle()
+    assert.equal(sent[0]?.get('exercise'), 'e')
+    assert.equal(sent[0]?.get('temperature'), '0')
+    let runs = () => $('[aria-label="Your runs"]')?.textContent ?? ''
+    assert.match(runs(), /Brewed beyond gravity/)
+    assert.match(runs(), /hourly run limit/)
+    assert.equal($('li[data-passed]')?.getAttribute('data-passed'), 'false')
+
+    let hot = $$('input[name="temperature"]')[1] as HTMLInputElement
+    await act(() => {
+      hot.checked = true
+      hot.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    await act(() => ($('form') as HTMLFormElement).requestSubmit())
+    await settle()
+    assert.match(runs(), /Lunar lattes\./)
+    assert.match(runs(), /model · T=1\.0/)
+    assert.equal($('li[data-passed]')?.getAttribute('data-passed'), 'true')
+  })
 })

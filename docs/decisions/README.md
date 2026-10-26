@@ -24,3 +24,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 016 | [Progress: D1 ledger, "complete lesson" form, session-held anonymous progress](016-progress.md) |
 | 017 | [No Turnstile on email sign-in (for now)](017-no-turnstile.md) |
 | 018 | [Content pipeline: markdown folders, versions in R2, a live pointer in D1](018-content-pipeline.md) |
+| 019 | [Live prompts: /api/run through AI Gateway, journalled runs](019-live-prompts.md) |

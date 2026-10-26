@@ -117,6 +117,8 @@ export interface ModelOutputProps {
   tokens?: number
   /** `done` (default), `streaming` (caret, aria-busy), `example` (fallback label), `error` (warn note). */
   state?: 'done' | 'streaming' | 'example' | 'error'
+  /** One line above the reply: why it is an example (muted), or what went wrong (`error`, warn). */
+  note?: string
   mix?: MixInput<HTMLElement>
   children?: RemixNode
 }
@@ -124,7 +126,7 @@ export interface ModelOutputProps {
 /** A model reply under a run (components §10.8). Static shell; the composer island renders it. */
 export function ModelOutput(handle: Handle<ModelOutputProps>) {
   return () => {
-    let { temperature, tokens, state = 'done', mix, children } = handle.props
+    let { temperature, tokens, state = 'done', note, mix, children } = handle.props
     let meta =
       state === 'streaming'
         ? `model · T=${temperature} · streaming…`
@@ -133,7 +135,11 @@ export function ModelOutput(handle: Handle<ModelOutputProps>) {
           : `model · T=${temperature} · ${tokens ?? 0} tokens`
     return (
       <div aria-busy={state === 'streaming' ? 'true' : undefined} mix={[outputStyle, attachedBlock, mix]}>
-        {state === 'error' ? <p mix={errorStyle}>Couldn’t reach the model — showing the example output.</p> : null}
+        {state === 'error' ? (
+          <p mix={errorStyle}>{note ?? 'Couldn’t reach the model — showing the example output.'}</p>
+        ) : note ? (
+          <p mix={noteStyle}>{note}</p>
+        ) : null}
         <p mix={metaStyle}>{meta}</p>
         <p mix={textStyle}>
           {children}
@@ -161,6 +167,7 @@ const outputStyle = modelPanelStyle
 const metaStyle = css({ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--ion)' })
 const textStyle = css({ margin: 0, fontSize: 'var(--fs-18)', lineHeight: 1.5, color: 'var(--text)', overflowWrap: 'anywhere' })
 const errorStyle = css({ margin: 0, fontSize: 'var(--fs-13)', color: 'var(--warn)' })
+const noteStyle = css({ margin: 0, fontSize: 'var(--fs-13)', color: 'var(--muted)' })
 const caretStyle = css({
   color: 'var(--ion)',
   animation: 'bits-blink var(--duration-caret) steps(1) infinite',

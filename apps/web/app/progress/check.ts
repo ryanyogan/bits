@@ -13,7 +13,10 @@ export const MAX_PROMPT_LENGTH = 4000
 export interface LessonSubmission {
   /** Exercise id → the learner's prompt. */
   prompts: Record<string, string>
-  /** Exercise id → temperatures run at (× 100). */
+  /**
+   * Exercise id → temperatures run at (× 100). Never read from the form:
+   * filled from the journal of runs (`/api/run`, decision 019).
+   */
   ran: Record<string, number[]>
   /** Quiz id → picked option keys. */
   quizzes: Record<string, string[]>
@@ -26,15 +29,6 @@ export function readSubmission(formData: FormData, content: LessonContent): Less
     if (block.type === 'prompt') {
       let prompt = formData.get(fieldNames.prompt(block.id))
       if (typeof prompt === 'string') submission.prompts[block.id] = prompt.slice(0, MAX_PROMPT_LENGTH)
-      let offered = new Set(offeredTemperatures(block))
-      submission.ran[block.id] = [
-        ...new Set(
-          formData
-            .getAll(fieldNames.ran(block.id))
-            .map((value) => Number(value))
-            .filter((t) => offered.has(t)),
-        ),
-      ]
     } else if (block.type === 'quiz') {
       let keys = new Set(block.options.map((option) => option.key))
       let picked = formData.getAll(fieldNames.quiz(block.id)).filter((v): v is string => typeof v === 'string' && keys.has(v))
@@ -82,7 +76,8 @@ export function checkLesson(courseSlug: string, lessonSlug: string, content: Les
   let base = `${courseSlug}/${lessonSlug}`
   let exercises = exercisesOf(content).map((block): CheckedExercise => {
     let prompt = submission.prompts[block.id] ?? ''
-    let temperatures = submission.ran[block.id] ?? []
+    let offered = new Set(offeredTemperatures(block))
+    let temperatures = (submission.ran[block.id] ?? []).filter((t) => offered.has(t))
     let ranAt = new Set(temperatures)
     let failed = prompt.trim()
       ? promptChecks(block)

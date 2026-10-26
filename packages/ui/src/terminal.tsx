@@ -3,7 +3,15 @@ import { clientEntry, css, on } from 'remix/component'
 
 import { Keycap } from './keycap.tsx'
 import { TEMPERATURE_EVENT } from './odds-bars.tsx'
-import { checkPasses, submitFieldInputs, type PromptCheck, type SubmitFields, type TemperatureOption } from './prompt-composer.tsx'
+import { runNote, streamRun, type RunEndpoint } from './lib/run-stream.ts'
+import {
+  cannedOutput,
+  checkPasses,
+  submitFieldInputs,
+  type PromptCheck,
+  type SubmitFields,
+  type TemperatureOption,
+} from './prompt-composer.tsx'
 import { announceReward, type RewardNext } from './reward-toast.tsx'
 import { ToolButton } from './tool-button.tsx'
 
@@ -54,8 +62,10 @@ export interface TerminalPrompt {
   defaultDraft?: string
   placeholder?: string
   reward?: { xp: number; message: string; next?: RewardNext }
-  /** Also submit the draft and runs with another form (see SubmitFields). */
+  /** Also submit the draft with another form (see SubmitFields). */
   submit?: SubmitFields
+  /** Run through the server (/api/run), as the PromptComposer does; else canned `examples`. */
+  run?: RunEndpoint
 }
 
 export interface TerminalLogProps {
@@ -73,9 +83,20 @@ export interface TerminalLogProps {
   keepAppended?: number
 }
 
+/** A run's reply: a live model reply or canned output (with a note saying why). */
+interface ModelEntry {
+  kind: 'model'
+  id: number
+  temperature: string
+  text: string
+  live: boolean
+  streaming?: boolean
+  note?: string
+}
+
 type AppendedEntry =
   | (TerminalEntry & { id: number })
-  | { kind: 'model'; id: number; temperature: string; text: string }
+  | ModelEntry
   | { kind: 'reward'; id: number; xp: number; message: string; next?: RewardNext }
 
 const DEFAULT_REPLIES: TerminalReplies = {
@@ -129,22 +150,55 @@ export const TerminalLog = clientEntry(
       handle.update()
     }
 
-    function runPrompt(prompt: TerminalPrompt, text: string) {
-      let examples = prompt.examples?.[String(temperature.value)] ?? []
-      runs++
-      let output = examples.length ? examples[(runs - 1) % examples.length]! : 'A bright idea, brewed under moonlight.'
-      ranAt.add(temperature.value)
-      let entries: AppendedEntry[] = [
-        { kind: 'learner', text, id: ++count },
-        { kind: 'model', temperature: temperature.label, text: output, id: ++count },
-      ]
-      window.dispatchEvent(new CustomEvent('bits:run', { detail: { prompt: text, temperature: temperature.value } }))
+    // The server run in flight; running again aborts it.
+    let inflight: AbortController | undefined
+    handle.signal.addEventListener('abort', () => inflight?.abort())
+
+    async function runPrompt(prompt: TerminalPrompt, text: string) {
+      let n = ++runs
+      let at = temperature
+      let model: ModelEntry = { kind: 'model', temperature: at.label, text: '', id: 0, live: false }
+      if (prompt.run) {
+        inflight?.abort()
+        let controller = (inflight = new AbortController())
+        model.id = ++count
+        model.streaming = true
+        append({ kind: 'learner', text, id: ++count }, model)
+        let result
+        try {
+          result = await streamRun(prompt.run, { prompt: text, temperature: at.value }, {
+            signal: controller.signal,
+            onText(output) {
+              model.text = output
+              handle.update()
+            },
+          })
+        } catch {
+          model.streaming = false
+          model.note = 'Stopped: you ran it again.'
+          handle.update()
+          return
+        }
+        model.streaming = false
+        model.live = result.source === 'live'
+        model.text = result.text || cannedOutput(prompt.examples, at.value, n)
+        model.note = runNote(result)
+        handle.update()
+        if (!result.counted) return
+      } else {
+        model.id = ++count
+        model.text = cannedOutput(prompt.examples, at.value, n)
+        append({ kind: 'learner', text, id: ++count }, model)
+      }
+      ranAt.add(at.value)
+      window.dispatchEvent(new CustomEvent('bits:run', { detail: { prompt: text, temperature: at.value } }))
       if (prompt.reward && !rewarded && prompt.checks.every((check) => checkPasses(check, value, ranAt))) {
         rewarded = true
-        entries.push({ kind: 'reward', id: ++count, ...prompt.reward })
+        append({ kind: 'reward', id: ++count, ...prompt.reward })
         announceReward(prompt.reward)
+      } else {
+        handle.update()
       }
-      append(...entries)
     }
 
     return () => {
@@ -219,7 +273,7 @@ export const TerminalLog = clientEntry(
                 let text = value.trim()
                 if (!text) return
                 if (prompt) {
-                  runPrompt(prompt, text)
+                  void runPrompt(prompt, text)
                   return
                 }
                 let reply = /hint/i.test(text) ? replies.hint : replies.fallback
@@ -258,7 +312,7 @@ export const TerminalLog = clientEntry(
             <span aria-hidden="true" mix={enterHint}>
               ↵
             </span>
-            {prompt ? submitFieldInputs(prompt.submit, value, ranAt) : null}
+            {prompt ? submitFieldInputs(prompt.submit, value) : null}
           </form>
           {prompt && !hydrated ? <p mix={noJsStyle}>Turn on JavaScript to run prompts.</p> : null}
         </section>
@@ -313,9 +367,14 @@ function TerminalEntryView(
         <div mix={[tutorStyle, riseMix]}>
           <span mix={tones.ion}>
             <span aria-hidden="true">→ </span>
-            {`example output · T=${entry.temperature}`}
+            {entry.streaming
+              ? `model · T=${entry.temperature} · streaming…`
+              : `${entry.live ? 'model' : 'example output'} · T=${entry.temperature}`}
           </span>
-          <div mix={[tutorBody, tones.text]}>{entry.text}</div>
+          {entry.note ? <div mix={tones.muted}>{entry.note}</div> : null}
+          <div aria-busy={entry.streaming ? 'true' : undefined} mix={[tutorBody, tones.text]}>
+            {entry.text}
+          </div>
         </div>
       )
     }

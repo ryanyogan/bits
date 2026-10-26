@@ -17,6 +17,9 @@ declare global {
     GITHUB_CLIENT_SECRET?: string
     GOOGLE_CLIENT_ID?: string
     GOOGLE_CLIENT_SECRET?: string
+    /** Live prompts (app/runs/model.ts): the Anthropic key, and the AI Gateway token. */
+    ANTHROPIC_API_KEY?: string
+    CF_AIG_TOKEN?: string
   }
 }
 

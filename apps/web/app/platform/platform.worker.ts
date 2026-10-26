@@ -1,6 +1,6 @@
 // Cloudflare Workers runtime. Selected by the `workerd` condition of the
 // `#platform` import in package.json; bundled by scripts/build.ts.
-import { env } from 'cloudflare:workers'
+import { env, waitUntil } from 'cloudflare:workers'
 import type { Middleware } from 'remix/router'
 
 import type { AppAssets, AssetManifest, Platform } from './types.ts'
@@ -37,6 +37,7 @@ export const platform: Platform = {
   env,
   assets,
   middleware: passThrough,
+  waitUntil,
 }
 
 export async function disposePlatform(): Promise<void> {}
