@@ -134,6 +134,28 @@ describe('/author and /author/:course', () => {
     assert.doesNotMatch(catalog, /My renamed course/)
   })
 
+  it('two authors racing to upload a new slug: one owns it, the other gets 403', async () => {
+    let [a, b] = await Promise.all([
+      signIn('race-a@example.com', { role: 'author' }),
+      signIn('race-b@example.com', { role: 'author' }),
+    ])
+    let source = path.join(coursesDir, 'what-is-an-llm')
+    let responses = await Promise.all([
+      upload(source, { cookie: a.cookie, folder: 'race-course' }),
+      upload(source, { cookie: b.cookie, folder: 'race-course' }),
+    ])
+    assert.deepEqual(responses.map((response) => response.status).sort(), [201, 403])
+    let winner = responses[0]!.status === 201 ? a : b
+    let loser = winner === a ? b : a
+    let page = routes.author.course.index.href({ course: 'race-course' })
+    assert.equal((await fetchAs(winner.cookie, page)).status, 200)
+    assert.equal((await fetchAs(loser.cookie, page)).status, 403)
+    // Only the winner's build was recorded.
+    let html = await (await request(page)).text()
+    assert.match(html, /v1/)
+    assert.doesNotMatch(html, /v2/)
+  })
+
   it('unknown courses are a 404', async () => {
     let response = await request(routes.author.course.index.href({ course: 'nope' }))
     assert.equal(response.status, 404)

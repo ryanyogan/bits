@@ -31,6 +31,7 @@ import type {
 } from '../../actions/courses/lesson/content.ts'
 import { approximateTokens } from '../../actions/courses/lesson/public/tokenizer-toy.tsx'
 import { temperatureLabel } from '../../actions/courses/lesson/ui/exercise.ts'
+import { clampXp, MAX_BLOCK_XP } from '../limits.ts'
 import type { LessonKind } from '../types.ts'
 import { LessonFrontmatter, parseClock, readFrontmatter } from './frontmatter.ts'
 import { highlight, isKnownLanguage, languageOf } from './highlight.ts'
@@ -360,6 +361,14 @@ function attributes(node: Directive, allowed: string[], report: FileReport) {
   }
 }
 
+/** A block's xp, reported unless it's a whole number in 0…MAX_BLOCK_XP. */
+function blockXp(xp: number, report: FileReport, line: number): number {
+  if (!Number.isInteger(xp) || xp < 0 || xp > MAX_BLOCK_XP) {
+    report.error(`xp=${xp} is out of range: use a whole number from 0 to ${MAX_BLOCK_XP}`, line)
+  }
+  return clampXp(xp, MAX_BLOCK_XP)
+}
+
 // ---- :::prompt ----------------------------------------------------------------
 
 const QUOTED = String.raw`"((?:[^"\\]|\\.)*)"`
@@ -374,6 +383,8 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
 
   let task: string[] = []
   let checks: PromptBlock['checks'] = []
+  // `- check` lines seen, valid or not (a rejected one is its own error).
+  let checkLines = 0
   let examples: PromptBlock['examples'] = []
   let run: PromptBlock['run']
   let draft: string | undefined
@@ -399,6 +410,7 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
         }
         let [, label = '', source = '', flags = ''] = match
         stats.patterns++
+        checkLines++
         let problem = checkPattern(source, flags)
         if (problem) {
           report.error(`check “${unquote(label)}”: /${source}/ ${problem}`, at)
@@ -460,7 +472,7 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
     }
   })
 
-  if (!checks.length) report.error(':::prompt has no - check lines', line)
+  if (!checkLines) report.error(':::prompt has no - check lines', line)
   let taskText = stripMarkdown(task.join(' '))
   if (!taskText) report.error(':::prompt needs the task text (what the learner should write)', line)
 
@@ -480,7 +492,7 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
   let block: PromptBlock = {
     type: 'prompt',
     id,
-    xp: attrs.number('xp', 10)!,
+    xp: blockXp(attrs.number('xp', 10)!, report, line),
     task: taskText,
     checks,
     temperatures,
@@ -613,7 +625,7 @@ function compileQuiz(node: Directive, report: FileReport): QuizBlock | undefined
   if (options.length >= 2 && correct === 0) report.error(':::quiz has no right answer: mark it - [x]', line)
   if (correct > 1 && !multiple) report.error(`:::quiz has ${correct} right answers: add multiple to allow several`, line)
   if (!id) return undefined
-  let block: QuizBlock = { type: 'quiz', id, xp: attrs.number('xp', 10)!, question, options }
+  let block: QuizBlock = { type: 'quiz', id, xp: blockXp(attrs.number('xp', 10)!, report, line), question, options }
   if (multiple) block.multiple = true
   return block
 }

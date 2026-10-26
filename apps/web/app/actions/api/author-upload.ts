@@ -69,7 +69,9 @@ export async function authorUpload(context: RequestContext<any, any>): Promise<R
     return buildCourse(files, { folder: root.split('/').pop() || 'course' })
   })
 
-  // Check every course before saving any: an author may only rebuild their own.
+  // Check every course before saving any: an author may only rebuild their
+  // own. This early check keeps a mixed upload from half-saving; the claim
+  // itself is atomic in recordCourseBuild, which also catches a race.
   for (let build of builds) {
     let existing = await findCourse(db, build.slug)
     if (existing && !canManageCourse(user, { ownerIds: await listCourseAuthorIds(db, build.slug) })) {
@@ -79,7 +81,8 @@ export async function authorUpload(context: RequestContext<any, any>): Promise<R
 
   let courses: UploadedCourse[] = []
   for (let build of builds) {
-    let version = await saveBuild(db, build, { source: 'folder upload', userId: user.id }, contentBucket())
+    let version = await saveBuild(db, build, { source: 'folder upload', userId: user.id, trusted: user.role === 'admin' }, contentBucket())
+    if (!version) return json({ error: 'forbidden', message: `“${build.slug}” belongs to another author.` }, 403)
     courses.push({
       slug: build.slug,
       version: version.n,

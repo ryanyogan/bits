@@ -24,7 +24,9 @@ export async function uploadCourseFolder(
   options: { source: string; userId?: string | null; publish?: boolean },
 ): Promise<UploadResult> {
   let build = buildCourse(await readCourseFolder(dir), { folder: path.basename(dir) })
-  let version = await saveBuild(db, build, { source: options.source, userId: options.userId }, bucket)
+  // The CLI and the test platform hold the database already: trusted.
+  let version = await saveBuild(db, build, { source: options.source, userId: options.userId, trusted: true }, bucket)
+  if (!version) throw new Error(`${build.slug}: the build was not recorded`)
   let published = options.publish && version.status === 'ready' ? await publishVersion(db, build.slug, version.n) : false
   return { dir, build, version, published }
 }

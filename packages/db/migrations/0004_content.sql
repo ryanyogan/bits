@@ -19,6 +19,9 @@ create table courses (
   -- The live version; null until the first publish. No FK: the two tables
   -- reference each other, and publishing checks the version belongs here.
   current_version_id text,
+  -- Who created the course: set by the first build's insert and never
+  -- updated, so two first uploads of one slug can't both claim it.
+  owner_id text references users (id) on delete set null,
   created_at integer not null,
   updated_at integer not null
 );

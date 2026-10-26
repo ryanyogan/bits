@@ -249,6 +249,8 @@ export const courses = table({
     sort: c.integer(),
     /** course_versions.id of the live version; null until first published. */
     current_version_id: c.text().nullable(),
+    /** The first uploader; set on insert only. Null for CLI-created courses. */
+    owner_id: c.text().nullable(),
     created_at: c.integer(),
     updated_at: c.integer(),
   },

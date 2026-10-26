@@ -49,7 +49,19 @@ Constraints:
     - don't compile;
     - use flags other than `imsu`;
     - are longer than 200 characters;
-    - have a nested quantifier like `(a+)+`.
+    - have a nested quantifier like `(a+)+`;
+    - repeat an alternation whose branches can overlap, like `(a|a)*`
+      (only distinct plain words, like `(cat|dog)+`, may repeat);
+    - use a backreference (`\1`, `\k<name>`);
+    - have more than two unbounded quantifiers (`*`, `+`, `{n,}`).
+
+    The analyzer (`compile/regex.ts`) is small and conservative, and
+    learner input is capped at 4,000 characters, so a check stays cheap on
+    the server and in the browser. Rejections are ordinary build errors.
+  - XP is capped (`app/content/limits.ts`): at most 100 per `:::prompt` or
+    `:::quiz` block and 500 per lesson, as whole numbers. The build reports
+    values outside that range. `progress/check.ts` clamps the awards again,
+    so stored content can never award more than a lesson's capped xp.
 - **Versions are immutable.**
   - D1 (migration 0004) has three tables:
     - `courses`: the slug, the catalog fields and `current_version_id`, the
@@ -73,7 +85,14 @@ Constraints:
   `version=n` to `/author/:course/publish` or `rollback`. Admins manage
   every course; authors manage only courses they are listed on in
   `course_authors`. The first upload of a new slug makes the uploader its
-  author. An upload that targets someone else's slug gets a 403.
+  owner (`courses.owner_id`, set only by the insert that creates the row)
+  and author. An upload that targets someone else's slug gets a 403.
+  The claim is atomic: `recordCourseBuild` writes the course, the author
+  and the version in one D1 batch, and every statement is conditioned on
+  the uploader being trusted (an admin or the CLI), the owner or a listed
+  author. When two first uploads race, the loser writes nothing and gets
+  a 403. The check before saving only keeps a multi-course upload from
+  half-saving.
 - **Reading is one D1 query plus a per-isolate memo.**
   - `getCatalog(context)` reads the live pointers once per request.
   - Manifests and lesson JSON are memoised by `versionId:key`, LRU-bounded

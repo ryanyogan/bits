@@ -17,6 +17,7 @@ import { isMap, isScalar, LineCounter, parseDocument, type Node as YamlNode } fr
 import type { CoverPattern } from '@bits/ui/course-cover'
 import { coverPatterns } from '@bits/ui/course-cover'
 
+import { MAX_LESSON_XP } from '../limits.ts'
 import type { FileReport } from './report.ts'
 
 const slugPattern = /^[a-z0-9][a-z0-9-]*$/
@@ -61,7 +62,7 @@ export const LessonFrontmatter = object(
     title: text(),
     order: number().pipe(min(1)),
     minutes: number().pipe(min(1), max(240)),
-    xp: number().pipe(min(0)),
+    xp: number().pipe(min(0), max(MAX_LESSON_XP)).refine(Number.isInteger, 'Expected a whole number'),
     slug: optional(slug()),
     /** Syllabus module; lessons with the same module sit together. */
     module: optional(text()),

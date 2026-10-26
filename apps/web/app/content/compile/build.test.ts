@@ -6,7 +6,7 @@ import { describe, it } from 'remix/test'
 import { coursesDir, readCourseFolder } from '../../../scripts/lib/content-folder.ts'
 import { exercisesOf } from '../../actions/courses/lesson/content.ts'
 import { buildCourse, formatItem, type SourceFile } from './index.ts'
-import { hasNestedQuantifier } from './regex.ts'
+import { checkPattern, hasNestedQuantifier } from './regex.ts'
 
 const course = `---
 title: Test
@@ -86,7 +86,6 @@ describe('content build', () => {
     })
     assert.deepEqual(errors(result), [
       '01-one.md → duplicate order: 1 (also in 02-two.md)',
-      '01-one.md:8 → :::prompt has no - check lines',
       '01-one.md:10 → check “bad”: /(a+)+/ has a quantified group that repeats a quantifier, like (a+)+, which can backtrack forever',
       '01-one.md:13 → headings aren’t supported in lessons (the page has its own); write a paragraph',
       '01-one.md:15 → raw HTML isn’t allowed in lessons',
@@ -102,5 +101,47 @@ describe('content build', () => {
     assert.equal(hasNestedQuantifier('(?:\\w*)*'), true)
     assert.equal(hasNestedQuantifier('\\bwords?\\b|(colou?r)+'), false)
     assert.equal(hasNestedQuantifier('[(a+)]+'), false)
+  })
+
+  it('rejects check regexes that could backtrack badly', () => {
+    let unsafe: [string, RegExp][] = [
+      ['(a+)+', /repeats a quantifier/],
+      ['((ab)*c)+', /repeats a quantifier/],
+      ['(x+x+)+y', /repeats a quantifier/],
+      ['(a|a)*', /alternation whose branches can match the same text/],
+      ['(\\w|x)+', /alternation/],
+      ['(?:ab|ac){2,}', /alternation/],
+      ['(a)\\1', /backreference/],
+      ['(?<w>a)\\k<w>', /backreference/],
+      ['a*b*c*', /more than 2 unbounded quantifiers/],
+      ['\\s+(x)+.*', /more than 2 unbounded quantifiers/],
+      ['a'.repeat(201), /201 characters long/],
+      ['moon', /flags "g"/],
+    ]
+    for (let [source, problem] of unsafe) {
+      assert.match(checkPattern(source, source === 'moon' ? 'g' : 'i') ?? 'accepted', problem, source)
+    }
+    let safe = ['tagline|slogan', 'coffee|caf[eé]', '\\bwords?\\b|\\bshort\\b|\\bmax', '(cat|dog)+', '(\\w)+ and .*', 'colou?r{1,3}', '[(a+)|a]+']
+    for (let source of safe) assert.equal(checkPattern(source, 'i'), null, source)
+
+    // A bad check is a normal build error at its line.
+    let result = build({ '01-one.md': lesson(':::prompt{id="p"}\nDo it.\n- check "slow" /(a|a)*b/\n:::') })
+    assert.deepEqual(errors(result), [
+      '01-one.md:10 → check “slow”: /(a|a)*b/ repeats an alternation whose branches can match the same text, like (a|a)*; repeat only distinct plain words',
+    ])
+  })
+
+  it('rejects xp outside 0–100 per block and 0–500 per lesson', () => {
+    let result = build({
+      '01-one.md': lesson(
+        ':::prompt{id="p" xp=1000000}\nDo it.\n- check "any" /./\n:::\n\n:::quiz{id="q" xp=-5}\nPick\n- [x] a\n- [ ] b\n:::',
+        'title: One\norder: 1\nminutes: 5\nxp: 999999',
+      ),
+    })
+    assert.deepEqual(errors(result), [
+      '01-one.md:5 → xp: Expected number less than or equal to 500',
+      '01-one.md:8 → xp=1000000 is out of range: use a whole number from 0 to 100',
+      '01-one.md:13 → xp=-5 is out of range: use a whole number from 0 to 100',
+    ])
   })
 })

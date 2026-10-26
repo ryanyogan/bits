@@ -96,8 +96,14 @@ export interface CourseBuildInput {
   report: ReportItem[]
   files: number
   source: string
-  /** The uploader; becomes a course author. Null for the CLI without --as. */
+  /** The uploader. Null for the CLI without --as. */
   userId: string | null
+  /**
+   * May build any course: admins and the CLI (which has the database
+   * anyway). Everyone else may only build a course they own or author, or
+   * a new slug, which they then own.
+   */
+  trusted: boolean
   now: number
 }
 
@@ -106,29 +112,51 @@ export interface CourseBuildInput {
  * in SQL so concurrent builds can't collide), creating the course on its
  * first build. A clean build starts as `building` until its JSON is in R2
  * (markVersionReady); a build with errors is `failed` and stays a report.
+ *
+ * Ownership is decided inside the one batch (a D1 transaction), not by a
+ * read before it: the course row's `owner_id` is set only by the insert
+ * that creates it, and every later statement runs only when the uploader is
+ * trusted, the owner or a listed author. So when two first uploads of a new
+ * slug race, one creates and owns the course and the other writes nothing.
+ * Returns null when the uploader may not build this course; no version is
+ * left behind.
  */
-export async function recordCourseBuild(db: D1DataTableDatabase, input: CourseBuildInput): Promise<CourseVersion> {
+export async function recordCourseBuild(db: D1DataTableDatabase, input: CourseBuildInput): Promise<CourseVersion | null> {
   let d1 = db.d1
   let status: VersionStatus = input.errors > 0 ? 'failed' : 'building'
+  let trusted = input.trusted ? 1 : 0
+  // ?S = slug, ?U = user id, ?T = trusted, against an existing courses row `c`.
+  let allowed = (c: string, S: string, U: string, T: string) =>
+    `(${T} or ${c}.owner_id = ${U} or exists (select 1 from course_authors a where a.course_slug = ${S} and a.user_id = ${U}))`
   let statements = [
     // A failed build may not know the real title or track; keep the old ones.
     d1
       .prepare(
-        `insert into courses (slug, title, track, sort, created_at, updated_at)
-         values (?1, ?2, ?3, ?4, ?5, ?5)
+        `insert into courses (slug, title, track, sort, owner_id, created_at, updated_at)
+         values (?1, ?2, ?3, ?4, ?7, ?5, ?5)
          on conflict (slug) do update set
            title = case when ?6 then excluded.title else courses.title end,
            track = case when ?6 then excluded.track else courses.track end,
            sort = case when ?6 then excluded.sort else courses.sort end,
-           updated_at = excluded.updated_at`,
+           updated_at = excluded.updated_at
+         where ${allowed('courses', '?1', '?7', '?8')}`,
       )
-      .bind(input.slug, input.title, input.track, input.sort, input.now, input.errors === 0 ? 1 : 0),
+      .bind(input.slug, input.title, input.track, input.sort, input.now, input.errors === 0 ? 1 : 0, input.userId, trusted),
+    // The creator (owner_id) or a trusted uploader becomes an author.
+    d1
+      .prepare(
+        `insert or ignore into course_authors (course_slug, user_id, created_at)
+         select ?1, ?2, ?3 where ?2 is not null
+           and exists (select 1 from courses c where c.slug = ?1 and (?4 or c.owner_id = ?2))`,
+      )
+      .bind(input.slug, input.userId, input.now, trusted),
     d1
       .prepare(
         `insert into course_versions
            (id, course_slug, n, status, errors, warnings, report, files, source, created_by, created_at)
-         values (?1, ?2, (select coalesce(max(n), 0) + 1 from course_versions where course_slug = ?2),
-           ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`,
+         select ?1, ?2, (select coalesce(max(n), 0) + 1 from course_versions where course_slug = ?2),
+           ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10
+         where exists (select 1 from courses c where c.slug = ?2 and ${allowed('c', '?2', '?9', '?11')})`,
       )
       .bind(
         input.id,
@@ -141,19 +169,18 @@ export async function recordCourseBuild(db: D1DataTableDatabase, input: CourseBu
         input.source,
         input.userId,
         input.now,
+        trusted,
       ),
   ]
-  if (input.userId) {
-    statements.push(
-      d1
-        .prepare('insert or ignore into course_authors (course_slug, user_id, created_at) values (?, ?, ?)')
-        .bind(input.slug, input.userId, input.now),
-    )
-  }
   await db.batch(statements)
   let row = await d1.prepare(`select ${versionColumns} from course_versions v where v.id = ?`).bind(input.id).first<VersionRow>()
-  if (!row) throw new Error(`course_versions row ${input.id} was not written`)
-  return toVersion(row)
+  // Fail closed: an untrusted uploader must be a listed author afterwards.
+  let isAuthor = input.trusted || (input.userId !== null && (await listCourseAuthorIds(db, input.slug)).includes(input.userId))
+  if (!isAuthor) {
+    if (row) await deleteVersion(db, input.id)
+    return null
+  }
+  return row ? toVersion(row) : null
 }
 
 /** The version's JSON is in R2: it may now be published. */

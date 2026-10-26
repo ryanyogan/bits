@@ -130,6 +130,8 @@ export interface SaveOptions {
   source: string
   /** The uploader, recorded as a course author. */
   userId?: string | null
+  /** Admins and the CLI may build any course; others only their own or a new one. */
+  trusted: boolean
   now?: number
 }
 
@@ -137,13 +139,14 @@ export interface SaveOptions {
  * Records a build as the course's next version. D1 assigns n first, so a
  * clean build's JSON goes to R2 under a v{n} prefix nothing else writes;
  * then the version is marked ready. A build with errors is a report only.
+ * Null when the uploader may not build this course (see recordCourseBuild).
  */
 export async function saveBuild(
   db: D1DataTableDatabase,
   build: CourseBuild,
   options: SaveOptions,
   bucket: R2Bucket,
-): Promise<CourseVersion> {
+): Promise<CourseVersion | null> {
   let version = await recordCourseBuild(db, {
     id: crypto.randomUUID(),
     slug: build.slug,
@@ -156,8 +159,10 @@ export async function saveBuild(
     files: build.files,
     source: options.source,
     userId: options.userId ?? null,
+    trusted: options.trusted,
     now: options.now ?? Date.now(),
   })
+  if (!version) return null
   if (version.status === 'failed' || !build.manifest || !build.lessons) return version
 
   let put = (key: string, value: unknown) =>
