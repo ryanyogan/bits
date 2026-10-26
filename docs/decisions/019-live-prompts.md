@@ -61,7 +61,7 @@ Two API facts shape the design:
   rebuilds the table: `user_id` becomes nullable, plus `visitor`, `ip_hash`,
   `source`, `temperature`, `output` (2,000 chars), `model`, token counts).
   "Complete lesson" still writes one `source = 'submit'` row per exercise.
-  A live row is inserted when the model accepts the request (so an aborted
+  A live row is reserved before the model is called (see 020; an aborted
   run still counts) and finished with the output and exact token counts
   when the stream ends, or in `platform.waitUntil` if the browser goes away.
 - **Signed-out runs** are keyed by a random `visitor` id kept in the session
@@ -117,8 +117,14 @@ Two API facts shape the design:
   is the backstop if the in-app cap is misconfigured.
 - Token counts on screen are still the composer's estimate; exact counts
   are in the journal (and the settings export, now version 2).
-- Limits can be overshot by a few runs under concurrency (count, then
-  insert). Acceptable for cost; tighten with a Durable Object if needed.
+- ~~Limits can be overshot by a few runs under concurrency (count, then
+  insert).~~ Fixed in 020: the limits are enforced by the insert. A live
+  run first reserves its row with one `INSERT … SELECT … WHERE count < cap`
+  statement (`insertRunWithin`) covering the owner's, the IP's and the
+  daily live caps; only a reserved run calls `runModel`. Until the stream
+  ends the row is `live` with no `model` (in flight); a failed model call
+  turns it into `fallback`. Canned rows are written the same way below the
+  refusal caps, so parallel requests can't pass any of them.
 - `PromptBlock.model` (a per-exercise model override in the handoff) is not
   honoured yet: every live run uses Haiku 5.5.
 - Not done: Gateway caching (it would make T=1.0 deterministic, which is

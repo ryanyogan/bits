@@ -5,9 +5,11 @@ import {
   claimVisitorRuns,
   countRuns,
   finishRun,
-  insertRun,
+  insertRunWithin,
   listRunTemperatures,
+  markRunFallback,
   type D1DataTableDatabase,
+  type RunCaps,
   type RunCounts,
   type RunOwner,
 } from '@bits/db'
@@ -96,7 +98,18 @@ export function jsonError(error: string, status: number, extra: Record<string, u
   return Response.json({ error, ...extra }, { status, headers: { 'Cache-Control': 'no-store' } })
 }
 
-/** Runs a learner's prompt: a streamed live reply, or canned output, journalled either way. */
+/**
+ * Runs a learner's prompt: a streamed live reply, or canned output, journalled
+ * either way.
+ *
+ * Limits are enforced by the insert itself (insertRunWithin), not by a count
+ * read earlier, so parallel requests can't overshoot them:
+ * 1. A live temperature first reserves a `live` row within the owner's,
+ *    the IP's and the daily live caps. Only a reserved run calls the model;
+ *    if the model fails, the row becomes `fallback`.
+ * 2. Otherwise the run is canned, and its row is written only below the
+ *    refusal caps (`refuseAfter` × each limit). Past them it is a 429.
+ */
 export async function startRun(context: AnyContext, input: RunRequest): Promise<Response> {
   let block = await findExercise(context, input.course, input.lesson, input.exercise)
   if (!block) return jsonError('not_found', 404)
@@ -108,54 +121,84 @@ export async function startRun(context: AnyContext, input: RunRequest): Promise<
   let ip = context.headers.get('CF-Connecting-IP')
   let ipHash = owner.userId ? null : await sha256Hex(`ip:${ip ?? 'local'}`)
   let now = Date.now()
-  let counts = await countRuns(db, owner, ipHash, {
-    hourSince: now - HOUR,
-    daySince: now - DAY,
-    todaySince: now - (now % DAY),
-  })
-
-  let over = overLimit(owner, counts)
-  if (over === 'refuse') return jsonError('rate_limited', 429, { retryAfter: 3600 })
-
-  let base = {
+  let windows = { hourSince: now - HOUR, daySince: now - DAY, todaySince: now - (now % DAY) }
+  let caps = ownerCaps(owner)
+  let row = (id: string, source: 'live' | 'example' | 'fallback', output: string) => ({
+    id,
     owner,
     ipHash,
     courseId: input.course,
     lessonSlug: input.lesson,
     exerciseId: input.exercise,
     prompt: input.prompt,
+    source,
     temperature: input.temperature,
+    output,
+    model: null,
     now,
-  }
-  let canned = async (source: 'example' | 'fallback', reason?: FallbackReason) => {
-    let output = pickExample(block, input.temperature)
-    await insertRun(db, { ...base, id: crypto.randomUUID(), source, output, model: null })
-    return textResponse(output, source, reason)
+  })
+  let example = () => pickExample(block, input.temperature)
+  let live = runsLive(input.temperature)
+
+  if (live) {
+    let id = crypto.randomUUID()
+    if (await insertRunWithin(db, row(id, 'live', ''), windows, { ...caps, liveToday: dailyLiveCap() })) {
+      return runLive(db, id, input, example)
+    }
   }
 
-  if (!runsLive(input.temperature)) return canned(over ? 'fallback' : 'example', over || undefined)
-  if (over) return canned('fallback', over)
-  if (counts.liveToday >= dailyLiveCap()) return canned('fallback', 'budget')
+  // Canned. Which limit (if any) applies only picks the label now; the
+  // refusal caps below are enforced atomically like the live ones.
+  let counts = await countRuns(db, owner, ipHash, windows)
+  let over = overLimit(owner, counts)
+  if (over === 'refuse') return refused()
+  let reason: FallbackReason | undefined = over ?? (live ? (counts.liveToday >= dailyLiveCap() ? 'budget' : 'limit') : undefined)
+  let source: 'example' | 'fallback' = reason ? 'fallback' : 'example'
+  let output = example()
+  let refuseAt = runLimits.refuseAfter
+  let written = await insertRunWithin(db, row(crypto.randomUUID(), source, output), windows, {
+    hour: caps.hour * refuseAt,
+    day: caps.day * refuseAt,
+    ipHour: caps.ipHour * refuseAt,
+    liveToday: null,
+  })
+  if (!written) return refused()
+  return textResponse(output, source, reason)
+}
 
+/** Calls the model for a reserved live row, then streams and journals the reply. */
+async function runLive(db: D1DataTableDatabase, id: string, input: RunRequest, example: () => string): Promise<Response> {
   let abort = new AbortController()
   let run
   try {
     run = await runModel({ prompt: input.prompt, temperature: input.temperature, signal: abort.signal, env: platform.env as ModelEnv })
   } catch (error) {
+    let reason: ModelFailure = error instanceof ModelError ? error.reason : 'unavailable'
+    let output = example()
+    await markRunFallback(db, id, output)
     if (!(error instanceof ModelError)) throw error
-    if (error.reason !== 'unconfigured') {
-      console.warn(JSON.stringify({ level: 'warn', message: 'Model run fell back', reason: error.reason }))
+    if (reason !== 'unconfigured') {
+      console.warn(JSON.stringify({ level: 'warn', message: 'Model run fell back', reason }))
     }
-    return canned('fallback', error.reason)
+    return textResponse(output, 'fallback', reason)
   }
-
-  let id = crypto.randomUUID()
-  await insertRun(db, { ...base, id, source: 'live', output: '', model: run.model })
+  let model = run.model
   let finish = async (output: string) => {
     let usage = await run.usage
-    await finishRun(db, id, { output, inputTokens: usage.input, outputTokens: usage.output })
+    await finishRun(db, id, { output, model, inputTokens: usage.input, outputTokens: usage.output })
   }
-  return textResponse(journalled(run.stream, finish, () => abort.abort()), 'live', undefined, run.model)
+  return textResponse(journalled(run.stream, finish, () => abort.abort()), 'live', undefined, model)
+}
+
+function refused(): Response {
+  return jsonError('rate_limited', 429, { retryAfter: 3600 })
+}
+
+/** The owner's hourly and daily caps; signed-out visitors also have a per-IP cap and no daily one. */
+function ownerCaps(owner: RunOwner): Omit<RunCaps, 'liveToday'> {
+  return owner.userId
+    ? { hour: runLimits.userPerHour, day: runLimits.userPerDay, ipHour: 0 }
+    : { hour: runLimits.anonymousPerHour, day: Number.MAX_SAFE_INTEGER, ipHour: runLimits.anonymousPerIpHour }
 }
 
 function overLimit(owner: RunOwner, counts: RunCounts): 'limit' | 'refuse' | null {

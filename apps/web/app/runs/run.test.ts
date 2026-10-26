@@ -265,6 +265,79 @@ describe('/api/run', () => {
     )
   })
 
+  it('parallel runs at the limit boundary get exactly the allowed number of live runs', async () => {
+    let ip = testIp()
+    await withGateway(
+      () => sseReply(['Moon ', 'roast.']),
+      async (calls) => {
+        // One run makes the session (visitor id); the rest race for the 9 slots left.
+        let first = await runPrompt(null, { ...moon, temperature: 100, ip })
+        await first.text()
+        let cookie = sessionCookieFrom(first)
+        let burst = await Promise.all(
+          Array.from({ length: 15 }, () => runPrompt(cookie, { ...moon, temperature: 100, ip })),
+        )
+        let sources = await Promise.all(
+          burst.map(async (response) => {
+            await response.text()
+            return response.headers.get('X-Run-Source')
+          }),
+        )
+        assert.equal(sources.filter((source) => source === 'live').length, runLimits.anonymousPerHour - 1)
+        assert.equal(sources.filter((source) => source === 'fallback').length, 15 - (runLimits.anonymousPerHour - 1))
+        assert.equal(calls.length, runLimits.anonymousPerHour, 'the model ran only for reserved runs')
+      },
+    )
+  })
+
+  it('the daily live cap holds under parallel runs from many visitors', async () => {
+    let env = platform.env as unknown as Record<string, string | undefined>
+    let saved = env.RUN_DAILY_LIVE_CAP
+    let liveSoFar = (await rows(`source = 'live' and created_at >= ?`, Date.now() - (Date.now() % 86_400_000))).length
+    env.RUN_DAILY_LIVE_CAP = String(liveSoFar + 3)
+    try {
+      await withGateway(
+        () => sseReply(['Moon ', 'roast.']),
+        async (calls) => {
+          let burst = await Promise.all(
+            Array.from({ length: 8 }, () => runPrompt(null, { ...moon, temperature: 100, ip: testIp() })),
+          )
+          let results = await Promise.all(
+            burst.map(async (response) => {
+              await response.text()
+              return [response.headers.get('X-Run-Source'), response.headers.get('X-Run-Reason')]
+            }),
+          )
+          assert.equal(results.filter(([source]) => source === 'live').length, 3)
+          assert.deepEqual(
+            results.filter(([source]) => source !== 'live'),
+            Array.from({ length: 5 }, () => ['fallback', 'budget']),
+          )
+          assert.equal(calls.length, 3)
+        },
+      )
+    } finally {
+      env.RUN_DAILY_LIVE_CAP = saved
+    }
+  })
+
+  it('a failed model call turns the reserved live row into a fallback', async () => {
+    let { cookie, user } = await signIn('reserve-fail@example.com')
+    await withGateway(
+      () => new Response(JSON.stringify({ type: 'error', error: { type: 'overloaded_error', message: 'busy' } }), { status: 529 }),
+      async () => {
+        let response = await runPrompt(cookie, { ...moon, temperature: 100 })
+        assert.equal(response.headers.get('X-Run-Source'), 'fallback')
+        await response.text()
+      },
+    )
+    let journal = await rows('user_id = ?', user.id)
+    assert.equal(journal.length, 1)
+    assert.equal(journal[0]!.source, 'fallback')
+    assert.equal(journal[0]!.model, null)
+    assert.match(journal[0]!.output, HOT_TAGLINES)
+  })
+
   it('refuses runs far past the limit without journalling them', async () => {
     let ip = testIp()
     let cookie: string | null = null

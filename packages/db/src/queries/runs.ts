@@ -66,40 +66,96 @@ export interface RunInput {
 /** Longest output kept in the journal. */
 export const MAX_JOURNAL_OUTPUT = 2000
 
-export async function insertRun(db: D1DataTableDatabase, input: RunInput): Promise<void> {
-  await db.d1
-    .prepare(
-      `insert into exercise_attempts
-         (id, user_id, visitor, ip_hash, course_id, lesson_slug, exercise_id, prompt, source, temperature, output, model, created_at)
-       values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .bind(
-      input.id,
-      input.owner.userId ?? null,
-      input.owner.visitor ?? null,
-      input.ipHash,
-      input.courseId,
-      input.lessonSlug,
-      input.exerciseId,
-      input.prompt,
-      input.source,
-      input.temperature,
-      input.output.slice(0, MAX_JOURNAL_OUTPUT),
-      input.model,
-      input.now,
-    )
-    .run()
+const INSERT_COLUMNS =
+  'id, user_id, visitor, ip_hash, course_id, lesson_slug, exercise_id, prompt, source, temperature, output, model, created_at'
+
+function runValues(input: RunInput): unknown[] {
+  return [
+    input.id,
+    input.owner.userId ?? null,
+    input.owner.visitor ?? null,
+    input.ipHash,
+    input.courseId,
+    input.lessonSlug,
+    input.exerciseId,
+    input.prompt,
+    input.source,
+    input.temperature,
+    input.output.slice(0, MAX_JOURNAL_OUTPUT),
+    input.model,
+    input.now,
+  ]
 }
 
-/** Saves a live run's streamed output and token counts once it ends. */
+/** Caps for insertRunWithin: the row is written only while every count is below its cap. */
+export interface RunCaps {
+  /** The owner's runs since `hourSince`. */
+  hour: number
+  /** The owner's runs since `daySince`. */
+  day: number
+  /** Signed-out runs from `ipHash` since `hourSince` (ignored without an ipHash). */
+  ipHour: number
+  /** Live runs by everyone since `todaySince`; null leaves it out. */
+  liveToday: number | null
+}
+
+/**
+ * Inserts the run only if it stays within `caps`, as one statement
+ * (`INSERT … SELECT … WHERE count < cap`). D1 runs statements one at a time,
+ * so parallel requests can't both pass the same last slot: the counts and
+ * the insert can't interleave. Returns whether the row was written.
+ */
+export async function insertRunWithin(
+  db: D1DataTableDatabase,
+  input: RunInput,
+  windows: { hourSince: number; daySince: number; todaySince: number },
+  caps: RunCaps,
+): Promise<boolean> {
+  let [column, bind] = ownerColumn(input.owner)
+  let result = await db.d1
+    .prepare(
+      `insert into exercise_attempts (${INSERT_COLUMNS})
+       select ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13
+       where (select count(*) from exercise_attempts where ${column} = ?14 and ${RUNS} and created_at >= ?15) < ?16
+         and (select count(*) from exercise_attempts where ${column} = ?14 and ${RUNS} and created_at >= ?17) < ?18
+         and (?4 is null or (select count(*) from exercise_attempts where ip_hash = ?4 and user_id is null and created_at >= ?15) < ?19)
+         and (?20 is null or (select count(*) from exercise_attempts where source = 'live' and created_at >= ?21) < ?20)`,
+    )
+    .bind(
+      ...runValues(input),
+      bind,
+      windows.hourSince,
+      caps.hour,
+      windows.daySince,
+      caps.day,
+      caps.ipHour,
+      caps.liveToday,
+      windows.todaySince,
+    )
+    .run()
+  return result.meta.changes === 1
+}
+
+/**
+ * Saves a live run's streamed output, model and token counts once it ends.
+ * Until then the reserved row has no model: a run in flight.
+ */
 export async function finishRun(
   db: D1DataTableDatabase,
   id: string,
-  result: { output: string; inputTokens: number; outputTokens: number },
+  result: { output: string; model: string; inputTokens: number; outputTokens: number },
 ): Promise<void> {
   await db.d1
-    .prepare('update exercise_attempts set output = ?, input_tokens = ?, output_tokens = ? where id = ?')
-    .bind(result.output.slice(0, MAX_JOURNAL_OUTPUT), result.inputTokens, result.outputTokens, id)
+    .prepare('update exercise_attempts set output = ?, model = ?, input_tokens = ?, output_tokens = ? where id = ?')
+    .bind(result.output.slice(0, MAX_JOURNAL_OUTPUT), result.model, result.inputTokens, result.outputTokens, id)
+    .run()
+}
+
+/** A reserved live run whose model call failed becomes canned output. */
+export async function markRunFallback(db: D1DataTableDatabase, id: string, output: string): Promise<void> {
+  await db.d1
+    .prepare(`update exercise_attempts set source = 'fallback', output = ?, model = null where id = ?`)
+    .bind(output.slice(0, MAX_JOURNAL_OUTPUT), id)
     .run()
 }
 
