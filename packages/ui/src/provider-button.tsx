@@ -7,7 +7,11 @@ import { FOCUS, HOVER, type ForcedState } from './lib/states.ts'
 export interface ProviderButtonProps {
   /** `github` / `globe` (Google) / `key` (passkey). */
   icon: IconName
-  /** OAuth start URL: renders a link that works without JS. Omit for a button (passkey). */
+  /**
+   * OAuth start URL: renders a link that works without JS. It is a document
+   * navigation (`data-rmx-document`): the redirect leaves the origin, which
+   * client navigation can't follow. Omit for a button (passkey).
+   */
   href?: string
   type?: 'button' | 'submit'
   name?: string
@@ -32,7 +36,7 @@ export function ProviderButton(handle: Handle<ProviderButtonProps>) {
     )
     if (href) {
       return (
-        <a href={href} data-force={forceState} mix={[buttonStyle, mix]}>
+        <a href={href} data-rmx-document="" data-force={forceState} mix={[buttonStyle, mix]}>
           {content}
         </a>
       )

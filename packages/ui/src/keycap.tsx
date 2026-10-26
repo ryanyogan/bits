@@ -26,6 +26,13 @@ export interface KeycapProps {
   block?: boolean
   /** Renders an `<a>` when set, otherwise a `<button>`. */
   href?: string
+  /**
+   * Links only: a full-document navigation (`data-rmx-document`), for links
+   * that leave the app (OAuth) or return something other than a page.
+   */
+  document?: boolean
+  /** Links only: a file download (`download`, optionally the file name). */
+  download?: boolean | string
   type?: 'button' | 'submit' | 'reset'
   name?: string
   value?: string
@@ -58,6 +65,8 @@ export function Keycap(handle: Handle<KeycapProps>) {
       glow,
       block,
       href,
+      document,
+      download,
       type = 'button',
       name,
       value,
@@ -98,6 +107,8 @@ export function Keycap(handle: Handle<KeycapProps>) {
         <a
           {...common}
           href={disabled ? undefined : href}
+          data-rmx-document={document ? '' : undefined}
+          download={download === true ? '' : download || undefined}
           aria-disabled={disabled ? 'true' : undefined}
           role={disabled ? 'link' : undefined}
           mix={styles}

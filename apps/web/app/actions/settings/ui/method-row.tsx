@@ -40,6 +40,7 @@ export function MethodRow(handle: Handle<{ method: SignInMethod }>) {
           ) : provider && !method.connected ? (
             <Keycap
               variant="dark"
+              document
               href={routes.auth.oauth.start.href(
                 { provider },
                 { searchParams: { link: '1', next: routes.settings.index.href() } },

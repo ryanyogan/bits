@@ -129,6 +129,8 @@ export const DropZone = clientEntry(
           method="post"
           action={action}
           enctype="multipart/form-data"
+          // The no-JS fallback; errors come back as JSON, not a page.
+          data-rmx-document=""
           data-js={hydrated ? '' : undefined}
           data-files={picked.length ? '' : undefined}
           data-drag={dragging ? '' : undefined}

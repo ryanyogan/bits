@@ -58,7 +58,7 @@ export default createController(routes.login, {
         origin: context.url.origin,
       })
       if (!result.ok) {
-        let failure = failures[result.reason]
+        let failure = emailFailures[result.reason]
         return rerender(failure.status, { notice: { tone: 'danger', text: failure.text } })
       }
 
@@ -72,13 +72,14 @@ export default createController(routes.login, {
   },
 })
 
-const failures: Record<Extract<EmailRequestResult, { ok: false }>['reason'], { status: number; text: string }> = {
+/** Re-render statuses: 4xx, since the browser runtime treats a 5xx as a failed navigation. */
+export const emailFailures: Record<Extract<EmailRequestResult, { ok: false }>['reason'], { status: number; text: string }> = {
   'rate-email': {
     status: 429,
     text: 'We’ve sent this address 3 emails in the last 10 minutes. Use the newest one, or try again in a few minutes.',
   },
   'rate-ip': { status: 429, text: 'Too many sign-in emails from this network. Try again in an hour.' },
-  'send-failed': { status: 503, text: 'We couldn’t send the email just now. Try again in a minute.' },
+  'send-failed': { status: 422, text: 'We couldn’t send the email just now. Try again in a minute.' },
 }
 
 /** `?error=` from OAuth callbacks and `?notice=` from sign-out flows. */

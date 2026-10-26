@@ -4,6 +4,7 @@ import { after, describe, it } from 'remix/test'
 import { disposePlatform } from '#platform'
 
 import { router } from '../../router.ts'
+import { emailFailures } from './controller.tsx'
 import { routes } from '../../routes.ts'
 
 after(() => disposePlatform())
@@ -28,12 +29,20 @@ describe('/login', () => {
     assert.match(html, /Welcome back\./)
     assert.match(html, /<nav aria-label="Account"/)
     assert.match(html, /href="\/login\?next=%2Fcourses" aria-current="page"/)
-    assert.match(html, /href="\/auth\/oauth\/github\?next=%2Fcourses"/)
-    assert.match(html, /href="\/auth\/oauth\/google\?next=%2Fcourses"/)
+    // OAuth redirects leave the origin, so they are document navigations.
+    assert.match(html, /href="\/auth\/oauth\/github\?next=%2Fcourses" data-rmx-document=""/)
+    assert.match(html, /href="\/auth\/oauth\/google\?next=%2Fcourses" data-rmx-document=""/)
     assert.ok(html.indexOf('Use a passkey') < html.indexOf('Continue with GitHub'), 'passkey comes first')
     assert.match(html, /<input type="hidden" name="next" value="\/courses"/)
     assert.match(html, /<main id="main"/)
     assert.doesNotMatch(html, /name="goals"/)
+  })
+
+  it('answers every email failure with a 4xx page, which client navigation renders', () => {
+    // The browser runtime rejects 5xx responses, so a re-render with a notice must be 4xx.
+    for (let [reason, { status }] of Object.entries(emailFailures)) {
+      assert.ok(status >= 400 && status < 500, `${reason}: ${status}`)
+    }
   })
 
   it('renders create account with name, goal chips (curious on) and timezone', async () => {

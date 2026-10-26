@@ -236,6 +236,7 @@ function VideoRow(handle: Handle<{ slug: string; video: VideoUpload }>) {
               method="post"
               action={routes.api.authorVideoUploadUrl.href()}
               enctype="multipart/form-data"
+              data-rmx-document=""
               mix={missingForm}
             >
               <span mix={warnText}>! {VIDEO_STATUS.missing}</span>

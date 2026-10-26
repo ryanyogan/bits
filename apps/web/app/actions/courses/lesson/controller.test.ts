@@ -32,7 +32,8 @@ describe('lesson page and author preview', () => {
     assert.equal(status, 200)
     assert.match(html, /<title>Temperature &amp; randomness · Tokens &amp; temperature · Bits<\/title>/)
     assert.equal(count(html, /<h1[\s>]/), 1)
-    assert.match(html, /<main id="main"/)
+    // Keyed per lesson, so client navigation to another lesson replaces its islands (F1).
+    assert.match(html, /<main id="main" data-rmx-key="tokens-and-temperature\/temperature"/)
     assert.match(html, /aria-label="Lessons"/)
     // Tutor text is server-rendered, readable without JS.
     assert.match(html, /<strong[^>]*>every possible token a probability<\/strong>/)

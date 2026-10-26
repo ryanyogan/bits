@@ -58,7 +58,13 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[] 
           segments={segments}
           progressLabel={`Lesson ${view.index + 1} of ${view.total}, ${done} complete`}
           modes={modes.map((m) => ({ label: modeLabels[m], href: view.href.mode(m), current: m === mode }))}
-          xp={viewer ? <LessonXp neurons={viewer.xp} award={award} /> : undefined}
+          xp={
+            viewer ? (
+              <span data-rmx-key={view.key} mix={contentsStyle}>
+                <LessonXp neurons={viewer.xp} award={award} />
+              </span>
+            ) : undefined
+          }
         />
         {view.draft ? (
           <p mix={draftStyle}>
@@ -69,7 +75,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[] 
           </p>
         ) : null}
         {mode === 'terminal' ? (
-          <main id="main" mix={workspaceMain}>
+          <main id="main" data-rmx-key={view.key} mix={workspaceMain}>
             <TerminalMode view={view} />
             <div mix={hasCode(content) ? undefined : soloFooter}>
               <LessonFooter view={view} gated={gated} issues={issues} />
@@ -78,7 +84,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[] 
         ) : (
           <div mix={bodyStyle}>
             <OutlineNav view={view} />
-            <main id="main" mix={mainStyle}>
+            <main id="main" data-rmx-key={view.key} mix={mainStyle}>
               <OutlineDisclosure view={view} />
               {mode === 'watch' ? <WatchMode view={view} /> : <ReadMode view={view} />}
               <div mix={mode === 'watch' ? watchFooter : readFooter}>
@@ -126,6 +132,13 @@ function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean; issues?
 }
 
 const MOBILE = '@media (max-width: 759px)'
+
+// Client navigation reconciles a new page into the old DOM, and an island in
+// a matching spot keeps its setup state (a passed check, a composer's runs).
+// `data-rmx-key={view.key}` on <main> and on the XP pill's wrapper makes a
+// different lesson replace them, so every island starts fresh per lesson.
+// The same lesson (a quiz GET, a 422 re-render) keeps its state.
+const contentsStyle = css({ display: 'contents' })
 
 const skipLinkStyle = css({
   position: 'absolute',

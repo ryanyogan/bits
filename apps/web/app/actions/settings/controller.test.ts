@@ -32,10 +32,11 @@ describe('/settings', () => {
     for (let action of ['/settings/profile', '/settings/email', '/settings/methods', '/settings/sessions', '/settings/delete']) {
       assert.match(html, new RegExp(`method="post" action="${action}"`), action)
     }
-    assert.match(html, /href="\/settings\/export"/)
+    // Downloads and OAuth leave client navigation (F4, F3).
+    assert.match(html, /href="\/settings\/export" download=""/)
     assert.match(html, /name="visibility" value="public"[^>]*checked/)
     assert.match(html, /Disconnect GitHub/, 'linked GitHub identity shows Disconnect')
-    assert.match(html, /href="\/auth\/oauth\/google\?link=1&amp;next=%2Fsettings"/, 'Google offers Connect')
+    assert.match(html, /href="\/auth\/oauth\/google\?link=1&amp;next=%2Fsettings" data-rmx-document=""/, 'Google offers Connect')
     assert.match(html, /This device/)
     assert.match(html, /<legend[^>]*>Profile visibility<\/legend>/)
   })

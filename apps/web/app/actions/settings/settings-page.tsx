@@ -224,7 +224,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                 description="Download everything you've done here: progress, neurons, badges and every prompt in your journal, as one JSON file."
               >
                 <div mix={footerStyle}>
-                  <Keycap variant="dark" href={routes.settings.export.href()} mix={footerKeyStyle}>
+                  <Keycap variant="dark" href={routes.settings.export.href()} download mix={footerKeyStyle}>
                     Download my data (.json)
                   </Keycap>
                 </div>

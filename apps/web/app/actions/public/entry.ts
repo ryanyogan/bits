@@ -22,6 +22,35 @@ const app = run({
   },
 })
 
+// A failed enhanced navigation falls back to the browser's own (guide 12,
+// "Handle browser runtime errors at the app root"). The default resolver
+// rejects a 5xx, a redirect to another origin or a non-HTML redirect, so
+// without this the page would just freeze. A link becomes a document load
+// of its destination; a form is submitted again natively, so the browser
+// shows whatever the server answers.
+let navigating = false
+let lastNavigation: { url: string; source: Element | null; post: boolean } | null = null
+app.frames.top.addEventListener('reloadStart', () => (navigating = true))
+app.frames.top.addEventListener('reloadComplete', () => (navigating = false))
+window.navigation?.addEventListener('navigate', (event) => {
+  lastNavigation = { url: event.destination.url, source: event.sourceElement ?? null, post: event.formData != null }
+})
+
+app.addEventListener('error', (event) => {
+  console.error('Browser runtime error:', event.error)
+  if (!navigating || !lastNavigation) return
+  let { url, source, post } = lastNavigation
+  lastNavigation = null
+  let form = source instanceof HTMLFormElement ? source : (source as HTMLButtonElement | null)?.form
+  if (post && form) {
+    form.setAttribute('data-rmx-document', '')
+    let submitter = source instanceof HTMLButtonElement || source instanceof HTMLInputElement ? source : undefined
+    form.requestSubmit(submitter)
+    return
+  }
+  window.location.assign(post ? window.location.href : url)
+})
+
 if (import.meta.hot) {
   import.meta.hot.on('server:update', async () => {
     try {
