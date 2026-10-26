@@ -4,7 +4,7 @@ import { after, describe, it } from 'remix/test'
 import { disposePlatform } from '#platform'
 
 import { routes } from '../../routes.ts'
-import { completeLesson, fetchAs, signIn } from '../../test/auth.ts'
+import { completeLesson, fetchAs, runAt, signIn } from '../../test/auth.ts'
 
 function get(path: string) {
   return fetchAs(null, path)
@@ -17,9 +17,10 @@ let jamie: Promise<string> | undefined
 async function getSignedIn(path: string) {
   jamie ??= (async () => {
     let { cookie } = await signIn('jamie@example.com', { displayName: 'Jamie Park' })
+    let exercise = { course: 'tokens-and-temperature', lesson: 'temperature', exercise: 'moon-tagline', prompt: prompt(4) }
+    await runAt(cookie, exercise, [0, 100])
     for (let n = 5; n <= 8; n++) {
-      let fields = { 'prompt.moon-tagline': prompt(n), 'ran.moon-tagline': ['0', '100'] }
-      await completeLesson(cookie, 'tokens-and-temperature', 'temperature', fields)
+      await completeLesson(cookie, 'tokens-and-temperature', 'temperature', { 'prompt.moon-tagline': prompt(n) })
     }
     await completeLesson(cookie, 'tokens-and-temperature', 'what-is-a-token', { 'quiz.common-words': 'a' })
     return cookie

@@ -152,28 +152,46 @@ export const lessonProgress = table({
 
 export type LessonProgress = TableRow<typeof lessonProgress>
 
+export const attemptSources = ['submit', 'live', 'example', 'fallback'] as const
+/**
+ * submit: saved with "Complete lesson". live: the model ran. example: canned
+ * output for a temperature the model doesn't run at. fallback: canned output
+ * because of a limit, the budget or an outage (decision 019).
+ */
+export type AttemptSource = (typeof attemptSources)[number]
+
+/** The prompt journal: every run and every submitted prompt (migration 0005). */
 export const exerciseAttempts = table({
   name: 'exercise_attempts',
   columns: {
     id: c.text(),
-    user_id: c.text(),
+    user_id: c.text().nullable(),
+    /** Session-held id of a signed-out visitor. */
+    visitor: c.text().nullable(),
+    ip_hash: c.text().nullable(),
     course_id: c.text(),
     lesson_slug: c.text(),
     exercise_id: c.text(),
     prompt: c.text(),
-    passed: c.boolean(),
-    temperatures: c.json(),
+    source: c.enum(attemptSources),
+    /** T × 100 of a run; null for a submission. */
+    temperature: c.integer().nullable(),
+    output: c.text(),
+    model: c.text().nullable(),
+    input_tokens: c.integer(),
+    output_tokens: c.integer(),
+    /** Submissions only: every check passed. */
+    passed: c.boolean().nullable(),
     created_at: c.integer(),
   },
   afterRead({ value }) {
     let next = { ...value }
-    if ('passed' in next) next.passed = decodeBoolean(next.passed) as boolean
-    if ('temperatures' in next) next.temperatures = decodeJsonArray(next.temperatures)
+    if ('passed' in next && next.passed != null) next.passed = decodeBoolean(next.passed) as boolean
     return { value: next }
   },
 })
 
-export type ExerciseAttempt = Omit<TableRow<typeof exerciseAttempts>, 'temperatures'> & { temperatures: number[] }
+export type ExerciseAttempt = TableRow<typeof exerciseAttempts>
 
 export const xpKinds = ['exercise', 'quiz', 'lesson'] as const
 export type XpKind = (typeof xpKinds)[number]

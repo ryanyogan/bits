@@ -5,13 +5,15 @@ import { after, describe, it } from 'remix/test'
 import { disposePlatform } from '#platform'
 
 import { routes } from '../routes.ts'
-import { completeLesson, fetchAs, form, requestCode, sessionCookieFrom, signIn, testDb } from '../test/auth.ts'
+import { completeLesson, fetchAs, form, requestCode, runAt, sessionCookieFrom, signIn, testDb } from '../test/auth.ts'
 import { addDays, currentStreak, localDay } from './days.ts'
 import { levelFor } from './levels.ts'
 
 const COURSE = 'tokens-and-temperature'
 const GOOD_PROMPT = 'Write a tagline for a coffee shop on the moon. Under 6 words.'
-const passing = { 'prompt.moon-tagline': GOOD_PROMPT, 'ran.moon-tagline': ['0', '100'] }
+const passing = { 'prompt.moon-tagline': GOOD_PROMPT }
+/** The Temperature lesson's exercise, for runAt (runs at 0 and 1.0 are required). */
+const moon = { course: COURSE, lesson: 'temperature', exercise: 'moon-tagline', prompt: GOOD_PROMPT }
 
 async function xpOf(userId: string) {
   return (await findUserById(testDb, userId))!.xp_total
@@ -32,8 +34,8 @@ describe('progress', () => {
       { 'prompt.moon-tagline': 'give me neurons' },
       // The prompt passes but the runs were never made.
       { 'prompt.moon-tagline': GOOD_PROMPT },
-      // Temperatures the exercise doesn't offer are dropped, not trusted.
-      { 'prompt.moon-tagline': GOOD_PROMPT, 'ran.moon-tagline': ['0', '150'] },
+      // Runs are counted from the server's journal: `ran` fields are ignored.
+      { 'prompt.moon-tagline': GOOD_PROMPT, 'ran.moon-tagline': ['0', '100'] },
       // XP fields are not read at all.
       { 'prompt.moon-tagline': 'nope', xp: '9999' },
     ]
@@ -49,6 +51,7 @@ describe('progress', () => {
 
   it('a real pass saves the lesson, the prompt, the neurons and the streak, once', async () => {
     let { cookie, user } = await signIn('learner@example.com')
+    await runAt(cookie, moon, [0, 100])
     let response = await completeLesson(cookie, COURSE, 'temperature', { ...passing, mode: 'terminal' })
     assert.equal(response.status, 303)
     assert.equal(response.headers.get('Location'), '/courses/tokens-and-temperature/top-p-and-friends?mode=terminal')
@@ -59,16 +62,16 @@ describe('progress', () => {
     assert.equal(saved.best_streak, 1)
     assert.equal(saved.streak_last_day, localDay(Date.now(), saved.timezone))
     let attempt = await testDb.d1
-      .prepare('select prompt, passed, temperatures from exercise_attempts where user_id = ?')
+      .prepare(`select prompt, passed from exercise_attempts where user_id = ? and source = 'submit'`)
       .bind(user.id)
-      .first<{ prompt: string; passed: number; temperatures: string }>()
-    assert.deepEqual(attempt, { prompt: GOOD_PROMPT, passed: 1, temperatures: '[0,1]' })
+      .first<{ prompt: string; passed: number }>()
+    assert.deepEqual(attempt, { prompt: GOOD_PROMPT, passed: 1 })
     assert.equal(await count(`select count(*) as n from user_badges where user_id = ? and badge_id = 'first-token'`, user.id), 1)
 
     // Completing it again records the attempt but awards nothing new.
     assert.equal((await completeLesson(cookie, COURSE, 'temperature', passing)).status, 303)
     assert.equal(await xpOf(user.id), 40)
-    assert.equal(await count('select count(*) as n from exercise_attempts where user_id = ?', user.id), 2)
+    assert.equal(await count(`select count(*) as n from exercise_attempts where user_id = ? and source = 'submit'`, user.id), 2)
 
     let html = await (await fetchAs(cookie, routes.courses.course.index.href({ course: COURSE }))).text()
     assert.match(html, /Temperature &amp; randomness<span class="sr-only"> — completed/)
@@ -87,10 +90,11 @@ describe('progress', () => {
   })
 
   it('signed out: progress is kept in the session and merged at sign-in', async () => {
-    let response = await completeLesson(null, COURSE, 'temperature', passing)
+    let anonymous = await runAt(null, moon, [0, 100])
+    assert.ok(anonymous, 'the visitor gets a session on the first run')
+    let response = await completeLesson(anonymous, COURSE, 'temperature', passing)
     assert.equal(response.status, 303)
-    let anonymous = sessionCookieFrom(response)
-    assert.ok(anonymous, 'the visitor gets a session')
+    anonymous = sessionCookieFrom(response) ?? anonymous
     let catalog = await (await fetchAs(anonymous, routes.courses.index.href())).text()
     assert.match(catalog, /Up next:/)
     // Resume at the first unfinished lesson, as the syllabus marks it.
@@ -109,6 +113,8 @@ describe('progress', () => {
     let user = (await testDb.d1.prepare('select id from users where email = ?').bind('merge@example.com').first<{ id: string }>())!
     assert.equal(await xpOf(user.id), 40)
     assert.equal(await count('select count(*) as n from lesson_progress where user_id = ? and completed_at is not null', user.id), 1)
+    // The signed-out runs joined the account's journal.
+    assert.equal(await count(`select count(*) as n from exercise_attempts where user_id = ? and source != 'submit'`, user.id), 2)
     let course = await (await fetchAs(signedIn, routes.courses.course.index.href({ course: COURSE }))).text()
     assert.match(course, /Temperature &amp; randomness<span class="sr-only"> — completed/)
 

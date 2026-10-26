@@ -79,6 +79,45 @@ export function fetchAs(cookie: string | null, path: string, init: RequestInit =
   return router.fetch(new Request(new URL(path, 'http://localhost'), { ...init, headers }))
 }
 
+export interface RunInput {
+  course: string
+  lesson: string
+  exercise: string
+  prompt: string
+  /** T × 100. */
+  temperature: number
+  /** CF-Connecting-IP; defaults to a fresh test IP. */
+  ip?: string
+}
+
+/** POST /api/run as the composer does. Returns the response (read its body to finish the run). */
+export function runPrompt(cookie: string | null, input: RunInput): Promise<Response> {
+  let { ip = testIp(), temperature, ...fields } = input
+  return fetchAs(cookie, routes.api.run.href(), {
+    method: 'POST',
+    headers: { 'CF-Connecting-IP': ip },
+    body: form({ ...fields, temperature: String(temperature) }),
+  })
+}
+
+/**
+ * Runs an exercise at each temperature (× 100) and returns the session
+ * cookie to keep using (a signed-out visitor gets one on the first run).
+ */
+export async function runAt(
+  cookie: string | null,
+  exercise: Omit<RunInput, 'temperature'>,
+  temperatures: number[],
+): Promise<string | null> {
+  for (let temperature of temperatures) {
+    let response = await runPrompt(cookie, { ...exercise, temperature })
+    if (response.status !== 200) throw new Error(`POST /api/run answered ${response.status}`)
+    await response.text()
+    cookie = sessionCookieFrom(response) ?? cookie
+  }
+  return cookie
+}
+
 /** Completes a lesson through the real "complete lesson" form. Returns the response. */
 export async function completeLesson(
   cookie: string | null,

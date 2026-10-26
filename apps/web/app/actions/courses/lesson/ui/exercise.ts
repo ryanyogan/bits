@@ -2,9 +2,10 @@
 // TerminalLog prompt mode, CodeEditor). Plain data only: these cross into
 // islands.
 import type { CodeFile } from '@bits/ui/code-editor'
-import type { PromptCheck, SubmitFields, TemperatureOption } from '@bits/ui/prompt-composer'
+import type { PromptCheck, RunEndpoint, SubmitFields, TemperatureOption } from '@bits/ui/prompt-composer'
 import type { RewardNext } from '@bits/ui/reward-toast'
 
+import { routes } from '../../../../routes.ts'
 import type { CodeBlock, PromptBlock } from '../content.ts'
 import type { LessonView } from '../lesson-view.ts'
 
@@ -15,7 +16,6 @@ export function temperatureLabel(t: number): string {
 /** Field names of the lesson's "complete" form (read by app/progress/check.ts). */
 export const fieldNames = {
   prompt: (exerciseId: string) => `prompt.${exerciseId}`,
-  ran: (exerciseId: string) => `ran.${exerciseId}`,
   quiz: (quizId: string) => `quiz.${quizId}`,
 }
 
@@ -32,6 +32,7 @@ export interface ExerciseProps {
   examples: Record<string, string[]>
   reward: { xp: number; message: string; next?: RewardNext }
   submit?: SubmitFields
+  run?: RunEndpoint
 }
 
 /** The exercise's checks, as the composer runs them and the server re-runs them. */
@@ -64,7 +65,11 @@ export function exerciseProps(view: LessonView, block: PromptBlock): ExercisePro
     examples,
     reward: { xp: block.xp, message: block.success.message, next },
     submit: view.completeForm
-      ? { form: view.completeForm.id, prompt: fieldNames.prompt(block.id), ran: fieldNames.ran(block.id) }
+      ? { form: view.completeForm.id, prompt: fieldNames.prompt(block.id) }
+      : undefined,
+    // Runs go through /api/run (live or canned, journalled); the draft preview runs canned in the browser.
+    run: view.completeForm
+      ? { action: routes.api.run.href(), fields: { course: view.course.slug, lesson: view.lesson.slug, exercise: block.id } }
       : undefined,
   }
 }

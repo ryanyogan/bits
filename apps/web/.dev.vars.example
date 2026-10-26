@@ -8,3 +8,11 @@ SESSION_SECRET=change-me-to-a-long-random-string
 # GITHUB_CLIENT_SECRET=
 # GOOGLE_CLIENT_ID=
 # GOOGLE_CLIENT_SECRET=
+# Live prompts (decision 019). Until ANTHROPIC_API_KEY and both gateway vars
+# are set, /api/run answers with the lesson's example output (a fallback).
+# The gateway vars live in wrangler.jsonc; override them here for dev.
+# ANTHROPIC_API_KEY=
+# Only if the gateway has Authenticated Gateway on:
+# CF_AIG_TOKEN=
+# AI_GATEWAY_ACCOUNT_ID=
+# AI_GATEWAY_ID=bits

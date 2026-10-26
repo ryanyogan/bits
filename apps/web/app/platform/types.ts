@@ -21,6 +21,11 @@ export interface Platform {
   assets: AppAssets
   /** Runtime-specific middleware that runs first (static files on Node). */
   middleware: Middleware
+  /**
+   * Finishes work after the response (or a cancelled stream) without
+   * holding it up: `waitUntil` on Workers; on Node the promise just runs.
+   */
+  waitUntil(promise: Promise<unknown>): void
 }
 
 /** The browser-facing asset surface the renderer and document need. */

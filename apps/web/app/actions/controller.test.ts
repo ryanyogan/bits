@@ -41,7 +41,9 @@ describe('router smoke test', () => {
 
   it('the catch-all does not shadow real routes or POST endpoints', async () => {
     assert.equal((await request(routes.health.href())).status, 200)
-    assert.equal((await request('/api/run', { method: 'POST' })).status, 501)
+    // An empty POST reaches the run endpoint (422 invalid), not the 404 page.
+    assert.equal((await request('/api/run', { method: 'POST' })).status, 422)
+    assert.equal((await request('/api/progress', { method: 'POST' })).status, 501)
   })
 
   let publicPages = [
