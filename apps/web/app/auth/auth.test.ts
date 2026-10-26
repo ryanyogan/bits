@@ -272,7 +272,7 @@ describe('auth', () => {
 
   it('next= accepts only same-origin paths', () => {
     assert.equal(safeNextPath('/courses?track=agents#top'), '/courses?track=agents#top')
-    for (let bad of ['//evil.example', '/\\evil.example', '/\t/evil.example', '/\n/evil.example', 'https://evil.example', 'evil', '']) {
+    for (let bad of ['//evil.example', '/\\evil.example', '/\t/evil.example', '/\n/evil.example', 'https://evil.example', 'evil', '', '/.//evil.example', '/..//evil.example', '/%2e//evil.example']) {
       assert.equal(safeNextPath(bad), undefined, JSON.stringify(bad))
     }
   })

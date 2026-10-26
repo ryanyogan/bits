@@ -4,7 +4,7 @@ import * as f from 'remix/data-schema/form-data'
 
 /** Only same-origin paths may be used as a post-login destination. */
 export function safeNextPath(value: string | undefined | null): string | undefined {
-  if (!value || !value.startsWith('/')) return undefined
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return undefined
   // Browsers drop tabs and newlines and read `\` as `/`, so `/\t/evil.example`
   // could still leave the site. Refuse them, then let URL decide the origin.
   if (/[\\\s\x00-\x1f\x7f]/.test(value)) return undefined
@@ -16,7 +16,9 @@ export function safeNextPath(value: string | undefined | null): string | undefin
     return undefined
   }
   if (url.origin !== base) return undefined
-  return url.pathname + url.search + url.hash
+  let path = url.pathname + url.search + url.hash
+  // Dot segments can normalise `/.//evil.example` into `//evil.example`.
+  return path.startsWith('//') ? undefined : path
 }
 
 const trimmed = s.defaulted(s.string(), '').transform((value) => value.trim())
