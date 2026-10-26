@@ -90,7 +90,7 @@ const tokensAndTemperature: CourseDetail = {
     'Explain why a model “chooses” one word over another.',
     'Pick a temperature for a task and defend it.',
   ],
-  badge: { id: 'tokens-temperature', name: 'Temperature Tamer', glyph: 'T°' },
+  badge: { id: 'tokens-temperature', name: 'Temperature tamer', glyph: 'T°' },
   modules: [
     { n: 'M1', title: 'How text becomes numbers', lessons: [
       lesson(1, 'what-is-a-token', 'What is a token?', 'done', 6, 30, ['chat', 'type', 'video']),
