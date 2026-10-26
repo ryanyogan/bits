@@ -105,7 +105,7 @@ describe('/author and /author/:course', () => {
       edit: (file, text) => (file === 'course.md' ? text.replace('title: "What is an LLM, really?"', 'title: "My first course"') : text),
     })
     assert.equal(first.status, 201)
-    let lessonPath = routes.courses.lesson.index.href({ course: 'my-first-course', lesson: 'lesson-1' })
+    let lessonPath = routes.courses.lesson.index.href({ course: 'my-first-course', lesson: 'say-hi-to-claude' })
     assert.equal((await fetchAs(null, lessonPath)).status, 404, 'drafts are not public')
 
     // The uploader owns it: it's on their /author, and they can publish it.

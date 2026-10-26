@@ -28,6 +28,12 @@ export function stepRows(step: NextTokenStep): OddsRow[] {
   )
 }
 
+/** The prompt, plus a space when the reply's first token has none (a chat reply). */
+export function promptText(prompt: string, steps: NextTokenStep[]): string {
+  let first = steps[0]?.token ?? ''
+  return /\s$/.test(prompt) || /^\s/.test(first) || !first ? prompt : `${prompt} `
+}
+
 // Autoplay beats: the odds show, then the pick lights up, then it lands.
 const ODDS_MS = 900
 const PICK_MS = 650
@@ -132,7 +138,7 @@ export const NextTokenPlayer = clientEntry(
         return (
           <ToyPanel context="the reply, one token at a time" label="next-token prediction" illustrative={illustrative} mix={watch}>
             <p mix={sentenceStyle}>
-              <span mix={promptStyle}>{prompt}</span>
+              <span mix={promptStyle}>{promptText(prompt, steps)}</span>
               {reply}
             </p>
             <table mix={toyTableStyle}>
@@ -169,7 +175,7 @@ export const NextTokenPlayer = clientEntry(
       return (
         <ToyPanel context="the reply, one token at a time" label="next-token prediction" illustrative={illustrative} mix={watch}>
           <p mix={sentenceStyle}>
-            <span mix={promptStyle}>{prompt}</span>
+            <span mix={promptStyle}>{promptText(prompt, steps)}</span>
             {steps.slice(0, pos).map((s, i) => (
               <span key={i} data-new={i === pos - 1 ? 'true' : undefined} mix={landedStyle}>
                 {s.token}

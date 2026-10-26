@@ -23,7 +23,7 @@ Before Claude sees your prompt, a **tokenizer** chops the text into pieces
 from a fixed vocabulary. Each piece has an id number, and the numbers are all
 the model ever sees. It doesn't see the letters inside them.
 
-:::tokenizer{sample="How many r's in strawberry?"}
+:::tokenizer{sample="How many r's in strawberry?" illustrative}
 "How"     4438
 " many"   1690
 " r"      436

@@ -58,8 +58,8 @@ function Side(handle: Handle<{ label: string; text: string; tone: 'muted' | 'ion
   return () => {
     let { label, text, tone } = handle.props
     return (
-      <figure mix={[modelPanelStyle, sideStyle, tone === 'muted' ? mutedSide : undefined]}>
-        <figcaption mix={[metaStyle, tone === 'muted' ? mutedMeta : undefined]}>{label}</figcaption>
+      <figure data-tone={tone} mix={[modelPanelStyle, sideStyle]}>
+        <figcaption mix={metaStyle}>{label}</figcaption>
         <p mix={textStyle}>{text}</p>
       </figure>
     )
@@ -86,8 +86,11 @@ const columns = css({
   gap: 'var(--space-3)',
   '@media (max-width: 639px)': { gridTemplateColumns: '1fr' },
 })
-const sideStyle = css({ margin: 0, minWidth: 0 })
-const mutedSide = css({ borderColor: 'var(--line-strong)', background: 'var(--well)' })
+const sideStyle = css({
+  margin: 0,
+  minWidth: 0,
+  '&[data-tone="muted"]': { borderColor: 'var(--line-strong)', background: 'var(--well)' },
+  '&[data-tone="muted"] figcaption': { color: 'var(--muted)' },
+})
 const metaStyle = css({ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--ion)' })
-const mutedMeta = css({ color: 'var(--muted)' })
 const textStyle = css({ margin: 0, fontSize: 'var(--fs-16)', lineHeight: 1.55, color: 'var(--text)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' })

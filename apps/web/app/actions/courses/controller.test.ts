@@ -7,13 +7,28 @@ import type { Catalog } from '../../content/catalog.ts'
 import { loadCatalog } from '../../content/store.ts'
 import type { CourseManifest } from '../../content/types.ts'
 import { routes } from '../../routes.ts'
-import { completeLesson, fetchAs, signIn, testDb } from '../../test/auth.ts'
+import { completeLesson, fetchAs, runAt, signIn, testDb } from '../../test/auth.ts'
 import { catalogHref, filterCourses as filter, parseCatalogQuery, resultLabel } from './catalog.ts'
 
 let cookie: string | null = null
 // The published catalog: content/courses/, built and published by the test platform.
 let catalog: Catalog
 let courses: readonly CourseManifest[] = []
+// A passing answer for each gated block of What is an LLM (prompts also need a run at T=1.0).
+const LLM_LESSONS: { lesson: string; prompt?: [id: string, text: string]; quiz?: [id: string, key: string] }[] = [
+  { lesson: 'say-hi-to-claude', prompt: ['say-hi', 'Hi Claude, what are you? Explain in one sentence.'] },
+  { lesson: 'a-very-good-next-word-guesser', prompt: ['finish-the-sentence', 'Finish this sentence with one word: The sky is ...'] },
+  { lesson: 'words-become-tokens', quiz: ['strawberry', 'b'] },
+  { lesson: 'where-it-learned-pretraining', quiz: ['what-pretraining-practises', 'a'] },
+  { lesson: 'from-autocomplete-to-assistant', quiz: ['constitutional-ai', 'b'] },
+  { lesson: 'attention-how-it-keeps-track', prompt: ['what-does-it-mean', 'In "The dog chased the cat because it was hungry", what does it refer to?'] },
+  { lesson: 'what-it-cant-do', prompt: ['catch-a-guess', 'Who wrote the 1923 novel The Glass Orchard? If you are not sure, say so.'] },
+  {
+    lesson: 'checkpoint-talk-to-it-well',
+    prompt: ['talk-to-it-well', 'Write a welcome message for my running club, for nervous beginners, because we want them back. Keep it under 40 words. Ask me questions if anything is unclear.'],
+  },
+]
+
 const filterCourses = (query: Parameters<typeof filter>[0]) => filter(query, catalog.listCourses())
 
 /** Fetches a page signed in (progress shows), or signed out with `{ anonymous: true }`. */
@@ -33,9 +48,18 @@ describe('catalog and course pages', () => {
     catalog = await loadCatalog(testDb, platform.env.CONTENT)
     courses = catalog.courses
     ;({ cookie } = await signIn('catalog@example.com'))
-    // The artboards' learner: finished the LLM course, then lessons 1–5 of
-    // Tokens & temperature (none of these has a gating exercise).
-    for (let n = 1; n <= 8; n++) await completeLesson(cookie, 'what-is-an-llm', `lesson-${n}`)
+    // The artboards' learner: finished the LLM course (passing each gate),
+    // then lessons 1–5 of Tokens & temperature (none of these is gated).
+    for (let { lesson, prompt, quiz } of LLM_LESSONS) {
+      let fields: Record<string, string> = {}
+      if (prompt) {
+        cookie = await runAt(cookie, { course: 'what-is-an-llm', lesson, exercise: prompt[0], prompt: prompt[1] }, [100])
+        fields[`prompt.${prompt[0]}`] = prompt[1]
+      }
+      if (quiz) fields[`quiz.${quiz[0]}`] = quiz[1]
+      let response = await completeLesson(cookie, 'what-is-an-llm', lesson, fields)
+      assert.equal(response.status, 303, lesson)
+    }
     for (let slug of ['what-is-a-token', 'tokenizers-are-weird', 'counting-tokens', 'probabilities-not-answers', 'greedy-vs-sampled']) {
       let response = await completeLesson(cookie, 'tokens-and-temperature', slug)
       assert.equal(response.status, 303, slug)

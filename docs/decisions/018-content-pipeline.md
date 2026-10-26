@@ -29,7 +29,8 @@ Constraints:
     splits turns.
   - Remark directives add the interactive blocks: `::ask[…]`,
     `:::prompt`, `:::code`, `:::terminal`, `:::quiz`, `:::odds` and
-    `:::tokenizer`. Inside `:::prompt`, `:::quiz`, `:::odds` and
+    `:::tokenizer` (and, since 021, the lesson toys `:::nexttoken`,
+    `:::training`, `:::attention`, `:::compare` and `:::rabbithole`). Inside `:::prompt`, `:::quiz`, `:::odds` and
     `:::terminal`, the body is read as plain lines (`- check "label" /re/i`,
     `- [x] answer`), not as markdown.
   - Adjacent `:::code` blocks form one tabbed editor. A `:::terminal` right

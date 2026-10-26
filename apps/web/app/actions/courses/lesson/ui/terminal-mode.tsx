@@ -3,6 +3,7 @@ import { css } from 'remix/component'
 import { CodeEditor } from '@bits/ui/code-editor'
 import { oddsAt, temperatureNote } from '@bits/ui/odds-bars'
 import { formatOdds, showToken } from '@bits/ui/odds-list'
+import { promptText } from '@bits/ui/next-token'
 import { linkMeta } from '@bits/ui/rabbit-hole'
 import { OutputPanel, TerminalLog, type TerminalEntry, type TerminalPart, type TerminalPrompt, type TerminalTone } from '@bits/ui/terminal'
 
@@ -212,7 +213,7 @@ function nextTokenEntry(block: NextTokenBlock): TerminalEntry {
       ['ion', formatOdds(step.p).padStart(5)],
       ['muted', step.alternatives.length ? `   ${step.alternatives.map(([t, p]) => `${showToken(t)} ${formatOdds(p)}`).join('  ')}` : ''],
     ]),
-    summary: `${block.prompt}${block.steps.map((step) => step.token).join('')}${block.illustrative ? `  (${ILLUSTRATIVE})` : ''}`,
+    summary: `${promptText(block.prompt, block.steps)}${block.steps.map((step) => step.token).join('')}${block.illustrative ? `  (${ILLUSTRATIVE})` : ''}`,
   }
 }
 
