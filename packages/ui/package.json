@@ -11,7 +11,8 @@
   },
   "scripts": {
     "fonts": "node scripts/copy-fonts.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "cd ../.. && remix test --config packages/ui/remix.json"
   },
   "peerDependencies": {
     "remix": "^3.1.0"
@@ -21,7 +22,11 @@
     "@fontsource/geist-mono": "^5.3.0",
     "@fontsource/unbounded": "^5.3.0",
     "@types/node": "^24.6.0",
+    "playwright": "1.64.1",
     "remix": "^3.1.0",
     "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@remix-run/ui": "0.13.0"
   }
 }
