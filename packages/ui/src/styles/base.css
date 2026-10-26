@@ -48,6 +48,8 @@
 @layer base {
   html {
     background: var(--ink);
+    /* Sticky bars must not cover focused elements (components §3.1). */
+    scroll-padding-top: 72px;
   }
 
   body {
@@ -75,15 +77,72 @@
     color: var(--on-volt);
   }
 
-  /* Focus ring: a 4px volt glow on keyboard focus only. */
+  /* Focus ring (resolutions §6): a 2px solid volt outline plus a 4px volt
+   * glow, keyboard focus only. Components that set their own box-shadow
+   * compose var(--focus-ring) into it on :focus-visible. */
   :focus {
     outline: none;
   }
 
-  :focus-visible {
+  /* [data-force="focus"] renders the same ring statically in the style guide. */
+  :focus-visible,
+  [data-force='focus'] {
     outline: 2px solid var(--focus-ring-color);
     outline-offset: 2px;
     box-shadow: var(--focus-ring);
+  }
+
+  /* Shared keyframes (tokens §6.2). Names are global; components reference
+   * them by name in css() mixins. */
+  @keyframes bits-blink {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes bits-pulse-ion {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 var(--ion-a60);
+    }
+    50% {
+      box-shadow: 0 0 0 8px var(--ion-a0);
+    }
+  }
+
+  @keyframes bits-pulse-volt {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 var(--volt-a55);
+    }
+    50% {
+      box-shadow: 0 0 0 6px var(--volt-a0);
+    }
+  }
+
+  @keyframes bits-rise {
+    from {
+      opacity: 0;
+      transform: translateY(var(--reveal-rise));
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes bits-pop {
+    0% {
+      opacity: 0;
+      transform: translateY(20px) scale(0.9);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+    }
   }
 
   /* Visually hidden but available to assistive tech. */

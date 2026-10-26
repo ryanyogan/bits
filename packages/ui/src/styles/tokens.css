@@ -1,9 +1,12 @@
 /*
  * Bits design tokens. Dark only (v1).
  *
- * Source of truth: docs/design/artboards/System.dc.html and the "Frontend"
- * section of docs/handoff.md. Components read these through var(--token);
- * never hard-code a hex value in a component.
+ * Source of truth: docs/design/spec/tokens.md (extracted from
+ * docs/design/artboards/*.dc.html), with docs/design/spec/resolutions.md
+ * applied on top. Components read these through var(--token); never
+ * hard-code a colour, spacing step, radius, type size, shadow or duration in
+ * a component. If a design needs a value that is missing here, add it here
+ * first (with its source) and then use it.
  *
  * Cascade layer order is declared once here and again inline at the top of
  * <head> by Document, so it is established before Remix's generated `rmx`
@@ -18,130 +21,364 @@
   :root {
     color-scheme: dark;
 
-    /* ---- Color: core palette (System.dc.html "Color") ---- */
+    /* ------------------------------------------------------------------
+     * 1.1 Ground and surfaces
+     * ------------------------------------------------------------------ */
     --ink: #07080d; /* page ground, never pure black */
-    --surface: #0e1018; /* cards, panels, inputs */
-    --raised: #151826; /* dark keycaps, selected tabs */
-    --text: #eceef5; /* headlines, primary copy */
-    --muted: #9aa0b4; /* secondary body, descriptions */
-    --dim: #7a8098; /* hints and meta; lightest grey allowed for text (4.9:1) */
-    --volt: #c6ff3d; /* primary action, "your turn", success */
-    --volt-edge: #6e9116; /* keycap shadow under volt only */
+    --surface: #0e1018; /* cards, panels, tab-group track */
+    --well: #0a0c14; /* sunken wells: inputs, composer, editor body, cover base */
+    --terminal: #090a10; /* terminal lesson + output panels */
+    --raised: #151826; /* dark keycap face, avatar button */
+    --selected: #1c2030; /* selected segmented tab; disabled keycap face */
+    --bubble: #1a1e2d; /* learner bubble */
+    --glass: rgb(12 14 22 / 0.78); /* #0C0E16 @ 78%: frosted panels */
+    --glass-80: rgb(12 14 22 / 0.8); /* mode cards */
+    --glass-82: rgb(12 14 22 / 0.82); /* progress card */
+    --glass-well: rgb(10 12 20 / 0.78); /* --well @ 78% (Auth session panel) */
+    --key-dark-edge: #020305; /* shadow edge under dark keycaps */
+
+    /* 1.2 Text */
+    --text: #eceef5; /* headlines, primary copy (17.3:1 on ink) */
+    --text-body: #d5d8e3; /* lesson body copy, labels */
+    --text-quiet: #c6cad6; /* mono hex values, unselected filters, code punctuation */
+    --text-lead: #b4b9ca; /* lead paragraphs, marketing nav, unselected chips */
+    --muted: #9aa0b4; /* secondary copy, app nav, mono meta (7.7:1) */
+    --dim: #7a8098; /* hints, placeholders: lightest grey allowed for text (5.1:1); never on --selected */
+    --on-volt: #0a0c05; /* text and icons on volt fills (16.6:1) */
+
+    /* 1.3 Accents */
+    --volt: #c6ff3d; /* primary action, your turn, success, focus */
+    --volt-edge: #6e9116; /* keycap shadow edge under volt only */
+    --volt-hover: #d4ff66; /* System hover sample face */
+    --volt-link-hover: #e2ff8f; /* a:hover */
+    --volt-soft: #e4ff9e; /* text on volt tints: selected chips, XP pill, passed checks */
     --ion: #3de3ff; /* model output, in progress, video */
-    --synapse: #9d85ff; /* 3D field and Tools track only */
+    --ion-edge: #1a8fa3; /* keycap edge under an ion face ("Copied ✓") */
+    --synapse: #9d85ff; /* 3D field, Tools track, shell prompt, code/project kinds */
+    --synapse-soft: #b9a6ff; /* syntax keywords, directive attributes */
+    --warn: #ffd08a; /* warning text */
+    /* Resolutions §1: proposed danger colour, provisional until design sign-off. */
+    --danger: #ff7a6b; /* 7.86:1 on ink */
+    --danger-tint: rgb(255 122 107 / 0.12);
+    --danger-line: rgb(255 122 107 / 0.4);
 
-    /* ---- Color: supporting values used across the artboards ---- */
-    --on-volt: #0a0c05; /* text and icons on volt */
-    --volt-hover: #d4ff66; /* keycap hover fill */
-    --volt-link-hover: #e2ff8f; /* link hover */
-    --volt-soft-text: #e4ff9e; /* text on a volt-tinted chip */
-    --synapse-soft: #b9a6ff;
-    --text-body: #d5d8e3; /* long-form lesson copy */
-    --text-nav: #b4b9ca; /* nav links, inactive chips */
-    --text-code-meta: #c6cad6; /* hex labels, code meta */
-    --composer: #0a0c14; /* prompt composer well */
-    --raised-2: #1c2030;
-    --keycap-dark-edge: #020305; /* shadow under dark keycaps */
-    --glass: rgb(12 14 22 / 0.78); /* #0C0E16 @ 78% */
-    --glass-blur: 14px;
-    --scrim: rgb(7 8 13 / 0.82); /* sticky bars over content */
+    /* 1.10 Semantic aliases */
+    --success: var(--volt);
+    --progress: var(--ion);
+    --info: var(--ion);
+    --warning: var(--warn);
 
-    /* Hairlines and fills are white at fixed alphas. */
-    --line-faint: rgb(255 255 255 / 0.06);
-    --line-soft: rgb(255 255 255 / 0.07);
-    --line: rgb(255 255 255 / 0.08);
-    --line-strong: rgb(255 255 255 / 0.12);
-    --line-ghost: rgb(255 255 255 / 0.14);
-    --line-dashed: rgb(255 255 255 / 0.3);
-    --fill-faint: rgb(255 255 255 / 0.05);
-    --fill-selected: rgb(255 255 255 / 0.1);
+    /* 1.4 Code and skeleton greys (decorative; see resolutions §6 for text use) */
+    --code-gutter: #4a5068; /* decorative only: real line numbers use --dim */
+    --code-gutter-faint: #3b4157; /* locked badge chip fill (Main) */
+    --skeleton: #262b3c;
+    --skeleton-bubble: #1f2436;
+    /* Syntax palette (CodeLesson `C` map). Comments use --dim (resolutions §6). */
+    --syntax-keyword: var(--synapse-soft);
+    --syntax-string: var(--volt);
+    --syntax-type: var(--ion);
+    --syntax-function: var(--text);
+    --syntax-plain: var(--text-quiet);
+    --syntax-comment: var(--dim);
+    --syntax-number: var(--ion);
 
-    /* Accent tints. */
-    --volt-tint: rgb(198 255 61 / 0.12);
-    --volt-tint-border: rgb(198 255 61 / 0.35);
-    --volt-glow: rgb(198 255 61 / 0.25);
-    --volt-border-active: rgb(198 255 61 / 0.6);
-    --ion-tint: rgb(61 227 255 / 0.12);
-    --ion-tint-border: rgb(61 227 255 / 0.35);
-    --synapse-tint: rgb(157 133 255 / 0.14);
-    --synapse-tint-border: rgb(157 133 255 / 0.4);
+    /* 1.5 White alphas: lines and fills */
+    --line-hair: rgb(255 255 255 / 0.06); /* inner dividers, cover bottom border */
+    --line-bar: rgb(255 255 255 / 0.07); /* app-bar bottom, section dividers */
+    --line: rgb(255 255 255 / 0.08); /* default card border, ring track */
+    --line-glass: rgb(255 255 255 / 0.09); /* glass cards, terminal + editor border */
+    --line-panel: rgb(255 255 255 / 0.1); /* quiz options, format tags, badge chips */
+    --line-strong: rgb(255 255 255 / 0.12); /* inputs, dark keycap, avatar button */
+    --line-control: rgb(255 255 255 / 0.14); /* ghost buttons, unselected chips, kbd */
+    --line-dashed: rgb(255 255 255 / 0.16); /* dashed empty-state / source card */
+    --line-dashed-strong: rgb(255 255 255 / 0.2); /* "Write a course" card */
+    --line-drop: rgb(255 255 255 / 0.22); /* drop zone, ghost hover border, scrubber remainder */
+    --line-node-next: rgb(255 255 255 / 0.3); /* dashed "next" node, filter hover border */
+    --fill-row-hover: rgb(255 255 255 / 0.03);
+    --fill-hover: rgb(255 255 255 / 0.04);
+    --fill-seg: rgb(255 255 255 / 0.05); /* segmented track, odds track, heatmap 0 */
+    --fill-ghost-hover: rgb(255 255 255 / 0.06);
+    --fill-btn: rgb(255 255 255 / 0.08); /* video controls, tool-button hover, progress tracks */
+    --fill-tab-on: rgb(255 255 255 / 0.1); /* selected segment in the static tabs */
+    --fill-seg-off: rgb(255 255 255 / 0.1); /* unfilled lesson progress segment */
+    --fill-codeline-hover: rgb(255 255 255 / 0.025);
+    --dot-grid: rgb(255 255 255 / 0.05);
+    --dot-grid-field: rgb(255 255 255 / 0.055);
+    --inset-highlight: rgb(255 255 255 / 0.55); /* keycap top highlight */
+    --kbd-edge: rgb(255 255 255 / 0.08);
+    --strike-muted: rgb(154 160 180 / 0.4); /* done lesson strike-through */
+    --avatar-edge: rgb(236 238 245 / 0.35);
+    --on-volt-a12: rgb(10 12 5 / 0.12); /* ↵ tile inside a volt keycap */
 
-    /* ---- Type ---- */
+    /* 1.6 Volt alphas */
+    --volt-a0: rgb(198 255 61 / 0);
+    --volt-a035: rgb(198 255 61 / 0.035); /* highlighted code range */
+    --volt-a04: rgb(198 255 61 / 0.04);
+    --volt-a05: rgb(198 255 61 / 0.05);
+    --volt-a06: rgb(198 255 61 / 0.06);
+    --volt-a08: rgb(198 255 61 / 0.08); /* XP pill, type-mode banner */
+    --volt-tint: rgb(198 255 61 / 0.1); /* search focus glow, focused code line */
+    --volt-tint-on: rgb(198 255 61 / 0.12); /* selected chip, passed check, focus glow */
+    --volt-a14: rgb(198 255 61 / 0.14);
+    --volt-a22: rgb(198 255 61 / 0.22);
+    --volt-a25: rgb(198 255 61 / 0.25); /* XP pill border, heatmap 1, toast glow */
+    --volt-a28: rgb(198 255 61 / 0.28);
+    --volt-a30: rgb(198 255 61 / 0.3);
+    --volt-a35: rgb(198 255 61 / 0.35);
+    --volt-a40: rgb(198 255 61 / 0.4); /* composer border, card hover border */
+    --volt-a45: rgb(198 255 61 / 0.45); /* passed check border */
+    --volt-a50: rgb(198 255 61 / 0.5);
+    --volt-a55: rgb(198 255 61 / 0.55); /* heatmap 2, pulse start */
+    --volt-a60: rgb(198 255 61 / 0.6); /* selected chip border, search focus */
+    --volt-a70: rgb(198 255 61 / 0.7); /* field focus border */
+    --volt-a75: rgb(198 255 61 / 0.75); /* composer focus border */
+
+    /* 1.7 Ion alphas */
+    --ion-a0: rgb(61 227 255 / 0);
+    --ion-a04: rgb(61 227 255 / 0.04);
+    --ion-a06: rgb(61 227 255 / 0.06);
+    --ion-a08: rgb(61 227 255 / 0.08);
+    --ion-a12: rgb(61 227 255 / 0.12);
+    --ion-a16: rgb(61 227 255 / 0.16);
+    --ion-a18: rgb(61 227 255 / 0.18);
+    --ion-a22: rgb(61 227 255 / 0.22);
+    --ion-a25: rgb(61 227 255 / 0.25);
+    --ion-a28: rgb(61 227 255 / 0.28);
+    --ion-a30: rgb(61 227 255 / 0.3);
+    --ion-a35: rgb(61 227 255 / 0.35);
+    --ion-a45: rgb(61 227 255 / 0.45);
+    --ion-a50: rgb(61 227 255 / 0.5);
+    --ion-a55: rgb(61 227 255 / 0.55);
+    --ion-a60: rgb(61 227 255 / 0.6);
+
+    /* 1.8 Synapse alphas */
+    --syn-a14: rgb(157 133 255 / 0.14);
+    --syn-a25: rgb(157 133 255 / 0.25);
+    --syn-a40: rgb(157 133 255 / 0.4);
+    --syn-a42: rgb(157 133 255 / 0.42);
+    --syn-a50: rgb(157 133 255 / 0.5);
+    --syn-a60: rgb(157 133 255 / 0.6);
+
+    /* 1.9 Ink, black and warn alphas */
+    --ink-a55: rgb(7 8 13 / 0.55);
+    --ink-a60: rgb(7 8 13 / 0.6);
+    --ink-a70: rgb(7 8 13 / 0.7); /* text on --text fills (selected filter count) */
+    --ink-a78: rgb(7 8 13 / 0.78); /* video control bar */
+    --appbar-bg: rgb(7 8 13 / 0.82); /* app-bar glass, cover track tag */
+    --ink-a86: rgb(7 8 13 / 0.86);
+    --lessonbar-bg: rgb(7 8 13 / 0.88);
+    --shadow-a45: rgb(0 0 0 / 0.45);
+    --shadow-a50: rgb(0 0 0 / 0.5);
+    --shadow-a55: rgb(0 0 0 / 0.55);
+    --warn-tint: rgb(255 184 77 / 0.08);
+    --warn-line: rgb(255 184 77 / 0.35);
+
+    /* 1.11 Track colours */
+    --track-foundations: var(--volt);
+    --track-prompting: var(--ion);
+    --track-tools: var(--synapse);
+    --track-agents: var(--volt);
+
+    /* ------------------------------------------------------------------
+     * 2. Typography
+     * ------------------------------------------------------------------ */
     --font-display: 'Unbounded', ui-sans-serif, system-ui, sans-serif; /* 500 / 700 / 800 */
     --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif; /* 400–600 */
     --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace; /* 400 / 500 */
 
-    /* Scale from System.dc.html "Type". */
-    --type-display-xl-size: clamp(46px, 9vw, 124px);
-    --type-display-xl-leading: 0.95;
-    --type-display-xl-tracking: -0.045em;
-    --type-h2-size: clamp(34px, 5vw, 64px);
+    /* Font sizes (px-named so the artboard value is greppable). */
+    --fs-10: 10px;
+    --fs-11: 11px;
+    --fs-12: 12px;
+    --fs-13: 13px;
+    --fs-14: 14px;
+    --fs-15: 15px;
+    --fs-16: 16px;
+    --fs-17: 17px;
+    --fs-18: 18px;
+    --fs-19: 19px;
+    --fs-20: 20px;
+    --fs-22: 22px;
+    --fs-24: 24px;
+    --fs-28: 28px;
+    --fs-30: 30px;
+    --fs-32: 32px;
+    --fs-34: 34px;
+    --fs-52: 52px;
+    --fs-56: 56px;
+    --fs-88: 88px;
+
+    /* Letter spacing */
+    --tracking-display: -0.045em; /* display-xl, CTA, course hero */
+    --tracking-sigil: -0.05em;
+    --tracking-tight: -0.04em; /* display-l, System h1, card sigil */
+    --tracking-h2: -0.035em;
+    --tracking-form: -0.03em; /* form h1, banner title */
+    --tracking-title: -0.02em; /* card titles, wordmark */
+    --tracking-tag: 0.08em; /* cover track tag */
+    --tracking-eyebrow-s: 0.12em;
+    --tracking-eyebrow: 0.14em;
+    --tracking-cue: 0.16em;
+
+    /* Type roles from System.dc.html "Type" (kept for existing pages). */
+    --type-display-xl-size: clamp(46px, 8.4vw, 124px);
+    --type-display-xl-leading: 0.94;
+    --type-display-xl-tracking: var(--tracking-display);
+    --type-h2-size: clamp(36px, 4.6vw, 64px);
     --type-h2-leading: 1.02;
-    --type-h2-tracking: -0.035em;
-    --type-h3-size: 22px;
+    --type-h2-tracking: var(--tracking-h2);
+    --type-h3-size: var(--fs-22);
     --type-h3-leading: 1.15;
-    --type-h3-tracking: -0.02em;
-    --type-body-size: 17px;
+    --type-h3-tracking: var(--tracking-title);
+    --type-body-size: var(--fs-17);
     --type-body-leading: 1.7;
     --type-body-measure: 68ch;
-    --type-ui-size: 15px;
-    --type-small-size: 13px;
-    --type-mono-size: 15px;
+    --type-ui-size: var(--fs-15);
+    --type-small-size: var(--fs-13);
+    --type-mono-size: var(--fs-15);
     --type-mono-leading: 1.75;
-    --type-eyebrow-size: 13px;
-    --type-eyebrow-tracking: 0.14em;
-    --type-wordmark-size: 20px;
-    --type-wordmark-tracking: -0.02em;
+    --type-eyebrow-size: var(--fs-13);
+    --type-eyebrow-tracking: var(--tracking-eyebrow);
+    --type-wordmark-size: var(--fs-20);
+    --type-wordmark-tracking: var(--tracking-title);
 
-    /* ---- Shape ---- */
-    --radius-xs: 6px; /* inline keycap hints, small badges */
+    /* ------------------------------------------------------------------
+     * 3. Spacing (4-pt; --space-N = N × 4px, fractional steps for the
+     * exact artboard paddings)
+     * ------------------------------------------------------------------ */
+    --space-0_5: 2px;
+    --space-0_75: 3px;
+    --space-1: 4px;
+    --space-1_25: 5px;
+    --space-1_5: 6px;
+    --space-1_75: 7px;
+    --space-2: 8px;
+    --space-2_25: 9px;
+    --space-2_5: 10px;
+    --space-2_75: 11px;
+    --space-3: 12px;
+    --space-3_25: 13px;
+    --space-3_5: 14px;
+    --space-4: 16px;
+    --space-4_5: 18px;
+    --space-5: 20px;
+    --space-5_5: 22px;
+    --space-6: 24px; /* card padding */
+    --space-6_5: 26px;
+    --space-7: 28px;
+    --space-8: 32px;
+    --space-9: 36px;
+    --space-10: 40px;
+    --space-11: 44px;
+    --space-12: 48px;
+    --space-14: 56px;
+    --space-16: 64px;
+    --space-18: 72px;
+    --space-20: 80px;
+    --space-24: 96px;
+    --space-30: 120px;
+    --space-section: var(--space-30);
+
+    /* 7. Layout */
+    --page-max: 1280px; /* --container */
+    --page-gutter: 32px; /* desktop horizontal padding */
+    --gutter-mobile: 16px; /* ≤480px */
+    --read-width: 760px;
+    --watch-width: 1040px;
+    --form-width: 420px;
+    --measure: 68ch;
+    --touch-target: 44px; /* minimum hit area */
+    --bp-mobile: 760px; /* resolutions §8 (documentation only: CSS cannot read it in @media) */
+
+    /* ------------------------------------------------------------------
+     * 4. Radii. Scale: 8 · 11 · 14 · 18 · 22 · pill. Off-scale values the
+     * artboards use exactly are px-named.
+     * ------------------------------------------------------------------ */
+    --radius-xs: 6px;
     --radius-sm: 8px;
     --radius-md: 11px;
     --radius-lg: 14px;
     --radius-xl: 18px;
     --radius-2xl: 22px;
     --radius-pill: 999px;
-    --radius-keycap: 12px; /* System keycap sample */
+    --radius-2: 2px;
+    --radius-3: 3px;
+    --radius-4: 4px;
+    --radius-5: 5px;
+    --radius-7: 7px;
+    --radius-9: 9px;
+    --radius-10: 10px;
+    --radius-12: 12px;
+    --radius-13: 13px;
+    --radius-16: 16px;
+    --radius-20: 20px;
+    --radius-24: 24px;
+    --radius-28: 28px;
+    --radius-keycap: var(--radius-12); /* resolutions §3 */
+    --radius-bubble: 16px 16px 4px 16px; /* learner bubble */
 
-    /* ---- Space (4-pt grid) ---- */
-    --space-1: 4px;
-    --space-2: 8px;
-    --space-3: 12px;
-    --space-4: 16px;
-    --space-5: 20px;
-    --space-6: 24px; /* card padding */
-    --space-8: 32px;
-    --space-10: 40px;
-    --space-12: 48px;
-    --space-16: 64px;
-    --space-section: 120px;
-    --page-max: 1280px;
-    --page-gutter: clamp(16px, 4vw, 32px);
-    --touch-target: 44px; /* minimum hit area */
-
-    /* ---- Elevation ---- */
-    --shadow-keycap-volt: 0 4px 0 var(--volt-edge), inset 0 1px 0 rgb(255 255 255 / 0.55);
-    --shadow-keycap-volt-hover: 0 5px 0 var(--volt-edge), 0 12px 30px var(--volt-glow),
-      inset 0 1px 0 rgb(255 255 255 / 0.55);
-    --shadow-keycap-volt-pressed: 0 1px 0 var(--volt-edge);
-    --shadow-keycap-dark: 0 4px 0 var(--keycap-dark-edge);
-    --shadow-keycap-dark-pressed: 0 1px 0 var(--keycap-dark-edge);
-    --shadow-toast: 0 20px 60px var(--volt-glow);
-    --shadow-float: 0 30px 80px rgb(0 0 0 / 0.5);
-
-    /* ---- Focus: 4px volt glow ---- */
-    --focus-ring: 0 0 0 4px rgb(198 255 61 / 0.45);
-    --focus-ring-color: var(--volt);
-
-    /* ---- Motion ---- */
-    --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-    --ease: ease;
-    --duration-press: 120ms; /* keycap press */
+    /* ------------------------------------------------------------------
+     * 5. Elevation. Keycaps per resolutions §3: 4px edge, 1px when pressed.
+     * ------------------------------------------------------------------ */
+    --keycap-edge: 4px;
     --keycap-travel: 3px;
-    --duration-fast: 150ms; /* hover color */
+    --shadow-keycap-volt: 0 var(--keycap-edge) 0 var(--volt-edge), inset 0 1px 0 var(--inset-highlight);
+    --shadow-keycap-volt-hover: 0 5px 0 var(--volt-edge), 0 12px 30px var(--volt-a25),
+      inset 0 1px 0 var(--inset-highlight);
+    --shadow-keycap-volt-cta: 0 var(--keycap-edge) 0 var(--volt-edge), 0 20px 60px var(--volt-a22),
+      inset 0 1px 0 var(--inset-highlight);
+    --shadow-keycap-volt-pressed: 0 1px 0 var(--volt-edge);
+    --shadow-keycap-dark: 0 var(--keycap-edge) 0 var(--key-dark-edge);
+    --shadow-keycap-dark-pressed: 0 1px 0 var(--key-dark-edge);
+    --shadow-keycap-ion: 0 var(--keycap-edge) 0 var(--ion-edge);
+    --shadow-keycap-ion-pressed: 0 1px 0 var(--ion-edge);
+    --shadow-kbd: 0 2px 0 var(--kbd-edge);
+    --shadow-prompt-bar: 0 30px 80px var(--shadow-a50);
+    --shadow-float: 0 40px 120px var(--shadow-a55);
+    --shadow-editor: 0 30px 90px var(--shadow-a45);
+    --shadow-card-hover: 0 30px 80px var(--shadow-a50);
+    --shadow-play: 0 20px 60px var(--shadow-a50);
+    --glow-toast: 0 24px 70px var(--volt-a25);
+    --glow-toast-s: 0 20px 60px var(--volt-a25);
+    --glow-ion-art: 0 40px 120px var(--ion-a12);
+    --ring-sigil: 0 0 0 6px var(--ink);
+    --tab-active-top: inset 0 2px 0 var(--volt);
+    --blur-glass: 14px; /* app bar, path/mode cards */
+    --blur-prompt: 16px;
+    --blur-preview: 18px;
+    --glass-blur: var(--blur-glass);
+    --scrim: var(--appbar-bg);
+
+    /* 8. Focus: 4px volt glow + 2px solid volt outline (resolutions §6). */
+    --focus-ring: 0 0 0 4px var(--volt-tint-on);
+    --focus-ring-color: var(--volt);
+    --focus-border: var(--volt-a70); /* text-field border on focus */
+
+    /* ------------------------------------------------------------------
+     * 6. Motion
+     * ------------------------------------------------------------------ */
+    --ease: ease;
+    --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --ease-out-expo: var(--ease-out);
+    --ease-spring: cubic-bezier(0.2, 1.4, 0.4, 1);
+    --duration-press: 120ms; /* keycap press */
+    --duration-fast: 150ms; /* hover colours */
+    --duration-focus: 200ms; /* focus border/glow */
     --duration-card: 250ms; /* card lift */
-    --duration-reveal: 400ms; /* reveals */
+    --duration-sigil: 350ms; /* sigil, odds bars */
+    --duration-reveal: 400ms; /* rise */
+    --duration-pop: 600ms; /* reward pop */
+    --duration-caret: 1.05s;
+    --duration-pulse: 2s;
     --reveal-rise: 8px;
     --morph-lerp: 0.055; /* 3D field ease per frame */
+    --copy-confirm-ms: 1600; /* copy-confirm reset (read by script) */
+  }
+
+  /* ≤480px: 16px page gutter (tokens §7.1, proposed for 360px support). */
+  @media (max-width: 480px) {
+    :root {
+      --page-gutter: var(--gutter-mobile);
+    }
   }
 }

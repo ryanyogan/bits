@@ -1,5 +1,7 @@
 import type { Handle } from 'remix/component'
-import { clientEntry, css, on, ref } from 'remix/component'
+import { clientEntry, css, on } from 'remix/component'
+
+import { Icon } from './icon.tsx'
 
 export interface AppBarLink {
   href: string
@@ -9,106 +11,108 @@ export interface AppBarLink {
 export interface AppBarMenuProps {
   links: AppBarLink[]
   currentPath?: string
+  /** Accessible name of the nav inside the sheet. */
+  label?: string
+  /** id of the sheet; unique per page. */
+  id?: string
 }
 
 /**
- * The narrow-screen navigation menu.
+ * The narrow-screen (<760px) navigation: a menu button that opens a sheet of
+ * nav links under the app bar (resolutions §8).
  *
- * A native `<details>` disclosure, so it works with JavaScript off. As a
- * client entry it hydrates to add the behavior a menu needs: Escape closes it
- * and returns focus to the toggle, and a click outside closes it.
+ * The sheet is a native `popover="auto"` opened by `popovertarget`, so it
+ * opens, closes on Escape or an outside click, restores focus and exposes
+ * `aria-expanded` with JavaScript off. As a client entry it adds the one thing
+ * the platform cannot: closing the sheet when a link inside it starts a
+ * client-side (frame) navigation, which keeps the document and so would keep
+ * the popover open.
  *
- * Props cross the server/browser boundary, so they must stay serializable.
+ * Props cross the server/browser boundary, so they stay serializable.
  */
 export const AppBarMenu = clientEntry(
   import.meta.url,
   function AppBarMenu(handle: Handle<AppBarMenuProps>) {
-    let details: HTMLDetailsElement | undefined
-
-    function close(returnFocus: boolean) {
-      if (!details?.open) return
-      details.open = false
-      if (returnFocus) details.querySelector('summary')?.focus()
-    }
-
     return () => {
-      let { links, currentPath } = handle.props
+      let { links, currentPath, label = 'Primary', id = 'app-nav-sheet' } = handle.props
 
       return (
-        <details
-          mix={[
-            menuStyle,
-            ref((node, signal) => {
-              details = node as HTMLDetailsElement
-              document.addEventListener(
-                'click',
-                (event) => {
-                  if (!node.contains(event.target as Node)) close(false)
-                },
-                { signal },
-              )
-            }),
-            on('keydown', (event) => {
-              if (event.key === 'Escape') close(true)
-            }),
-          ]}
-        >
-          <summary mix={summaryStyle}>
-            <span class="sr-only">Menu</span>
-            <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-            </svg>
-          </summary>
-          <nav aria-label="Primary" mix={panelStyle}>
-            {links.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                aria-current={link.href === currentPath ? 'page' : undefined}
-                mix={linkStyle}
-              >
-                {link.label}
-              </a>
-            ))}
-          </nav>
-        </details>
+        <div mix={menuStyle}>
+          <button type="button" popovertarget={id} aria-label="Menu" mix={buttonStyle}>
+            <Icon name="menu" />
+          </button>
+          <div
+            id={id}
+            popover="auto"
+            mix={[
+              sheetStyle,
+              on('click', (event) => {
+                let target = event.target as Element | null
+                if (target?.closest('a')) event.currentTarget.hidePopover()
+              }),
+            ]}
+          >
+            <nav aria-label={label} mix={sheetNavStyle}>
+              {links.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  aria-current={link.href === currentPath ? 'page' : undefined}
+                  mix={linkStyle}
+                >
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+          </div>
+        </div>
       )
     }
   },
 )
 
 const menuStyle = css({
-  position: 'relative',
   display: 'none',
-  '@media (max-width: 760px)': { display: 'block' },
+  '@media (max-width: 759.98px)': { display: 'block' },
 })
 
-const summaryStyle = css({
-  listStyle: 'none',
+const buttonStyle = css({
   display: 'grid',
   placeItems: 'center',
   width: 'var(--touch-target)',
   height: 'var(--touch-target)',
-  borderRadius: 'var(--radius-md)',
-  border: '1px solid var(--line-ghost)',
+  padding: 0,
+  borderRadius: 'var(--radius-12)',
+  border: '1px solid var(--line-strong)',
+  background: 'transparent',
   color: 'var(--text)',
   cursor: 'pointer',
-  '&::-webkit-details-marker': { display: 'none' },
-  '&:hover': { background: 'var(--fill-faint)' },
+  transition: 'background-color var(--duration-fast), border-color var(--duration-fast)',
+  '&:hover': { background: 'var(--fill-ghost-hover)', borderColor: 'var(--line-drop)' },
 })
 
-const panelStyle = css({
-  position: 'absolute',
-  right: 0,
-  top: 'calc(100% + var(--space-2))',
-  minWidth: '220px',
+const sheetStyle = css({
+  // A full-width sheet that drops from under the bar.
+  position: 'fixed',
+  inset: 'var(--appbar-h, 73px) 0 auto 0',
+  width: '100%',
+  maxWidth: 'none',
+  margin: 0,
+  padding: 'var(--space-2) var(--page-gutter) var(--space-4)',
+  border: 0,
+  borderBottom: '1px solid var(--line-bar)',
+  background: 'var(--surface)',
+  color: 'var(--text)',
+  boxShadow: 'var(--shadow-float)',
+  '&::backdrop': { background: 'var(--ink-a60)' },
+  '&:popover-open': { animation: 'bits-rise var(--duration-reveal) var(--ease) both' },
+  '@media (prefers-reduced-motion: reduce)': { '&:popover-open': { animation: 'none' } },
+})
+
+const sheetNavStyle = css({
   display: 'flex',
   flexDirection: 'column',
-  padding: 'var(--space-2)',
-  borderRadius: 'var(--radius-lg)',
-  background: 'var(--surface)',
-  border: '1px solid var(--line)',
-  boxShadow: 'var(--shadow-float)',
+  gap: 'var(--space-0_5)',
 })
 
 const linkStyle = css({
@@ -116,8 +120,15 @@ const linkStyle = css({
   alignItems: 'center',
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-3)',
-  borderRadius: 'var(--radius-sm)',
-  color: 'var(--text-nav)',
+  borderRadius: 'var(--radius-10)',
+  color: 'var(--muted)',
+  fontSize: 'var(--fs-15)',
   textDecoration: 'none',
-  '&:hover, &[aria-current="page"]': { color: 'var(--text)', background: 'var(--fill-faint)' },
+  transition: 'background-color var(--duration-fast), color var(--duration-fast)',
+  '&:hover': { color: 'var(--text)', background: 'var(--fill-hover)' },
+  '&[aria-current="page"]': {
+    color: 'var(--text)',
+    background: 'var(--fill-ghost-hover)',
+    boxShadow: 'inset 2px 0 0 var(--volt)',
+  },
 })
