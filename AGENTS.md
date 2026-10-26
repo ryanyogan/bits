@@ -98,6 +98,70 @@ packages/db/              @bits/db: migrations/, tables.ts, D1 driver, queries/
 - New global CSS files go in `src/styles/` and `stylesheetFiles` in
   `src/assets.ts`. New fonts go through `scripts/copy-fonts.ts`.
 
+## Component catalogue (packages/ui/src)
+
+Import as `@bits/ui/<file>`. "Island" = `clientEntry`, ships JS; everything
+else is static (server-rendered, CSS-only states). Live catalogue with every
+variant and state: `/styleguide` (`apps/web/app/actions/styleguide/`).
+Rationale: `docs/decisions/010-component-library.md`.
+
+| Component | File | Key props | Kind |
+|---|---|---|---|
+| Document | document.tsx | assets, title, description, head | static |
+| AppBar | app-bar.tsx | brand, homeHref, links, currentPath, actions, variant, position | static |
+| AppBarMenu | app-bar-menu.tsx | links, currentPath, label (mobile sheet <760px, native popover) | island |
+| Logo / BrandMark | logo.tsx / brand-mark.tsx | brand, href, variant / size | static |
+| NavLink | nav-link.tsx | href, variant, current | static |
+| Icon | icon.tsx | name (`iconNames`), size, color, label | static |
+| Keycap | keycap.tsx | variant primary/dark/ghost/ghost-mono/inverse/ion, size sm/md/lg, href, type, loading, glow, block, disabled | static |
+| ToolButton | tool-button.tsx | variant outline/quiz/video, square, label, pressed | static |
+| ProviderButton | provider-button.tsx | icon, href or type/name/value, busy | static |
+| BackButton | back-button.tsx | href, label | static |
+| SegmentedTabs / StaticTabs | segmented-tabs.tsx | label, items, flavour mode/account / items, selected, size | static (URL tabs) |
+| TabPanels | tab-panels.tsx | label, items {name, label, panel}, defaultTab, flavour | island (@remix-run/ui tabs) |
+| ChoiceChip / Chip / SuggestionChip | chip.tsx | name, value, type, defaultChecked / selected / href | static |
+| FilterPill | filter-pill.tsx | href, dot, count, selected | static |
+| Tag | tag.tsx | variant, color | static |
+| TextField | text-field.tsx | name, label, type, value, error, hint, mono, compact | static |
+| SearchField | search-field.tsx | action, name, value, label, shortcut | static |
+| SearchShortcut | search-shortcut.tsx | target (input id; `/` and Cmd/Ctrl-K focus it) | island |
+| CodeInput | code-input.tsx | name, length, error, autoSubmit, value | island (one input without JS) |
+| Switch | switch.tsx | name, legend, options, value | static (native radios) |
+| QuizChoice | quiz-choice.tsx | name, question, options, multiple, explanation, action | static (POST form) |
+| Card | card.tsx | variant default/page/compact/dashed/glass, as, label | static |
+| Callout | callout.tsx | tone ok/warning/danger/info, role, title, compact | static |
+| Eyebrow / MonoHeading | eyebrow.tsx | tone, size, as / level, id | static |
+| Kbd | kbd.tsx | decorative | static |
+| StatTile | stat-tile.tsx | value, label, color, variant main/profile | static |
+| KeyValueList | key-value-list.tsx | items, variant default/course | static |
+| EmptyState | empty-state.tsx | title, hint, action | static |
+| LiveDot | live-dot.tsx | tone, pulse | static |
+| Footer | footer.tsx | brand, homeHref, links, copyright | static |
+| XpPill / StreakPill / AvatarButton | xp-pill.tsx / streak-pill.tsx / avatar-button.tsx | neurons / days / initials, href, current | static |
+| CourseCover / Sigil | course-cover.tsx | pattern (8 `coverPatterns`), tone volt/ion/synapse, sigil, variant card/banner/art/thumb | static |
+| CourseCard / WriteCourseCard | course-card.tsx | href, title, desc, level, lessons, mins, sigil, tone, pattern, formats, pct | static |
+| ContinueBanner | continue-banner.tsx | href, courseTitle, nextLesson, mins, pct, sigil, tone, pattern | static |
+| ProgressBar / SegmentedProgress | progress-bar.tsx | pct, variant card/banner/art/row/level, color, label / segments | static |
+| ProgressRing | progress-ring.tsx | pct, size 96/132, color, caption, label | static |
+| LessonNode / LessonNodeRow | lesson-node.tsx | state done/current/next, size, n, passed / state, badge | static |
+| LessonBar | lesson-bar.tsx | backHref, context, title, segments, modes, neurons | static |
+| TutorAvatar / TutorMessage / LearnerBubble / ModelOutput | tutor.tsx | size / variant / variant / temperature, tokens, state done/streaming/example/error | static |
+| CheckChip | check-chip.tsx | passed, compact | static |
+| TokenPill / TokenizerPanel | token-pill.tsx | text, id, index / tokens | static |
+| HexBadge / BadgeTile / BadgeChip | hex-badge.tsx | name, glyph, color, variant earned/locked/preview/chip | static |
+| ActivityGrid | activity-grid.tsx | levels (`sampleActivity()` for demos), label | static |
+| RewardToast | reward-toast.tsx | xp, message, next, variant lesson/system | static |
+| RewardRegion | reward-toast.tsx | dismissAfter; shows toasts from `announceReward()` (`bits:reward`) | island |
+| OddsBars | odds-bars.tsx | context, candidates, defaultValue (follows `bits:temperature`) | island |
+| PromptComposer | prompt-composer.tsx | id, task, checks, temperatures, examples, reward, keepRuns | island (Enter runs, Shift+Enter newline) |
+| CodeEditor | code-editor.tsx | files, highlight, focusLine, typeMode | island (@remix-run/ui tabs) |
+| TerminalLog | terminal.tsx | path, entries, replies, placeholder | island |
+| TerminalOutput | terminal.tsx | lines | static |
+| OutputPanel | terminal.tsx | command, lines (replayed) | island |
+| VideoPlayer | video-player.tsx | title, duration, chapters, cues, transcriptOpen | island (visual shell, simulated clock) |
+Island rule: JSX passed as an island prop is serialized, so it must not carry
+`mix` or component elements; use plain elements and let the island style them.
+
 ## Data (packages/db)
 
 - Schema changes: add `packages/db/migrations/NNNN_name.sql`, update

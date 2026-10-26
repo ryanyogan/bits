@@ -15,3 +15,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 007 | [Styling: tokens, cascade layers, self-hosted fonts](007-styling-conventions.md) |
 | 008 | [Schema conventions and migrations](008-schema-conventions.md) |
 | 009 | [Route maps and controllers](009-routes-and-controllers.md) |
+| 010 | [Component library: static by default, small islands](010-component-library.md) |
