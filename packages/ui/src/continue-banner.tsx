@@ -33,7 +33,7 @@ export function ContinueBanner(handle: Handle<ContinueBannerProps>) {
     let { href, courseTitle, eyebrow, nextLesson, mins, pct, sigil, tone, pattern, forceState, mix } = handle.props
     return (
       <a href={href} data-force={forceState} mix={[bannerStyle, toneVars[tone], mix]}>
-        <CourseCover pattern={pattern} tone={tone} sigil={sigil} variant="banner" />
+        <CourseCover pattern={pattern} tone={tone} sigil={sigil} variant="banner" mix={artNarrow} />
         <div mix={bodyStyle}>
           <Eyebrow tone="ion" size="sm">
             {eyebrow}
@@ -43,12 +43,12 @@ export function ContinueBanner(handle: Handle<ContinueBannerProps>) {
             Up next: <span mix={nextTitle}>{nextLesson}</span> · about {mins} min
           </span>
           <span mix={rowStyle}>
-            <ProgressBar pct={pct} variant="banner" color="var(--ion)" />
+            <ProgressBar pct={pct} variant="banner" color="var(--ion)" mix={barNarrow} />
             <span mix={pctStyle}>
               {`${Math.round(pct)}%`}
               <span class="sr-only"> complete</span>
             </span>
-            <span aria-hidden="true" class="key" mix={keycapFace}>
+            <span aria-hidden="true" class="key" mix={[...keycapFace, keyNarrow]}>
               Resume →
             </span>
           </span>
@@ -78,7 +78,7 @@ const bodyStyle = css({
   flexDirection: 'column',
   justifyContent: 'center',
   gap: 'var(--space-3_5)',
-  '@media (max-width: 480px)': { padding: 'var(--space-5_5) var(--space-4_5)' },
+  '@media (max-width: 480px)': { padding: 'var(--space-5)' },
 })
 const titleStyle = css({
   fontFamily: 'var(--font-display)',
@@ -86,8 +86,16 @@ const titleStyle = css({
   fontSize: 'var(--fs-28)',
   letterSpacing: '-0.03em',
   lineHeight: 1.15,
+  '@media (max-width: 480px)': { fontSize: 'var(--fs-22)' },
 })
 const nextStyle = css({ fontSize: 'var(--fs-16)', color: 'var(--muted)' })
 const nextTitle = css({ color: 'var(--text)' })
 const rowStyle = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-3_5)', flexWrap: 'wrap' })
 const pctStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--ion)' })
+
+// Catalog.md responsive (360px): shorter art with a 64px sigil, and the
+// progress row wraps (bar full width, then % and the keycap pushed right).
+// The sigil reads its size from --fs-88, so the art overrides that token.
+const artNarrow = css({ '@media (max-width: 480px)': { minHeight: '140px', '--fs-88': '64px' } })
+const barNarrow = css({ '@media (max-width: 480px)': { flexBasis: '100%' } })
+const keyNarrow = css({ '@media (max-width: 480px)': { marginLeft: 'auto' } })

@@ -119,11 +119,23 @@ export function CourseCover(handle: Handle<CourseCoverProps>) {
           mix,
         ]}
       >
-        <Sigil text={sigil} size={sigilSize} />
+        <Sigil text={sigil} size={sigilSize} mix={variant === 'art' ? artFit(sigil) : undefined} />
         {children}
       </div>
     )
   }
+}
+
+// The 128px art sigil is drawn for two glyphs ("T°"); longer sigils ("loop",
+// "[ctx]") step down so they fit inside the 340px square.
+const artFitStyles = {
+  3: css({ fontSize: 'min(96px, 26cqi)' }),
+  4: css({ fontSize: 'min(76px, 21cqi)' }),
+  5: css({ fontSize: 'min(62px, 17cqi)' }),
+}
+function artFit(sigil: string) {
+  let length = [...sigil].length
+  return length <= 2 ? undefined : artFitStyles[Math.min(length, 5) as 3 | 4 | 5]
 }
 
 const coverStyle = css({
@@ -137,6 +149,7 @@ const coverVariants = {
   card: css({ height: '170px', borderBottom: '1px solid var(--line-hair)' }),
   banner: css({ minHeight: '200px' }),
   art: css({
+    containerType: 'inline-size',
     width: '340px',
     maxWidth: '100%',
     aspectRatio: '1',

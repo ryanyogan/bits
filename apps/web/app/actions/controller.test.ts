@@ -32,7 +32,7 @@ describe('router smoke test', () => {
 
   let pages = [
     routes.courses.index.href(),
-    routes.courses.course.index.href({ course: 'prompting-101' }),
+    routes.courses.course.index.href({ course: 'tokens-and-temperature' }),
     routes.courses.lesson.index.href({ course: 'prompting-101', lesson: 'what-is-a-token' }),
     routes.login.index.href(),
     routes.login.check.index.href(),

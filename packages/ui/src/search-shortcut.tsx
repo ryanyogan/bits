@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { clientEntry } from 'remix/component'
+import { clientEntry, css } from 'remix/component'
 
 import { kbdStyle } from './kbd.tsx'
 
@@ -39,9 +39,13 @@ export const SearchShortcut = clientEntry(
     })
 
     return () => (
-      <kbd aria-hidden="true" mix={kbdStyle}>
+      <kbd aria-hidden="true" mix={[kbdStyle, narrowStyle]}>
         {label}
       </kbd>
     )
   },
 )
+
+// Components §7.2: hide the hint at ≤480px. Lives here (not in SearchField)
+// because each mixin is its own cascade layer, so an outer rule loses to kbdStyle.
+const narrowStyle = css({ '@media (max-width: 480px)': { display: 'none' } })

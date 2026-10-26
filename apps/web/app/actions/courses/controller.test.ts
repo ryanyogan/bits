@@ -1,0 +1,163 @@
+import * as assert from 'remix/assert'
+import { after, describe, it } from 'remix/test'
+
+import { disposePlatform } from '#platform'
+
+import { courses } from '../../data/fixtures.ts'
+import { router } from '../../router.ts'
+import { routes } from '../../routes.ts'
+import { catalogHref, filterCourses, parseCatalogQuery, resultLabel } from './catalog.ts'
+
+after(() => disposePlatform())
+
+async function page(path: string) {
+  let response = await router.fetch(new Request(new URL(path, 'http://localhost')))
+  return { status: response.status, html: await response.text() }
+}
+
+function count(html: string, pattern: RegExp) {
+  return html.match(new RegExp(pattern.source, 'g'))?.length ?? 0
+}
+
+describe('catalog filtering', () => {
+  it('parses track and q from the URL and ignores unknown tracks', () => {
+    let query = parseCatalogQuery(new URL('http://x/courses?track=Agents&q=%20rag%20'))
+    assert.equal(query.track, 'agents')
+    assert.equal(query.q, 'rag')
+    assert.equal(parseCatalogQuery(new URL('http://x/courses?track=nope')).track, undefined)
+  })
+
+  it('matches title, desc, track and sigil case-insensitively', () => {
+    assert.deepEqual(
+      filterCourses({ q: 'RAG' }).results.map((c) => c.slug),
+      ['retrieval-without-tears'],
+    )
+    assert.equal(filterCourses({ q: 'agents' }).results.length, 2)
+    assert.equal(filterCourses({ q: 'T°' }).results[0]?.slug, 'tokens-and-temperature')
+  })
+
+  it('counts each track within the current search', () => {
+    let all = filterCourses({ q: '' })
+    assert.equal(all.counts.all, courses.length)
+    assert.equal(all.counts.foundations, 2)
+    let agents = filterCourses({ track: 'agents', q: '' })
+    assert.equal(agents.results.length, 2)
+    assert.equal(agents.counts.all, courses.length)
+  })
+
+  it('builds clean filter hrefs and result labels', () => {
+    assert.equal(catalogHref({}), routes.courses.index.href())
+    assert.match(catalogHref({ track: 'tools', q: 'rag', anon: true }), /track=tools&q=rag&as=anon/)
+    assert.equal(resultLabel(1), '1 course · all free')
+    assert.equal(resultLabel(8), '8 courses · all free')
+  })
+})
+
+describe('GET /courses', () => {
+  it('renders the catalog with every course, the write card and the continue banner', async () => {
+    let { status, html } = await page(routes.courses.index.href())
+    assert.equal(status, 200)
+    assert.match(html, /<title>Courses · bits<\/title>/)
+    assert.equal(count(html, /<h1[\s>]/), 1)
+    assert.match(html, /Pick your next/)
+    assert.match(html, /role="search"/)
+    assert.match(html, /<nav aria-label="Filter by track"/)
+    assert.match(html, /aria-current="true"[^>]*>(?:(?!<\/a>).)*All/s)
+    assert.match(html, /8 courses · all free/)
+    assert.match(html, /aria-live="polite"/)
+    for (let course of courses) assert.ok(html.includes(`href="/courses/${course.slug}"`), course.slug)
+    assert.match(html, /Write a course/)
+    assert.match(html, /Up next:/)
+    assert.match(html, /href="\/courses\/tokens-and-temperature\/temperature"/)
+  })
+
+  it('filters by track with the pill marked current', async () => {
+    let { html } = await page(`${routes.courses.index.href()}?track=agents`)
+    assert.match(html, /2 courses · all free/)
+    assert.ok(html.includes('href="/courses/first-agent-loop"'))
+    assert.ok(!html.includes('href="/courses/what-is-an-llm"'))
+    assert.match(html, /href="\/courses\?track=agents" aria-current="true"/)
+  })
+
+  it('searches with q and keeps it in the form and the pill links', async () => {
+    let { html } = await page(`${routes.courses.index.href()}?q=rag`)
+    assert.match(html, /1 course · all free/)
+    assert.match(html, /name="q"[^>]*value="rag"/)
+    assert.match(html, /href="\/courses\?track=tools&amp;q=rag"/)
+  })
+
+  it('shows the empty state for a query with no matches', async () => {
+    let { status, html } = await page(`${routes.courses.index.href()}?q=zzz`)
+    assert.equal(status, 200)
+    assert.match(html, /0 courses · all free/)
+    assert.match(html, /0 results for “zzz”/)
+    assert.match(html, /Clear filters/)
+    assert.match(html, /Write a course/)
+  })
+
+  it('hides the continue banner and progress when signed out', async () => {
+    let { html } = await page(`${routes.courses.index.href()}?as=anon`)
+    assert.doesNotMatch(html, /Up next:/)
+    assert.match(html, /Sign in/)
+    assert.match(html, /href="\/courses\/tokens-and-temperature\?as=anon"/)
+    assert.match(html, /name="as" value="anon"/)
+  })
+})
+
+describe('GET /courses/:course', () => {
+  let path = routes.courses.course.index.href({ course: 'tokens-and-temperature' })
+
+  it('renders the syllabus with lesson states and the resume callout', async () => {
+    let { status, html } = await page(path)
+    assert.equal(status, 200)
+    assert.match(html, /<title>Tokens &amp; temperature · bits<\/title>/)
+    assert.equal(count(html, /<h1[\s>]/), 1)
+    assert.match(html, /<nav aria-label="Breadcrumb"/)
+    assert.match(html, /By the end you(?:'|&#39;)ll be able to/)
+    assert.equal(count(html, /<h3[\s>]/), 3)
+    assert.equal(count(html, /— completed/), 5)
+    assert.equal(count(html, /— in progress/), 1)
+    assert.equal(count(html, /— not started/), 2)
+    assert.match(html, /aria-current="step"/)
+    assert.match(html, /Resume lesson 6 →/)
+    assert.match(html, /Pick up here →/)
+    assert.match(html, /You stopped at the exercise/)
+    assert.match(html, /aria-label="62 percent complete"/)
+    assert.match(html, /5 of 8 lessons/)
+    assert.match(html, /badge \+ 320 neurons on finish/)
+    assert.match(html, /How you(?:'|&#39;)ll learn/)
+    assert.match(html, /href="\/courses\/tokens-and-temperature\/what-is-a-token"/)
+    assert.match(html, /href="\/courses\/tokens-and-temperature\/what-is-a-token\?mode=watch"/)
+  })
+
+  it('renders the signed-out variant with nothing started', async () => {
+    let { html } = await page(`${path}?as=anon`)
+    assert.equal(count(html, /— not started/), 8)
+    assert.equal(count(html, /— completed/), 0)
+    assert.doesNotMatch(html, /aria-current="step"/)
+    assert.doesNotMatch(html, /Pick up here/)
+    assert.match(html, /Start lesson 1 →/)
+    assert.match(html, /aria-label="0 percent complete"/)
+  })
+
+  it('renders every catalog course', async () => {
+    for (let course of courses) {
+      let { status, html } = await page(routes.courses.course.index.href({ course: course.slug }))
+      assert.equal(status, 200, course.slug)
+      assert.ok(html.includes(course.desc.slice(0, 20)) || html.includes('<h1'), course.slug)
+    }
+  })
+
+  it('labels a finished course "Review the course"', async () => {
+    let { html } = await page(routes.courses.course.index.href({ course: 'what-is-an-llm' }))
+    assert.match(html, /Review the course →/)
+  })
+
+  it('returns a styled 404 for an unknown course', async () => {
+    let { status, html } = await page(routes.courses.course.index.href({ course: 'no-such-course' }))
+    assert.equal(status, 404)
+    assert.match(html, /<main id="main"/)
+    assert.match(html, /That course isn(?:'|&#39;)t here\./)
+    assert.match(html, /Browse courses →/)
+  })
+})
