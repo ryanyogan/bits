@@ -1,0 +1,41 @@
+{
+  "name": "@bits/web",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#platform": {
+      "workerd": "./app/platform/platform.worker.ts",
+      "default": "./app/platform/platform.node.ts"
+    }
+  },
+  "scripts": {
+    "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
+    "hmr": "NODE_ENV=development node hmr.ts",
+    "start": "NODE_ENV=production node --import remix/node-tsx server.ts",
+    "build": "NODE_ENV=production node --import remix/node-tsx scripts/build.ts",
+    "preview": "pnpm build && wrangler dev",
+    "deploy": "pnpm build && wrangler deploy",
+    "cf-typegen": "wrangler types worker-configuration.d.ts --include-runtime false --strict-vars false",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "db:seed:local": "wrangler d1 execute DB --local --file ../../packages/db/seed/local.sql",
+    "test": "NODE_ENV=test remix test",
+    "typecheck": "tsc --noEmit",
+    "doctor": "remix doctor"
+  },
+  "engines": {
+    "node": ">=24.3.0"
+  },
+  "dependencies": {
+    "@bits/db": "workspace:*",
+    "@bits/ui": "workspace:*",
+    "remix": "^3.1.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261026.1",
+    "@types/node": "^24.6.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.152.0"
+  }
+}

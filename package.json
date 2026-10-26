@@ -1,22 +1,28 @@
 {
-  "name": "bits",
+  "name": "bits-monorepo",
   "private": true,
   "type": "module",
-  "scripts": {
-    "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
-    "hmr": "NODE_ENV=development node hmr.ts",
-    "start": "NODE_ENV=production node --import remix/node-tsx server.ts",
-    "test": "NODE_ENV=test remix test",
-    "typecheck": "tsc --noEmit"
-  },
+  "packageManager": "pnpm@11.25.0",
   "engines": {
     "node": ">=24.3.0"
   },
-  "dependencies": {
-    "remix": "^3.1.0"
+  "scripts": {
+    "dev": "pnpm --filter @bits/web run hmr",
+    "dev:restart": "pnpm --filter @bits/web run dev",
+    "hmr": "pnpm --filter @bits/web run hmr",
+    "build": "pnpm --filter @bits/web run build",
+    "preview": "pnpm --filter @bits/web run preview",
+    "deploy": "pnpm --filter @bits/web run deploy",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "db:migrate:local": "pnpm --filter @bits/web run db:migrate:local",
+    "db:migrate:remote": "pnpm --filter @bits/web run db:migrate:remote",
+    "db:seed:local": "pnpm --filter @bits/web run db:seed:local",
+    "remix:doctor": "pnpm --filter @bits/web run doctor",
+    "cf-typegen": "pnpm --filter @bits/web run cf-typegen"
   },
   "devDependencies": {
-    "@types/node": "latest",
-    "typescript": "latest"
+    "remix": "^3.1.0",
+    "typescript": "^7.0.2"
   }
 }

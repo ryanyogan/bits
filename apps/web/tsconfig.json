@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "remix/assets/types/hmr"]
+  },
+  "include": ["app", "scripts", "server.ts", "hmr.ts", "worker.ts", "worker-configuration.d.ts"],
+  "exclude": ["build", "tmp", ".wrangler"]
+}
