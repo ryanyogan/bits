@@ -76,6 +76,38 @@ content/fixtures/         deliberately broken folders for tests
 6. Existing placeholder pages: replace `PlaceholderPage` in that area's
    controller with the real page.
 
+## Client navigation (decision 020)
+
+The browser runtime intercepts same-origin links and forms and reconciles
+the new page into the old DOM. Write for that:
+
+- A link that leaves the origin (an OAuth start) or a form whose answer
+  isn't a page (JSON) needs `data-rmx-document`. Use `<Keycap document>`
+  for keycaps. A file link needs `download` (`<Keycap download>`).
+- Islands keep their setup state when the next page puts them in the same
+  spot. Reset per-page state with a `data-rmx-key` on a wrapping element,
+  as the lesson `<main>` does (`view.key`).
+- Pending UI resets on `handle.frame`'s `reloadComplete`, not only on
+  `pageshow` (`login/public/pending-submit.tsx`).
+- Re-render failures as 4xx pages, not 5xx: the runtime treats a 5xx as a
+  failed navigation. `entry.ts` then falls back to a document load.
+- Cover the enhanced path with an e2e test (`app/*.test.e2e.ts`, Playwright
+  via `remix test`).
+
+## Responses (decision 020)
+
+- `app/middleware/headers.ts` adds the security headers and the HTML
+  Cache-Control default (`private, no-cache`; `no-store` under `/settings`,
+  `/me`, `/login`, `/auth` and `/logout`). Set your own Cache-Control on a
+  response that needs another policy. Don't add `script-src` without nonces.
+- Write endpoints get a burst limit: add
+  `middleware: [rateLimit('RL_<tier>')]` to the action
+  (`app/middleware/rate-limit.tsx`). Tiers are bindings in
+  `wrangler.jsonc`; after adding one, run `pnpm cf-typegen`.
+- Log with `log(level, message, fields)` from `app/log.ts` (JSON lines).
+- Browser-only packages go in `BROWSER_ONLY` in `scripts/build.ts`, so
+  they never reach the Worker bundle.
+
 ## Building components (packages/ui)
 
 - One component per file, kebab-case filename, named export:
@@ -117,15 +149,15 @@ Rationale: `docs/decisions/010-component-library.md`.
 
 | Component | File | Key props | Kind |
 |---|---|---|---|
-| Document | document.tsx | assets, title, description, head | static |
+| Document | document.tsx | assets, title, description, url (canonical + og:url), siteName, head | static |
 | AppBar | app-bar.tsx | brand, homeHref, links, currentPath, actions, variant, position | static |
 | AppBarMenu | app-bar-menu.tsx | links, currentPath, label (mobile sheet <760px, native popover) | island |
 | Logo / BrandMark | logo.tsx / brand-mark.tsx | brand, href, variant / size | static |
 | NavLink | nav-link.tsx | href, variant, current | static |
 | Icon | icon.tsx | name (`iconNames`), size, color, label | static |
-| Keycap | keycap.tsx | variant primary/dark/ghost/ghost-mono/inverse/ion, size sm/md/lg, href, type, loading, glow, block, disabled | static |
+| Keycap | keycap.tsx | variant primary/dark/ghost/ghost-mono/inverse/ion, size sm/md/lg, href, document, download, type, loading, glow, block, disabled | static |
 | ToolButton | tool-button.tsx | variant outline/quiz/video, square, label, pressed | static |
-| ProviderButton | provider-button.tsx | icon, href or type/name/value, busy | static |
+| ProviderButton | provider-button.tsx | icon, href (always data-rmx-document) or type/name/value, busy | static |
 | BackButton | back-button.tsx | href, label | static |
 | SegmentedTabs / StaticTabs | segmented-tabs.tsx | label, items, flavour mode/account / items, selected, size | static (URL tabs) |
 | TabPanels | tab-panels.tsx | label, items {name, label, panel}, defaultTab, flavour | island (@remix-run/ui tabs) |
@@ -253,6 +285,8 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
 - `POST /api/run` (FormData: course, lesson, exercise, prompt,
   temperature × 100) streams plain text. `X-Run-Source` is `live`,
   `example` or `fallback`; `X-Run-Reason` says why a fallback happened.
+  Limits are enforced by the insert (`insertRunWithin`): reserve the row,
+  then call the model. Never count first and insert later.
   The islands call it through `packages/ui/src/lib/run-stream.ts` when they
   get a `run` prop (`exerciseProps` sets it); a rerun aborts the one in
   flight.

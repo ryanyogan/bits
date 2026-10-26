@@ -25,3 +25,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 017 | [No Turnstile on email sign-in (for now)](017-no-turnstile.md) |
 | 018 | [Content pipeline: markdown folders, versions in R2, a live pointer in D1](018-content-pipeline.md) |
 | 019 | [Live prompts: /api/run through AI Gateway, journalled runs](019-live-prompts.md) |
+| 020 | [Production hardening: client navigation, headers, caching, limits, placement](020-production-hardening.md) |
