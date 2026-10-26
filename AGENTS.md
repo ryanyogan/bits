@@ -236,8 +236,12 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
 - Publishing only flips `courses.current_version_id` to a `ready`
   version. Builds with errors are recorded as `failed` (report only).
 - Authored content runs on the server, so the build guards it: check
-  regexes must pass `compile/regex.ts` (no nested quantifiers, overlapping
-  alternations or backreferences), and xp stays within
+  regexes must fit the allowlist grammar in `compile/regex.ts` (literals,
+  `.`, `\b \w \d \s` and their negations, escaped symbols, simple
+  classes, `|`, `(...)` / `(?:...)`, `^ $`, and at most 4 `?`; no `*`, `+`
+  or `{n}` at all, and at most 64 paths). Extend the grammar there, never
+  with a denylist; `progress/check.ts` re-validates stored patterns before
+  running them. Xp stays within
   `app/content/limits.ts` (100 per block, 500 per lesson; `check.ts`
   clamps again). Ownership is claimed atomically in `recordCourseBuild`;
   don't add read-then-write ownership checks around it.

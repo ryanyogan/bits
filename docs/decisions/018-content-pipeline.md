@@ -44,20 +44,32 @@ Constraints:
     - the compiled `LessonContent` for each lesson.
   - The same code runs in the CLI, in tests and in the Worker (the folder
     upload).
-  - Prompt checks run on the server against learner input. The build
-    therefore rejects check regexes that:
-    - don't compile;
-    - use flags other than `imsu`;
-    - are longer than 200 characters;
-    - have a nested quantifier like `(a+)+`;
-    - repeat an alternation whose branches can overlap, like `(a|a)*`
-      (only distinct plain words, like `(cat|dog)+`, may repeat);
-    - use a backreference (`\1`, `\k<name>`);
-    - have more than two unbounded quantifiers (`*`, `+`, `{n,}`).
+  - Prompt checks run on the server against learner input, so check
+    regexes must fit a small **allowlist grammar** that can't backtrack
+    badly by construction (`compile/regex.ts`; revised in 020 after a
+    security review found bypasses of the earlier denylist analyzer):
+    - allowed: literal characters and `.`; the escapes `\b \B \w \W \d
+      \D \s \S` and escaped symbols (`\.`, `\(`, …); character classes
+      `[...]` with literals, those escapes and simple ranges (`a-z`), not
+      empty and not nested; `|`; plain `(...)` and non-capturing `(?:...)`
+      groups; `^` and `$`; and the quantifier `?`, at most 4 per pattern;
+    - rejected: all repetition (`*`, `+`, any `{`), lookarounds, named
+      groups, backreferences, other escapes, a `]` or `}` outside a class,
+      and anything else the tokenizer doesn't recognise;
+    - with no repetition, the work per start position is bounded by the
+      number of paths through the pattern (each `|` adds one, each `?`
+      doubles its atom). That is capped at 64, so `(?:a|a)(?:a|a)…` can't
+      sneak an exponential back in;
+    - kept: flags `imsu` only, 200 characters at most, and the pattern
+      must compile.
 
-    The analyzer (`compile/regex.ts`) is small and conservative, and
-    learner input is capped at 4,000 characters, so a check stays cheap on
-    the server and in the browser. Rejections are ordinary build errors.
+    The tokenizer walks the source once and rejects by default. Errors are
+    ordinary build errors with file and line, and say what to write
+    instead ("repetition (*, + or {n}) isn't allowed in checks; list the
+    alternatives instead"). `progress/check.ts` re-validates every stored
+    pattern before running it and fails the check if it is outside the
+    grammar, as defence in depth for content already in R2. Learner input
+    is capped at 4,000 characters as well.
   - XP is capped (`app/content/limits.ts`): at most 100 per `:::prompt` or
     `:::quiz` block and 500 per lesson, as whole numbers. The build reports
     values outside that range. `progress/check.ts` clamps the awards again,

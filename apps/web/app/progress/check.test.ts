@@ -67,4 +67,28 @@ describe('checkLesson awards', () => {
       [100, 50, 0],
     )
   })
+
+  it('fails a stored check whose pattern is outside the grammar, without running it', () => {
+    let evil: LessonContent = {
+      ...inflated,
+      blocks: [
+        {
+          type: 'prompt',
+          id: 'p',
+          xp: 10,
+          task: 'Write anything',
+          // Stored before the grammar: exponential on a long run of a's.
+          checks: [{ label: 'evil', patterns: [{ source: '^(a+)+$' }] }],
+          temperatures: [70],
+          examples: [],
+          success: { message: 'ok' },
+        },
+      ],
+    }
+    let started = Date.now()
+    let checked = checkLesson('c', 'l', evil, { prompts: { p: `${'a'.repeat(4000)}!` }, ran: {}, quizzes: {} })
+    assert.ok(Date.now() - started < 1000, 'the pattern never ran')
+    assert.equal(checked.ok, false)
+    assert.deepEqual(checked.exercises[0]!.failed, ['evil'])
+  })
 })

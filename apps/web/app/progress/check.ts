@@ -6,6 +6,7 @@ import { checkPasses } from '@bits/ui/prompt-composer'
 
 import { exercisesOf, type LessonContent, type QuizBlock } from '../actions/courses/lesson/content.ts'
 import { fieldNames, offeredTemperatures, promptChecks } from '../actions/courses/lesson/ui/exercise.ts'
+import { isSafePattern } from '../content/compile/regex.ts'
 import { clampXp, MAX_BLOCK_XP, MAX_LESSON_XP } from '../content/limits.ts'
 
 export const MAX_PROMPT_LENGTH = 4000
@@ -62,6 +63,15 @@ export interface CheckedLesson {
   awards: Award[]
 }
 
+/**
+ * Defence in depth for content stored before the check grammar (decision
+ * 018): a pattern the build would now reject never runs on the server, and
+ * its check fails.
+ */
+function patternsSafe(check: { patterns?: { source: string; flags?: string }[] }): boolean {
+  return (check.patterns ?? []).every((pattern) => isSafePattern(pattern.source, pattern.flags))
+}
+
 export function quizCorrect(block: QuizBlock, picked: string[] | undefined): boolean {
   if (!picked?.length) return false
   let correct = block.options.filter((option) => option.correct).map((option) => option.key)
@@ -83,7 +93,7 @@ export function checkLesson(courseSlug: string, lessonSlug: string, content: Les
     let ranAt = new Set(temperatures)
     let failed = prompt.trim()
       ? promptChecks(block)
-          .filter((check) => !checkPasses(check, prompt, ranAt))
+          .filter((check) => !(patternsSafe(check) && checkPasses(check, prompt, ranAt)))
           .map((check) => check.label)
       : promptChecks(block).map((check) => check.label)
     return { exerciseId: block.id, task: block.task, prompt, temperatures, passed: failed.length === 0, failed }
