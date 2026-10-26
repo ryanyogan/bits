@@ -22,7 +22,12 @@ export default {
     let url = new URL(request.url)
     let canonical = platform.env.CANONICAL_ORIGIN
     if (canonical && legacyHosts.has(url.host)) {
-      return Response.redirect(new URL(url.pathname + url.search, canonical).href, 301)
+      // Assign the path rather than resolving it: `//evil.example` would
+      // otherwise resolve as a protocol-relative URL and leave the site.
+      let target = new URL(canonical)
+      target.pathname = url.pathname
+      target.search = url.search
+      return Response.redirect(target.href, 301)
     }
     try {
       return await router.fetch(request)
