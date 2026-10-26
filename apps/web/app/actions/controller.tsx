@@ -3,6 +3,7 @@ import { createController } from 'remix/router'
 import { platform } from '#platform'
 
 import { routes } from '../routes.ts'
+import { getViewer } from '../data/fixtures.ts'
 import { HomePage } from './home-page.tsx'
 
 export default createController(routes, {
@@ -30,7 +31,7 @@ export default createController(routes, {
       )
     },
     home(context) {
-      return context.render(<HomePage />)
+      return context.render(<HomePage viewer={getViewer(context.url)} />)
     },
   },
 })

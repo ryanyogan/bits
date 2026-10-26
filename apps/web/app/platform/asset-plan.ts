@@ -1,6 +1,7 @@
 // What the browser needs from the server, described once for both runtimes:
 // the Node dev server resolves it on demand, and scripts/build.ts resolves it
 // ahead of time into the Workers static-asset manifest.
+import * as fs from 'node:fs'
 import * as path from 'node:path'
 
 import { criticalFontFiles, sourceDir as uiSourceDir, stylesheetFiles } from '@bits/ui/assets'
@@ -18,6 +19,16 @@ function rel(file: string): string {
 export const entryFile = rel(path.join(appDir, 'app/actions/public/entry.ts'))
 export const stylesheets = stylesheetFiles.map(rel)
 export const fontPreloads = criticalFontFiles.map(rel)
+/**
+ * Every self-hosted font, for pages that preload a face beyond the global
+ * critical set (e.g. the landing h1's Unbounded 800). Keyed by file name.
+ */
+export const fontFiles: Record<string, string> = Object.fromEntries(
+  fs
+    .readdirSync(path.join(uiSourceDir, 'fonts'))
+    .filter((name) => name.endsWith('.woff2'))
+    .map((name) => [name, rel(path.join(uiSourceDir, 'fonts', name))]),
+)
 
 /** Asset server access policy: the security boundary for what the browser may fetch. */
 export const assetAccess = {
@@ -34,7 +45,8 @@ export const assetAccess = {
     `${rel(uiSourceDir)}/**`,
   ],
   // @remix-run/ui: headless primitives used by @bits/ui islands (decision 010).
-  allowPackages: ['remix', '@remix-run/ui'],
+  // three: the landing page's 3D field, imported dynamically by its island.
+  allowPackages: ['remix', '@remix-run/ui', 'three'],
   denyFiles: ['**/*.test.*', `${rel(uiSourceDir)}/assets.ts`],
   files: { extensions: ['.woff2', '.svg', '.png', '.webp'] },
 }

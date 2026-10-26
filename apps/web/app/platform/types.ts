@@ -31,6 +31,8 @@ export interface AppAssets {
   stylesheets: string[]
   /** Font URLs to preload. */
   fontPreloads: string[]
+  /** Public URL of each self-hosted font, keyed by file name (`unbounded-latin-800-normal.woff2`). */
+  fonts: Record<string, string>
   /** Resolves a `clientEntry(import.meta.url, ...)` module to its script entry. */
   getScriptEntry(entryId: string): Promise<ScriptEntry>
   /** Serves an `/assets/*` request, or null when this runtime does not serve assets itself. */
@@ -42,6 +44,7 @@ export interface AssetManifest {
   entry: ScriptEntry
   stylesheets: string[]
   fontPreloads: string[]
+  fonts: Record<string, string>
   /** clientEntry module path (repo-relative, e.g. `packages/ui/src/app-bar-menu.tsx`) to its entry. */
   clientEntries: Record<string, ScriptEntry>
 }

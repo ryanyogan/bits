@@ -7,7 +7,7 @@ import { componentHmr } from 'remix/component-hmr/assets'
 import { staticFiles } from 'remix/middleware/static'
 import { getPlatformProxy } from 'wrangler'
 
-import { appDir, assetAccess, entryFile, fontPreloads, stylesheets } from './asset-plan.ts'
+import { appDir, assetAccess, entryFile, fontFiles, fontPreloads, stylesheets } from './asset-plan.ts'
 import type { AppAssets, Platform } from './types.ts'
 
 const nodeEnv = process.env.NODE_ENV ?? 'development'
@@ -33,6 +33,11 @@ const assets: AppAssets = {
   entry: await assetServer.getScriptEntry(entryFile),
   stylesheets: await Promise.all(stylesheets.map((file) => assetServer.getHref(file))),
   fontPreloads: await Promise.all(fontPreloads.map((file) => assetServer.getHref(file))),
+  fonts: Object.fromEntries(
+    await Promise.all(
+      Object.entries(fontFiles).map(async ([name, file]) => [name, await assetServer.getHref(file)] as const),
+    ),
+  ),
   getScriptEntry: (entryId) => assetServer.getScriptEntry(entryId),
   fetch: (request) => assetServer.fetch(request),
 }

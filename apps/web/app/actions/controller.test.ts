@@ -25,7 +25,7 @@ describe('router smoke test', () => {
     assert.match(response.headers.get('Content-Type') ?? '', /text\/html/)
     let html = await response.text()
     assert.match(html, /<html[\s>]/)
-    assert.match(html, /<title>bits<\/title>/)
+    assert.match(html, /<title>Bits — learn AI by typing to it<\/title>/)
     assert.match(html, /rel="stylesheet"/)
     assert.match(html, /type="importmap"/)
   })

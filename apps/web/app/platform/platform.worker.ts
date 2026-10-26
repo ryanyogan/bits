@@ -14,6 +14,7 @@ const assets: AppAssets = {
   entry: manifest.entry,
   stylesheets: manifest.stylesheets,
   fontPreloads: manifest.fontPreloads,
+  fonts: manifest.fonts,
   async getScriptEntry(entryId) {
     // The build rewrites each module's import.meta.url to
     // `file:///<repo-relative path>`, which is the manifest key.

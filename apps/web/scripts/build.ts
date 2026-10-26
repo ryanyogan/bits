@@ -21,6 +21,7 @@ import {
   appDir,
   assetAccess,
   entryFile,
+  fontFiles,
   fontPreloads,
   repoRoot,
   stylesheets,
@@ -68,9 +69,14 @@ async function buildClient(): Promise<AssetManifest> {
     }
     let stylesheetHrefs = await Promise.all(stylesheets.map((file) => assetServer.getHref(file)))
     let fontHrefs = await Promise.all(fontPreloads.map((file) => assetServer.getHref(file)))
+    let namedFonts = Object.fromEntries(
+      await Promise.all(
+        Object.entries(fontFiles).map(async ([name, file]) => [name, await assetServer.getHref(file)] as const),
+      ),
+    )
 
     // Crawl from every URL the server can hand to a browser.
-    let queue = new Set<string>([...stylesheetHrefs, ...fontHrefs])
+    let queue = new Set<string>([...stylesheetHrefs, ...fontHrefs, ...Object.values(namedFonts)])
     for (let scriptEntry of [entry, ...Object.values(clientEntries)]) {
       queue.add(scriptEntry.href)
       for (let preload of scriptEntry.preloads) queue.add(preload)
@@ -139,6 +145,7 @@ async function buildClient(): Promise<AssetManifest> {
       entry: renameEntry(entry),
       stylesheets: stylesheetHrefs.map(rename),
       fontPreloads: fontHrefs.map(rename),
+      fonts: mapValues(namedFonts, rename) ?? {},
       clientEntries: Object.fromEntries(
         Object.entries(clientEntries).map(([key, value]) => [key, renameEntry(value)]),
       ),
