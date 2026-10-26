@@ -188,4 +188,117 @@ describe('content build', () => {
       '01-one.md:13 → xp=-5 is out of range: use a whole number from 0 to 100',
     ])
   })
+
+  it('builds every lesson toy from the toys fixture', async () => {
+    let dir = path.join(coursesDir, '../fixtures/toys')
+    let result = buildCourse(await readCourseFolder(dir), { folder: 'toys' })
+    assert.deepEqual(result.report.filter((item) => item.level !== 'ok').map(formatItem), [])
+    let blocks = result.lessons!.get('every-toy')!.blocks.filter((block) => block.type !== 'markdown')
+    assert.deepEqual(blocks.map((block) => block.type), ['nexttoken', 'training', 'attention', 'compare', 'rabbithole'])
+    let [nexttoken, training, attention, compare, rabbithole] = blocks
+    assert.deepEqual(nexttoken, {
+      type: 'nexttoken',
+      prompt: 'The capital of France is',
+      steps: [
+        { token: ' Paris', p: 0.92, alternatives: [[' the', 0.03], [' a', 0.02]] },
+        { token: '.', p: 0.71, alternatives: [[',', 0.2], [' and', 0.05]] },
+        { token: ' It', p: 0.4, alternatives: [[' The', 0.3], ['\n', 0.1]] },
+      ],
+      illustrative: true,
+    })
+    assert.deepEqual(training?.type === 'training' && training.snapshots.map((s) => [s.step, s.loss]), [
+      [0, 10.8],
+      [500, 6.1],
+      [5000, 3.2],
+      [50000, 1.9],
+    ])
+    assert.equal(attention?.type === 'attention' && attention.tokens.length, 10)
+    assert.deepEqual(attention?.type === 'attention' && attention.links[0], { from: 7, to: 1, weight: 0.62 })
+    assert.equal(attention?.type === 'attention' && attention.caption, 'What does “it” refer to?')
+    // illustrative=false on the block beats the frontmatter; strings can span lines.
+    assert.deepEqual(compare, {
+      type: 'compare',
+      left: 'Base model',
+      right: 'Assistant',
+      rows: [
+        {
+          prompt: 'What is the capital of France?',
+          left: 'What is the capital of Germany?\nWhat is the capital of Spain?',
+          right: 'The capital of France is Paris.',
+        },
+      ],
+    })
+    assert.deepEqual(
+      rabbithole?.type === 'rabbithole' && rabbithole.links.map((link) => [link.kind, link.by, link.mins, link.deep]),
+      [
+        ['video', '3Blue1Brown', 27, undefined],
+        ['video', 'Andrej Karpathy', 116, true],
+        ['read', 'Anthropic', undefined, undefined],
+      ],
+    )
+  })
+
+  it('reports each toy’s validation errors at their lines (broken-toys fixture)', async () => {
+    let dir = path.join(coursesDir, '../fixtures/broken-toys')
+    let result = buildCourse(await readCourseFolder(dir), { folder: 'broken-toys' })
+    assert.deepEqual(errors(result), [
+      '01-nexttoken.md:10 → :::nexttoken needs a prompt, like :::nexttoken{prompt="The capital of France is"}',
+      '01-nexttoken.md:11 → odds 1.4 for " Paris" are outside 0–1',
+      '01-nexttoken.md:12 → the odds on this line add up to 1.20, more than 1',
+      '01-nexttoken.md:13 → runners-up look like " the":0.03 " a":0.02 (couldn’t read “" the" 0.3”)',
+      '01-nexttoken.md:14 → nexttoken lines are the picked token, its odds, then | and the runners-up, like: " Paris" 0.92 | " the":0.03 " a":0.02',
+      '02-training.md:12 → step 100 comes after step 500: list steps in increasing order',
+      '02-training.md:13 → training lines look like: - step 500 loss=6.1 "the model’s output at that step"',
+      '03-attention.md:12 → from=4 to=1: indexes count from 0 and must be below 4 (the number of tokens)',
+      '03-attention.md:13 → from=1 to=3: a token only attends to itself and earlier tokens (to ≤ from)',
+      '03-attention.md:14 → w=1.5 is outside 0–1',
+      '03-attention.md:16 → from=3 to=1 is listed twice',
+      '04-compare.md:10 → :::compare needs both labels, like :::compare{left="Base model" right="Assistant"}',
+      '04-compare.md:11 → each compare row needs a - left and a - right line',
+      '04-compare.md:13 → compare lines look like: - prompt "…", - left "…" or - right "…" (a string can run over several lines)',
+      '05-rabbithole.md:10 → :::rabbithole has 4 links; pick the best 3',
+      '05-rabbithole.md:11 → a rabbit hole needs an https link: url="https://…" (got “http://example.com/video”)',
+      '05-rabbithole.md:12 → a rabbit hole needs its author: by="3Blue1Brown"',
+      '05-rabbithole.md:13 → a rabbit hole needs a title',
+      '05-rabbithole.md:14 → unknown rabbit hole kind "podcast" (use video or read)',
+    ])
+  })
+
+  it('checks the toy bodies: missing lines, javascript: links, weights that add up past 1', () => {
+    let result = build({
+      '01-one.md': lesson(
+        [
+          ':::training{prompt="x"}',
+          '- step 0 loss=9 "a"',
+          ':::',
+          '',
+          ':::attention',
+          'tokens "a" "b"',
+          '- from=1 to=0 w=0.8',
+          '- from=1 to=1 w=0.7',
+          ':::',
+          '',
+          ':::rabbithole',
+          '- read "Bad" by="X" url="javascript:alert(1)"',
+          ':::',
+          '',
+          ':::compare{left="A" right="B"}',
+          '- left "one \\"quoted\\"\\nline"',
+          '- right "two"',
+          ':::',
+        ].join('\n'),
+      ),
+    })
+    assert.deepEqual(errors(result), [
+      '01-one.md:8 → :::training needs at least two - step lines',
+      '01-one.md:19 → a rabbit hole needs an https link: url="https://…" (got “javascript:alert(1)”)',
+    ])
+    assert.deepEqual(
+      result.report.filter((item) => item.level === 'warning').map(formatItem),
+      ['01-one.md:12 → the weights from token 1 add up to 1.50; attention weights sum to at most 1'],
+    )
+    let ok = build({ '01-one.md': lesson(':::compare{left="A" right="B"}\n- left "one \\"quoted\\"\\nline"\n- right "two"\n:::') })
+    let compare = ok.lessons?.get('one')?.blocks.find((block) => block.type === 'compare')
+    assert.deepEqual(compare?.type === 'compare' && compare.rows, [{ left: 'one "quoted"\nline', right: 'two' }])
+  })
 })

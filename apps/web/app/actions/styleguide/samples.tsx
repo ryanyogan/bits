@@ -1,6 +1,10 @@
 import { css } from 'remix/component'
 import type { CodeFile, CodeSegment } from '@bits/ui/code-editor'
+import type { AttentionLink } from '@bits/ui/attention-map'
+import type { NextTokenStep } from '@bits/ui/next-token'
+import type { RabbitHoleLink } from '@bits/ui/rabbit-hole'
 import type { TerminalEntry, TerminalPart } from '@bits/ui/terminal'
+import type { TrainingSnapshot } from '@bits/ui/training-scrubber'
 
 export const swatches = [
   { name: 'Ink', token: '--ink', hex: '#07080D', use: 'Page ground. Never pure black.' },
@@ -207,4 +211,46 @@ export const oddsCandidates: [string, number][] = [
   [' Lunar', 1.9],
   [' Fly', 1.2],
   [' Zero', 0.6],
+]
+
+// Lesson toys (decision 021). Illustrative numbers, as the specimens say.
+export const nextTokenSteps: NextTokenStep[] = [
+  { token: ' Paris', p: 0.92, alternatives: [[' the', 0.03], [' a', 0.02], [' located', 0.01]] },
+  { token: '.', p: 0.71, alternatives: [[',', 0.2], [' and', 0.05]] },
+  { token: ' It', p: 0.38, alternatives: [[' The', 0.31], [' Paris', 0.12]] },
+  { token: ' is', p: 0.55, alternatives: [["'s", 0.25], [' has', 0.1]] },
+  { token: ' known', p: 0.3, alternatives: [[' also', 0.22], [' the', 0.2]] },
+  { token: ' for', p: 0.86, alternatives: [[' as', 0.11]] },
+  { token: ' its', p: 0.41, alternatives: [[' the', 0.37], [' art', 0.04]] },
+  { token: ' café', p: 0.09, alternatives: [[' art', 0.28], [' food', 0.2], [' museums', 0.14]] },
+  { token: 's', p: 0.97, alternatives: [[' culture', 0.01]] },
+  { token: '.', p: 0.8, alternatives: [[' and', 0.15]] },
+]
+
+export const trainingSnapshots: TrainingSnapshot[] = [
+  { step: 0, loss: 10.8, text: 'qz# lorp vv kk ~e' },
+  { step: 200, loss: 7.9, text: 'e e the t th a' },
+  { step: 1000, loss: 5.6, text: 'the the was a of of' },
+  { step: 5000, loss: 3.4, text: 'time there was a a little' },
+  { step: 20000, loss: 2.3, text: 'time, there was a little fox who' },
+  { step: 100000, loss: 1.7, text: 'time, there lived a small fox who loved the snow.' },
+]
+
+export const attentionTokens = ['The', ' animal', " didn't", ' cross', ' the', ' street', ' because', ' it', ' was', ' tired']
+export const attentionLinks: AttentionLink[] = [
+  { from: 7, to: 1, weight: 0.62 },
+  { from: 7, to: 5, weight: 0.18 },
+  { from: 7, to: 7, weight: 0.1 },
+  { from: 9, to: 1, weight: 0.45 },
+  { from: 9, to: 7, weight: 0.35 },
+  { from: 3, to: 1, weight: 0.5 },
+  { from: 3, to: 0, weight: 0.2 },
+  { from: 5, to: 4, weight: 0.55 },
+  { from: 5, to: 3, weight: 0.3 },
+]
+
+export const rabbitHoleLinks: RabbitHoleLink[] = [
+  { kind: 'video', title: 'But what is a GPT? Visual intro to transformers', by: '3Blue1Brown', mins: 27, url: 'https://www.youtube.com/watch?v=wjZofJX0v4M' },
+  { kind: 'video', title: 'Intro to Large Language Models', by: 'Andrej Karpathy', mins: 60, url: 'https://www.youtube.com/watch?v=zjkBMFhNj_g', deep: true },
+  { kind: 'read', title: 'Tracing the thoughts of a large language model', by: 'Anthropic', url: 'https://www.anthropic.com/research/tracing-thoughts-language-model' },
 ]

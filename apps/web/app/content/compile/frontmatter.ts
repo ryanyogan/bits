@@ -73,6 +73,8 @@ export const LessonFrontmatter = object(
     /** Video length until the video provider reports it. */
     duration: optional(clock()),
     chapters: optional(array(object({ at: clock(), title: text() }, { unknownKeys: 'error' }))),
+    /** Labels every toy in the lesson as illustrative (a block can say illustrative=false). */
+    illustrative: optional(boolean()),
     /** Canned Terminal-mode replies until the tutor model is wired up. */
     replies: optional(object({ hint: text(), fallback: text() }, { unknownKeys: 'error' })),
   },

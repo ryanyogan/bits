@@ -1,6 +1,7 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 import { ActivityGrid, sampleActivity } from '@bits/ui/activity-grid'
+import { AttentionMap } from '@bits/ui/attention-map'
 import { AppBar } from '@bits/ui/app-bar'
 import { AvatarButton } from '@bits/ui/avatar-button'
 import { BackButton } from '@bits/ui/back-button'
@@ -11,6 +12,7 @@ import { CheckChip, checkListStyle } from '@bits/ui/check-chip'
 import { Chip, ChoiceChip, SuggestionChip } from '@bits/ui/chip'
 import { CodeEditor } from '@bits/ui/code-editor'
 import { CodeInput } from '@bits/ui/code-input'
+import { ComparePanel } from '@bits/ui/compare-panel'
 import { ContinueBanner } from '@bits/ui/continue-banner'
 import { CourseCard, WriteCourseCard, courseGridStyle } from '@bits/ui/course-card'
 import { CourseCover, coverPatterns } from '@bits/ui/course-cover'
@@ -28,12 +30,14 @@ import { LessonNode, LessonNodeRow, lessonListStyle } from '@bits/ui/lesson-node
 import { LiveDot } from '@bits/ui/live-dot'
 import { Logo } from '@bits/ui/logo'
 import { NavLink } from '@bits/ui/nav-link'
+import { NextTokenPlayer } from '@bits/ui/next-token'
 import { OddsBars } from '@bits/ui/odds-bars'
 import { ProgressBar, SegmentedProgress } from '@bits/ui/progress-bar'
 import { ProgressRing } from '@bits/ui/progress-ring'
 import { PromptComposer } from '@bits/ui/prompt-composer'
 import { ProviderButton } from '@bits/ui/provider-button'
 import { QuizChoice } from '@bits/ui/quiz-choice'
+import { RabbitHole } from '@bits/ui/rabbit-hole'
 import { RewardRegion, RewardToast } from '@bits/ui/reward-toast'
 import { SearchField } from '@bits/ui/search-field'
 import { SegmentedTabs, StaticTabs } from '@bits/ui/segmented-tabs'
@@ -46,6 +50,7 @@ import { OutputPanel, TerminalLog } from '@bits/ui/terminal'
 import { TextField } from '@bits/ui/text-field'
 import { TokenizerPanel } from '@bits/ui/token-pill'
 import { ToolButton } from '@bits/ui/tool-button'
+import { TrainingScrubber } from '@bits/ui/training-scrubber'
 import { LearnerBubble, ModelOutput, TutorAvatar, TutorMessage, attachedBlock } from '@bits/ui/tutor'
 import { VideoPlayer } from '@bits/ui/video-player'
 import { XpPill } from '@bits/ui/xp-pill'
@@ -54,14 +59,19 @@ import { APP_NAME } from '../../config.ts'
 import { Section, Specimen, State, column, row, specimenGrid } from './layout.tsx'
 import {
   agentFile,
+  attentionLinks,
+  attentionTokens,
   chapters,
   cues,
+  nextTokenSteps,
   oddsCandidates,
+  rabbitHoleLinks,
   outputLines,
   readmeFile,
   terminalEntries,
   tokens,
   toolsFile,
+  trainingSnapshots,
 } from './samples.tsx'
 
 const navLinks = [
@@ -902,6 +912,43 @@ export function Catalogue(handle: Handle) {
             cues={cues}
             initialTime={112}
           />
+        </Specimen>
+      </Section>
+
+      <Section
+        id="sg-toys"
+        title="Lesson toys"
+        intro="The :::nexttoken, :::training, :::attention, :::compare and :::rabbithole blocks (decision 021). With JS off the islands render their fallback: a table or list of the same data."
+      >
+        <div mix={specimenGrid}>
+          <Specimen caption="NextTokenPlayer (island) — plays when scrolled into view; play/pause, ‹ ›, restart; no play button under reduced motion">
+            <NextTokenPlayer prompt="The capital of France is" steps={nextTokenSteps} illustrative />
+          </Specimen>
+          <Specimen caption="TrainingScrubber (island) — drag through training; loss sparkline marks the step">
+            <TrainingScrubber id="sg-training" prompt="Once upon a" snapshots={trainingSnapshots} illustrative />
+          </Specimen>
+        </div>
+        <div mix={specimenGrid}>
+          <Specimen caption="AttentionMap (island) — click or arrow through the tokens; tint = weight">
+            <AttentionMap tokens={attentionTokens} links={attentionLinks} caption="What does “it” refer to?" illustrative />
+          </Specimen>
+          <Specimen caption="ComparePanel (static) — two columns, stacked under 640px">
+            <ComparePanel
+              left="Base model"
+              right="Assistant"
+              illustrative
+              rows={[
+                {
+                  prompt: 'What is the capital of France?',
+                  left: 'What is the capital of Germany?\nWhat is the capital of Spain?\nWhat is the capital of Italy?',
+                  right: 'The capital of France is Paris.',
+                },
+              ]}
+            />
+          </Specimen>
+        </div>
+        <Specimen caption="RabbitHole (static) — up to 3 external links; new tab, data-rmx-document, noopener" wide>
+          <RabbitHole id="sg-rabbit-hole" links={rabbitHoleLinks} />
         </Specimen>
       </Section>
 

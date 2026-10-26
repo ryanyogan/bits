@@ -2,8 +2,11 @@ import * as assert from 'remix/assert'
 import { render } from 'remix/component/test'
 import { describe, it } from 'remix/test'
 
+import { AttentionMap } from './attention-map.tsx'
+import { NextTokenPlayer } from './next-token.tsx'
 import { OddsBars } from './odds-bars.tsx'
 import { PromptComposer } from './prompt-composer.tsx'
+import { TrainingScrubber } from './training-scrubber.tsx'
 
 describe('OddsBars', () => {
   it('reshapes the odds when the temperature slider moves', async (t) => {
@@ -131,5 +134,118 @@ describe('PromptComposer', () => {
     assert.match(runs(), /Lunar lattes\./)
     assert.match(runs(), /model · T=1\.0/)
     assert.equal($('li[data-passed]')?.getAttribute('data-passed'), 'true')
+  })
+})
+
+const tick = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms))
+const button = (root: ParentNode, label: string) => root.querySelector(`button[aria-label="${label}"]`) as HTMLButtonElement
+
+describe('NextTokenPlayer', () => {
+  it('steps the reply forward and back, showing each step’s odds', async (t) => {
+    let { $, act, cleanup, container } = render(
+      <NextTokenPlayer
+        prompt="The capital of France is"
+        steps={[
+          { token: ' Paris', p: 0.92, alternatives: [[' the', 0.03]] },
+          { token: '.', p: 0.7, alternatives: [[',', 0.2]] },
+        ]}
+        illustrative
+      />,
+    )
+    t.after(cleanup)
+    await act(() => tick())
+    assert.match(container.textContent ?? '', /illustrative/)
+    assert.match($('[aria-label="Candidates for step 1"]')?.textContent ?? '', /Paris.*92%.*the.*3\.0%/)
+    assert.equal(button(container, 'Previous token').disabled, true)
+
+    await act(() => button(container, 'Next token').click())
+    assert.match($('p')?.textContent ?? '', /The capital of France is Paris/)
+    assert.match($('[aria-live]')?.textContent ?? '', /Step 2 of 2/)
+
+    await act(() => button(container, 'Next token').click())
+    assert.match(container.textContent ?? '', /Done: 2 tokens/)
+    assert.equal(button(container, 'Next token').disabled, true)
+
+    await act(() => button(container, 'Previous token').click())
+    assert.match($('[aria-live]')?.textContent ?? '', /Step 2 of 2/)
+  })
+
+  it('plays through on its own', async (t) => {
+    let { act, cleanup, container } = render(
+      <NextTokenPlayer prompt="Hi" steps={[{ token: ' there', p: 0.8, alternatives: [] }]} />,
+    )
+    t.after(cleanup)
+    await act(() => tick())
+    let play = button(container, 'Play')
+    // Reduced motion hides Play; then there is nothing to autoplay.
+    if (!play) return
+    await act(() => play.click())
+    assert.ok(button(container, 'Pause'))
+    await act(() => tick(1800))
+    assert.match(container.textContent ?? '', /Hi there/)
+    assert.match(container.textContent ?? '', /Done/)
+  })
+})
+
+describe('TrainingScrubber', () => {
+  it('shows the snapshot under the slider', async (t) => {
+    let { $, act, cleanup } = render(
+      <TrainingScrubber
+        id="t-train"
+        prompt="Once upon a"
+        snapshots={[
+          { step: 0, loss: 10.8, text: 'qz# lorp' },
+          { step: 5000, loss: 2.1, text: 'time there was' },
+        ]}
+      />,
+    )
+    t.after(cleanup)
+    await act(() => tick())
+    let slider = $('#t-train')
+    assert.ok(slider instanceof HTMLInputElement)
+    assert.match($('[aria-live]')?.textContent ?? '', /qz# lorp/)
+    await act(() => {
+      slider.value = '1'
+      slider.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    assert.match($('[aria-live]')?.textContent ?? '', /time there was/)
+    assert.equal($('output')?.textContent, '5,000')
+    assert.equal(slider.getAttribute('aria-valuetext'), 'step 5,000, loss 2.10')
+    assert.ok($('svg circle'))
+  })
+})
+
+describe('AttentionMap', () => {
+  it('highlights what the picked token attends to, with roving focus', async (t) => {
+    let { $, $$, act, cleanup } = render(
+      <AttentionMap
+        tokens={['The', ' animal', ' was', ' tired', ' it']}
+        links={[
+          { from: 4, to: 1, weight: 0.6 },
+          { from: 3, to: 1, weight: 0.4 },
+          { from: 3, to: 2, weight: 0.3 },
+        ]}
+      />,
+    )
+    t.after(cleanup)
+    await act(() => tick())
+    let chips = () => [...$$('[role="toolbar"] button')] as HTMLButtonElement[]
+    assert.equal(chips().length, 5)
+    // Starts on the strongest link's token.
+    assert.equal(chips()[4]?.getAttribute('aria-pressed'), 'true')
+    assert.equal(chips()[4]?.tabIndex, 0)
+    assert.equal(chips()[1]?.getAttribute('data-state'), 'to')
+    assert.match($('[aria-live]')?.textContent ?? '', /“it” looks most at “animal” \(60%\)/)
+
+    await act(() => chips()[3]!.click())
+    assert.equal(chips()[2]?.getAttribute('data-state'), 'to')
+    assert.match(chips()[1]?.getAttribute('aria-label') ?? '', /attention 40%/)
+
+    chips()[3]!.focus()
+    await act(() => chips()[3]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })))
+    await act(() => tick())
+    assert.equal(chips()[2]?.getAttribute('aria-pressed'), 'true')
+    assert.equal(document.activeElement, chips()[2])
+    assert.match($('[aria-live]')?.textContent ?? '', /no links/)
   })
 })

@@ -215,12 +215,19 @@ Rationale: `docs/decisions/010-component-library.md`.
 | LessonBar | lesson-bar.tsx | backHref, context, title, segments, modes, neurons | static |
 | TutorAvatar / TutorMessage / LearnerBubble / ModelOutput | tutor.tsx | size / variant / variant / temperature, tokens, state done/streaming/example/error, note | static |
 | CheckChip | check-chip.tsx | passed, compact | static |
-| TokenPill / TokenizerPanel | token-pill.tsx | text, id, index / tokens | static |
+| TokenPill / TokenizerPanel | token-pill.tsx | text, id, index / tokens, illustrative | static |
 | HexBadge / BadgeTile / BadgeChip | hex-badge.tsx | name, glyph, color, variant earned/locked/preview/chip | static |
 | ActivityGrid | activity-grid.tsx | levels (`sampleActivity()` for demos), label | static |
 | RewardToast | reward-toast.tsx | xp, message, next, variant lesson/system | static |
 | RewardRegion | reward-toast.tsx | dismissAfter; shows toasts from `announceReward()` (`bits:reward`) | island |
 | OddsBars | odds-bars.tsx | context, candidates, defaultValue (follows `bits:temperature`) | island |
+| OddsList | odds-list.tsx | rows {token, p, picked}, label, top (`formatOdds`, `showToken`) | static |
+| ToyPanel / IllustrativeTag | toy-panel.tsx | context, label, illustrative, name | static |
+| NextTokenPlayer | next-token.tsx | prompt, steps {token, p, alternatives}, illustrative (`:::nexttoken`) | island (fallback: sentence + steps table) |
+| TrainingScrubber | training-scrubber.tsx | id, prompt, snapshots {step, loss, text}, illustrative (`:::training`) | island (fallback: snapshot list) |
+| AttentionMap | attention-map.tsx | tokens, links {from, to, weight}, caption, illustrative (`:::attention`) | island (fallback: from → to table) |
+| ComparePanel | compare-panel.tsx | left, right, rows {prompt?, left, right}, illustrative (`:::compare`) | static |
+| RabbitHole | rabbit-hole.tsx | links {kind video/read, title, by, url, mins, deep}, id (`:::rabbithole`) | static |
 | PromptComposer | prompt-composer.tsx | id, task, checks, temperatures, examples, reward, keepRuns, submit, run (/api/run) | island (Enter runs, Shift+Enter newline) |
 | CodeEditor | code-editor.tsx | files, highlight, focusLine, typeMode | island (@remix-run/ui tabs) |
 | TerminalLog | terminal.tsx | path, entries, replies, placeholder | island |
@@ -282,6 +289,14 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
 - Courses are markdown folders in `content/courses/<slug>/`, not code.
   Frontmatter and block syntax: the `.md` files there and the block
   reference on `/author`. Change content, then `pnpm content validate`.
+- Lesson toys (decision 021): `:::nexttoken`, `:::training`,
+  `:::attention`, `:::compare` and `:::rabbithole`. Bodies are plain lines;
+  the exact syntax is in the decision and on `/author`. Mark made-up
+  numbers with a bare `illustrative` attribute (or `illustrative: true` in
+  the lesson frontmatter); rabbit holes take `https` links only, 3 at most.
+  A toy island renders its no-JS fallback on the server and switches to
+  the interactive view on the client. Valid and broken examples:
+  `content/fixtures/toys/` and `content/fixtures/broken-toys/`.
 - Read published content with `const catalog = await getCatalog(context)`
   (`app/content/request.ts`, one D1 query per request), then
   `catalog.getCourse/listCourses/getLesson/getContinue` and

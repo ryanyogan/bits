@@ -1,11 +1,11 @@
 // Where the landing and sign-in pages' calls to action go. Fixed lesson
 // URLs, so these pages render without loading the catalog; the lessons are
-// content/courses/what-is-an-llm/01-lesson-1.md and
+// content/courses/what-is-an-llm/01-say-hi-to-claude.md and
 // content/courses/first-agent-loop/04-the-loop.md.
 import { routes } from '../../routes.ts'
 
 /** "Lesson 1" everywhere: the first lesson of the first course. */
-export const LESSON_ONE = { course: 'what-is-an-llm', lesson: 'lesson-1' } as const
+export const LESSON_ONE = { course: 'what-is-an-llm', lesson: 'say-hi-to-claude' } as const
 
 /** The agent-loop lesson (the CodeLesson artboard). */
 const AGENT_LESSON = { course: 'first-agent-loop', lesson: 'the-loop' } as const

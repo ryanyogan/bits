@@ -25,6 +25,7 @@ export type IconName =
   | 'hex-check'
   | 'menu'
   | 'close'
+  | 'book'
 
 interface IconDef {
   viewBox: string
@@ -203,6 +204,17 @@ export const icons: Record<IconName, IconDef> = {
     size: [20, 20],
     color: 'currentColor',
     draw: (c) => <path d="M5 5 L15 15 M15 5 L5 15" stroke={c} stroke-width="1.6" stroke-linecap="round" />,
+  },
+  book: {
+    viewBox: '0 0 20 20',
+    size: [18, 18],
+    color: 'currentColor',
+    draw: (c) => (
+      <g fill="none" stroke={c} stroke-width="1.6" stroke-linejoin="round">
+        <path d="M10 5 C8 3.6 5.5 3.2 2.5 3.5 V15.5 C5.5 15.2 8 15.6 10 17 C12 15.6 14.5 15.2 17.5 15.5 V3.5 C14.5 3.2 12 3.6 10 5 Z" />
+        <path d="M10 5 V17" />
+      </g>
+    ),
   },
 }
 
