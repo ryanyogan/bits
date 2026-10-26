@@ -15,12 +15,12 @@ import {
 } from '@bits/db'
 import type { ActivityLevel } from '@bits/ui/activity-grid'
 
-import { listCourses, getLesson, type Completed, type CourseSummary } from '../../data/fixtures.ts'
+import type { Catalog } from '../../content/catalog.ts'
+import type { Completed, CourseSummary } from '../../content/types.ts'
 import { badgeDefinitions } from '../../progress/badges.ts'
 import { addDays, currentStreak, localDay } from '../../progress/days.ts'
 import { levelFor } from '../../progress/levels.ts'
 import { exercisesOf } from '../courses/lesson/content.ts'
-import { getLessonContent } from '../courses/lesson/fixtures.ts'
 import { promptChecks, temperatureLabel } from '../courses/lesson/ui/exercise.ts'
 
 export interface Badge {
@@ -98,7 +98,7 @@ const goalPhrases: Record<string, string> = {
 const methodLabels = { github: 'GitHub', google: 'Google' } as const
 
 /** A user's profile, read from D1 (lesson_progress, xp, badges, journal, activity). */
-async function profileFor(db: D1DataTableDatabase, user: User, now = Date.now()): Promise<Profile> {
+async function profileFor(db: D1DataTableDatabase, catalog: Catalog, user: User, now = Date.now()): Promise<Profile> {
   let today = localDay(now, user.timezone)
   let [completedRows, attempts, promptsWritten, held, activity, identities] = await Promise.all([
     listCompletedLessons(db, user.id),
@@ -111,7 +111,7 @@ async function profileFor(db: D1DataTableDatabase, user: User, now = Date.now())
   let completed: Completed = new Map(completedRows.map((row) => [`${row.course_id}/${row.lesson_slug}`, row.completed_at]))
   let level = levelFor(user.xp_total)
   let earned = new Set(held.map((row) => row.badge_id))
-  let started = listCourses(completed).filter((course) => course.pct > 0)
+  let started = catalog.listCourses(completed).filter((course) => course.pct > 0)
   let name = user.display_name || user.handle
 
   return {
@@ -133,21 +133,20 @@ async function profileFor(db: D1DataTableDatabase, user: User, now = Date.now())
     signIn: ['Email', ...identities.map((identity) => methodLabels[identity.provider])].join(' · '),
     // Courses under way first, then finished ones.
     courses: [...started.filter((c) => c.pct < 100), ...started.filter((c) => c.pct >= 100)],
-    badges: badgeDefinitions
+    badges: badgeDefinitions(catalog)
       .map((badge) => ({ name: badge.name, glyph: badge.glyph, earned: earned.has(badge.id), color: badge.color }))
       .sort((a, b) => Number(b.earned) - Number(a.earned)),
-    journal: attempts.map((attempt) => journalEntry(attempt)),
+    journal: await Promise.all(attempts.map((attempt) => journalEntry(catalog, attempt))),
     activity: activityLevels(activity, today),
     activityEnd: today,
   }
 }
 
-function journalEntry(attempt: ExerciseAttempt): JournalEntry {
-  let found = getLesson(attempt.course_id, attempt.lesson_slug)
+async function journalEntry(catalog: Catalog, attempt: ExerciseAttempt): Promise<JournalEntry> {
+  let found = catalog.getLesson(attempt.course_id, attempt.lesson_slug)
   let where = found ? `${found.course.title} · L${found.lesson.n}` : attempt.course_id
-  let block = found
-    ? exercisesOf(getLessonContent(found.course.slug, found.lesson)).find((e) => e.id === attempt.exercise_id)
-    : undefined
+  let content = found ? await catalog.lessonContent(attempt.course_id, attempt.lesson_slug) : undefined
+  let block = content ? exercisesOf(content).find((e) => e.id === attempt.exercise_id) : undefined
   let checks = block ? promptChecks(block).length : 0
   if (attempt.temperatures.length && !attempt.passed) {
     let temps = attempt.temperatures.map((t) => `T=${temperatureLabel(t)}`).join(' and ')
@@ -162,14 +161,14 @@ function journalEntry(attempt: ExerciseAttempt): JournalEntry {
 }
 
 /** The signed-in user's own profile (`/me`). */
-export function getOwnProfile(db: D1DataTableDatabase, user: User): Promise<Profile> {
-  return profileFor(db, user)
+export function getOwnProfile(db: D1DataTableDatabase, catalog: Catalog, user: User): Promise<Profile> {
+  return profileFor(db, catalog, user)
 }
 
 /** A public profile by handle; private or unknown handles return undefined (404). */
-export async function getPublicProfile(db: D1DataTableDatabase, handle: string): Promise<Profile | undefined> {
+export async function getPublicProfile(db: D1DataTableDatabase, catalog: Catalog, handle: string): Promise<Profile | undefined> {
   let user = await findUserByHandle(db, handle)
-  return user?.is_public ? profileFor(db, user) : undefined
+  return user?.is_public ? profileFor(db, catalog, user) : undefined
 }
 
 /** Journal entries the profile shows before "All →". */

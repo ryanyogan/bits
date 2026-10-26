@@ -1,6 +1,7 @@
 import { createController } from 'remix/router'
 
 import { routes } from '../../routes.ts'
+import { authorUpload } from './author-upload.ts'
 
 function notImplemented(endpoint: string) {
   return Response.json(
@@ -15,7 +16,7 @@ export default createController(routes.api, {
     progress: () => notImplemented('progress'),
     run: () => notImplemented('run'),
     passkey: (context) => notImplemented(`passkey/${context.params.step}`),
-    authorUpload: () => notImplemented('author/upload'),
+    authorUpload: (context) => authorUpload(context),
     authorVideoUploadUrl: () => notImplemented('author/video-upload-url'),
   },
 })

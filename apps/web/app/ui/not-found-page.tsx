@@ -3,7 +3,7 @@ import { css } from 'remix/component'
 import { Eyebrow } from '@bits/ui/eyebrow'
 import { Keycap } from '@bits/ui/keycap'
 
-import type { Viewer } from '../data/fixtures.ts'
+import type { Viewer } from '../auth/identity.ts'
 import { routes } from '../routes.ts'
 import { Layout } from './layout.tsx'
 

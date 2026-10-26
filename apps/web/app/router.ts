@@ -41,7 +41,9 @@ export const router = createRouter({
     cop({ insecureBypassPatterns: ['POST /webhooks/{provider}'] }),
     loadDatabase(db),
     loadSession(db),
-    formData(),
+    // A course folder upload is many small text files (POST /api/author/upload;
+    // the DropZone sends media as names only, so videos never come through here).
+    formData({ maxFiles: 300, maxFileSize: 1024 * 1024, maxTotalSize: 8 * 1024 * 1024 }),
     loadAuth(db),
     render({ assets: platform.assets }),
   ],

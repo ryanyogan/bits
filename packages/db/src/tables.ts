@@ -217,3 +217,76 @@ export const userBadges = table({
 })
 
 export type UserBadge = TableRow<typeof userBadges>
+
+// Course content (migration 0004, decision 018). Compiled JSON lives in R2;
+// these rows index it: the live pointer, every build with its report, and
+// who may publish.
+export const courses = table({
+  name: 'courses',
+  primaryKey: 'slug',
+  columns: {
+    slug: c.text(),
+    title: c.text(),
+    track: c.text().nullable(),
+    sort: c.integer(),
+    /** course_versions.id of the live version; null until first published. */
+    current_version_id: c.text().nullable(),
+    created_at: c.integer(),
+    updated_at: c.integer(),
+  },
+})
+
+export type Course = TableRow<typeof courses>
+
+export const validationLevels = ['ok', 'warning', 'error'] as const
+export type ValidationLevel = (typeof validationLevels)[number]
+
+/** One line of a build's validation report. */
+export interface ReportItem {
+  level: ValidationLevel
+  text: string
+  /** Path inside the course folder, e.g. `06-temperature.md`. */
+  file?: string
+  /** 1-based line in `file`. */
+  line?: number
+}
+
+/** building: R2 upload in progress; ready: may go live; failed: has errors, nothing in R2. */
+export const versionStatuses = ['building', 'ready', 'failed'] as const
+export type VersionStatus = (typeof versionStatuses)[number]
+
+export const courseVersions = table({
+  name: 'course_versions',
+  columns: {
+    id: c.text(),
+    course_slug: c.text(),
+    n: c.integer(),
+    status: c.enum(versionStatuses),
+    errors: c.integer(),
+    warnings: c.integer(),
+    report: c.json(),
+    files: c.integer(),
+    source: c.text(),
+    created_by: c.text().nullable(),
+    created_at: c.integer(),
+    published_at: c.integer().nullable(),
+  },
+  afterRead({ value }) {
+    if (!('report' in value)) return { value }
+    return { value: { ...value, report: decodeJsonArray(value.report) } }
+  },
+})
+
+export type CourseVersion = Omit<TableRow<typeof courseVersions>, 'report'> & { report: ReportItem[] }
+
+export const courseAuthors = table({
+  name: 'course_authors',
+  primaryKey: ['course_slug', 'user_id'],
+  columns: {
+    course_slug: c.text(),
+    user_id: c.text(),
+    created_at: c.integer(),
+  },
+})
+
+export type CourseAuthor = TableRow<typeof courseAuthors>

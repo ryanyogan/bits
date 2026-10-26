@@ -36,6 +36,16 @@
     }
   ],
 
+  // Compiled course content: courses/{slug}/v{n}/manifest.json and
+  // lessons/{lesson}.json, immutable per version (decision 018). Read
+  // through the binding only; the bucket is never public.
+  "r2_buckets": [
+    {
+      "binding": "CONTENT",
+      "bucket_name": "bits-content"
+    }
+  ],
+
   // Sign-in email (Cloudflare Email Sending, beta). bits.yogan.dev is
   // onboarded with SPF/DKIM; the binding may only send from this address.
   "send_email": [

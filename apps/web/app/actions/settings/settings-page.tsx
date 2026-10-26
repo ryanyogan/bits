@@ -9,7 +9,7 @@ import { Switch } from '@bits/ui/switch'
 import { Tag } from '@bits/ui/tag'
 import { TextField } from '@bits/ui/text-field'
 
-import type { Viewer } from '../../data/fixtures.ts'
+import type { Viewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
 import { GeneratedAvatar } from '../profile/ui/generated-avatar.tsx'
 import type { AccountSettings } from './data.ts'

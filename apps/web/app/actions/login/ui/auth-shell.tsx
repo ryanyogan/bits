@@ -7,8 +7,8 @@ import { SegmentedTabs } from '@bits/ui/segmented-tabs'
 import { platform } from '#platform'
 
 import { APP_NAME, pageTitle } from '../../../config.ts'
-import { courses, getCourse } from '../../../data/fixtures.ts'
 import { routes } from '../../../routes.ts'
+import { lessonOneHref } from '../../home/links.ts'
 import type { LoginMode } from '../schema.ts'
 import { BrainPane } from './brain-pane.tsx'
 
@@ -26,8 +26,6 @@ export function AuthShell(handle: Handle<AuthShellProps>) {
   return () => {
     let { title, mode, next, children } = handle.props
     let nextParam = next ? { next } : {}
-    let firstCourse = getCourse(courses[0]!.slug)!
-    let firstLesson = firstCourse.modules[0]!.lessons[0]!
 
     return (
       <Document
@@ -61,10 +59,7 @@ export function AuthShell(handle: Handle<AuthShellProps>) {
               />
               {children}
               <footer mix={footerStyle}>
-                <a
-                  href={routes.courses.lesson.index.href({ course: firstCourse.slug, lesson: firstLesson.slug })}
-                  mix={exploreLinkStyle}
-                >
+                <a href={lessonOneHref()} mix={exploreLinkStyle}>
                   Just exploring? Start lesson 1 without an account →
                 </a>
                 <p mix={legalStyle}>

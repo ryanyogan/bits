@@ -1,7 +1,7 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 
-import type { Viewer } from '../../../data/fixtures.ts'
+import type { Viewer } from '../../../auth/identity.ts'
 import { routes } from '../../../routes.ts'
 import { Layout } from '../../../ui/layout.tsx'
 import type { CourseView } from './course-data.ts'

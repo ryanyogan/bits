@@ -1,0 +1,10 @@
+WEBVTT
+
+00:01:24.000 --> 00:01:40.000
+So the model has a ranked list of candidates for the next token…
+
+00:01:40.000 --> 00:02:04.000
+Temperature divides every score before they become probabilities. Divide by a small number and the gaps get huge.
+
+00:02:04.000 --> 00:02:15.000
+Divide by a big number and everything starts to look the same…

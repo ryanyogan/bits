@@ -17,10 +17,12 @@ import {
 import type { RequestContext } from 'remix/router'
 import { Session } from 'remix/session'
 
-import { getLessonContent } from '../actions/courses/lesson/fixtures.ts'
 import { currentUser } from '../auth/identity.ts'
+import type { Catalog } from '../content/catalog.ts'
+import { contentBucket, getCatalog } from '../content/request.ts'
+import { loadCatalog } from '../content/store.ts'
+import type { Completed } from '../content/types.ts'
 import { getDatabase } from '../middleware/database.ts'
-import { getLesson, type Completed } from '../data/fixtures.ts'
 import { badgeDefinitions, earnedBadgeIds, type BadgeDefinition } from './badges.ts'
 import { checkLesson, type CheckedLesson, type LessonSubmission } from './check.ts'
 import { addDays, localDay } from './days.ts'
@@ -78,15 +80,15 @@ export async function completeLesson(
   lessonSlug: string,
   submission: LessonSubmission,
 ): Promise<CompletionResult | undefined> {
-  let found = getLesson(courseSlug, lessonSlug)
-  if (!found) return undefined
-  let content = getLessonContent(found.course.slug, found.lesson)
-  let checked = checkLesson(found.course.slug, found.lesson.slug, content, submission)
+  let catalog = await getCatalog(context)
+  let content = await catalog.lessonContent(courseSlug, lessonSlug)
+  if (!content) return undefined
+  let checked = checkLesson(courseSlug, lessonSlug, content, submission)
   if (!checked.ok) return { ok: false, checked }
 
   let user = currentUser(context)
   if (user) {
-    let badges = await recordForUser(getDatabase(context), user, courseSlug, lessonSlug, checked, Date.now())
+    let badges = await recordForUser(getDatabase(context), catalog, user, courseSlug, lessonSlug, checked, Date.now())
     return { ok: true, checked, badges }
   }
 
@@ -104,6 +106,7 @@ export async function completeLesson(
 
 async function recordForUser(
   db: D1DataTableDatabase,
+  catalog: Catalog,
   user: User,
   courseSlug: string,
   lessonSlug: string,
@@ -111,7 +114,7 @@ async function recordForUser(
   at: number,
 ): Promise<BadgeDefinition[]> {
   await record(db, user, courseSlug, lessonSlug, checked, at)
-  return awardNewBadges(db, user.id, Date.now())
+  return awardNewBadges(db, catalog, user.id, Date.now())
 }
 
 /** One batch: progress, journal, once-only awards, activity, streak. */
@@ -136,7 +139,7 @@ function record(db: D1DataTableDatabase, user: User, courseSlug: string, lessonS
 }
 
 /** Awards every badge whose rule now holds; returns the ones that are new. */
-async function awardNewBadges(db: D1DataTableDatabase, userId: string, now: number): Promise<BadgeDefinition[]> {
+async function awardNewBadges(db: D1DataTableDatabase, catalog: Catalog, userId: string, now: number): Promise<BadgeDefinition[]> {
   let [completedRows, passed, user, held] = await Promise.all([
     listCompletedLessons(db, userId),
     listPassedExercises(db, userId),
@@ -144,11 +147,11 @@ async function awardNewBadges(db: D1DataTableDatabase, userId: string, now: numb
     db.d1.prepare('select badge_id from user_badges where user_id = ?').bind(userId).all<{ badge_id: string }>(),
   ])
   let completed: Completed = new Map(completedRows.map((row) => [`${row.course_id}/${row.lesson_slug}`, row.completed_at]))
-  let earned = earnedBadgeIds({ completed, exercisesPassed: passed.length, bestStreak: user?.best_streak ?? 0 })
+  let earned = earnedBadgeIds({ completed, exercisesPassed: passed.length, bestStreak: user?.best_streak ?? 0 }, catalog)
   let already = new Set(held.results.map((row) => row.badge_id))
   let fresh = earned.filter((id) => !already.has(id))
   await awardBadges(db, userId, fresh, now)
-  return badgeDefinitions.filter((badge) => fresh.includes(badge.id))
+  return badgeDefinitions(catalog).filter((badge) => fresh.includes(badge.id))
 }
 
 /**
@@ -160,15 +163,15 @@ export async function mergeAnonymousProgress(db: D1DataTableDatabase, session: S
   let anonymous = readAnonymous(session)
   let lessons = Object.entries(anonymous).sort((a, b) => a[1].at - b[1].at)
   if (lessons.length === 0) return
+  let catalog = await loadCatalog(db, contentBucket())
   for (let [key, lesson] of lessons) {
     let [courseSlug, lessonSlug] = key.split('/') as [string, string]
-    let found = getLesson(courseSlug, lessonSlug)
-    if (!found) continue
-    let content = getLessonContent(found.course.slug, found.lesson)
+    let content = await catalog.lessonContent(courseSlug, lessonSlug)
+    if (!content) continue
     let checked = checkLesson(courseSlug, lessonSlug, content, lesson.submission)
     if (!checked.ok) continue
     await record(db, user, courseSlug, lessonSlug, checked, lesson.at)
   }
-  await awardNewBadges(db, user.id, Date.now())
+  await awardNewBadges(db, catalog, user.id, Date.now())
   session.unset(PROGRESS_KEY)
 }

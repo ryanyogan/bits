@@ -3,7 +3,7 @@ import { css } from 'remix/component'
 import { CourseCover } from '@bits/ui/course-cover'
 import { ProgressBar } from '@bits/ui/progress-bar'
 
-import type { CourseSummary } from '../../../data/fixtures.ts'
+import type { CourseSummary } from '../../../content/types.ts'
 import { routes } from '../../../routes.ts'
 
 const toneColour = { volt: 'var(--volt)', ion: 'var(--ion)', synapse: 'var(--synapse)' } as const

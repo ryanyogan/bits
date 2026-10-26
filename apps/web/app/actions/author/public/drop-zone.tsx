@@ -77,7 +77,12 @@ export const DropZone = clientEntry(
       if (!picked.length) return // Let an empty submit fall through to native validation.
       event.preventDefault()
       let body = new FormData()
-      for (let { file, path } of picked) body.append('files', file, path)
+      // Markdown and captions are built; media goes by name only (the build
+      // checks a lesson's video exists; video upload is its own flow).
+      for (let { file, path } of picked) {
+        if (/\.(md|vtt|txt)$/i.test(path)) body.append('files', file, path)
+        else body.append('assets', path)
+      }
       let xhr = new XMLHttpRequest()
       xhr.open('POST', handle.props.action)
       xhr.upload.addEventListener('progress', (e) => {
@@ -88,15 +93,18 @@ export const DropZone = clientEntry(
         handle.update()
       })
       xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
+        let reply = parseReply(xhr.responseText)
+        if (xhr.status >= 200 && xhr.status < 300 && reply.courses?.length) {
           phase = 'done'
-          message = 'Uploaded. Building and validating…'
-        } else if (xhr.status === 501) {
-          phase = 'done'
-          message = `Uploaded ${picked.length} files. Builds aren’t switched on in this preview yet.`
+          let first = reply.courses[0]!
+          message = first.errors
+            ? `Built v${first.version} with ${first.errors} ${first.errors === 1 ? 'error' : 'errors'}. Opening the report…`
+            : `Built v${first.version}. Opening the report…`
+          // The build page shows the validation report and Publish.
+          location.assign(first.href)
         } else {
           phase = 'failed'
-          message = `Upload failed (${xhr.status}). Try again.`
+          message = reply.message ?? `Upload failed (${xhr.status}). Try again.`
         }
         handle.update()
       })
@@ -196,6 +204,20 @@ async function walk(entry: FileSystemEntry, prefix: string, out: Picked[]): Prom
     let batch = await new Promise<FileSystemEntry[]>((resolve, reject) => reader.readEntries(resolve, reject))
     if (!batch.length) break
     for (let child of batch) await walk(child, `${path}/`, out)
+  }
+}
+
+interface UploadReply {
+  courses?: { slug: string; version: number; errors: number; href: string }[]
+  message?: string
+}
+
+function parseReply(text: string): UploadReply {
+  try {
+    let value: unknown = JSON.parse(text)
+    return value && typeof value === 'object' ? (value as UploadReply) : {}
+  } catch {
+    return {}
   }
 }
 

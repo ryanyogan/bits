@@ -10,7 +10,7 @@ import { XpPill } from '@bits/ui/xp-pill'
 import { platform } from '#platform'
 
 import { APP_NAME, APP_TAGLINE, pageTitle } from '../config.ts'
-import type { Viewer } from '../data/fixtures.ts'
+import type { Viewer } from '../auth/identity.ts'
 import { routes } from '../routes.ts'
 
 export interface LayoutProps {

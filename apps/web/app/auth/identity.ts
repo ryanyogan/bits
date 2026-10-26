@@ -7,10 +7,24 @@ import { redirect } from 'remix/response/redirect'
 import type { RequestContext } from 'remix/router'
 import { Session } from 'remix/session'
 
-import type { Viewer } from '../data/fixtures.ts'
 import { currentStreak } from '../progress/days.ts'
 import { routes } from '../routes.ts'
 import { readUserRecord, USER_KEY, type UserRecord } from './session.ts'
+
+/** The signed-in user as page chrome shows them. */
+export interface Viewer {
+  /** users.id */
+  id: string
+  role: 'learner' | 'author' | 'admin'
+  name: string
+  handle: string
+  initials: string
+  email: string
+  xp: number
+  streak: number
+  bestStreak: number
+  isPublic: boolean
+}
 
 /** Renew a signed-in session (row expiry and cookie Max-Age) at most once a day. */
 const RENEW_AFTER_MS = 24 * 60 * 60 * 1000

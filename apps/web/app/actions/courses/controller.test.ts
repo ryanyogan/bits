@@ -1,14 +1,20 @@
 import * as assert from 'remix/assert'
 import { after, before, describe, it } from 'remix/test'
 
-import { disposePlatform } from '#platform'
+import { disposePlatform, platform } from '#platform'
 
-import { courses } from '../../data/fixtures.ts'
+import type { Catalog } from '../../content/catalog.ts'
+import { loadCatalog } from '../../content/store.ts'
+import type { CourseManifest } from '../../content/types.ts'
 import { routes } from '../../routes.ts'
-import { completeLesson, fetchAs, signIn } from '../../test/auth.ts'
-import { catalogHref, filterCourses, parseCatalogQuery, resultLabel } from './catalog.ts'
+import { completeLesson, fetchAs, signIn, testDb } from '../../test/auth.ts'
+import { catalogHref, filterCourses as filter, parseCatalogQuery, resultLabel } from './catalog.ts'
 
 let cookie: string | null = null
+// The published catalog: content/courses/, built and published by the test platform.
+let catalog: Catalog
+let courses: readonly CourseManifest[] = []
+const filterCourses = (query: Parameters<typeof filter>[0]) => filter(query, catalog.listCourses())
 
 /** Fetches a page signed in (progress shows), or signed out with `{ anonymous: true }`. */
 async function page(path: string, options: { anonymous?: boolean } = {}) {
@@ -24,6 +30,8 @@ function count(html: string, pattern: RegExp) {
 // the platform (D1) must stay up until the last test.
 describe('catalog and course pages', () => {
   before(async () => {
+    catalog = await loadCatalog(testDb, platform.env.CONTENT)
+    courses = catalog.courses
     ;({ cookie } = await signIn('catalog@example.com'))
     // The artboards' learner: finished the LLM course, then lessons 1–5 of
     // Tokens & temperature (none of these has a gating exercise).

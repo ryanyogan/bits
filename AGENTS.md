@@ -24,7 +24,9 @@ pnpm preview              # build, then run the real Worker under wrangler dev
 pnpm deploy               # build, then wrangler deploy → https://bits.yogan.dev (workers.dev 301s there)
 pnpm db:migrate:local     # wrangler d1 migrations apply (local state shared by dev and preview)
 pnpm db:migrate:remote
-pnpm db:seed:local        # demo user demo@bits.local / @demo
+pnpm db:seed:local        # demo user demo@bits.local / @demo, then upload + publish content/courses/*
+pnpm content validate <dir…>            # build course folders, print path:line problems
+pnpm content upload <dir…> [--publish]  # save as the next version (local; --remote for deployed)
 pnpm cf-typegen           # regenerate apps/web/worker-configuration.d.ts after wrangler.jsonc changes
 pnpm remix:doctor         # `pnpm doctor` is pnpm's own builtin
 ```
@@ -42,13 +44,17 @@ apps/web/                 @bits/web: the Remix app and Worker
   app/middleware/         database.ts puts the data-table db on context.db
   app/auth/               sessions, identity, email sign-in, OAuth, mailer (server-only)
   app/progress/           lesson checks, progress store + anonymous merge, badges, levels, days
+  app/content/            published courses: compile/ (markdown → JSON), store.ts (R2 + D1), catalog.ts, request.ts
   app/test/auth.ts        test helpers: signIn, fetchAs, requestCode
   app/platform/           runtime seam: `#platform` → platform.node.ts | platform.worker.ts
   scripts/build.ts        asset crawl into build/client + esbuild Worker bundle
+  scripts/content.ts      content CLI (validate / upload); scripts/lib/ reads course folders
   worker.ts               Workers entry; server.ts / hmr.ts are the Node entries
-  wrangler.jsonc          Worker "bits", D1 DB=bits-db, static assets, observability
+  wrangler.jsonc          Worker "bits", D1 DB=bits-db, R2 CONTENT=bits-content, static assets, observability
 packages/ui/              @bits/ui: tokens, fonts, base CSS, design-system components
 packages/db/              @bits/db: migrations/, tables.ts, D1 driver, queries/
+content/courses/<slug>/   course sources: course.md + NN-lesson.md (+ assets/*.vtt)
+content/fixtures/         deliberately broken folders for tests
 ```
 
 ## Adding a page
@@ -199,9 +205,9 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
 
 ## Progress (decision 016)
 
-- Course and lesson fixtures carry content only. Pass the viewer's
-  completed lessons, `await loadCompleted(context)`, to `getCourse`,
-  `listCourses`, `getLesson` or `getContinue` to get states and pct.
+- The catalog carries content only. Pass the viewer's completed lessons,
+  `await loadCompleted(context)`, to `catalog.getCourse`, `listCourses`,
+  `getLesson` or `getContinue` to get states and pct.
 - Saving is the native form `POST /courses/:course/:lesson/complete`.
   Exercises join it via `form=` hidden fields (`fieldNames` in
   `lesson/ui/exercise.ts`). The server re-runs the checks
@@ -211,6 +217,25 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   `startUserSession` merges it at sign-in.
 - Tests: `completeLesson(cookie, course, lesson, fields)` in
   `app/test/auth.ts`.
+
+## Content (decision 018)
+
+- Courses are markdown folders in `content/courses/<slug>/`, not code.
+  Frontmatter and block syntax: the `.md` files there and the block
+  reference on `/author`. Change content, then `pnpm content validate`.
+- Read published content with `const catalog = await getCatalog(context)`
+  (`app/content/request.ts`, one D1 query per request), then
+  `catalog.getCourse/listCourses/getLesson/getContinue` and
+  `await catalog.lessonContent(course, lesson)`. Never read R2 directly in
+  a page; `store.ts` memoises immutable versions per isolate.
+- The build (`app/content/compile/`) is pure and runs in the CLI, tests and
+  the Worker. Errors are `report.error(text, line)` with a source line;
+  add a case to `compile/build.test.ts` for each new check. (The folder
+  isn't `build/`: `.gitignore` drops every `build/` directory.)
+- Publishing only flips `courses.current_version_id` to a `ready`
+  version. Builds with errors are recorded as `failed` (report only).
+- Tests: the test platform uploads and publishes every folder in
+  `content/courses/` at startup, so a broken course fails every test run.
 
 ## Runtime rules
 

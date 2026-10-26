@@ -1,7 +1,7 @@
 import { createController } from 'remix/router'
 
-import { getContinue, listCourses } from '../../data/fixtures.ts'
 import { getViewer } from '../../auth/identity.ts'
+import { getCatalog } from '../../content/request.ts'
 import { loadCompleted } from '../../progress/progress.ts'
 import { routes } from '../../routes.ts'
 import { filterCourses, parseCatalogQuery } from './catalog.ts'
@@ -14,11 +14,11 @@ export default createController(routes.courses, {
       let query = parseCatalogQuery(context.url)
       // Progress is on the server for everyone: D1 when signed in, the
       // session when not (decision 016).
-      let completed = await loadCompleted(context)
-      let { results, counts } = filterCourses(query, listCourses(completed))
+      let [catalog, completed] = await Promise.all([getCatalog(context), loadCompleted(context)])
+      let { results, counts } = filterCourses(query, catalog.listCourses(completed))
 
       let continueTarget: ContinueTarget | undefined
-      let resume = getContinue(completed)
+      let resume = catalog.getContinue(completed)
       if (resume) {
         let { course, lesson, total } = resume
         continueTarget = {
