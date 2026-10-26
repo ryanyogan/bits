@@ -11,6 +11,32 @@ Remix: read `./.agents/skills/remix/SKILL.md`, then find guides and API
 READMEs through `apps/web/node_modules/remix/INDEX.md`. The installed docs are
 canonical. Do not use `@remix-run/react`, React Router or Next.js patterns.
 
+## Why bits exists (read before writing any lesson)
+
+bits teaches AI engineering to everyone, for free. It distils the owner's
+years of hands-on experience with AI into the shortest path from "I've heard
+of LLMs" to "I build with them". It's for the engineer on the go: someone who
+wants to get running, and doesn't have 100 hours or $2k for a course.
+
+Quality bar for every lesson:
+
+- **Best-in-class sources only.** Ground every claim in official or
+  top-tier material: Anthropic's docs, courses and research; AI Hero (Matt
+  Pocock); Theo (t3.gg); 3Blue1Brown; Andrej Karpathy; and the providers'
+  own docs. Never rely on hearsay, outdated blog posts or unverified memory.
+  Check model names, prices and API details against current docs when
+  writing, and date them.
+- **Distilled, not diluted.** Each lesson is 5–8 minutes long and teaches one
+  idea well. It shows that idea with a toy or a live exercise and states
+  current best practice, not history.
+- **Start with Claude.** Learners use Claude first, in the in-app sandbox.
+  Examples use Claude unless a lesson is about comparing providers.
+- **Original words, credited ideas.** Write our own explanations, link to the
+  best source in "Down the rabbit hole", and never copy another course's
+  text or code.
+- **Honest.** Say what models can't do, label illustrative toys as
+  illustrative, and never fake a live result.
+
 ## Commands (repo root)
 
 ```sh
