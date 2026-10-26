@@ -18,7 +18,9 @@
     "cf-typegen": "wrangler types worker-configuration.d.ts --include-runtime false --strict-vars false",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
-    "db:seed:local": "wrangler d1 execute DB --local --file ../../packages/db/seed/local.sql",
+    "db:seed:local": "wrangler d1 execute DB --local --file ../../packages/db/seed/local.sql && pnpm content:seed:local",
+    "content": "node --import remix/node-tsx scripts/content.ts",
+    "content:seed:local": "node --import remix/node-tsx scripts/content.ts upload --all --publish",
     "test": "NODE_ENV=test remix test",
     "typecheck": "tsc --noEmit",
     "doctor": "remix doctor"
@@ -30,11 +32,18 @@
     "@anthropic-ai/sdk": "^1.3.0",
     "@bits/db": "workspace:*",
     "@bits/ui": "workspace:*",
+    "remark-directive": "^4.0.0",
+    "remark-frontmatter": "^5.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
     "remix": "^3.1.0",
-    "three": "^0.186.1"
+    "three": "^0.186.1",
+    "unified": "^11.0.5",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261026.1",
+    "@types/mdast": "^4.0.4",
     "@types/node": "^24.6.0",
     "@types/three": "^0.186.0",
     "esbuild": "^0.28.2",

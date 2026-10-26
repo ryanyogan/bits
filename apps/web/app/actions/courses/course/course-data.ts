@@ -1,37 +1,10 @@
-// View model for /courses/:course. Turns the shared fixtures (or, later, the
-// compiled course + progress) into exactly what the page draws, so the
+// View model for /courses/:course. Turns the compiled course (with the
+// viewer's progress applied) into exactly what the page draws, so the
 // components stay dumb and the rules live in one testable place.
-import type { CourseDetail, LessonKind, LessonSummary, Viewer } from '../../../data/fixtures.ts'
 import type { LessonState } from '@bits/ui/lesson-node'
 
-/** Copy the shared fixtures don't carry yet (lead, resume point, authorship). */
-interface CourseExtras {
-  lead?: string
-  /** Shown as the secondary hero CTA when the first lesson has a video. */
-  introLabel?: string
-  /** "You stopped at the exercise: …" under the current lesson. */
-  exercise?: string
-  author?: string
-  /** ISO date of the published version. */
-  updated?: string
-}
-
-const extras: Record<string, CourseExtras> = {
-  'tokens-and-temperature': {
-    lead: "Why the same prompt gives different answers — and how to dial randomness up or down on purpose. You'll tokenize sentences, read probability tables and tune a chatbot from boring to unhinged.",
-    introLabel: 'Watch the 90-second intro',
-    exercise: 'make the model write the same tagline at temperature 0 and 1, then explain the difference.',
-    author: 'Mira Okafor',
-    updated: '2026-10-12',
-  },
-  'first-agent-loop': {
-    lead: 'Plan, act, observe, repeat. You will write the thirty lines of code every agent is built on, give it tools, and learn to stop a loop that never ends.',
-    introLabel: 'Watch the 2-minute intro',
-    exercise: 'finish the loop so it feeds each tool result back to the model until it stops asking.',
-    author: 'Dev Arora',
-    updated: '2026-10-03',
-  },
-}
+import type { Viewer } from '../../../auth/identity.ts'
+import type { CourseDetail, LessonKind, LessonSummary } from '../../../content/types.ts'
 
 const DEFAULT_AUTHOR = 'The bits team'
 const DEFAULT_UPDATED = '2026-09-28'
@@ -86,7 +59,6 @@ type LessonHref = (lesson: string, mode?: 'watch') => string
  */
 export function buildCourseView(course: CourseDetail, viewer: Viewer | null, lessonHref: LessonHref): CourseView {
   let signedIn = viewer !== null
-  let info = extras[course.slug] ?? {}
   let all = course.modules.flatMap((m) => m.lessons)
   let stateOf = (lesson: LessonSummary): LessonState => lesson.state
 
@@ -108,8 +80,8 @@ export function buildCourseView(course: CourseDetail, viewer: Viewer | null, les
 
   let first = all[0]!
   let intro =
-    info.introLabel && first.kinds.includes('video')
-      ? { label: info.introLabel, href: lessonHref(first.slug, 'watch') }
+    course.introLabel && first.kinds.includes('video')
+      ? { label: course.introLabel, href: lessonHref(first.slug, 'watch') }
       : undefined
 
   let modules = course.modules.map((module) => ({
@@ -130,7 +102,7 @@ export function buildCourseView(course: CourseDetail, viewer: Viewer | null, les
         state,
         href: lessonHref(lesson.slug),
         trace,
-        resume: state === 'current' ? { exercise: info.exercise, href: lessonHref(lesson.slug) } : undefined,
+        resume: state === 'current' ? { exercise: course.exercise, href: lessonHref(lesson.slug) } : undefined,
       }
     }),
   }))
@@ -157,7 +129,7 @@ export function buildCourseView(course: CourseDetail, viewer: Viewer | null, les
 
   return {
     course,
-    lead: info.lead ?? course.desc,
+    lead: course.lead ?? course.desc,
     signedIn,
     pct,
     done,
@@ -171,8 +143,8 @@ export function buildCourseView(course: CourseDetail, viewer: Viewer | null, les
     source: {
       files: total + 1,
       path: `courses/${course.slug}/`,
-      author: info.author ?? DEFAULT_AUTHOR,
-      updated: info.updated ?? DEFAULT_UPDATED,
+      author: course.authors.join(', ') || DEFAULT_AUTHOR,
+      updated: course.updated ?? DEFAULT_UPDATED,
     },
   }
 }

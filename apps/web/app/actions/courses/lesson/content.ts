@@ -1,7 +1,6 @@
-// The compiled lesson shape. The content pipeline (docs/handoff.md, "Course
-// content pipeline") will parse each lesson's markdown with remark and write
-// this JSON to R2; until then `fixtures.ts` holds hand-written lessons in the
-// same shape. Everything here is plain, serializable data: no HTML strings
+// The compiled lesson shape. The content pipeline (decision 018,
+// app/content/compile/) parses each lesson's markdown with remark and writes
+// this JSON to R2. Everything here is plain, serializable data: no HTML strings
 // (raw HTML in markdown is rejected at build time), regexes as source/flags,
 // and code pre-highlighted into syntax segments.
 import type { CodeSegment } from '@bits/ui/code-editor'

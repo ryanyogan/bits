@@ -50,10 +50,19 @@ const proxy = await getPlatformProxy<Env>({
   persist: isTest ? false : { path: path.join(appDir, '.wrangler/state/v3') },
 })
 
-// Tests start from an empty in-memory D1; give it the real schema.
+// Tests start from an empty in-memory D1 and R2: give them the real schema
+// and publish every course in content/courses/ through the real pipeline.
 if (isTest) {
   let { applyMigrations } = await import('@bits/db/test/migrations')
   await applyMigrations(proxy.env.DB)
+  let { createD1Database } = await import('@bits/db')
+  let { listCourseFolders } = await import('../../scripts/lib/content-folder.ts')
+  let { uploadCourseFolder } = await import('../../scripts/lib/upload.ts')
+  let db = createD1Database(proxy.env.DB)
+  for (let dir of await listCourseFolders()) {
+    let result = await uploadCourseFolder(db, proxy.env.CONTENT, dir, { source: 'test', publish: true })
+    if (!result.published) throw new Error(`content/courses/${result.build.slug} didn't build: ${JSON.stringify(result.build.report)}`)
+  }
 }
 
 export const platform: Platform = {

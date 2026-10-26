@@ -1,11 +1,12 @@
 // Builds everything the lesson page renders from the URL: the course and
-// lesson fixtures, the compiled content, the mode, and every href. Shared by
-// /courses/:course/:lesson and the author preview /author/:course/preview/:lesson.
-import type { Completed, CourseDetail, LessonSummary, Viewer } from '../../../data/fixtures.ts'
-import { getLesson } from '../../../data/fixtures.ts'
+// lesson from the catalog, the compiled content, the mode, and every href.
+// Shared by /courses/:course/:lesson (the published catalog) and the author
+// preview /author/:course/preview/:lesson (a catalog of the draft build).
+import type { Viewer } from '../../../auth/identity.ts'
+import type { Catalog } from '../../../content/catalog.ts'
+import type { Completed, CourseDetail, LessonSummary } from '../../../content/types.ts'
 import { routes } from '../../../routes.ts'
 import { exercisesOf, type LessonContent } from './content.ts'
-import { getLessonContent, resumeAt } from './fixtures.ts'
 
 export type LessonMode = 'read' | 'watch' | 'terminal'
 
@@ -23,7 +24,7 @@ export interface LessonView {
   content: LessonContent
   mode: LessonMode
   viewer: Viewer | null
-  /** Watch-mode resume position, seconds. */
+  /** Watch-mode resume position, seconds (not stored yet; see decision 016). */
   resumeAt?: number
   /** Answers to quizzes submitted with the GET form: quiz id → option keys. */
   answers: Record<string, string[]>
@@ -54,12 +55,19 @@ export interface LessonViewOptions {
 
 const MODES: LessonMode[] = ['read', 'watch', 'terminal']
 
-/** Returns undefined when the course or lesson doesn't exist. */
-export function buildLessonView(courseSlug: string, lessonSlug: string, url: URL, options: LessonViewOptions = {}): LessonView | undefined {
-  let found = getLesson(courseSlug, lessonSlug, options.completed)
+/** Resolves undefined when the course or lesson doesn't exist. */
+export async function buildLessonView(
+  catalog: Catalog,
+  courseSlug: string,
+  lessonSlug: string,
+  url: URL,
+  options: LessonViewOptions = {},
+): Promise<LessonView | undefined> {
+  let found = catalog.getLesson(courseSlug, lessonSlug, options.completed)
   if (!found) return undefined
   let { course, lesson, index, total, prev, next } = found
-  let content = getLessonContent(course.slug, lesson)
+  let content = await catalog.lessonContent(course.slug, lesson.slug)
+  if (!content) return undefined
   let requested = url.searchParams.get('mode') as LessonMode | null
   let mode: LessonMode = requested && MODES.includes(requested) ? requested : 'read'
   if (mode === 'watch' && !content.video) mode = 'read'
@@ -91,7 +99,6 @@ export function buildLessonView(courseSlug: string, lessonSlug: string, url: URL
     content,
     mode,
     viewer: options.viewer ?? null,
-    resumeAt: resumeAt[`${course.slug}/${lesson.slug}`],
     answers,
     draft: options.draft
       ? { version: options.draft.version, backHref: routes.author.course.index.href({ course: course.slug }) }

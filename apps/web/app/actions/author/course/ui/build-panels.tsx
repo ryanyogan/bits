@@ -11,7 +11,8 @@ import { StatusTag } from '../../ui/status-tag.tsx'
 
 export interface ValidationReportProps {
   item: AuthorCourse
-  previewHref: string
+  /** The draft preview, when a build is clean. */
+  previewHref?: string
   /** Notice after publish / rollback, or a refused publish. */
   notice?: { tone: 'ok' | 'error'; text: string }
 }
@@ -30,7 +31,7 @@ export function ValidationReport(handle: Handle<ValidationReportProps>) {
     let { errors } = counts(item.items)
     let { course } = item
     let isLive = item.live === item.build
-    let previous = item.versions.find((v) => v.n < item.build && v.state !== 'draft')
+    let previous = item.versions.find((v) => v.n < item.build && v.state !== 'draft' && !v.failed)
 
     return (
       <section aria-labelledby="report-title" mix={cardStyle}>
@@ -43,9 +44,11 @@ export function ValidationReport(handle: Handle<ValidationReportProps>) {
           </span>
           {isLive ? <LiveDot>{`live · v${item.build}`}</LiveDot> : null}
           <span mix={actionsStyle}>
-            <Keycap variant="ghost-mono" href={previewHref} mix={previewKey}>
-              Preview draft
-            </Keycap>
+            {previewHref ? (
+              <Keycap variant="ghost-mono" href={previewHref} mix={previewKey}>
+                Preview draft
+              </Keycap>
+            ) : null}
             {isLive ? (
               previous ? (
                 <form method="post" action={routes.author.course.rollback.href({ course: course.slug })} mix={inlineForm}>
@@ -146,7 +149,7 @@ function VersionRow(handle: Handle<{ item: AuthorCourse; version: CourseVersion 
     let live = item.live === version.n
     let isBuild = version.n === item.build
     let action =
-      live || isBuild ? null : (
+      live || isBuild || version.failed ? null : (
         <form method="post" action={routes.author.course.rollback.href({ course: item.course.slug })} mix={inlineForm}>
           <input type="hidden" name="version" value={String(version.n)} />
           <Keycap variant="ghost-mono" size="sm" type="submit" mix={smallKey}>
@@ -160,6 +163,7 @@ function VersionRow(handle: Handle<{ item: AuthorCourse; version: CourseVersion 
         <span mix={rowBody}>
           <span mix={rowMain}>
             {live ? <StatusTag status="live">live</StatusTag> : isBuild ? <StatusTag status="draft">latest build</StatusTag> : null}
+            {version.failed ? <StatusTag status="error">failed</StatusTag> : null}
             <span mix={rowWhen}>{version.when}</span>
           </span>
           <span mix={rowMeta}>{version.source}</span>

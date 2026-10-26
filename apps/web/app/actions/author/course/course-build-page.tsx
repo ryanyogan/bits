@@ -2,7 +2,7 @@ import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 import { MonoHeading } from '@bits/ui/eyebrow'
 
-import type { Viewer } from '../../../data/fixtures.ts'
+import type { Viewer } from '../../../auth/identity.ts'
 import { Layout } from '../../../ui/layout.tsx'
 import type { AuthorCourse } from '../data.ts'
 import { BlockTable } from '../ui/block-table.tsx'
@@ -12,7 +12,7 @@ import { SourcePreview } from './ui/source-preview.tsx'
 
 export interface CourseBuildPageProps {
   item: AuthorCourse
-  previewHref: string
+  previewHref?: string
   notice?: { tone: 'ok' | 'error'; text: string }
   viewer: Viewer | null
 }

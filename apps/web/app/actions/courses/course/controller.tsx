@@ -1,7 +1,7 @@
 import { createController } from 'remix/router'
 
-import { getCourse } from '../../../data/fixtures.ts'
 import { getViewer } from '../../../auth/identity.ts'
+import { getCatalog } from '../../../content/request.ts'
 import { loadCompleted } from '../../../progress/progress.ts'
 import { routes } from '../../../routes.ts'
 import { trackSlug } from '../catalog.ts'
@@ -14,7 +14,8 @@ export default createController(routes.courses.course, {
     async index(context) {
       let viewer = getViewer(context)
       let coursesHref = routes.courses.index.href()
-      let course = getCourse(context.params.course, await loadCompleted(context))
+      let [catalog, completed] = await Promise.all([getCatalog(context), loadCompleted(context)])
+      let course = catalog.getCourse(context.params.course, completed)
 
       if (!course) {
         return context.render(

@@ -1,6 +1,6 @@
 import { css } from 'remix/component'
 
-import type { CourseSummary } from '../../../../data/fixtures.ts'
+import type { CourseSummary } from '../../../../content/types.ts'
 
 type Tone = CourseSummary['tone']
 

@@ -6,6 +6,7 @@ import { checkPasses } from '@bits/ui/prompt-composer'
 
 import { exercisesOf, type LessonContent, type QuizBlock } from '../actions/courses/lesson/content.ts'
 import { fieldNames, offeredTemperatures, promptChecks } from '../actions/courses/lesson/ui/exercise.ts'
+import { clampXp, MAX_BLOCK_XP, MAX_LESSON_XP } from '../content/limits.ts'
 
 export const MAX_PROMPT_LENGTH = 4000
 
@@ -70,7 +71,8 @@ export function quizCorrect(block: QuizBlock, picked: string[] | undefined): boo
 /**
  * Grades a submission for course/lesson. Awards: each passed exercise and
  * correct quiz earns its own xp; completing the lesson earns the rest of the
- * lesson's xp, so a lesson is worth its frontmatter `xp` in total.
+ * lesson's xp, so a lesson is worth its frontmatter `xp` in total, never more
+ * than MAX_LESSON_XP however the content was stored.
  */
 export function checkLesson(courseSlug: string, lessonSlug: string, content: LessonContent, submission: LessonSubmission): CheckedLesson {
   let base = `${courseSlug}/${lessonSlug}`
@@ -87,22 +89,22 @@ export function checkLesson(courseSlug: string, lessonSlug: string, content: Les
     return { exerciseId: block.id, task: block.task, prompt, temperatures, passed: failed.length === 0, failed }
   })
 
+  // The build already rejects xp outside the caps (content/limits.ts); clamp
+  // again so stored content can never award more than a lesson's cap.
+  let lessonXp = clampXp(content.xp, MAX_LESSON_XP)
   let awards: Award[] = []
   let earmarked = 0
   for (let block of content.blocks) {
-    if (block.type === 'prompt') {
-      earmarked += block.xp
-      if (exercises.find((e) => e.exerciseId === block.id)?.passed) {
-        awards.push({ kind: 'exercise', ref: `${base}/${block.id}`, xp: block.xp })
-      }
-    } else if (block.type === 'quiz') {
-      earmarked += block.xp
-      if (quizCorrect(block, submission.quizzes[block.id])) {
-        awards.push({ kind: 'quiz', ref: `${base}/${block.id}`, xp: block.xp })
-      }
-    }
+    if (block.type !== 'prompt' && block.type !== 'quiz') continue
+    let xp = Math.min(clampXp(block.xp, MAX_BLOCK_XP), Math.max(0, lessonXp - earmarked))
+    earmarked += xp
+    let passed =
+      block.type === 'prompt'
+        ? exercises.find((e) => e.exerciseId === block.id)?.passed
+        : quizCorrect(block, submission.quizzes[block.id])
+    if (passed) awards.push({ kind: block.type === 'prompt' ? 'exercise' : 'quiz', ref: `${base}/${block.id}`, xp })
   }
   let ok = exercises.every((exercise) => exercise.passed)
-  if (ok) awards.push({ kind: 'lesson', ref: base, xp: Math.max(0, content.xp - earmarked) })
+  if (ok) awards.push({ kind: 'lesson', ref: base, xp: lessonXp - earmarked })
   return { ok, exercises, awards }
 }

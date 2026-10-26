@@ -3,6 +3,7 @@ import { createController } from 'remix/router'
 
 import { routes } from '../../routes.ts'
 import { jsonError, startRun } from '../../runs/run.ts'
+import { authorUpload } from './author-upload.ts'
 import { runForm } from './schema.ts'
 
 function notImplemented(endpoint: string) {
@@ -22,7 +23,7 @@ export default createController(routes.api, {
       return startRun(context, parsed.value)
     },
     passkey: (context) => notImplemented(`passkey/${context.params.step}`),
-    authorUpload: () => notImplemented('author/upload'),
+    authorUpload: (context) => authorUpload(context),
     authorVideoUploadUrl: () => notImplemented('author/video-upload-url'),
   },
 })

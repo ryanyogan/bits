@@ -5,6 +5,7 @@
 declare global {
   type D1Database = import('@cloudflare/workers-types/index.ts').D1Database
   type Fetcher = import('@cloudflare/workers-types/index.ts').Fetcher
+  type R2Bucket = import('@cloudflare/workers-types/index.ts').R2Bucket
   type ExecutionContext = import('@cloudflare/workers-types/index.ts').ExecutionContext
   type SendEmail = import('@cloudflare/workers-types/index.ts').SendEmail
 

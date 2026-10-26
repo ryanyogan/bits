@@ -4,6 +4,7 @@ import { Keycap } from '@bits/ui/keycap'
 import { createController } from 'remix/router'
 
 import { getViewer } from '../../auth/identity.ts'
+import { getCatalog } from '../../content/request.ts'
 import { routes } from '../../routes.ts'
 import { Layout } from '../../ui/layout.tsx'
 import { getPublicProfile } from './data.ts'
@@ -15,7 +16,7 @@ export default createController(routes.profile, {
   actions: {
     async index(context) {
       let viewer = getViewer(context)
-      let profile = await getPublicProfile(context.db, context.params.handle)
+      let profile = await getPublicProfile(context.db, await getCatalog(context), context.params.handle)
       if (!profile) {
         return context.render(
           <Layout title="Profile not found" viewer={viewer} currentPath={context.url.pathname}>

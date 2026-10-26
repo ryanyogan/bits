@@ -10,7 +10,7 @@ import { KeyValueList } from '@bits/ui/key-value-list'
 import { ProgressBar } from '@bits/ui/progress-bar'
 import { StatTile } from '@bits/ui/stat-tile'
 
-import type { Viewer } from '../../data/fixtures.ts'
+import type { Viewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
 import { Layout } from '../../ui/layout.tsx'
 import { activityTitles, RECENT_JOURNAL, type Profile } from './data.ts'

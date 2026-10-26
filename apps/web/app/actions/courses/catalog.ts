@@ -1,7 +1,7 @@
 // Catalog filtering (Catalog.md §2c–2e). Filters are URL state
 // (`?track=agents&q=rag`) so they can be shared and work without JS; this
 // module turns the URL into the filtered list and the hrefs for each pill.
-import { listCourses, type CourseSummary, type Track } from '../../data/fixtures.ts'
+import type { CourseSummary, Track } from '../../content/types.ts'
 import { routes } from '../../routes.ts'
 
 export type TrackSlug = 'foundations' | 'prompting' | 'tools' | 'agents'
@@ -45,7 +45,7 @@ function matchesQuery(course: CourseSummary, q: string): boolean {
 }
 
 /** The query matches before the track filter, so pill counts reflect the search. */
-export function filterCourses(query: Pick<CatalogQuery, 'track' | 'q'>, list: CourseSummary[] = listCourses()) {
+export function filterCourses(query: Pick<CatalogQuery, 'track' | 'q'>, list: CourseSummary[]) {
   let matching = list.filter((course) => matchesQuery(course, query.q))
   let counts = Object.fromEntries(
     trackFilters.map((filter) => [

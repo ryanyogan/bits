@@ -1,6 +1,7 @@
 import { createController } from 'remix/router'
 
 import { requireUser, toViewer } from '../../auth/identity.ts'
+import { getCatalog } from '../../content/request.ts'
 import { routes } from '../../routes.ts'
 import { getOwnProfile } from '../profile/data.ts'
 import { ProfilePage } from '../profile/profile-page.tsx'
@@ -12,7 +13,7 @@ export default createController(routes.me, {
   actions: {
     async index(context) {
       let viewer = toViewer(context.auth.identity)
-      let profile = await getOwnProfile(context.db, context.auth.identity)
+      let profile = await getOwnProfile(context.db, await getCatalog(context), context.auth.identity)
       let tab: 'journal' | 'overview' = context.url.searchParams.get('tab') === 'journal' ? 'journal' : 'overview'
       return context.render(
         <ProfilePage

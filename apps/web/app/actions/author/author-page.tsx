@@ -4,7 +4,7 @@ import { CourseCover } from '@bits/ui/course-cover'
 import { EmptyState } from '@bits/ui/empty-state'
 import { MonoHeading } from '@bits/ui/eyebrow'
 
-import type { Viewer } from '../../data/fixtures.ts'
+import type { Viewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
 import { Layout } from '../../ui/layout.tsx'
 import { counts, plural, repo, type AuthorCourse } from './data.ts'

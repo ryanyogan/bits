@@ -17,11 +17,10 @@ import { Session } from 'remix/session'
 import { platform } from '#platform'
 
 import { exercisesOf, type PromptBlock } from '../actions/courses/lesson/content.ts'
-import { getLessonContent } from '../actions/courses/lesson/fixtures.ts'
 import { offeredTemperatures } from '../actions/courses/lesson/ui/exercise.ts'
 import { sha256Hex } from '../auth/crypto.ts'
 import { currentUser } from '../auth/identity.ts'
-import { getLesson } from '../data/fixtures.ts'
+import { getCatalog } from '../content/request.ts'
 import { getDatabase } from '../middleware/database.ts'
 import { ModelError, runModel, runsLive, type ModelEnv, type ModelFailure } from './model.ts'
 
@@ -87,10 +86,10 @@ export interface RunRequest {
   temperature: number
 }
 
-export function findExercise(course: string, lesson: string, exercise: string): PromptBlock | undefined {
-  let found = getLesson(course, lesson)
-  if (!found) return undefined
-  return exercisesOf(getLessonContent(found.course.slug, found.lesson)).find((block) => block.id === exercise)
+/** The prompt exercise in the published lesson (decision 018), with its checks and examples. */
+export async function findExercise(context: AnyContext, course: string, lesson: string, exercise: string): Promise<PromptBlock | undefined> {
+  let content = await (await getCatalog(context)).lessonContent(course, lesson)
+  return content && exercisesOf(content).find((block) => block.id === exercise)
 }
 
 export function jsonError(error: string, status: number, extra: Record<string, unknown> = {}): Response {
@@ -99,7 +98,7 @@ export function jsonError(error: string, status: number, extra: Record<string, u
 
 /** Runs a learner's prompt: a streamed live reply, or canned output, journalled either way. */
 export async function startRun(context: AnyContext, input: RunRequest): Promise<Response> {
-  let block = findExercise(input.course, input.lesson, input.exercise)
+  let block = await findExercise(context, input.course, input.lesson, input.exercise)
   if (!block) return jsonError('not_found', 404)
   if (!offeredTemperatures(block).includes(input.temperature)) return jsonError('temperature_not_offered', 422)
 
