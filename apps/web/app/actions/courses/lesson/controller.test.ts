@@ -28,7 +28,7 @@ describe('lesson page', () => {
   it('renders Read mode by default with one h1, landmarks and the lesson text', async () => {
     let { status, html } = await page(lessonHref(temperature))
     assert.equal(status, 200)
-    assert.match(html, /<title>Temperature &amp; randomness · Tokens &amp; temperature · bits<\/title>/)
+    assert.match(html, /<title>Temperature &amp; randomness · Tokens &amp; temperature · Bits<\/title>/)
     assert.equal(count(html, /<h1[\s>]/), 1)
     assert.match(html, /<main id="main"/)
     assert.match(html, /aria-label="Lessons"/)
@@ -87,7 +87,7 @@ describe('author lesson preview', () => {
     assert.equal(status, 200)
     assert.match(html, /DRAFT · v\d+ preview — not visible to learners/)
     assert.match(html, /Back to validation/)
-    assert.match(html, /\(draft\) · bits<\/title>/)
+    assert.match(html, /\(draft\) · Bits<\/title>/)
     assert.equal(count(html, /<h1[\s>]/), 1)
   })
 

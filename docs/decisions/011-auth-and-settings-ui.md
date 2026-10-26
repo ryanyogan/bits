@@ -25,8 +25,8 @@ Status: Accepted (2026-10-26), provisional until the auth milestone
 - **Inline confirmations without JS**: Remove/Disconnect and Delete account
   use `<details>`. Delete is checked on the server (typed handle); an island
   only disables the key until the handle matches and focuses the field.
-- **Settings signed-in frame** is local (`actions/settings/ui/settings-shell.tsx`)
-  until the shared `Layout` grows a signed-in variant; then switch to it.
+- **Settings signed-in frame**: renders through the shared `Layout` with
+  `viewer` and `bleed` (the interim local shell was removed in integration).
 - **New shared bits**: Keycap `danger` variant (+ `--danger-edge`,
   `--danger-a04`, `--danger-a35`, `--shadow-keycap-danger*` tokens) and a
   `TextField` `autoFocus` prop (first invalid field after a 422).

@@ -18,7 +18,7 @@ import { DeleteConfirm } from './public/delete-confirm.tsx'
 import { summaryStyle } from './ui/confirm-disclosure.tsx'
 import { HandleField } from './ui/handle-field.tsx'
 import { MethodRow } from './ui/method-row.tsx'
-import { SettingsShell } from './ui/settings-shell.tsx'
+import { Layout } from '../../ui/layout.tsx'
 
 export type SettingsSection = 'profile' | 'email' | 'sign-in' | 'data' | 'sessions' | 'danger'
 
@@ -71,7 +71,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
     let passkeyCount = account.methods.filter((m) => m.kind === 'passkey').length
 
     return (
-      <SettingsShell title="Settings" viewer={viewer}>
+      <Layout title="Settings" description="Your sign-in, your profile, your data." viewer={viewer} bleed>
         <div mix={pageStyle}>
           <header mix={headerStyle}>
             <Eyebrow as="p">Account</Eyebrow>
@@ -303,7 +303,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
             </aside>
           </div>
         </div>
-      </SettingsShell>
+      </Layout>
     )
   }
 }

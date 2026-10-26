@@ -14,7 +14,7 @@ import type { Viewer } from '../data/fixtures.ts'
 import { routes } from '../routes.ts'
 
 export interface LayoutProps {
-  /** Page name; the document title becomes "<title> · bits". Omit on the landing page. */
+  /** Page name; the document title becomes "<title> · Bits". Omit on the landing page. */
   title?: string
   description?: string
   /** Pathname of this page, to mark the active nav link. */

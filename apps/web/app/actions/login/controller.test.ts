@@ -23,7 +23,7 @@ describe('/login', () => {
     let response = await request(routes.login.index.href(undefined, { searchParams: { next: '/courses' } }))
     assert.equal(response.status, 200)
     let html = await response.text()
-    assert.match(html, /<title>Sign in · bits<\/title>/)
+    assert.match(html, /<title>Sign in · Bits<\/title>/)
     assert.equal(html.match(/<h1[\s>]/g)?.length, 1)
     assert.match(html, /Welcome back\./)
     assert.match(html, /<nav aria-label="Account"/)
@@ -39,7 +39,7 @@ describe('/login', () => {
 
   it('renders create account with name, goal chips (curious on) and timezone', async () => {
     let html = await (await request(routes.login.index.href(undefined, { searchParams: { mode: 'signup' } }))).text()
-    assert.match(html, /<title>Create account · bits<\/title>/)
+    assert.match(html, /<title>Create account · Bits<\/title>/)
     assert.match(html, /Make it yours\./)
     assert.match(html, /name="displayName"/)
     assert.equal(html.match(/name="goals"/g)?.length, 4)
@@ -91,7 +91,7 @@ describe('/login/check', () => {
     )
     assert.equal(response.status, 200)
     let html = await response.text()
-    assert.match(html, /<title>Check your inbox · bits<\/title>/)
+    assert.match(html, /<title>Check your inbox · Bits<\/title>/)
     assert.match(html, /Check your inbox\./)
     assert.match(html, /ada@example\.com/)
     assert.match(html, /action="\/auth\/verify"/)

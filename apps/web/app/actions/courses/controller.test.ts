@@ -57,7 +57,7 @@ describe('GET /courses', () => {
   it('renders the catalog with every course, the write card and the continue banner', async () => {
     let { status, html } = await page(routes.courses.index.href())
     assert.equal(status, 200)
-    assert.match(html, /<title>Courses · bits<\/title>/)
+    assert.match(html, /<title>Courses · Bits<\/title>/)
     assert.equal(count(html, /<h1[\s>]/), 1)
     assert.match(html, /Pick your next/)
     assert.match(html, /role="search"/)
@@ -110,7 +110,7 @@ describe('GET /courses/:course', () => {
   it('renders the syllabus with lesson states and the resume callout', async () => {
     let { status, html } = await page(path)
     assert.equal(status, 200)
-    assert.match(html, /<title>Tokens &amp; temperature · bits<\/title>/)
+    assert.match(html, /<title>Tokens &amp; temperature · Bits<\/title>/)
     assert.equal(count(html, /<h1[\s>]/), 1)
     assert.match(html, /<nav aria-label="Breadcrumb"/)
     assert.match(html, /By the end you(?:'|&#39;)ll be able to/)

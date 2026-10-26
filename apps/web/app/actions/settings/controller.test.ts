@@ -23,7 +23,7 @@ describe('/settings', () => {
     let response = await request(routes.settings.index.href())
     assert.equal(response.status, 200)
     let html = await response.text()
-    assert.match(html, /<title>Settings · bits<\/title>/)
+    assert.match(html, /<title>Settings · Bits<\/title>/)
     assert.equal(html.match(/<h1[\s>]/g)?.length, 1)
     for (let id of ['profile', 'email', 'sign-in', 'data', 'sessions', 'danger']) {
       assert.match(html, new RegExp(`id="${id}"`), id)
