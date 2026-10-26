@@ -4,6 +4,7 @@ import { createController } from 'remix/router'
 
 import { peekMagicLink, redeemCode, redeemMagicLink } from '../../../auth/email-sign-in.ts'
 import { parseSignup, startUserSession, userForVerifiedEmail } from '../../../auth/users.ts'
+import { rateLimit } from '../../../middleware/rate-limit.tsx'
 import { routes } from '../../../routes.ts'
 import { CheckEmailPage } from '../../login/check/check-email-page.tsx'
 import { readText, safeNextPath, verifyCodeForm } from '../../login/schema.ts'
@@ -24,44 +25,47 @@ export default createController(routes.auth.verify, {
     },
 
     // Either the confirmed magic link (`token`) or the 6-digit code (`email` + `code`).
-    async action(context) {
-      let token = readText(context.formData, 'token')
-      let redeemed
-      if (token) {
-        redeemed = await redeemMagicLink(context.db, token)
-        if (!redeemed) return linkExpired()
-      } else {
-        let parsed = s.parseSafe(verifyCodeForm, context.formData)
-        let next = safeNextPath(readText(context.formData, 'next'))
-        let retry = (message: string) =>
-          context.render(
-            <CheckEmailPage
-              email={readText(context.formData, 'email')}
-              next={next}
-              code={readText(context.formData, 'code')}
-              issues={parsed.success ? [{ message, path: ['code'] }] : parsed.issues}
-            />,
-            { status: 422 },
-          )
-        if (!parsed.success) return retry('')
-        let result = await redeemCode(context.db, parsed.value.email, parsed.value.code)
-        if (!result.ok) {
-          return retry(
-            result.reason === 'wrong'
-              ? 'That code isn’t right. Check the newest email and try again.'
-              : 'That code has expired or had too many tries. Send a new one below.',
-          )
+    action: {
+      middleware: [rateLimit('RL_SIGNIN')],
+      async handler(context) {
+        let token = readText(context.formData, 'token')
+        let redeemed
+        if (token) {
+          redeemed = await redeemMagicLink(context.db, token)
+          if (!redeemed) return linkExpired()
+        } else {
+          let parsed = s.parseSafe(verifyCodeForm, context.formData)
+          let next = safeNextPath(readText(context.formData, 'next'))
+          let retry = (message: string) =>
+            context.render(
+              <CheckEmailPage
+                email={readText(context.formData, 'email')}
+                next={next}
+                code={readText(context.formData, 'code')}
+                issues={parsed.success ? [{ message, path: ['code'] }] : parsed.issues}
+              />,
+              { status: 422 },
+            )
+          if (!parsed.success) return retry('')
+          let result = await redeemCode(context.db, parsed.value.email, parsed.value.code)
+          if (!result.ok) {
+            return retry(
+              result.reason === 'wrong'
+                ? 'That code isn’t right. Check the newest email and try again.'
+                : 'That code has expired or had too many tries. Send a new one below.',
+            )
+          }
+          redeemed = result.token
         }
-        redeemed = result.token
-      }
 
-      // Verified: the email is theirs. Find or create the user, rotate the
-      // session and sign in. completeAuth keeps the session's data, so
-      // anything an anonymous visitor saved carries over (decision 015).
-      let { user } = await userForVerifiedEmail(context.db, redeemed.email, parseSignup(redeemed.signup))
-      await startUserSession(context, user, 'email')
-      let next = safeNextPath(redeemed.next_path) ?? safeNextPath(readText(context.formData, 'next'))
-      return redirect(next ?? routes.courses.index.href(), 303)
+        // Verified: the email is theirs. Find or create the user, rotate the
+        // session and sign in. completeAuth keeps the session's data, so
+        // anything an anonymous visitor saved carries over (decision 015).
+        let { user } = await userForVerifiedEmail(context.db, redeemed.email, parseSignup(redeemed.signup))
+        await startUserSession(context, user, 'email')
+        let next = safeNextPath(redeemed.next_path) ?? safeNextPath(readText(context.formData, 'next'))
+        return redirect(next ?? routes.courses.index.href(), 303)
+      },
     },
   },
 })

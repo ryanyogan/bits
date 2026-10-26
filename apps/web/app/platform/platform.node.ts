@@ -72,7 +72,12 @@ export const platform: Platform = {
     { APP_ENV: nodeEnv },
     // Tests never reach a real provider, whatever .dev.vars holds: live-run
     // tests set these themselves and stub the gateway (app/runs/run.test.ts).
-    isTest ? { ANTHROPIC_API_KEY: undefined, CF_AIG_TOKEN: undefined } : {},
+    // Nor do they share burst limits: every request in a test run comes from
+    // one address, so the limiters are off (app/middleware/rate-limit.test.ts
+    // installs its own).
+    isTest
+      ? { ANTHROPIC_API_KEY: undefined, CF_AIG_TOKEN: undefined, RL_WRITES: undefined, RL_SIGNIN: undefined, RL_RUNS: undefined }
+      : {},
   ),
   assets,
   middleware: staticFiles(path.join(appDir, 'public'), { index: false }),

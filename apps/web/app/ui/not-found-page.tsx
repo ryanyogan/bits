@@ -51,6 +51,19 @@ export function ForbiddenPage(handle: Handle<ForbiddenPageProps>) {
   )
 }
 
+/** 429 from a burst limit (app/middleware/rate-limit.ts). */
+export function TooManyRequestsPage(handle: Handle<{ viewer: Viewer | null }>) {
+  return () => (
+    <StatusPage
+      title="Slow down"
+      eyebrow="429 · too many requests"
+      heading="That was a lot, very fast."
+      viewer={handle.props.viewer}
+      hint="Wait a minute, then go back and try again."
+    />
+  )
+}
+
 interface StatusPageProps {
   title: string
   eyebrow: string

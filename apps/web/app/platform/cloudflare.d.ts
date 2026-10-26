@@ -8,6 +8,7 @@ declare global {
   type R2Bucket = import('@cloudflare/workers-types/index.ts').R2Bucket
   type ExecutionContext = import('@cloudflare/workers-types/index.ts').ExecutionContext
   type SendEmail = import('@cloudflare/workers-types/index.ts').SendEmail
+  type RateLimit = import('@cloudflare/workers-types/index.ts').RateLimit
 
   // Secrets are not in wrangler.jsonc, so `wrangler types` cannot see them.
   // Optional because development and tests run without them (app/auth/config.ts).

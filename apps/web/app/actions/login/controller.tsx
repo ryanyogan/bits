@@ -4,6 +4,7 @@ import { createController } from 'remix/router'
 
 import { requestEmailSignIn, type EmailRequestResult } from '../../auth/email-sign-in.ts'
 import { currentUser } from '../../auth/identity.ts'
+import { rateLimit } from '../../middleware/rate-limit.tsx'
 import { routes } from '../../routes.ts'
 import { LoginPage, type LoginNotice } from './login-page.tsx'
 import { issueField, loginForm, readGoals, readText, safeNextPath, type FormIssue, type LoginMode } from './schema.ts'
@@ -27,47 +28,50 @@ export default createController(routes.login, {
 
     // Request a magic link + code: the per-email and per-IP limits, then
     // store the hashed token and send the email (decisions 015, 017).
-    async action(context) {
-      let parsed = s.parseSafe(loginForm, context.formData)
-      let mode: LoginMode = readText(context.formData, 'mode') === 'signup' ? 'signup' : 'signin'
-      let rerender = (status: number, extra: { issues?: FormIssue[]; notice?: LoginNotice }) =>
-        context.render(
-          <LoginPage
-            mode={mode}
-            next={safeNextPath(readText(context.formData, 'next'))}
-            values={{
-              email: readText(context.formData, 'email'),
-              displayName: readText(context.formData, 'displayName'),
-              goals: readGoals(context.formData),
-            }}
-            {...extra}
-          />,
-          { status },
+    action: {
+      middleware: [rateLimit('RL_SIGNIN')],
+      async handler(context) {
+        let parsed = s.parseSafe(loginForm, context.formData)
+        let mode: LoginMode = readText(context.formData, 'mode') === 'signup' ? 'signup' : 'signin'
+        let rerender = (status: number, extra: { issues?: FormIssue[]; notice?: LoginNotice }) =>
+          context.render(
+            <LoginPage
+              mode={mode}
+              next={safeNextPath(readText(context.formData, 'next'))}
+              values={{
+                email: readText(context.formData, 'email'),
+                displayName: readText(context.formData, 'displayName'),
+                goals: readGoals(context.formData),
+              }}
+              {...extra}
+            />,
+            { status },
+          )
+
+        if (!parsed.success) return rerender(422, { issues: parsed.issues.map(friendlyIssue) })
+
+        let ip = context.headers.get('CF-Connecting-IP')
+
+        let { email, mode: parsedMode, next, displayName, goals, timezone } = parsed.value
+        let result = await requestEmailSignIn(context.db, {
+          email,
+          signup: parsedMode === 'signup' ? { displayName, goals, timezone } : null,
+          next: next ?? null,
+          ip,
+          origin: context.url.origin,
+        })
+        if (!result.ok) {
+          let failure = emailFailures[result.reason]
+          return rerender(failure.status, { notice: { tone: 'danger', text: failure.text } })
+        }
+
+        return redirect(
+          routes.login.check.index.href(undefined, {
+            searchParams: { email, ...(parsedMode === 'signup' ? { mode: parsedMode } : {}), ...(next ? { next } : {}) },
+          }),
+          303,
         )
-
-      if (!parsed.success) return rerender(422, { issues: parsed.issues.map(friendlyIssue) })
-
-      let ip = context.headers.get('CF-Connecting-IP')
-
-      let { email, mode: parsedMode, next, displayName, goals, timezone } = parsed.value
-      let result = await requestEmailSignIn(context.db, {
-        email,
-        signup: parsedMode === 'signup' ? { displayName, goals, timezone } : null,
-        next: next ?? null,
-        ip,
-        origin: context.url.origin,
-      })
-      if (!result.ok) {
-        let failure = emailFailures[result.reason]
-        return rerender(failure.status, { notice: { tone: 'danger', text: failure.text } })
-      }
-
-      return redirect(
-        routes.login.check.index.href(undefined, {
-          searchParams: { email, ...(parsedMode === 'signup' ? { mode: parsedMode } : {}), ...(next ? { next } : {}) },
-        }),
-        303,
-      )
+      },
     },
   },
 })
