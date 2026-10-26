@@ -69,9 +69,12 @@ export const routes = route({
 
   author: route('/author', {
     index: get('/'), // actions/author/controller.tsx
+    repo: post('/repo'), // save the GitHub sync settings
     course: route('/:course', {
       index: get('/'), // actions/author/course/controller.tsx
       preview: get('/preview/:lesson'),
+      publish: post('/publish'), // flip the live pointer to the latest build
+      rollback: post('/rollback'), // flip it back to an older version
     }),
   }),
 

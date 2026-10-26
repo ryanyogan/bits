@@ -37,10 +37,10 @@ describe('router smoke test', () => {
     routes.login.index.href(),
     routes.login.check.index.href(),
     routes.me.index.href(),
-    routes.profile.index.href({ handle: 'demo' }),
+    routes.profile.index.href({ handle: 'jamie' }),
     routes.settings.index.href(),
     routes.author.index.href(),
-    routes.author.course.index.href({ course: 'prompting-101' }),
+    routes.author.course.index.href({ course: 'tokens-and-temperature' }),
     routes.author.course.preview.href({ course: 'prompting-101', lesson: 'what-is-a-token' }),
   ]
 

@@ -9,6 +9,10 @@ export interface ActivityGridProps {
   /** Summary for screen readers, e.g. "Activity heatmap: active 41 of the last 182 days". */
   label: string
   heading?: string
+  /** Heading level; Profile uses 2 (the heading sits under the page h1). */
+  headingLevel?: 2 | 3
+  /** Optional per-cell hover titles, e.g. "Oct 12 · 3 activities" (same order as `levels`). */
+  titles?: string[]
   mix?: MixInput<HTMLElement>
 }
 
@@ -18,11 +22,11 @@ export interface ActivityGridProps {
  */
 export function ActivityGrid(handle: Handle<ActivityGridProps>) {
   return () => {
-    let { levels, label, heading = 'ACTIVITY · LAST 26 WEEKS', mix } = handle.props
+    let { levels, label, heading = 'ACTIVITY · LAST 26 WEEKS', headingLevel = 3, titles, mix } = handle.props
     return (
       <section aria-label="Activity" mix={[cardStyle, mix]}>
         <div mix={headerStyle}>
-          <h3 mix={headingStyle}>{heading}</h3>
+          {headingLevel === 2 ? <h2 mix={headingStyle}>{heading}</h2> : <h3 mix={headingStyle}>{heading}</h3>}
           <div aria-hidden="true" mix={legendStyle}>
             less
             {([0, 1, 2, 3] as const).map((level) => (
@@ -34,7 +38,7 @@ export function ActivityGrid(handle: Handle<ActivityGridProps>) {
         <div mix={scrollStyle} tabIndex={0} aria-label="Activity heatmap, scrollable">
           <div role="img" aria-label={label} mix={gridStyle}>
             {levels.map((level, index) => (
-              <span key={index} data-level={level} mix={cellStyle} />
+              <span key={index} data-level={level} title={titles?.[index]} mix={cellStyle} />
             ))}
           </div>
         </div>
@@ -70,12 +74,14 @@ const cardStyle = css({
   minWidth: 0,
 })
 const headerStyle = css({ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-3)', flexWrap: 'wrap' })
+// MonoHeading recipe (components §11.3 / §8.2): Geist Mono 500 13px, .14em.
 const headingStyle = css({
   margin: 0,
   fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-12)',
-  fontWeight: 400,
-  letterSpacing: 'var(--tracking-eyebrow-s)',
+  fontSize: 'var(--fs-13)',
+  fontWeight: 500,
+  lineHeight: 'normal',
+  letterSpacing: 'var(--tracking-eyebrow)',
   color: 'var(--muted)',
 })
 const legendStyle = css({
@@ -86,7 +92,13 @@ const legendStyle = css({
   fontSize: 'var(--fs-11)',
   color: 'var(--muted)',
 })
+// row-reverse starts the scroll position at the right end (the latest week)
+// when the grid overflows on narrow screens (§11.3), with no JS; `safe`
+// keeps it left-aligned when it fits.
 const scrollStyle = css({
+  display: 'flex',
+  flexDirection: 'row-reverse',
+  justifyContent: 'safe flex-end',
   overflowX: 'auto',
   '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
 })
