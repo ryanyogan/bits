@@ -28,6 +28,7 @@ import webhooksController from './actions/webhooks/controller.tsx'
 import { loadAuth } from './auth/identity.ts'
 import { loadSession } from './auth/session.ts'
 import { loadDatabase } from './middleware/database.ts'
+import { responseHeaders } from './middleware/headers.ts'
 import { routes } from './routes.ts'
 
 // One data-table wrapper per isolate; it holds no per-request state.
@@ -35,6 +36,8 @@ const db = createD1Database(platform.env.DB)
 
 export const router = createRouter({
   middleware: [
+    // Outermost, so every response gets the security and cache headers.
+    responseHeaders(),
     platform.middleware,
     // Rejects cross-origin POSTs (Sec-Fetch-Site, then Origin). Webhooks are
     // server-to-server and verify their own signatures. See decision 015.
