@@ -60,8 +60,8 @@ each free to track something different (who did what, what a word refers to,
 which bracket is still open). Then it stacks many of these layers, so later
 layers build on what earlier ones worked out.
 
-Attention also explains the **context window**: the stretch of text the model
-can look back over. Claude Haiku 5.5's is 1M tokens, per Anthropic's models
+Attention can only look back over a limited stretch of text, called the
+**context window**. Claude Haiku 5.5's is 1M tokens, per Anthropic's models
 overview (October 2026). Anything outside it, the model simply can't see.
 
 Your turn. Write a sentence where a word like “it” could point two ways, and

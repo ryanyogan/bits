@@ -60,7 +60,7 @@ information from the internet, public and private datasets, some user data
 models, cleaned and de-duplicated first.
 
 Here's a useful way to think about the result. The text is far bigger than the
-model, so it can't keep a copy. It keeps **patterns** instead, a bit like a
+model, so it can't keep a copy of it all. It mostly keeps **patterns**, a bit like a
 lossy zip file of everything it read. The gist survives. Rare details get
 fuzzy. Hold on to that, because it explains a lot in lesson 7.
 
