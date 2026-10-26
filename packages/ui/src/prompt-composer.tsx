@@ -23,6 +23,30 @@ export interface PromptCheck {
   ranAt?: number[]
 }
 
+/**
+ * Mirrors the exercise into another form on the page (the lesson's "complete"
+ * form) as hidden fields, via the `form` attribute: the draft as `prompt`,
+ * one `ran` field per temperature run at. The server re-checks them.
+ */
+export interface SubmitFields {
+  /** id of the form to submit with. */
+  form: string
+  prompt: string
+  ran: string
+}
+
+export function submitFieldInputs(fields: SubmitFields | undefined, draft: string, ranAt: Set<number>) {
+  if (!fields) return null
+  return (
+    <>
+      <input type="hidden" form={fields.form} name={fields.prompt} value={draft} />
+      {[...ranAt].map((t) => (
+        <input key={t} type="hidden" form={fields.form} name={fields.ran} value={String(t)} />
+      ))}
+    </>
+  )
+}
+
 export interface TemperatureOption {
   /** T × 100. */
   value: number
@@ -46,6 +70,8 @@ export interface PromptComposerProps {
   keepRuns?: number
   /** Style-guide only: render the focused composer look. */
   forceFocus?: boolean
+  /** Also submit the draft and runs with another form (see SubmitFields). */
+  submit?: SubmitFields
 }
 
 interface Run {
@@ -126,15 +152,17 @@ export const PromptComposer = clientEntry(
       let examples = handle.props.examples?.[String(temperature.value)] ?? []
       let entry: Run = { id, prompt, temperature, tokens: 0 }
       runs = [...runs, entry].slice(-(handle.props.keepRuns ?? 4))
-      let signal = await handle.update()
+      await handle.update()
       await new Promise((resolve) => setTimeout(resolve, 450))
-      if (signal.aborted || handle.signal.aborted) return
+      // Only removal cancels a run: other updates (picking a temperature,
+      // typing) mid-run must not leave it stuck on "Running…".
+      if (handle.signal.aborted) return
       let output = examples.length ? examples[(id - 1) % examples.length]! : 'A bright idea, brewed under moonlight.'
       entry.output = output
       entry.tokens = draftTokens(output)
-      ranAt.add(temperature.value)
+      ranAt.add(entry.temperature.value)
       running = false
-      window.dispatchEvent(new CustomEvent('bits:run', { detail: { prompt, temperature: temperature.value } }))
+      window.dispatchEvent(new CustomEvent('bits:run', { detail: { prompt, temperature: entry.temperature.value } }))
       let reward = handle.props.reward
       if (reward && !rewarded && allPassed()) {
         rewarded = true
@@ -253,6 +281,7 @@ export const PromptComposer = clientEntry(
               </Keycap>
             </div>
             {hydrated ? null : <p mix={noJsStyle}>Turn on JavaScript to run prompts.</p>}
+            {submitFieldInputs(handle.props.submit, draft, ranAt)}
           </form>
         </div>
       )

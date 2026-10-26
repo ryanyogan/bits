@@ -5,7 +5,7 @@ import { Keycap } from '@bits/ui/keycap'
 import { ProgressRing } from '@bits/ui/progress-ring'
 import { StatTile } from '@bits/ui/stat-tile'
 
-import { sampleProfileHref } from './links.ts'
+import { profileHref } from './links.ts'
 import { h2Style, leadStyle, PHONE, sectionStyle, splitGrid } from './styles.ts'
 
 // Sample data on a marketing page: never personalised (Main.md §6).
@@ -63,8 +63,8 @@ export function Progress(_handle: Handle) {
             earn follows you to any device. Free — no card, no trial, no catch.
           </p>
           <div>
-            <Keycap variant="dark" href={sampleProfileHref()} mix={profileKey}>
-              See a profile →
+            <Keycap variant="dark" href={profileHref()} mix={profileKey}>
+              See your profile →
             </Keycap>
           </div>
         </div>

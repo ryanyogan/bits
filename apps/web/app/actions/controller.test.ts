@@ -50,7 +50,6 @@ describe('router smoke test', () => {
     routes.courses.lesson.index.href({ course: 'tokens-and-temperature', lesson: 'temperature' }),
     routes.login.index.href(),
     routes.login.check.index.href(),
-    routes.profile.index.href({ handle: 'jamie' }),
   ]
 
   for (let path of publicPages) {

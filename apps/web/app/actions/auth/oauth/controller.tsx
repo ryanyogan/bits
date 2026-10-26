@@ -66,7 +66,7 @@ export default createController(routes.auth.oauth, {
       // Connecting from /settings: the session already belongs to this user.
       if (signedIn) return toSettings('connected', name)
 
-      startUserSession(context, outcome.user, name)
+      await startUserSession(context, outcome.user, name)
       return redirect(safeNextPath(returnTo) ?? routes.courses.index.href(), 303)
     },
   },

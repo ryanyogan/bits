@@ -6,8 +6,6 @@ import { XpPill } from '@bits/ui/xp-pill'
 import { whenPassed } from './lesson-state.ts'
 
 export interface LessonXpProps {
-  /** course/lesson; keys the remembered pass. */
-  lessonKey: string
   /** The viewer's neurons when the page was rendered. */
   neurons: number
   /** Neurons this lesson awards when its checks pass (0 if already passed). */
@@ -24,7 +22,7 @@ export const LessonXp = clientEntry(import.meta.url, function LessonXp(handle: H
 
   handle.queueTask(() => {
     if (handle.props.award <= 0) return
-    whenPassed(handle.props.lessonKey, handle.signal, () => {
+    whenPassed(handle.signal, () => {
       passed = true
       handle.update()
     })

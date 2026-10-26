@@ -61,7 +61,7 @@ export default createController(routes.auth.verify, {
       // session and sign in. completeAuth keeps the session's data, so
       // anything an anonymous visitor saved carries over (decision 015).
       let { user } = await userForVerifiedEmail(context.db, redeemed.email, parseSignup(redeemed.signup))
-      startUserSession(context, user, 'email')
+      await startUserSession(context, user, 'email')
       let next = safeNextPath(redeemed.next_path) ?? safeNextPath(readText(context.formData, 'next'))
       return redirect(next ?? routes.courses.index.href(), 303)
     },

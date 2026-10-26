@@ -13,9 +13,9 @@ import { ProfilePage } from './profile-page.tsx'
 // unknown handle is a 404 with the same message, so handles can't be probed.
 export default createController(routes.profile, {
   actions: {
-    index(context) {
+    async index(context) {
       let viewer = getViewer(context)
-      let profile = getPublicProfile(context.params.handle)
+      let profile = await getPublicProfile(context.db, context.params.handle)
       if (!profile) {
         return context.render(
           <Layout title="Profile not found" viewer={viewer} currentPath={context.url.pathname}>

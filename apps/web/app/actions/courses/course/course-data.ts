@@ -81,23 +81,20 @@ export interface CourseView {
 type LessonHref = (lesson: string, mode?: 'watch') => string
 
 /**
- * Anonymous visitors see every lesson "not started" (their local progress is
- * hydrated later by a ProgressStore island); signed-in viewers see synced
- * progress, which the fixtures stand in for.
+ * `course` carries the viewer's progress (D1 when signed in, the session
+ * when not): lesson states and pct come from getCourse(slug, completed).
  */
 export function buildCourseView(course: CourseDetail, viewer: Viewer | null, lessonHref: LessonHref): CourseView {
   let signedIn = viewer !== null
   let info = extras[course.slug] ?? {}
   let all = course.modules.flatMap((m) => m.lessons)
-  // A course with no progress is "not started" even if the data marks lesson 1 current.
-  let started = signedIn && course.pct > 0
-  let stateOf = (lesson: LessonSummary): LessonState => (started ? lesson.state : 'next')
+  let stateOf = (lesson: LessonSummary): LessonState => lesson.state
 
   let done = all.filter((l) => stateOf(l) === 'done').length
   let total = all.length
   let current = all.find((l) => stateOf(l) === 'current')
   let firstOpen = current ?? all.find((l) => stateOf(l) !== 'done')
-  let pct = started ? course.pct : 0
+  let pct = course.pct
   let remaining = all.filter((l) => stateOf(l) !== 'done').reduce((sum, l) => sum + l.mins, 0)
   // "about 20 min to go": round down to 5 so the estimate never overshoots.
   let minsLeft = remaining === 0 ? 0 : Math.max(5, Math.floor(remaining / 5) * 5)
@@ -125,7 +122,7 @@ export function buildCourseView(course: CourseDetail, viewer: Viewer | null, les
         ? state === 'done' && stateOf(next) !== 'next'
           ? 'done'
           : 'todo'
-        : state === 'current' && signedIn
+        : state === 'current'
           ? 'tail'
           : 'none'
       return {

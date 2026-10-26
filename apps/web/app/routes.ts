@@ -19,6 +19,7 @@ export const routes = route({
     }),
     lesson: route('/:course/:lesson', {
       index: get('/'), // actions/courses/lesson/controller.tsx (?mode=read|watch|terminal)
+      complete: post('/complete'), // re-checks the exercises, saves progress, 303 onward
     }),
   }),
 

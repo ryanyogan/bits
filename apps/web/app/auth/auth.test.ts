@@ -260,7 +260,7 @@ describe('auth', () => {
     let { cookie, user } = await signIn('revoked@example.com')
     let storage = createD1SessionStorage(testDb)
     // remix/middleware/session wraps the id with its expiry.
-    let id = (JSON.parse(await sessionCookie.parse(cookie)) as { value: string }).value
+    let id = (JSON.parse((await sessionCookie.parse(cookie))!) as { value: string }).value
     let session = await storage.read(id)
     assert.equal(session.id, id)
     await deleteUserSessions(testDb, user.id)

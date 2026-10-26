@@ -15,6 +15,8 @@ import {
 import { completeAuth } from 'remix/auth'
 import type { RequestContext } from 'remix/router'
 
+import { getDatabase } from '../middleware/database.ts'
+import { mergeAnonymousProgress } from '../progress/progress.ts'
 import { USER_KEY, type SignInMethod, type UserRecord } from './session.ts'
 
 /** Sign-up answers collected before the email is verified. */
@@ -140,8 +142,10 @@ export async function userForOAuth(
  * Starts the signed-in session: rotates the session id (remix/auth
  * `completeAuth`, which also deletes the old row) and stores the user record.
  */
-export function startUserSession(context: RequestContext<any, any>, user: User, method: SignInMethod): void {
+export async function startUserSession(context: RequestContext<any, any>, user: User, method: SignInMethod): Promise<void> {
   let session = completeAuth(context)
+  // Lessons finished while signed out move into the account (decision 016).
+  await mergeAnonymousProgress(getDatabase(context), session, user)
   let now = Date.now()
   let record: UserRecord = {
     userId: user.id,

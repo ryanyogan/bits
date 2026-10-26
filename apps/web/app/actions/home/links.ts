@@ -1,6 +1,6 @@
 // Where the landing page's calls to action go. Derived from the sample
 // fixtures so the links follow the catalogue when it changes.
-import { courses, demoViewer, getCourse } from '../../data/fixtures.ts'
+import { courses, getCourse } from '../../data/fixtures.ts'
 import { routes } from '../../routes.ts'
 
 /** The first lesson of the first course: "lesson 1" everywhere on the page. */
@@ -32,7 +32,7 @@ export function trackHref(track: 'foundations' | 'prompting' | 'tools' | 'agents
   return routes.courses.index.href(undefined, { searchParams: { track } })
 }
 
-/** A sample public profile for "See a profile →". */
-export function sampleProfileHref(): string {
-  return routes.profile.index.href({ handle: demoViewer.handle })
+/** "See your profile →": /me (signed-out visitors sign in first). */
+export function profileHref(): string {
+  return routes.me.index.href()
 }

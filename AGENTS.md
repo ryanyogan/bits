@@ -41,6 +41,7 @@ apps/web/                 @bits/web: the Remix app and Worker
   app/ui/                 app-level shared UI: Layout, PlaceholderPage
   app/middleware/         database.ts puts the data-table db on context.db
   app/auth/               sessions, identity, email sign-in, OAuth, Turnstile, mailer (server-only)
+  app/progress/           lesson checks, progress store + anonymous merge, badges, levels, days
   app/test/auth.ts        test helpers: signIn, fetchAs, requestCode
   app/platform/           runtime seam: `#platform` → platform.node.ts | platform.worker.ts
   scripts/build.ts        asset crawl into build/client + esbuild Worker bundle
@@ -195,6 +196,21 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
 - Secrets: `SESSION_SECRET` (required in production),
   `TURNSTILE_SECRET_KEY`, `GITHUB_CLIENT_ID/SECRET` and
   `GOOGLE_CLIENT_ID/SECRET`. See `apps/web/.dev.vars.example`.
+
+## Progress (decision 016)
+
+- Course and lesson fixtures carry content only. Pass the viewer's
+  completed lessons, `await loadCompleted(context)`, to `getCourse`,
+  `listCourses`, `getLesson` or `getContinue` to get states and pct.
+- Saving is the native form `POST /courses/:course/:lesson/complete`.
+  Exercises join it via `form=` hidden fields (`fieldNames` in
+  `lesson/ui/exercise.ts`). The server re-runs the checks
+  (`progress/check.ts`). Never read XP from the client.
+- Signed in, progress goes to D1 in one batch (`recordLessonCompletion`).
+  Signed out, it goes to the session (`progress` key), and
+  `startUserSession` merges it at sign-in.
+- Tests: `completeLesson(cookie, course, lesson, fields)` in
+  `app/test/auth.ts`.
 
 ## Runtime rules
 

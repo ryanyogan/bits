@@ -10,9 +10,9 @@ import { ProfilePage } from '../profile/profile-page.tsx'
 export default createController(routes.me, {
   middleware: [requireUser()],
   actions: {
-    index(context) {
+    async index(context) {
       let viewer = toViewer(context.auth.identity)
-      let profile = getOwnProfile(viewer)
+      let profile = await getOwnProfile(context.db, context.auth.identity)
       let tab: 'journal' | 'overview' = context.url.searchParams.get('tab') === 'journal' ? 'journal' : 'overview'
       return context.render(
         <ProfilePage

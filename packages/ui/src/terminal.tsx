@@ -3,7 +3,7 @@ import { clientEntry, css, on } from 'remix/component'
 
 import { Keycap } from './keycap.tsx'
 import { TEMPERATURE_EVENT } from './odds-bars.tsx'
-import { checkPasses, type PromptCheck, type TemperatureOption } from './prompt-composer.tsx'
+import { checkPasses, submitFieldInputs, type PromptCheck, type SubmitFields, type TemperatureOption } from './prompt-composer.tsx'
 import { announceReward, type RewardNext } from './reward-toast.tsx'
 import { ToolButton } from './tool-button.tsx'
 
@@ -54,6 +54,8 @@ export interface TerminalPrompt {
   defaultDraft?: string
   placeholder?: string
   reward?: { xp: number; message: string; next?: RewardNext }
+  /** Also submit the draft and runs with another form (see SubmitFields). */
+  submit?: SubmitFields
 }
 
 export interface TerminalLogProps {
@@ -256,6 +258,7 @@ export const TerminalLog = clientEntry(
             <span aria-hidden="true" mix={enterHint}>
               ↵
             </span>
+            {prompt ? submitFieldInputs(prompt.submit, value, ranAt) : null}
           </form>
           {prompt && !hydrated ? <p mix={noJsStyle}>Turn on JavaScript to run prompts.</p> : null}
         </section>

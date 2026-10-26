@@ -41,6 +41,11 @@ export const users = table({
     goals: c.json(),
     timezone: c.text(),
     xp_total: c.integer(),
+    /** Consecutive local days with activity, ending on streak_last_day. */
+    streak_days: c.integer(),
+    /** YYYY-MM-DD in the user's timezone; null before any activity. */
+    streak_last_day: c.text().nullable(),
+    best_streak: c.integer(),
     is_public: c.boolean(),
     created_at: c.integer(),
     updated_at: c.integer(),
@@ -131,3 +136,84 @@ export const passkeys = table({
 })
 
 export type Passkey = TableRow<typeof passkeys>
+
+export const lessonProgress = table({
+  name: 'lesson_progress',
+  primaryKey: ['user_id', 'course_id', 'lesson_slug'],
+  columns: {
+    user_id: c.text(),
+    course_id: c.text(),
+    lesson_slug: c.text(),
+    started_at: c.integer(),
+    completed_at: c.integer().nullable(),
+    updated_at: c.integer(),
+  },
+})
+
+export type LessonProgress = TableRow<typeof lessonProgress>
+
+export const exerciseAttempts = table({
+  name: 'exercise_attempts',
+  columns: {
+    id: c.text(),
+    user_id: c.text(),
+    course_id: c.text(),
+    lesson_slug: c.text(),
+    exercise_id: c.text(),
+    prompt: c.text(),
+    passed: c.boolean(),
+    temperatures: c.json(),
+    created_at: c.integer(),
+  },
+  afterRead({ value }) {
+    let next = { ...value }
+    if ('passed' in next) next.passed = decodeBoolean(next.passed) as boolean
+    if ('temperatures' in next) next.temperatures = decodeJsonArray(next.temperatures)
+    return { value: next }
+  },
+})
+
+export type ExerciseAttempt = Omit<TableRow<typeof exerciseAttempts>, 'temperatures'> & { temperatures: number[] }
+
+export const xpKinds = ['exercise', 'quiz', 'lesson'] as const
+export type XpKind = (typeof xpKinds)[number]
+
+export const xpEvents = table({
+  name: 'xp_events',
+  columns: {
+    id: c.text(),
+    user_id: c.text(),
+    kind: c.enum(xpKinds),
+    ref: c.text(),
+    xp: c.integer(),
+    day: c.text(),
+    created_at: c.integer(),
+  },
+})
+
+export type XpEvent = TableRow<typeof xpEvents>
+
+export const activityDays = table({
+  name: 'activity_days',
+  primaryKey: ['user_id', 'day'],
+  columns: {
+    user_id: c.text(),
+    day: c.text(),
+    xp: c.integer(),
+    actions: c.integer(),
+  },
+})
+
+export type ActivityDay = TableRow<typeof activityDays>
+
+export const userBadges = table({
+  name: 'user_badges',
+  primaryKey: ['user_id', 'badge_id'],
+  columns: {
+    user_id: c.text(),
+    badge_id: c.text(),
+    awarded_at: c.integer(),
+  },
+})
+
+export type UserBadge = TableRow<typeof userBadges>

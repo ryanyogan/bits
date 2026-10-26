@@ -2,7 +2,7 @@
 // (docs/design/spec/pages/Authoring.md). Mirrors what the build pipeline will
 // store (handoff "Course content pipeline"): course_versions rows, the saved
 // validation report and the videos table. Swap for D1 queries later.
-import { courses, getCourse, type CourseSummary } from '../../data/fixtures.ts'
+import { courses, getCourse, type CourseInfo } from '../../data/fixtures.ts'
 
 export type ValidationLevel = 'ok' | 'warning' | 'error'
 
@@ -36,7 +36,7 @@ export interface TreeNode {
 }
 
 export interface AuthorCourse {
-  course: CourseSummary
+  course: CourseInfo
   /** The course folder name in the repo or upload. */
   folder: string
   files: number

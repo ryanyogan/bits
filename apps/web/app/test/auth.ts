@@ -78,3 +78,13 @@ export function fetchAs(cookie: string | null, path: string, init: RequestInit =
   if (cookie) headers.set('Cookie', cookie)
   return router.fetch(new Request(new URL(path, 'http://localhost'), { ...init, headers }))
 }
+
+/** Completes a lesson through the real "complete lesson" form. Returns the response. */
+export async function completeLesson(
+  cookie: string | null,
+  course: string,
+  lesson: string,
+  fields: Record<string, string | string[]> = {},
+): Promise<Response> {
+  return fetchAs(cookie, routes.courses.lesson.complete.href({ course, lesson }), { method: 'POST', body: form(fields) })
+}

@@ -4,15 +4,26 @@ import { after, describe, it } from 'remix/test'
 import { disposePlatform } from '#platform'
 
 import { routes } from '../../routes.ts'
-import { fetchAs, signIn } from '../../test/auth.ts'
+import { completeLesson, fetchAs, signIn } from '../../test/auth.ts'
 
 function get(path: string) {
   return fetchAs(null, path)
 }
 
+const prompt = (n: number) => `Write a tagline for a coffee shop on the moon, under ${n} words.`
+
+/** Jamie: a public profile with four journal prompts and two lessons done. */
 let jamie: Promise<string> | undefined
 async function getSignedIn(path: string) {
-  jamie ??= signIn('jamie@example.com', { displayName: 'Jamie Park' }).then((session) => session.cookie)
+  jamie ??= (async () => {
+    let { cookie } = await signIn('jamie@example.com', { displayName: 'Jamie Park' })
+    for (let n = 5; n <= 8; n++) {
+      let fields = { 'prompt.moon-tagline': prompt(n), 'ran.moon-tagline': ['0', '100'] }
+      await completeLesson(cookie, 'tokens-and-temperature', 'temperature', fields)
+    }
+    await completeLesson(cookie, 'tokens-and-temperature', 'what-is-a-token', { 'quiz.common-words': 'a' })
+    return cookie
+  })()
   return fetchAs(await jamie, path)
 }
 
@@ -32,8 +43,15 @@ describe('/me and /u/:handle', () => {
     assert.match(html, /jamie@example\.com/)
     assert.match(html, /Edit profile/)
     assert.match(html, /aria-label="Jamie(&#39;|')s generated avatar"/)
-    assert.match(html, /aria-label="Activity heatmap: active \d+ of the last 182 days/)
-    assert.match(html, /Tool wielder — locked/)
+    assert.match(html, /aria-label="Activity heatmap: active 1 of the last 182 days; current streak 1 day"/)
+    assert.match(html, /LEVEL 2 · FIRST WORDS/)
+    assert.match(html, /aria-label="70 neurons"|>70</)
+    assert.match(html, /aria-label="First token"/)
+    assert.match(html, /BADGES · 1 OF 12/)
+    assert.match(html, /Loop Closer — locked/)
+    assert.match(html, /Write a tagline for a coffee shop on the moon, under 8 words\./)
+    assert.match(html, /Tokens &amp; temperature · L6/)
+    assert.match(html, /✓ passed 4\/4 checks/)
     // Sign out is a POST form, not a link.
     assert.match(html, new RegExp(`<form method="post" action="${routes.logout.action.href()}"`))
     // Only the three most recent journal entries before "All →".
@@ -56,10 +74,11 @@ describe('/me and /u/:handle', () => {
   })
 
   it('renders a public profile without email, journal, account or Edit', async () => {
-    let response = await get(routes.profile.index.href({ handle: 'jamie' }))
+    await getSignedIn(routes.me.index.href())
+    let response = await get(routes.profile.index.href({ handle: 'jamie_park' }))
     assert.equal(response.status, 200)
     let html = await response.text()
-    assert.match(html, /<title>Jamie Park \(@jamie\) · Bits<\/title>/)
+    assert.match(html, /<title>Jamie Park \(@jamie_park\) · Bits<\/title>/)
     assert.match(html, /Share ↗/)
     assert.doesNotMatch(html, /jamie@example\.com/)
     assert.doesNotMatch(html, /PROMPT JOURNAL/)
@@ -67,8 +86,16 @@ describe('/me and /u/:handle', () => {
     assert.doesNotMatch(html, /Edit profile/)
   })
 
-  for (let handle of ['sam-r', 'nobody-here']) {
+  for (let handle of ['private-sam', 'nobody-here']) {
     it(`/u/${handle} is a 404 that says the profile is private`, async () => {
+      if (handle === 'private-sam') {
+        let { cookie } = await signIn('sam@example.com', { displayName: 'Private Sam' })
+        let saved = await fetchAs(cookie, routes.settings.profile.href(), {
+          method: 'POST',
+          body: new URLSearchParams({ name: 'Private Sam', handle: 'private-sam', visibility: 'private' }),
+        })
+        assert.equal(saved.status, 303)
+      }
       let response = await get(routes.profile.index.href({ handle }))
       assert.equal(response.status, 404)
       let html = await response.text()

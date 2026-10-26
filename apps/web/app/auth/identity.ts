@@ -8,6 +8,7 @@ import type { RequestContext } from 'remix/router'
 import { Session } from 'remix/session'
 
 import type { Viewer } from '../data/fixtures.ts'
+import { currentStreak } from '../progress/days.ts'
 import { routes } from '../routes.ts'
 import { readUserRecord, USER_KEY, type UserRecord } from './session.ts'
 
@@ -63,9 +64,8 @@ export function toViewer(user: User): Viewer {
     initials: initialsOf(name),
     email: user.email,
     xp: user.xp_total,
-    // Streaks arrive with progress tracking (activity_days).
-    streak: 0,
-    bestStreak: 0,
+    streak: currentStreak(user),
+    bestStreak: user.best_streak,
     isPublic: user.is_public,
   }
 }

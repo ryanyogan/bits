@@ -1,23 +1,26 @@
 import { createController } from 'remix/router'
 
-import { getContinue } from '../../data/fixtures.ts'
+import { getContinue, listCourses } from '../../data/fixtures.ts'
 import { getViewer } from '../../auth/identity.ts'
+import { loadCompleted } from '../../progress/progress.ts'
 import { routes } from '../../routes.ts'
 import { filterCourses, parseCatalogQuery } from './catalog.ts'
 import { CatalogPage, type ContinueTarget } from './catalog-page.tsx'
 
 export default createController(routes.courses, {
   actions: {
-    index(context) {
+    async index(context) {
       let viewer = getViewer(context)
       let query = parseCatalogQuery(context.url)
-      let { results, counts } = filterCourses(query)
+      // Progress is on the server for everyone: D1 when signed in, the
+      // session when not (decision 016).
+      let completed = await loadCompleted(context)
+      let { results, counts } = filterCourses(query, listCourses(completed))
 
-      // Signed-in progress renders on the server. Anonymous (local) progress
-      // will be filled in by a ProgressStore island later; render nothing now.
       let continueTarget: ContinueTarget | undefined
-      if (viewer) {
-        let { course, lesson, total } = getContinue()
+      let resume = getContinue(completed)
+      if (resume) {
+        let { course, lesson, total } = resume
         continueTarget = {
           href: routes.courses.lesson.index.href({ course: course.slug, lesson: lesson.slug }),
           courseTitle: course.title,

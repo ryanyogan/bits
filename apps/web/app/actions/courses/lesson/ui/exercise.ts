@@ -2,7 +2,7 @@
 // TerminalLog prompt mode, CodeEditor). Plain data only: these cross into
 // islands.
 import type { CodeFile } from '@bits/ui/code-editor'
-import type { PromptCheck, TemperatureOption } from '@bits/ui/prompt-composer'
+import type { PromptCheck, SubmitFields, TemperatureOption } from '@bits/ui/prompt-composer'
 import type { RewardNext } from '@bits/ui/reward-toast'
 
 import type { CodeBlock, PromptBlock } from '../content.ts'
@@ -10,6 +10,13 @@ import type { LessonView } from '../lesson-view.ts'
 
 export function temperatureLabel(t: number): string {
   return t === 0 ? '0' : t.toFixed(1)
+}
+
+/** Field names of the lesson's "complete" form (read by app/progress/check.ts). */
+export const fieldNames = {
+  prompt: (exerciseId: string) => `prompt.${exerciseId}`,
+  ran: (exerciseId: string) => `ran.${exerciseId}`,
+  quiz: (quizId: string) => `quiz.${quizId}`,
 }
 
 /** Temperatures travel as T × 100 so they compare exactly. */
@@ -24,11 +31,23 @@ export interface ExerciseProps {
   temperatures: TemperatureOption[]
   examples: Record<string, string[]>
   reward: { xp: number; message: string; next?: RewardNext }
+  submit?: SubmitFields
+}
+
+/** The exercise's checks, as the composer runs them and the server re-runs them. */
+export function promptChecks(block: PromptBlock): PromptCheck[] {
+  let checks: PromptCheck[] = block.checks.map((check) => ({ label: check.label, patterns: check.patterns }))
+  if (block.run) checks.push({ label: block.run.label, ranAt: block.run.temperatures.map(hundredths) })
+  return checks
+}
+
+/** Temperatures (× 100) the composer offers for this exercise. */
+export function offeredTemperatures(block: PromptBlock): number[] {
+  return block.temperatures.map(hundredths)
 }
 
 export function exerciseProps(view: LessonView, block: PromptBlock): ExerciseProps {
-  let checks: PromptCheck[] = block.checks.map((check) => ({ label: check.label, patterns: check.patterns }))
-  if (block.run) checks.push({ label: block.run.label, ranAt: block.run.temperatures.map(hundredths) })
+  let checks = promptChecks(block)
   let examples: Record<string, string[]> = {}
   for (let example of block.examples) (examples[String(hundredths(example.temperature))] ??= []).push(example.text)
   let next: RewardNext = view.next
@@ -44,6 +63,9 @@ export function exerciseProps(view: LessonView, block: PromptBlock): ExercisePro
     temperatures: block.temperatures.map((t) => ({ value: hundredths(t), label: temperatureLabel(t) })),
     examples,
     reward: { xp: block.xp, message: block.success.message, next },
+    submit: view.completeForm
+      ? { form: view.completeForm.id, prompt: fieldNames.prompt(block.id), ran: fieldNames.ran(block.id) }
+      : undefined,
   }
 }
 

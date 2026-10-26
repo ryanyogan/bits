@@ -1,5 +1,5 @@
 import type { D1DataTableDatabase } from '@bits/db'
-import { createContextKey, type Middleware } from 'remix/router'
+import { createContextKey, type Middleware, type RequestContext } from 'remix/router'
 
 export const databaseContext = createContextKey<D1DataTableDatabase>()
 
@@ -18,4 +18,9 @@ export function loadDatabase(db: D1DataTableDatabase): Middleware<{
     context.set(databaseContext, db, { property: 'db' })
     return next()
   }
+}
+
+/** `context.db` for helpers that take any request context. */
+export function getDatabase(context: RequestContext<any, any>): D1DataTableDatabase {
+  return context.get(databaseContext) as D1DataTableDatabase
 }

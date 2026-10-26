@@ -108,8 +108,8 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
                 <ActivityGrid
                   levels={profile.activity}
                   headingLevel={2}
-                  titles={activityTitles(profile.activity)}
-                  label={`Activity heatmap: active ${activeDays} of the last 182 days, most days in the last two weeks; current streak ${profile.streak} days`}
+                  titles={activityTitles(profile.activity, profile.activityEnd)}
+                  label={`Activity heatmap: active ${activeDays} of the last 182 days; current streak ${profile.streak} ${profile.streak === 1 ? 'day' : 'days'}`}
                 />
 
                 <section aria-labelledby="courses-heading" mix={sectionStyle}>

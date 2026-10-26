@@ -62,6 +62,7 @@ function terminalPrompt(view: LessonView, block: PromptBlock): TerminalPrompt {
     defaultDraft: props.defaultDraft,
     placeholder: props.placeholder,
     reward: props.reward,
+    submit: props.submit,
   }
 }
 

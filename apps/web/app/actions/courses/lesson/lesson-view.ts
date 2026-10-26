@@ -1,7 +1,7 @@
 // Builds everything the lesson page renders from the URL: the course and
 // lesson fixtures, the compiled content, the mode, and every href. Shared by
 // /courses/:course/:lesson and the author preview /author/:course/preview/:lesson.
-import type { CourseDetail, LessonSummary, Viewer } from '../../../data/fixtures.ts'
+import type { Completed, CourseDetail, LessonSummary, Viewer } from '../../../data/fixtures.ts'
 import { getLesson } from '../../../data/fixtures.ts'
 import { routes } from '../../../routes.ts'
 import { exercisesOf, type LessonContent } from './content.ts'
@@ -29,6 +29,8 @@ export interface LessonView {
   answers: Record<string, string[]>
   /** The author draft preview. */
   draft?: { version: string; backHref: string }
+  /** The "complete lesson" form (absent in the draft preview). */
+  completeForm?: { id: string; action: string }
   href: {
     /** This lesson in a mode. */
     mode(mode: LessonMode): string
@@ -46,13 +48,15 @@ export interface LessonViewOptions {
   draft?: { version: string }
   /** The signed-in viewer, or null. */
   viewer?: Viewer | null
+  /** The viewer's completed lessons (lesson states, the done segment). */
+  completed?: Completed
 }
 
 const MODES: LessonMode[] = ['read', 'watch', 'terminal']
 
 /** Returns undefined when the course or lesson doesn't exist. */
 export function buildLessonView(courseSlug: string, lessonSlug: string, url: URL, options: LessonViewOptions = {}): LessonView | undefined {
-  let found = getLesson(courseSlug, lessonSlug)
+  let found = getLesson(courseSlug, lessonSlug, options.completed)
   if (!found) return undefined
   let { course, lesson, index, total, prev, next } = found
   let content = getLessonContent(course.slug, lesson)
@@ -92,6 +96,9 @@ export function buildLessonView(courseSlug: string, lessonSlug: string, url: URL
     draft: options.draft
       ? { version: options.draft.version, backHref: routes.author.course.index.href({ course: course.slug }) }
       : undefined,
+    completeForm: preview
+      ? undefined
+      : { id: 'lesson-complete', action: routes.courses.lesson.complete.href({ course: course.slug, lesson: lesson.slug }) },
     href: {
       mode: (m) => lessonHref(lesson.slug, m),
       lesson: (slug) => lessonHref(slug),

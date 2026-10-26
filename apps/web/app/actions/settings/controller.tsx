@@ -1,9 +1,20 @@
-import { deleteUserSessions, findUserByHandle, reservedHandles, unlinkIdentity, users, type User } from '@bits/db'
+import {
+  deleteUserSessions,
+  findUserByHandle,
+  listAttempts,
+  listCompletedLessons,
+  listUserBadges,
+  reservedHandles,
+  unlinkIdentity,
+  users,
+  type User,
+} from '@bits/db'
 import * as s from 'remix/data-schema'
 import { redirect } from 'remix/response/redirect'
 import { createController } from 'remix/router'
 
 import { requireUser, toViewer } from '../../auth/identity.ts'
+import { currentStreak } from '../../progress/days.ts'
 import type { AppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { issueField, readText, type FormIssue } from '../login/schema.ts'
@@ -29,7 +40,12 @@ export default createController(routes.settings, {
 
     async export(context) {
       let user = context.auth.identity
-      let account = await getAccountSettings(context.db, user, context.session.id)
+      let [account, lessons, attempts, badges] = await Promise.all([
+        getAccountSettings(context.db, user, context.session.id),
+        listCompletedLessons(context.db, user.id),
+        listAttempts(context.db, user.id, 10_000),
+        listUserBadges(context.db, user.id),
+      ])
       let body = {
         format: 'bits-export',
         version: 1,
@@ -44,10 +60,25 @@ export default createController(routes.settings, {
           createdAt: new Date(user.created_at).toISOString(),
         },
         signInMethods: account.methods.filter((m) => m.connected).map(({ kind, meta }) => ({ kind, meta })),
-        // Progress, badges and the prompt journal join with progress tracking.
-        progress: { neurons: user.xp_total },
-        badges: [],
-        prompts: [],
+        progress: {
+          neurons: user.xp_total,
+          streak: { current: currentStreak(user), best: user.best_streak },
+          lessons: lessons.map((row) => ({
+            course: row.course_id,
+            lesson: row.lesson_slug,
+            completedAt: new Date(row.completed_at).toISOString(),
+          })),
+        },
+        badges: badges.map((row) => ({ id: row.badge_id, awardedAt: new Date(row.awarded_at).toISOString() })),
+        prompts: attempts.map((row) => ({
+          course: row.course_id,
+          lesson: row.lesson_slug,
+          exercise: row.exercise_id,
+          prompt: row.prompt,
+          passed: row.passed,
+          temperatures: row.temperatures,
+          at: new Date(row.created_at).toISOString(),
+        })),
       }
       return new Response(JSON.stringify(body, null, 2) + '\n', {
         headers: {

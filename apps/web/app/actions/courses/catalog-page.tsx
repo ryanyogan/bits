@@ -119,7 +119,7 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
                     tone={course.tone}
                     pattern={course.pattern}
                     formats={course.formats}
-                    pct={viewer ? course.pct : 0}
+                    pct={course.pct}
                     mix={cardFill}
                   />
                 </li>

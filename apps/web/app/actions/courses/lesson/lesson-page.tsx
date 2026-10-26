@@ -13,6 +13,7 @@ import { lessonAward, type LessonMode, type LessonView } from './lesson-view.ts'
 import { LessonComplete } from './public/lesson-complete.tsx'
 import { PASSED_ROOT } from './public/lesson-state.ts'
 import { LessonXp } from './public/lesson-xp.tsx'
+import { fieldNames } from './ui/exercise.ts'
 import { OutlineDisclosure, OutlineNav } from './ui/outline.tsx'
 import { ReadMode } from './ui/read-mode.tsx'
 import { TerminalMode } from './ui/terminal-mode.tsx'
@@ -25,9 +26,9 @@ const modeLabels: Record<LessonMode, string> = { read: 'Read', watch: 'Watch', t
  * The author preview renders this same page with a Draft banner. Lesson text
  * is server-rendered; only the islands the lesson's blocks need hydrate.
  */
-export function LessonPage(handle: Handle<{ view: LessonView }>) {
+export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[] }>) {
   return () => {
-    let { view } = handle.props
+    let { view, issues } = handle.props
     let { course, lesson, content, mode, viewer } = view
     let modes: LessonMode[] = content.video ? ['read', 'watch', 'terminal'] : ['read', 'terminal']
     let segments: SegmentState[] = view.lessons.map((l) =>
@@ -57,7 +58,7 @@ export function LessonPage(handle: Handle<{ view: LessonView }>) {
           segments={segments}
           progressLabel={`Lesson ${view.index + 1} of ${view.total}, ${done} complete`}
           modes={modes.map((m) => ({ label: modeLabels[m], href: view.href.mode(m), current: m === mode }))}
-          xp={viewer ? <LessonXp lessonKey={view.key} neurons={viewer.xp} award={award} /> : undefined}
+          xp={viewer ? <LessonXp neurons={viewer.xp} award={award} /> : undefined}
         />
         {view.draft ? (
           <p mix={draftStyle}>
@@ -71,7 +72,7 @@ export function LessonPage(handle: Handle<{ view: LessonView }>) {
           <main id="main" mix={workspaceMain}>
             <TerminalMode view={view} />
             <div mix={hasCode(content) ? undefined : soloFooter}>
-              <LessonFooter view={view} gated={gated} />
+              <LessonFooter view={view} gated={gated} issues={issues} />
             </div>
           </main>
         ) : (
@@ -81,7 +82,7 @@ export function LessonPage(handle: Handle<{ view: LessonView }>) {
               <OutlineDisclosure view={view} />
               {mode === 'watch' ? <WatchMode view={view} /> : <ReadMode view={view} />}
               <div mix={mode === 'watch' ? watchFooter : readFooter}>
-                <LessonFooter view={view} gated={gated} />
+                <LessonFooter view={view} gated={gated} issues={issues} />
               </div>
             </main>
           </div>
@@ -92,10 +93,15 @@ export function LessonPage(handle: Handle<{ view: LessonView }>) {
 }
 
 /** Prev/next lesson navigation and the gated "lesson complete" key. */
-function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean }>) {
+function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean; issues?: string[] }>) {
   return () => {
-    let { view, gated } = handle.props
+    let { view, gated, issues } = handle.props
     let { prev, next } = view
+    // Quiz answers live in the URL (GET forms); carry them into the save.
+    let fields = Object.entries(view.answers).flatMap(([quiz, keys]) =>
+      keys.map((key): [string, string] => [fieldNames.quiz(quiz), key]),
+    )
+    if (view.mode !== 'read') fields.push(['mode', view.mode])
     return (
       <nav aria-label="Lesson navigation" mix={footerStyle}>
         {prev ? (
@@ -106,8 +112,9 @@ function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean }>) {
           </Keycap>
         ) : null}
         <LessonComplete
-          lessonKey={view.key}
           gated={gated}
+          form={view.completeForm ? { ...view.completeForm, fields } : undefined}
+          issues={issues}
           passed={view.lesson.state === 'done'}
           href={next ? view.href.lesson(next.slug) : view.href.back}
           label={next ? `Next: ${next.title} →` : 'Finish the course →'}

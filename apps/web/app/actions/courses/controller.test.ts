@@ -5,7 +5,7 @@ import { disposePlatform } from '#platform'
 
 import { courses } from '../../data/fixtures.ts'
 import { routes } from '../../routes.ts'
-import { fetchAs, signIn } from '../../test/auth.ts'
+import { completeLesson, fetchAs, signIn } from '../../test/auth.ts'
 import { catalogHref, filterCourses, parseCatalogQuery, resultLabel } from './catalog.ts'
 
 let cookie: string | null = null
@@ -25,6 +25,13 @@ function count(html: string, pattern: RegExp) {
 describe('catalog and course pages', () => {
   before(async () => {
     ;({ cookie } = await signIn('catalog@example.com'))
+    // The artboards' learner: finished the LLM course, then lessons 1–5 of
+    // Tokens & temperature (none of these has a gating exercise).
+    for (let n = 1; n <= 8; n++) await completeLesson(cookie, 'what-is-an-llm', `lesson-${n}`)
+    for (let slug of ['what-is-a-token', 'tokenizers-are-weird', 'counting-tokens', 'probabilities-not-answers', 'greedy-vs-sampled']) {
+      let response = await completeLesson(cookie, 'tokens-and-temperature', slug)
+      assert.equal(response.status, 303, slug)
+    }
   })
   after(() => disposePlatform())
 
