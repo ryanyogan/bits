@@ -46,17 +46,26 @@
   ],
 
   // Non-secret config. Secrets (SESSION_SECRET,
-  // GITHUB_CLIENT_ID/SECRET, GOOGLE_CLIENT_ID/SECRET) are set with
-  // `wrangler secret put`, and locally in .dev.vars (see .dev.vars.example).
+  // GITHUB_CLIENT_ID/SECRET, GOOGLE_CLIENT_ID/SECRET, ANTHROPIC_API_KEY,
+  // CF_AIG_TOKEN) are set with `wrangler secret put`, and locally in
+  // .dev.vars (see .dev.vars.example).
   "vars": {
     "APP_ENV": "production",
     "EMAIL_FROM": "signin@bits.yogan.dev",
     "CANONICAL_ORIGIN": "https://bits.yogan.dev",
     // Hosts that redirect to CANONICAL_ORIGIN (comma-separated).
-    "LEGACY_HOSTS": "bits.ryanyogan.workers.dev"
+    "LEGACY_HOSTS": "bits.ryanyogan.workers.dev",
+    // Live prompts (decision 019): Anthropic through this AI Gateway. Runs
+    // fall back to the lesson's example output until the account id, the
+    // gateway and ANTHROPIC_API_KEY are all set.
+    "AI_GATEWAY_ACCOUNT_ID": "",
+    "AI_GATEWAY_ID": "bits",
+    // Spend guard: live model runs per UTC day, for everyone.
+    "RUN_DAILY_LIVE_CAP": "1000"
   },
 
-  // Daily housekeeping: delete expired sessions and email tokens (worker.ts).
+  // Daily housekeeping: delete expired sessions and email tokens, and
+  // signed-out prompt runs older than a week (worker.ts).
   "triggers": {
     "crons": ["17 4 * * *"]
   },

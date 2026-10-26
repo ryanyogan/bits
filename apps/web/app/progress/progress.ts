@@ -17,10 +17,12 @@ import {
 import type { RequestContext } from 'remix/router'
 import { Session } from 'remix/session'
 
+import { exercisesOf } from '../actions/courses/lesson/content.ts'
 import { getLessonContent } from '../actions/courses/lesson/fixtures.ts'
 import { currentUser } from '../auth/identity.ts'
 import { getDatabase } from '../middleware/database.ts'
 import { getLesson, type Completed } from '../data/fixtures.ts'
+import { claimRuns, journalledTemperatures } from '../runs/run.ts'
 import { badgeDefinitions, earnedBadgeIds, type BadgeDefinition } from './badges.ts'
 import { checkLesson, type CheckedLesson, type LessonSubmission } from './check.ts'
 import { addDays, localDay } from './days.ts'
@@ -81,6 +83,14 @@ export async function completeLesson(
   let found = getLesson(courseSlug, lessonSlug)
   if (!found) return undefined
   let content = getLessonContent(found.course.slug, found.lesson)
+  // "Ran at 0 and 1.0" counts journalled runs (/api/run), never form fields.
+  for (let block of exercisesOf(content)) {
+    submission.ran[block.id] = await journalledTemperatures(context, {
+      courseId: found.course.slug,
+      lessonSlug: found.lesson.slug,
+      exerciseId: block.id,
+    })
+  }
   let checked = checkLesson(found.course.slug, found.lesson.slug, content, submission)
   if (!checked.ok) return { ok: false, checked }
 
@@ -126,7 +136,6 @@ function record(db: D1DataTableDatabase, user: User, courseSlug: string, lessonS
       exerciseId: exercise.exerciseId,
       prompt: exercise.prompt,
       passed: exercise.passed,
-      temperatures: exercise.temperatures.map((t) => t / 100),
     })),
     awards: checked.awards.map((award) => ({ id: crypto.randomUUID(), ...award })),
     day,
@@ -153,10 +162,13 @@ async function awardNewBadges(db: D1DataTableDatabase, userId: string, now: numb
 
 /**
  * Moves a signed-out visitor's progress into the account they just signed
- * in to. Each lesson is re-checked against today's content and recorded on
- * the day it was done; awards are once-only, so a replay is harmless.
+ * in to. Their journalled runs join the account. Each lesson is re-checked
+ * against today's content and recorded on the day it was done; awards are
+ * once-only, so a replay is harmless. The `ran` kept in the session came
+ * from the journal when the lesson was completed (the session is server-side).
  */
 export async function mergeAnonymousProgress(db: D1DataTableDatabase, session: Session, user: User): Promise<void> {
+  await claimRuns(db, session, user.id)
   let anonymous = readAnonymous(session)
   let lessons = Object.entries(anonymous).sort((a, b) => a[1].at - b[1].at)
   if (lessons.length === 0) return

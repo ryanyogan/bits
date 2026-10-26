@@ -48,7 +48,7 @@ export default createController(routes.settings, {
       ])
       let body = {
         format: 'bits-export',
-        version: 1,
+        version: 2,
         exportedAt: new Date().toISOString(),
         account: {
           name: user.display_name,
@@ -75,8 +75,16 @@ export default createController(routes.settings, {
           lesson: row.lesson_slug,
           exercise: row.exercise_id,
           prompt: row.prompt,
-          passed: row.passed,
-          temperatures: row.temperatures,
+          // submit (Complete lesson) or a run: live, example or fallback.
+          source: row.source,
+          ...(row.source === 'submit'
+            ? { passed: row.passed }
+            : {
+                temperature: (row.temperature ?? 0) / 100,
+                output: row.output,
+                model: row.model,
+                tokens: { input: row.input_tokens, output: row.output_tokens },
+              }),
           at: new Date(row.created_at).toISOString(),
         })),
       }

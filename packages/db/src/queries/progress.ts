@@ -13,7 +13,6 @@ export interface AttemptInput {
   exerciseId: string
   prompt: string
   passed: boolean
-  temperatures: number[]
 }
 
 export interface AwardInput {
@@ -64,20 +63,10 @@ export async function recordLessonCompletion(db: D1DataTableDatabase, input: Les
       d1
         .prepare(
           `insert into exercise_attempts
-             (id, user_id, course_id, lesson_slug, exercise_id, prompt, passed, temperatures, created_at)
-           values (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             (id, user_id, course_id, lesson_slug, exercise_id, prompt, source, passed, created_at)
+           values (?, ?, ?, ?, ?, ?, 'submit', ?, ?)`,
         )
-        .bind(
-          attempt.id,
-          userId,
-          courseId,
-          lessonSlug,
-          attempt.exerciseId,
-          attempt.prompt,
-          attempt.passed ? 1 : 0,
-          JSON.stringify(attempt.temperatures),
-          now,
-        ),
+        .bind(attempt.id, userId, courseId, lessonSlug, attempt.exerciseId, attempt.prompt, attempt.passed ? 1 : 0, now),
     ),
     ...input.awards.map((award) =>
       d1
@@ -167,20 +156,17 @@ export async function listActivityDays(db: D1DataTableDatabase, userId: string, 
   return result.results
 }
 
-/** The prompt journal, newest first. */
+/** The prompt journal (runs and submissions), newest first. */
 export async function listAttempts(db: D1DataTableDatabase, userId: string, limit = 50): Promise<ExerciseAttempt[]> {
   let result = await db.d1
     .prepare(
-      `select id, user_id, course_id, lesson_slug, exercise_id, prompt, passed, temperatures, created_at
-       from exercise_attempts where user_id = ? order by created_at desc limit ?`,
+      `select id, user_id, visitor, ip_hash, course_id, lesson_slug, exercise_id, prompt, source, temperature,
+              output, model, input_tokens, output_tokens, passed, created_at
+       from exercise_attempts where user_id = ? order by created_at desc, rowid desc limit ?`,
     )
     .bind(userId, limit)
-    .all<Omit<ExerciseAttempt, 'passed' | 'temperatures'> & { passed: number; temperatures: string }>()
-  return result.results.map((row) => ({
-    ...row,
-    passed: row.passed === 1,
-    temperatures: parseNumbers(row.temperatures),
-  }))
+    .all<Omit<ExerciseAttempt, 'passed'> & { passed: number | null }>()
+  return result.results.map((row) => ({ ...row, passed: row.passed === null ? null : row.passed === 1 }))
 }
 
 export async function countAttempts(db: D1DataTableDatabase, userId: string): Promise<number> {
@@ -189,13 +175,4 @@ export async function countAttempts(db: D1DataTableDatabase, userId: string): Pr
     .bind(userId)
     .first<{ n: number }>()
   return row?.n ?? 0
-}
-
-function parseNumbers(text: string): number[] {
-  try {
-    let value: unknown = JSON.parse(text)
-    return Array.isArray(value) ? value.filter((n): n is number => typeof n === 'number') : []
-  } catch {
-    return []
-  }
 }

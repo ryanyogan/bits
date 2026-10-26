@@ -63,6 +63,7 @@ function terminalPrompt(view: LessonView, block: PromptBlock): TerminalPrompt {
     placeholder: props.placeholder,
     reward: props.reward,
     submit: props.submit,
+    run: props.run,
   }
 }
 

@@ -250,6 +250,27 @@ const stableImportMetaUrl: esbuild.Plugin = {
   },
 }
 
+/**
+ * The Anthropic SDK keeps its Node built-ins (file uploads, local tools) in
+ * `node.mjs` modules and swaps them for throwing `node.browser.mjs` shims via
+ * its package.json `browser` field. esbuild honours that map only for
+ * platform "browser", so apply it here: the Worker has no nodejs_compat, and
+ * /api/run only needs fetch and streams (decision 019).
+ */
+const anthropicNodeShims: esbuild.Plugin = {
+  name: 'anthropic-node-shims',
+  setup(build) {
+    build.onResolve({ filter: /(^|\/)node\.mjs$/ }, async (args) => {
+      if (args.pluginData === 'shimmed' || !args.importer.includes(`${path.sep}@anthropic-ai${path.sep}sdk${path.sep}`)) {
+        return undefined
+      }
+      let resolved = await build.resolve(args.path, { kind: args.kind, resolveDir: args.resolveDir, pluginData: 'shimmed' })
+      let shim = resolved.path.replace(/\.mjs$/, '.browser.mjs')
+      return (await fs.stat(shim).catch(() => null)) ? { path: shim } : resolved
+    })
+  },
+}
+
 async function buildWorker(manifest: AssetManifest) {
   let result = await esbuild.build({
     entryPoints: [path.join(appDir, 'worker.ts')],
@@ -274,7 +295,7 @@ async function buildWorker(manifest: AssetManifest) {
       __BITS_ASSET_MANIFEST__: JSON.stringify(manifest),
       'process.env.NODE_ENV': '"production"',
     },
-    plugins: [stableImportMetaUrl],
+    plugins: [stableImportMetaUrl, anthropicNodeShims],
     logLevel: 'warning',
   })
 
