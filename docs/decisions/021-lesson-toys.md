@@ -34,13 +34,18 @@ Shared rules:
   lesson frontmatter for every toy in the lesson (a block can opt out with
   `illustrative=false`). It shows an "illustrative" tag, so made-up numbers
   are never passed off as a real model's.
-- **No-JS fallback** is the island's server render: the final sentence and
-  a steps table (nexttoken), an ordered list of snapshots (training), a
-  from → to (weight) table (attention). The island switches to the
-  interactive view in its first client task.
+- **No layout shift**: the server renders the same interactive first state
+  the client starts with (attention: chips with the strongest link's token
+  picked; nexttoken: the prompt and step 1's odds; training: the first
+  snapshot, sparkline and slider), so hydration changes nothing.
+- **No-JS content** sits in a `<noscript>` inside the panel (`NoScript` in
+  `toy-panel.tsx`): the final sentence and a steps table (nexttoken), an
+  ordered list of snapshots (training), a from → to (weight) table
+  (attention). Its children render on the server only. Controls that need
+  JS (step, play, slider) hide under `@media (scripting: none)`.
 - **Motion**: nexttoken autoplays once when 60% of it is on screen; under
-  `prefers-reduced-motion` there is no Play button and no autoplay, only
-  the step buttons. All transitions and the caret switch off too.
+  `prefers-reduced-motion` the Play button is hidden in CSS and there is
+  no autoplay, only the step buttons. All transitions and the caret switch off too.
 - **Per-lesson reset**: the islands sit inside the lesson `<main
   data-rmx-key={view.key}>` (decision 020), so client navigation to
   another lesson starts them fresh.

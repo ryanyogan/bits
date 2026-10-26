@@ -2,7 +2,7 @@ import type { Handle } from 'remix/component'
 import { clientEntry, css, on, ref } from 'remix/component'
 
 import { formatOdds, showToken } from './odds-list.tsx'
-import { toyNoteStyle, ToyPanel, toyTableStyle } from './toy-panel.tsx'
+import { NoScript, toyNoteStyle, ToyPanel, toyTableStyle } from './toy-panel.tsx'
 
 export interface AttentionLink {
   /** Index of the token doing the looking. */
@@ -37,20 +37,16 @@ export function attendsTo(links: AttentionLink[], from: number): AttentionLink[]
  * focusing a token highlights the earlier tokens it attends to, tinted by
  * weight, with the weight under each chip. The chips are one tab stop with
  * roving focus (←/→, Home/End). No arcs: the chips wrap at 360px, where
- * arcs between rows stop being legible. Server render (no JS): a table of
- * from → to (weight). Client entry.
+ * arcs between rows stop being legible. The server renders the same chips
+ * with the strongest link's token picked, so hydration doesn't shift the
+ * page; without JS a `<noscript>` table lists every from → to (weight).
+ * Client entry.
  */
 export const AttentionMap = clientEntry(
   import.meta.url,
   function AttentionMap(handle: Handle<AttentionMapProps>) {
-    let live = false
     let selected = initialFrom(handle.props.links)
     let buttons: HTMLButtonElement[] = []
-
-    handle.queueTask(() => {
-      live = true
-      handle.update()
-    })
 
     function select(index: number, focus = false) {
       let count = handle.props.tokens.length
@@ -79,33 +75,6 @@ export const AttentionMap = clientEntry(
     return () => {
       let { tokens, links, caption, illustrative } = handle.props
       let header = { context: caption ?? 'who looks at whom', label: 'attention', illustrative }
-
-      if (!live) {
-        return (
-          <ToyPanel {...header}>
-            <p mix={sentenceStyle}>{tokens.join('')}</p>
-            <table mix={toyTableStyle}>
-              <caption>Attention: how much each token looks at an earlier one.</caption>
-              <thead>
-                <tr>
-                  <th scope="col">from</th>
-                  <th scope="col">to</th>
-                  <th scope="col">weight</th>
-                </tr>
-              </thead>
-              <tbody>
-                {links.map((link) => (
-                  <tr key={`${link.from}-${link.to}`}>
-                    <td data-mono>{showToken(tokens[link.from] ?? '')}</td>
-                    <td data-mono>{showToken(tokens[link.to] ?? '')}</td>
-                    <td data-mono>{link.weight.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </ToyPanel>
-        )
-      }
 
       let targets = attendsTo(links, selected)
       let weightOf = new Map(targets.map((link) => [link.to, link.weight]))
@@ -155,13 +124,33 @@ export const AttentionMap = clientEntry(
           <p aria-live="polite" mix={toyNoteStyle}>
             {summary}
           </p>
+          <NoScript>
+            <table mix={toyTableStyle}>
+              <caption>Attention: how much each token looks at an earlier one.</caption>
+              <thead>
+                <tr>
+                  <th scope="col">from</th>
+                  <th scope="col">to</th>
+                  <th scope="col">weight</th>
+                </tr>
+              </thead>
+              <tbody>
+                {links.map((link) => (
+                  <tr key={`${link.from}-${link.to}`}>
+                    <td data-mono>{showToken(tokens[link.from] ?? '')}</td>
+                    <td data-mono>{showToken(tokens[link.to] ?? '')}</td>
+                    <td data-mono>{link.weight.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </NoScript>
         </ToyPanel>
       )
     }
   },
 )
 
-const sentenceStyle = css({ margin: 0, fontSize: 'var(--fs-18)', lineHeight: 1.5, color: 'var(--text)', whiteSpace: 'pre-wrap' })
 const chipRow = css({ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-1_5)' })
 const chipStyle = css({
   position: 'relative',
@@ -184,6 +173,8 @@ const chipStyle = css({
   '&[data-state="from"]': { background: 'var(--volt-tint-on)', borderColor: 'var(--volt-a60)' },
   '&[data-state="to"]': { borderColor: 'var(--ion-a55)' },
   '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+  // Without JS the chips only show the default pick.
+  '@media (scripting: none)': { cursor: 'default' },
 })
 const heatStyle = css({
   position: 'absolute',

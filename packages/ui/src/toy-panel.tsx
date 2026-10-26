@@ -17,7 +17,7 @@ export interface ToyPanelProps {
 /**
  * The lesson-toy frame (components §10.12, the `OddsBars` panel): surface,
  * ion hairline, mono header. Used by the `:::nexttoken`, `:::training` and
- * `:::attention` islands and their no-JS fallbacks. Static.
+ * `:::attention` islands. Static.
  */
 export function ToyPanel(handle: Handle<ToyPanelProps>) {
   return () => {
@@ -36,6 +36,19 @@ export function ToyPanel(handle: Handle<ToyPanelProps>) {
     )
   }
 }
+
+/**
+ * The toys' no-JS content: the full table or list, inside `<noscript>`.
+ * The children render on the server only. With scripting on, the browser
+ * keeps `<noscript>` content as unparsed text and hydration ignores it, so
+ * the client never builds a hidden copy. Static.
+ */
+export function NoScript(handle: Handle<{ children?: RemixNode }>) {
+  return () => <noscript>{typeof document === 'undefined' ? handle.props.children : null}</noscript>
+}
+
+/** Hides a control that needs JS (play, step, slider) when scripting is off. */
+export const needsScriptStyle = css({ '@media (scripting: none)': { display: 'none' } })
 
 /** "illustrative" chip: toy numbers, not a real model's. Static. */
 export function IllustrativeTag() {

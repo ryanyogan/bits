@@ -4,7 +4,7 @@ import { clientEntry, css, on, ref } from 'remix/component'
 import { Icon } from './icon.tsx'
 import { formatOdds, OddsList, type OddsRow, showToken } from './odds-list.tsx'
 import { ToolButton } from './tool-button.tsx'
-import { toyNoteStyle, ToyPanel, toyTableStyle } from './toy-panel.tsx'
+import { needsScriptStyle, NoScript, toyNoteStyle, ToyPanel, toyTableStyle } from './toy-panel.tsx'
 
 export interface NextTokenStep {
   /** The token that was picked. */
@@ -34,6 +34,8 @@ export function promptText(prompt: string, steps: NextTokenStep[]): string {
   return /\s$/.test(prompt) || /^\s/.test(first) || !first ? prompt : `${prompt} `
 }
 
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
 // Autoplay beats: the odds show, then the pick lights up, then it lands.
 const ODDS_MS = 900
 const PICK_MS = 650
@@ -43,15 +45,15 @@ const PICK_MS = 650
  * step shows its candidate odds (the `OddsBars` look), the pick lights up
  * in volt and lands in the sentence. Play/pause, back, next and restart;
  * it starts playing when it scrolls into view, except under
- * `prefers-reduced-motion`, where there is no play button and no autoplay.
- * Server render (no JS): the final sentence and a table of the steps.
- * Client entry.
+ * `prefers-reduced-motion`, where there is no play button (hidden in CSS)
+ * and no autoplay. The server renders the same first step the client starts
+ * on (prompt, caret, step 1's odds), so hydration doesn't shift the page.
+ * Without JS the controls hide and a `<noscript>` holds the final sentence
+ * and a table of every step. Client entry.
  */
 export const NextTokenPlayer = clientEntry(
   import.meta.url,
   function NextTokenPlayer(handle: Handle<NextTokenPlayerProps>) {
-    let live = false
-    let reduced = false
     let pos = 0
     let playing = false
     // During autoplay, false until the pick lights up.
@@ -82,7 +84,7 @@ export const NextTokenPlayer = clientEntry(
     }
 
     function play() {
-      if (reduced) return
+      if (reducedMotion()) return
       if (pos >= handle.props.steps.length) pos = 0
       clearTimeout(timer)
       playing = true
@@ -108,18 +110,12 @@ export const NextTokenPlayer = clientEntry(
       handle.update()
     }
 
-    handle.queueTask(() => {
-      live = true
-      reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      handle.update()
-    })
-
     // Autoplay once, the first time most of the toy is on screen.
     let watch = ref((node, signal) => {
-      if (typeof IntersectionObserver === 'undefined' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+      if (typeof IntersectionObserver === 'undefined' || reducedMotion()) return
       let observer = new IntersectionObserver(
         (entries) => {
-          if (!live || !entries.some((entry) => entry.isIntersecting)) return
+          if (!entries.some((entry) => entry.isIntersecting)) return
           observer.disconnect()
           if (pos === 0 && !playing) play()
         },
@@ -133,38 +129,6 @@ export const NextTokenPlayer = clientEntry(
       let { prompt, steps, illustrative } = handle.props
       let total = steps.length
       let reply = steps.map((step) => step.token).join('')
-
-      if (!live) {
-        return (
-          <ToyPanel context="the reply, one token at a time" label="next-token prediction" illustrative={illustrative} mix={watch}>
-            <p mix={sentenceStyle}>
-              <span mix={promptStyle}>{promptText(prompt, steps)}</span>
-              {reply}
-            </p>
-            <table mix={toyTableStyle}>
-              <caption>Each step picks one token from the model’s odds.</caption>
-              <thead>
-                <tr>
-                  <th scope="col">step</th>
-                  <th scope="col">picked</th>
-                  <th scope="col">odds</th>
-                  <th scope="col">other candidates</th>
-                </tr>
-              </thead>
-              <tbody>
-                {steps.map((step, i) => (
-                  <tr key={i}>
-                    <td data-mono>{String(i + 1)}</td>
-                    <td data-mono>{showToken(step.token)}</td>
-                    <td data-mono>{formatOdds(step.p)}</td>
-                    <td data-mono>{step.alternatives.map(([token, p]) => `${showToken(token)} ${formatOdds(p)}`).join(' · ')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </ToyPanel>
-        )
-      }
 
       let done = pos >= total
       let step = steps[Math.min(pos, total - 1)]!
@@ -197,23 +161,43 @@ export const NextTokenPlayer = clientEntry(
               <OddsList rows={rows} label={`Candidates for step ${pos + 1}`} top={false} />
             </div>
           )}
-          <div mix={controlsStyle}>
+          <NoScript>
+            <p mix={sentenceStyle}>
+              <span mix={promptStyle}>{promptText(prompt, steps)}</span>
+              {reply}
+            </p>
+            <table mix={toyTableStyle}>
+              <caption>Each step picks one token from the model’s odds.</caption>
+              <thead>
+                <tr>
+                  <th scope="col">step</th>
+                  <th scope="col">picked</th>
+                  <th scope="col">odds</th>
+                  <th scope="col">other candidates</th>
+                </tr>
+              </thead>
+              <tbody>
+                {steps.map((step, i) => (
+                  <tr key={i}>
+                    <td data-mono>{String(i + 1)}</td>
+                    <td data-mono>{showToken(step.token)}</td>
+                    <td data-mono>{formatOdds(step.p)}</td>
+                    <td data-mono>{step.alternatives.map(([token, p]) => `${showToken(token)} ${formatOdds(p)}`).join(' · ')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </NoScript>
+          <div mix={[controlsStyle, needsScriptStyle]}>
             <ToolButton variant="video" square label="Restart" mix={on('click', restart)}>
               <span aria-hidden="true">↺</span>
             </ToolButton>
             <ToolButton variant="video" square label="Previous token" disabled={pos === 0} mix={on('click', () => go(pos - 1))}>
               <span aria-hidden="true">‹</span>
             </ToolButton>
-            {reduced ? null : (
-              <ToolButton
-                variant="video"
-                square
-                label={playing ? 'Pause' : 'Play'}
-                mix={on('click', toggle)}
-              >
-                <Icon name={playing ? 'pause' : 'play-inline'} color="var(--text)" />
-              </ToolButton>
-            )}
+            <ToolButton variant="video" square label={playing ? 'Pause' : 'Play'} mix={[playStyle, on('click', toggle)]}>
+              <Icon name={playing ? 'pause' : 'play-inline'} color="var(--text)" />
+            </ToolButton>
             <ToolButton variant="video" square label="Next token" disabled={done} mix={on('click', () => go(pos + 1))}>
               <span aria-hidden="true">›</span>
             </ToolButton>
@@ -264,6 +248,8 @@ const controlsStyle = css({
   borderTop: '1px solid var(--line-hair)',
   '& > button': { width: 'var(--touch-target)', minHeight: 'var(--touch-target)', fontSize: 'var(--fs-18)' },
 })
+// Under reduced motion there is no Play: only the step buttons.
+const playStyle = css({ '@media (prefers-reduced-motion: reduce)': { display: 'none' } })
 const statusStyle = css({
   flex: '1 1 200px',
   margin: 0,

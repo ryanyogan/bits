@@ -241,16 +241,34 @@ describe('Document', () => {
   })
 })
 
-describe('lesson toys (server render = the no-JS fallback)', () => {
-  it('NextTokenPlayer renders the final sentence and a table of steps', async () => {
+const noscript = (html: string) => html.match(/<noscript>(.*?)<\/noscript>/s)?.[1] ?? ''
+
+describe('lesson toys (server render = the interactive first state, plus <noscript>)', () => {
+  it('NextTokenPlayer renders step 1 with its controls, and the full reply in <noscript>', async () => {
     let html = await renderToString(
-      <NextTokenPlayer prompt="The capital of France is" steps={[{ token: ' Paris', p: 0.92, alternatives: [[' the', 0.03]] }]} illustrative />,
+      <NextTokenPlayer
+        prompt="The capital of France is"
+        steps={[
+          { token: ' Paris', p: 0.92, alternatives: [[' the', 0.03]] },
+          { token: '.', p: 0.7, alternatives: [[',', 0.2]] },
+        ]}
+        illustrative
+      />,
     )
-    assert.match(html, /The capital of France is<\/span> Paris/)
-    assert.match(html, /<table/)
-    assert.match(html, /␣Paris.*92%.*␣the 3\.0%/s)
     assert.match(html, /illustrative/)
-    assert.doesNotMatch(html, /<button/)
+    // Interactive first state: step 1's odds and the step controls.
+    assert.match(html, /step 1\/2 · candidates for the next token/)
+    assert.match(html, /aria-label="Candidates for step 1"/)
+    assert.match(html, /<button[^>]*aria-label="Next token"/)
+    assert.match(html, /<button[^>]*aria-label="Play"/)
+    assert.match(html, /Step 1 of 2: picks “␣Paris” at 92%/)
+    // No-JS: the final sentence and every step.
+    let fallback = noscript(html)
+    assert.match(fallback, /The capital of France is<\/span> Paris\./)
+    assert.match(fallback, /<table/)
+    assert.match(fallback, /␣Paris.*92%.*␣the 3\.0%/s)
+    assert.match(fallback, /<td[^>]*>2<\/td><td[^>]*>\.<\/td>/)
+    assert.doesNotMatch(fallback, /<button/)
   })
 
   it('stepRows sorts the pick in among its runners-up', () => {
@@ -262,7 +280,7 @@ describe('lesson toys (server render = the no-JS fallback)', () => {
     ])
   })
 
-  it('TrainingScrubber renders an ordered list of snapshots', async () => {
+  it('TrainingScrubber renders the first snapshot with the slider, and every snapshot in <noscript>', async () => {
     let html = await renderToString(
       <TrainingScrubber
         id="t"
@@ -273,17 +291,29 @@ describe('lesson toys (server render = the no-JS fallback)', () => {
         ]}
       />,
     )
-    assert.match(html, /<ol aria-label="Training snapshots"/)
-    assert.match(html, /step 5,000 · loss 2\.10/)
-    assert.doesNotMatch(html, /type="range"/)
+    // Interactive first state: snapshot 1, the sparkline and the slider.
+    assert.match(html, /model output at step 0/)
+    assert.match(html, /<input[^>]*type="range"/)
+    assert.match(html, /<svg[^>]*role="img"/)
+    assert.match(html, /<circle/)
+    let fallback = noscript(html)
+    assert.match(fallback, /<ol aria-label="Training snapshots"/)
+    assert.match(fallback, /step 5,000 · loss 2\.10/)
+    assert.doesNotMatch(fallback, /type="range"/)
     let points = sparkPoints([10, 5, 0])
     assert.ok(points[0]![1] < points[2]![1], 'higher loss draws higher')
   })
 
-  it('AttentionMap renders a from → to table', async () => {
+  it('AttentionMap renders the chips with the strongest link picked, and a from → to table in <noscript>', async () => {
     let html = await renderToString(<AttentionMap tokens={['The', ' cat', ' it']} links={[{ from: 2, to: 1, weight: 0.7 }]} />)
-    assert.match(html, /<table/)
-    assert.match(html, /␣it<\/td><td[^>]*>␣cat<\/td><td[^>]*>0\.70/)
+    // Interactive first state: chips, "it" picked, "cat" tinted.
+    assert.match(html, /role="toolbar"/)
+    assert.match(html, /<button[^>]*aria-pressed="true"[^>]*data-state="from"/)
+    assert.match(html, /aria-label="cat, attention 70%"[^>]*data-state="to"/)
+    assert.match(html, /“it” looks most at “cat” \(70%\)/)
+    let fallback = noscript(html)
+    assert.match(fallback, /<table/)
+    assert.match(fallback, /␣it<\/td><td[^>]*>␣cat<\/td><td[^>]*>0\.70/)
   })
 
   it('ComparePanel renders both sides with their labels, no JS', async () => {

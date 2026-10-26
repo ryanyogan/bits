@@ -153,6 +153,10 @@ describe('NextTokenPlayer', () => {
       />,
     )
     t.after(cleanup)
+    // The first render is already the interactive step 1 (no swap after hydration).
+    assert.ok(button(container, 'Next token'))
+    // The no-JS copy is server-only: the client leaves <noscript> empty.
+    assert.equal($('noscript')?.childNodes.length, 0)
     await act(() => tick())
     assert.match(container.textContent ?? '', /illustrative/)
     assert.match($('[aria-label="Candidates for step 1"]')?.textContent ?? '', /Paris.*92%.*the.*3\.0%/)
@@ -176,10 +180,15 @@ describe('NextTokenPlayer', () => {
     )
     t.after(cleanup)
     await act(() => tick())
-    let play = button(container, 'Play')
-    // Reduced motion hides Play; then there is nothing to autoplay.
-    if (!play) return
-    await act(() => play.click())
+    // Autoplay may already have started it (the toy is on screen).
+    let play = button(container, 'Play') ?? button(container, 'Pause')
+    assert.ok(play)
+    // Reduced motion hides Play (CSS) and play() does nothing.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      assert.equal(getComputedStyle(play).display, 'none')
+      return
+    }
+    if (play.getAttribute('aria-label') === 'Play') await act(() => play.click())
     assert.ok(button(container, 'Pause'))
     await act(() => tick(1800))
     assert.match(container.textContent ?? '', /Hi there/)
@@ -200,6 +209,8 @@ describe('TrainingScrubber', () => {
       />,
     )
     t.after(cleanup)
+    assert.ok($('#t-train'), 'the slider is there from the first render')
+    assert.equal($('noscript')?.childNodes.length, 0)
     await act(() => tick())
     let slider = $('#t-train')
     assert.ok(slider instanceof HTMLInputElement)
@@ -228,6 +239,8 @@ describe('AttentionMap', () => {
       />,
     )
     t.after(cleanup)
+    assert.equal($$('[role="toolbar"] button').length, 5, 'chips from the first render')
+    assert.equal($('noscript')?.childNodes.length, 0)
     await act(() => tick())
     let chips = () => [...$$('[role="toolbar"] button')] as HTMLButtonElement[]
     assert.equal(chips().length, 5)

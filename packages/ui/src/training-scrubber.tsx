@@ -1,7 +1,7 @@
 import type { Handle } from 'remix/component'
 import { clientEntry, css, on } from 'remix/component'
 
-import { toyNoteStyle, ToyPanel } from './toy-panel.tsx'
+import { needsScriptStyle, NoScript, toyNoteStyle, ToyPanel } from './toy-panel.tsx'
 
 export interface TrainingSnapshot {
   /** Training step. */
@@ -39,41 +39,19 @@ const formatLoss = (loss: number) => loss.toFixed(loss < 10 ? 2 : 1)
 /**
  * `:::training` (lesson toy): a scrubber over training snapshots. Each stop
  * shows what the model wrote for the prompt at that step, with a loss
- * sparkline (SVG) and the current point marked. Server render (no JS): an
- * ordered list of the snapshots. Client entry.
+ * sparkline (SVG) and the current point marked. The server renders the
+ * same first snapshot, sparkline and slider the client starts with, so
+ * hydration doesn't shift the page. Without JS the slider hides and a
+ * `<noscript>` ordered list holds every snapshot. Client entry.
  */
 export const TrainingScrubber = clientEntry(
   import.meta.url,
   function TrainingScrubber(handle: Handle<TrainingScrubberProps>) {
-    let live = false
     let index = 0
-
-    handle.queueTask(() => {
-      live = true
-      handle.update()
-    })
 
     return () => {
       let { id, prompt, snapshots, illustrative } = handle.props
       let header = { context: `prompt: “${prompt}”`, label: 'training snapshots', illustrative }
-
-      if (!live) {
-        return (
-          <ToyPanel {...header}>
-            <ol aria-label="Training snapshots" mix={listStyle}>
-              {snapshots.map((snap) => (
-                <li key={snap.step} mix={itemStyle}>
-                  <span mix={metaStyle}>{`step ${formatStep(snap.step)} · loss ${formatLoss(snap.loss)}`}</span>
-                  <span mix={outputStyle}>
-                    <span mix={promptStyle}>{prompt}</span>
-                    {snap.text}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </ToyPanel>
-        )
-      }
 
       let at = Math.min(index, snapshots.length - 1)
       let snap = snapshots[at]!
@@ -105,7 +83,7 @@ export const TrainingScrubber = clientEntry(
               <span>{formatLoss(snap.loss)}</span>
             </p>
           </div>
-          <div mix={sliderRow}>
+          <div mix={[sliderRow, needsScriptStyle]}>
             <label for={id} mix={sliderLabel}>
               training step
             </label>
@@ -129,7 +107,23 @@ export const TrainingScrubber = clientEntry(
               {formatStep(snap.step)}
             </output>
           </div>
-          <p mix={toyNoteStyle}>Lower loss means the model’s guesses for the next token got better. Drag to watch it learn.</p>
+          <p mix={toyNoteStyle}>
+            Lower loss means the model’s guesses for the next token got better.
+            <span mix={needsScriptStyle}> Drag to watch it learn.</span>
+          </p>
+          <NoScript>
+            <ol aria-label="Training snapshots" mix={listStyle}>
+              {snapshots.map((s) => (
+                <li key={s.step} mix={itemStyle}>
+                  <span mix={metaStyle}>{`step ${formatStep(s.step)} · loss ${formatLoss(s.loss)}`}</span>
+                  <span mix={outputStyle}>
+                    <span mix={promptStyle}>{prompt}</span>
+                    {s.text}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </NoScript>
         </ToyPanel>
       )
     }
