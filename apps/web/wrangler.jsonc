@@ -11,6 +11,10 @@
   "compatibility_date": "2026-10-19",
   "workers_dev": true,
   "preview_urls": true,
+  // The public address. Cloudflare creates the DNS record and certificate
+  // (yogan.dev is a zone on this account). The workers.dev host stays on
+  // for version previews and 301s to here (worker.ts, LEGACY_HOSTS).
+  "routes": [{ "pattern": "bits.yogan.dev", "custom_domain": true }],
 
   // Fingerprinted browser modules, CSS and fonts compiled ahead of time by
   // scripts/build.ts, plus apps/web/public. Requests that match a file are
@@ -46,7 +50,10 @@
   // `wrangler secret put`, and locally in .dev.vars (see .dev.vars.example).
   "vars": {
     "APP_ENV": "production",
-    "EMAIL_FROM": "signin@bits.yogan.dev"
+    "EMAIL_FROM": "signin@bits.yogan.dev",
+    "CANONICAL_ORIGIN": "https://bits.yogan.dev",
+    // Hosts that redirect to CANONICAL_ORIGIN (comma-separated).
+    "LEGACY_HOSTS": "bits.ryanyogan.workers.dev"
   },
 
   // Daily housekeeping: delete expired sessions and email tokens (worker.ts).

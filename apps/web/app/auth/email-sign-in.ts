@@ -33,7 +33,7 @@ export interface EmailRequest {
   next: string | null
   /** Client IP (CF-Connecting-IP); null in local development. */
   ip: string | null
-  /** Origin for the magic link, e.g. https://bits.ryanyogan.workers.dev. */
+  /** Origin for the magic link, e.g. https://bits.yogan.dev. */
   origin: string
 }
 

@@ -21,7 +21,7 @@ pnpm test                 # all packages (remix test; db tests run real D1 in Mi
 pnpm typecheck            # all packages
 pnpm build                # apps/web/build: client assets + Worker bundle
 pnpm preview              # build, then run the real Worker under wrangler dev
-pnpm deploy               # build, then wrangler deploy → https://bits.ryanyogan.workers.dev
+pnpm deploy               # build, then wrangler deploy → https://bits.yogan.dev (workers.dev 301s there)
 pnpm db:migrate:local     # wrangler d1 migrations apply (local state shared by dev and preview)
 pnpm db:migrate:remote
 pnpm db:seed:local        # demo user demo@bits.local / @demo

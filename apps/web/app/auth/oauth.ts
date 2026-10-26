@@ -2,8 +2,8 @@
 // with PKCE and state; the transaction lives in the session).
 //
 // Providers are created once per origin and cached, so the callback URL
-// always matches the host the browser is on (localhost in development, the
-// workers.dev host in production). Each OAuth app must register that URL.
+// always matches the host the browser is on (localhost in development,
+// bits.yogan.dev in production). Each OAuth app must register that URL.
 import type { OAuthProvider as OAuthProviderName } from '@bits/db'
 import {
   createGitHubAuthProvider,

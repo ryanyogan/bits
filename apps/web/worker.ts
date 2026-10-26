@@ -9,8 +9,21 @@ import { platform } from '#platform'
 
 import { router } from './app/router.ts'
 
+// One public address, so sessions and magic links don't split across hosts.
+const legacyHosts = new Set(
+  (platform.env.LEGACY_HOSTS ?? '')
+    .split(',')
+    .map((host) => host.trim())
+    .filter(Boolean),
+)
+
 export default {
   async fetch(request: Request): Promise<Response> {
+    let url = new URL(request.url)
+    let canonical = platform.env.CANONICAL_ORIGIN
+    if (canonical && legacyHosts.has(url.host)) {
+      return Response.redirect(new URL(url.pathname + url.search, canonical).href, 301)
+    }
     try {
       return await router.fetch(request)
     } catch (error) {
