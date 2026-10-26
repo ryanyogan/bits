@@ -58,7 +58,7 @@
     // Live prompts (decision 019): Anthropic through this AI Gateway. Runs
     // fall back to the lesson's example output until the account id, the
     // gateway and ANTHROPIC_API_KEY are all set.
-    "AI_GATEWAY_ACCOUNT_ID": "",
+    "AI_GATEWAY_ACCOUNT_ID": "8ad084035b854467eb9d93ae3363d40b",
     "AI_GATEWAY_ID": "bits",
     // Spend guard: live model runs per UTC day, for everyone.
     "RUN_DAILY_LIVE_CAP": "1000"
