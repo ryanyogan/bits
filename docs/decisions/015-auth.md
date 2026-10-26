@@ -22,7 +22,9 @@ for mail.
   `last_seen_at`. The storage never adopts an unknown id: a forged or stale
   cookie starts a new session (no fixation). `completeAuth` rotates the id
   at sign-in and keeps the data. A signed-in session renews itself once a
-  day (`seenAt`).
+  day (`seenAt`). A session read from D1 is saved with `UPDATE`; only new
+  ids are inserted. A row deleted mid-request (sign out everywhere) is never
+  written back.
 - **Identity is `remix/middleware/auth`.** `loadAuth(db)` is a session
   scheme, and `context.auth.identity` is the D1 user. Use
   `requireUser()` (from `app/auth/identity.ts`) as controller middleware;
@@ -33,7 +35,9 @@ for mail.
   and `code_hash = sha256("code:" + token_hash + ":" + code)`, a 15-minute
   TTL, the sign-up answers (`signup` JSON) and `next`. Tokens are spent
   atomically with `UPDATE … WHERE used_at IS NULL … RETURNING`. A code
-  locks after 5 wrong tries (the link still works). Limits: 3 emails per
+  locks after 5 tries (the link still works). Each try is counted in the
+  same `UPDATE … RETURNING` that selects the candidate tokens, before the
+  code is compared, so parallel guesses can't exceed the limit. Limits: 3 emails per
   address per 10 minutes, 20 per IP per hour (`ip_hash`). Unknown emails
   create the account when verified: there are no passwords and no
   "user not found" leak.

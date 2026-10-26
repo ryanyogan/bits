@@ -4,7 +4,7 @@
 // SESSION_SECRET. D1 keys the row by the SHA-256 of that id, so a database
 // leak cannot replay a session. Rows are written only when the session
 // changes: an anonymous visitor who never signs in costs no writes.
-import { deleteSession, readSession, saveSession, type D1DataTableDatabase } from '@bits/db'
+import { deleteSession, insertSession, readSession, updateSession, type D1DataTableDatabase } from '@bits/db'
 import { createCookie } from 'remix/cookie'
 import { session as sessionMiddleware } from 'remix/middleware/session'
 import { createSession, type Session, type SessionStorage } from 'remix/session'
@@ -52,13 +52,19 @@ export const sessionCookie = createCookie('__Host-session', {
 
 /** remix/session storage backed by the D1 `sessions` table. */
 export function createD1SessionStorage(db: D1DataTableDatabase): SessionStorage {
+  // The id each session was read from D1 under. Saving a session with that id
+  // updates its row; any other id (fresh, or rotated at sign-in) is inserted.
+  let loadedIds = new WeakMap<Session, string>()
+
   return {
     async read(cookie) {
       if (cookie) {
         let row = await readSession(db, await sha256Hex(cookie), Date.now())
         if (row) {
           try {
-            return createSession(cookie, JSON.parse(row.data))
+            let session = createSession(cookie, JSON.parse(row.data))
+            loadedIds.set(session, cookie)
+            return session
           } catch {
             // Corrupt row: fall through to a fresh session.
           }
@@ -77,14 +83,21 @@ export function createD1SessionStorage(db: D1DataTableDatabase): SessionStorage 
       if (!session.dirty) return null
       let now = Date.now()
       let record = readUserRecord(session)
-      await saveSession(db, {
+      let input = {
         idHash: await sha256Hex(session.id),
         userId: record?.userId ?? null,
         data: JSON.stringify(session.data),
         userAgent: record?.ua ?? null,
         expiresAt: now + SESSION_MAX_AGE_SECONDS * 1000,
         now,
-      })
+      }
+      if (loadedIds.get(session) !== session.id) {
+        await insertSession(db, input)
+      } else if (!(await updateSession(db, input))) {
+        // Signed out (e.g. "sign out everywhere") while this request ran:
+        // don't bring the row back; clear the cookie instead.
+        return ''
+      }
       return session.id
     },
   }

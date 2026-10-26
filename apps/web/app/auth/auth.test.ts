@@ -1,4 +1,4 @@
-import { findUserByEmail, findUserById } from '@bits/db'
+import { deleteUserSessions, findUserByEmail, findUserById } from '@bits/db'
 import * as assert from 'remix/assert'
 import { after, describe, it } from 'remix/test'
 
@@ -6,7 +6,9 @@ import { disposePlatform } from '#platform'
 
 import { routes } from '../routes.ts'
 import { fetchAs, form, requestCode, sessionCookieFrom, signIn, testDb, testIp } from '../test/auth.ts'
+import { safeNextPath } from '../actions/login/schema.ts'
 import { sha256Hex } from './crypto.ts'
+import { createD1SessionStorage, sessionCookie } from './session.ts'
 import { userForOAuth } from './users.ts'
 
 const verify = (fields: Record<string, string>, cookie: string | null = null) =>
@@ -238,5 +240,40 @@ describe('auth', () => {
       other,
     )
     assert.deepEqual(steal, { ok: false, reason: 'taken' })
+  })
+  it('parallel code guesses still stop at 5 per token', async () => {
+    let { code } = await requestCode('race@example.com')
+    let wrong = code === '000000' ? '111111' : '000000'
+    let responses = await Promise.all(
+      Array.from({ length: 12 }, () => verify({ email: 'race@example.com', code: wrong })),
+    )
+    assert.ok(responses.every((response) => response.status === 422))
+    let row = await testDb.d1
+      .prepare('select attempts from email_tokens where email = ?')
+      .bind('race@example.com')
+      .first<{ attempts: number }>()
+    assert.equal(row!.attempts, 5)
+    assert.equal((await verify({ email: 'race@example.com', code })).status, 422)
+  })
+
+  it('a session signed out mid-request is not written back', async () => {
+    let { cookie, user } = await signIn('revoked@example.com')
+    let storage = createD1SessionStorage(testDb)
+    // remix/middleware/session wraps the id with its expiry.
+    let id = (JSON.parse(await sessionCookie.parse(cookie)) as { value: string }).value
+    let session = await storage.read(id)
+    assert.equal(session.id, id)
+    await deleteUserSessions(testDb, user.id)
+    session.set('touched', Date.now())
+    assert.equal(await storage.save(session), '')
+    let rows = await testDb.d1.prepare('select count(*) as n from sessions where user_id = ?').bind(user.id).first<{ n: number }>()
+    assert.equal(rows!.n, 0)
+  })
+
+  it('next= accepts only same-origin paths', () => {
+    assert.equal(safeNextPath('/courses?track=agents#top'), '/courses?track=agents#top')
+    for (let bad of ['//evil.example', '/\\evil.example', '/\t/evil.example', '/\n/evil.example', 'https://evil.example', 'evil', '']) {
+      assert.equal(safeNextPath(bad), undefined, JSON.stringify(bad))
+    }
   })
 })

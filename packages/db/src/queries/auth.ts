@@ -37,21 +37,35 @@ export interface SaveSessionInput {
   now: number
 }
 
-/** Inserts or replaces a session row, keeping its created_at and user agent. */
-export async function saveSession(db: D1DataTableDatabase, input: SaveSessionInput): Promise<void> {
+/** Inserts the row for a new session id. */
+export async function insertSession(db: D1DataTableDatabase, input: SaveSessionInput): Promise<void> {
   await db.d1
     .prepare(
       `insert into sessions (id, user_id, data, user_agent, expires_at, created_at, last_seen_at)
-       values (?1, ?2, ?3, ?4, ?5, ?6, ?6)
-       on conflict (id) do update set
-         user_id = excluded.user_id,
-         data = excluded.data,
-         user_agent = coalesce(excluded.user_agent, sessions.user_agent),
-         expires_at = excluded.expires_at,
-         last_seen_at = excluded.last_seen_at`,
+       values (?1, ?2, ?3, ?4, ?5, ?6, ?6)`,
     )
     .bind(input.idHash, input.userId, input.data, input.userAgent, input.expiresAt, input.now)
     .run()
+}
+
+/**
+ * Updates an existing session row. Returns false when the row is gone: it was
+ * signed out (or expired) while this request ran, and must not come back.
+ */
+export async function updateSession(db: D1DataTableDatabase, input: SaveSessionInput): Promise<boolean> {
+  let result = await db.d1
+    .prepare(
+      `update sessions set
+         user_id = ?2,
+         data = ?3,
+         user_agent = coalesce(?4, user_agent),
+         expires_at = ?5,
+         last_seen_at = ?6
+       where id = ?1`,
+    )
+    .bind(input.idHash, input.userId, input.data, input.userAgent, input.expiresAt, input.now)
+    .run()
+  return (result.meta.changes ?? 0) > 0
 }
 
 export async function deleteSession(db: D1DataTableDatabase, idHash: string): Promise<void> {
@@ -159,10 +173,13 @@ export interface OpenEmailToken {
 }
 
 /**
- * Unused, unexpired tokens for an email that still have code attempts left,
- * newest first. A learner who asked twice can type the code from either email.
+ * Spends one code attempt on each open token for an email (the newest three:
+ * a learner who asked twice can type the code from either email) and returns
+ * those tokens with their new attempt counts. The attempt is counted before
+ * the code is compared, in one statement, so parallel guesses can't exceed
+ * `maxAttempts` per token.
  */
-export async function listOpenEmailTokens(
+export async function reserveCodeAttempts(
   db: D1DataTableDatabase,
   email: string,
   now: number,
@@ -170,23 +187,17 @@ export async function listOpenEmailTokens(
 ): Promise<OpenEmailToken[]> {
   let result = await db.d1
     .prepare(
-      `select token_hash, code_hash, email, attempts, next_path, signup from email_tokens
-       where email = ? and used_at is null and expires_at > ? and attempts < ?
-       order by created_at desc limit 3`,
+      `update email_tokens set attempts = attempts + 1
+       where attempts < ?3 and token_hash in (
+         select token_hash from email_tokens
+         where email = ?1 and used_at is null and expires_at > ?2 and attempts < ?3
+         order by created_at desc limit 3
+       )
+       returning token_hash, code_hash, email, attempts, next_path, signup`,
     )
     .bind(email, now, maxAttempts)
     .all<OpenEmailToken>()
   return result.results
-}
-
-/** Counts one wrong code against each token the learner could have meant. */
-export async function bumpEmailTokenAttempts(db: D1DataTableDatabase, tokenHashes: string[]): Promise<void> {
-  if (tokenHashes.length === 0) return
-  await db.batch(
-    tokenHashes.map((hash) =>
-      db.d1.prepare('update email_tokens set attempts = attempts + 1 where token_hash = ?').bind(hash),
-    ),
-  )
 }
 
 /**

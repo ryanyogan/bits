@@ -3,12 +3,11 @@
 // single use; the code allows 5 attempts. Requests are limited to 3 per email
 // per 10 minutes and 20 per IP per hour, counted from the email_tokens rows.
 import {
-  bumpEmailTokenAttempts,
   consumeEmailToken,
   countEmailTokensForEmail,
   countEmailTokensForIp,
   insertEmailToken,
-  listOpenEmailTokens,
+  reserveCodeAttempts,
   peekEmailToken,
   type D1DataTableDatabase,
   type OpenEmailToken,
@@ -94,7 +93,7 @@ export type CodeResult = { ok: true; token: OpenEmailToken } | { ok: false; reas
  */
 export async function redeemCode(db: D1DataTableDatabase, email: string, code: string): Promise<CodeResult> {
   let now = Date.now()
-  let open = await listOpenEmailTokens(db, email, now, MAX_CODE_ATTEMPTS)
+  let open = await reserveCodeAttempts(db, email, now, MAX_CODE_ATTEMPTS)
   if (open.length === 0) return { ok: false, reason: 'expired' }
 
   for (let candidate of open) {
@@ -104,11 +103,7 @@ export async function redeemCode(db: D1DataTableDatabase, email: string, code: s
     }
   }
 
-  await bumpEmailTokenAttempts(
-    db,
-    open.map((candidate) => candidate.token_hash),
-  )
-  let attemptsLeft = Math.max(...open.map((candidate) => MAX_CODE_ATTEMPTS - candidate.attempts - 1))
+  let attemptsLeft = Math.max(...open.map((candidate) => MAX_CODE_ATTEMPTS - candidate.attempts))
   return { ok: false, reason: attemptsLeft > 0 ? 'wrong' : 'expired' }
 }
 
