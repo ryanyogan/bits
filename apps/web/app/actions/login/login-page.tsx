@@ -81,6 +81,6 @@ const formStyle = css({
   marginTop: 'var(--space-4)',
 })
 
-const alertStyle = css({ color: 'var(--synapse)' })
+const alertStyle = css({ color: 'var(--danger)' })
 
 const switchStyle = css({ color: 'var(--muted)', fontSize: 'var(--type-ui-size)' })

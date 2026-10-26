@@ -86,7 +86,7 @@ const signInStyle = css({
   alignItems: 'center',
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-2)',
-  color: 'var(--text-nav)',
+  color: 'var(--text-lead)',
   textDecoration: 'none',
   fontSize: 'var(--type-ui-size)',
   '&:hover': { color: 'var(--text)' },

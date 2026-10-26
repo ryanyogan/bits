@@ -52,6 +52,16 @@ describe('router smoke test', () => {
     })
   }
 
+  it('GET /styleguide renders the design system, noindex', async () => {
+    let response = await request(routes.styleguide.index.href())
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('X-Robots-Tag'), 'noindex')
+    let html = await response.text()
+    assert.match(html, /<meta name="robots" content="noindex"/)
+    assert.match(html, /Ink, Volt &amp; Ion\./)
+    assert.match(html, /bits \/ system/)
+  })
+
   it('GET /health reports ok', async () => {
     let response = await request(routes.health.href())
     assert.equal(response.status, 200)

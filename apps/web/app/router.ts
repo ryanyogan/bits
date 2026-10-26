@@ -21,6 +21,7 @@ import logoutController from './actions/logout/controller.tsx'
 import meController from './actions/me/controller.tsx'
 import profileController from './actions/profile/controller.tsx'
 import settingsController from './actions/settings/controller.tsx'
+import styleguideController from './actions/styleguide/controller.tsx'
 import webhooksController from './actions/webhooks/controller.tsx'
 import { loadDatabase } from './middleware/database.ts'
 import { routes } from './routes.ts'
@@ -54,6 +55,7 @@ router.map(routes.logout, logoutController)
 router.map(routes.me, meController)
 router.map(routes.profile, profileController)
 router.map(routes.settings, settingsController)
+router.map(routes.styleguide, styleguideController)
 router.map(routes.author, authorController)
 router.map(routes.author.course, authorCourseController)
 router.map(routes.api, apiController)

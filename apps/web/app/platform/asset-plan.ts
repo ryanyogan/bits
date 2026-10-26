@@ -33,7 +33,8 @@ export const assetAccess = {
     `${rel(path.join(appDir, 'app'))}/**/public/**`,
     `${rel(uiSourceDir)}/**`,
   ],
-  allowPackages: ['remix'],
+  // @remix-run/ui: headless primitives used by @bits/ui islands (decision 010).
+  allowPackages: ['remix', '@remix-run/ui'],
   denyFiles: ['**/*.test.*', `${rel(uiSourceDir)}/assets.ts`],
   files: { extensions: ['.woff2', '.svg', '.png', '.webp'] },
 }

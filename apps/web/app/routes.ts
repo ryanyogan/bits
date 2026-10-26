@@ -56,6 +56,11 @@ export const routes = route({
     index: get('/'), // actions/settings/controller.tsx
   }),
 
+  // Design-system style guide (noindex; available in production for review).
+  styleguide: route('/styleguide', {
+    index: get('/'), // actions/styleguide/controller.tsx
+  }),
+
   author: route('/author', {
     index: get('/'), // actions/author/controller.tsx
     course: route('/:course', {

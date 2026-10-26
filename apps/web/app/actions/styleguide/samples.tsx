@@ -1,0 +1,210 @@
+import { css } from 'remix/component'
+import type { CodeFile, CodeSegment } from '@bits/ui/code-editor'
+import type { TerminalEntry, TerminalPart } from '@bits/ui/terminal'
+
+export const swatches = [
+  { name: 'Ink', token: '--ink', hex: '#07080D', use: 'Page ground. Never pure black.' },
+  { name: 'Surface', token: '--surface', hex: '#0E1018', use: 'Cards, panels, inputs.' },
+  { name: 'Raised', token: '--raised', hex: '#151826', use: 'Dark keycaps, selected tabs.' },
+  { name: 'Text', token: '--text', hex: '#ECEEF5', use: 'Headlines and primary copy.' },
+  { name: 'Muted', token: '--muted', hex: '#9AA0B4', use: 'Body secondary, descriptions.' },
+  { name: 'Dim', token: '--dim', hex: '#7A8098', use: 'Hints and meta. Smallest allowed grey (4.9:1).' },
+  { name: 'Volt', token: '--volt', hex: '#C6FF3D', use: 'Primary action, your turn, success. Text on it is Ink.' },
+  { name: 'Volt edge', token: '--volt-edge', hex: '#6E9116', use: 'Keycap shadow under Volt only.' },
+  { name: 'Ion', token: '--ion', hex: '#3DE3FF', use: 'Model output, in-progress, video.' },
+  { name: 'Synapse', token: '--synapse', hex: '#9D85FF', use: '3D field and Tools track only.' },
+]
+
+export const extendedSwatches = [
+  { name: 'Well', token: '--well', hex: '#0A0C14', use: 'Inputs, composer, editor body, cover base.' },
+  { name: 'Terminal', token: '--terminal', hex: '#090A10', use: 'Terminal lesson and output panels.' },
+  { name: 'Selected', token: '--selected', hex: '#1C2030', use: 'Selected tab; disabled keycap face.' },
+  { name: 'Bubble', token: '--bubble', hex: '#1A1E2D', use: 'Learner bubble.' },
+  { name: 'Text body', token: '--text-body', hex: '#D5D8E3', use: 'Lesson body copy, labels.' },
+  { name: 'Text quiet', token: '--text-quiet', hex: '#C6CAD6', use: 'Mono values, unselected filters.' },
+  { name: 'Text lead', token: '--text-lead', hex: '#B4B9CA', use: 'Lead paragraphs, marketing nav, chips.' },
+  { name: 'On volt', token: '--on-volt', hex: '#0A0C05', use: 'Text and icons on volt fills.' },
+  { name: 'Volt hover', token: '--volt-hover', hex: '#D4FF66', use: 'Primary keycap hover face.' },
+  { name: 'Volt soft', token: '--volt-soft', hex: '#E4FF9E', use: 'Text on volt tints.' },
+  { name: 'Ion edge', token: '--ion-edge', hex: '#1A8FA3', use: 'Edge under the “Copied ✓” key.' },
+  { name: 'Synapse soft', token: '--synapse-soft', hex: '#B9A6FF', use: 'Syntax keywords.' },
+  { name: 'Warn', token: '--warn', hex: '#FFD08A', use: 'Warnings, wrong quiz answer.' },
+  { name: 'Danger', token: '--danger', hex: '#FF7A6B', use: 'Errors, delete (provisional, resolutions §1).' },
+  { name: 'Key dark edge', token: '--key-dark-edge', hex: '#020305', use: 'Edge under dark keycaps.' },
+]
+
+const display = css({
+  fontFamily: 'var(--font-display)',
+  fontWeight: 800,
+  fontSize: 'clamp(46px, 8.4vw, 88px)',
+  lineHeight: 0.95,
+  letterSpacing: 'var(--tracking-display)',
+})
+const h2 = css({
+  fontFamily: 'var(--font-display)',
+  fontWeight: 700,
+  fontSize: 'clamp(30px, 6vw, 52px)',
+  lineHeight: 1.02,
+  letterSpacing: '-0.035em',
+})
+const h3 = css({ fontFamily: 'var(--font-display)', fontWeight: 500, fontSize: 'var(--fs-22)', letterSpacing: 'var(--tracking-title)' })
+const body = css({ maxWidth: '68ch', fontSize: 'var(--fs-17)', lineHeight: 1.7, color: 'var(--text-body)' })
+const mono = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-15)', lineHeight: 1.75 })
+const volt = css({ color: 'var(--volt)' })
+const eyebrow = css({
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-13)',
+  letterSpacing: 'var(--tracking-eyebrow)',
+  textTransform: 'uppercase',
+  color: 'var(--ion)',
+})
+
+export const typeRows = [
+  { label: 'display-xl · Unbounded 800 · clamp(46–124) · −0.045em', sample: <span mix={display}>Learn AI</span> },
+  { label: 'h2 · Unbounded 700 · 64 / 1.02 · −0.035em', sample: <span mix={h2}>Every lesson is a conversation.</span> },
+  { label: 'h3 / card title · Unbounded 500 · 22 / 1.15 · −0.02em', sample: <span mix={h3}>Give your model tools</span> },
+  {
+    label: 'body / lesson · Geist 400 · 17 / 1.7 · max 68ch',
+    sample: (
+      <p mix={[body, css({ margin: 0 })]}>
+        A model never sees your sentence. It sees a list of numbers, one per token, and guesses which number should come
+        next — then does it again.
+      </p>
+    ),
+  },
+  {
+    label: 'mono / input + code · Geist Mono 400 · 15 / 1.75',
+    sample: (
+      <span mix={mono}>
+        <span mix={volt}>›</span> You are a pirate. Answer in exactly 3 bullet points.
+      </span>
+    ),
+  },
+  { label: 'eyebrow · Geist Mono 500 · 12–13 · +0.14em · caps', sample: <span mix={eyebrow}>02 — How it works</span> },
+]
+
+// ---- Code editor sample (agent.ts) ---------------------------------------
+
+const k = (t: string): CodeSegment => ['keyword', t]
+const s = (t: string): CodeSegment => ['string', t]
+const ty = (t: string): CodeSegment => ['type', t]
+const f = (t: string): CodeSegment => ['function', t]
+const p = (t: string): CodeSegment => ['punct', t]
+const c = (t: string): CodeSegment => ['comment', t]
+const n = (t: string): CodeSegment => ['number', t]
+
+export const agentFile: CodeFile = {
+  name: 'agent.ts',
+  badge: 'TS',
+  badgeTone: 'ion',
+  language: 'TypeScript',
+  lines: [
+    [k('import'), p(' Anthropic '), k('from'), p(' '), s('"@anthropic-ai/sdk"'), p(';')],
+    [k('import'), p(' { '), f('getWeather'), p(' } '), k('from'), p(' '), s('"./tools"'), p(';')],
+    [],
+    [k('const'), p(' client = '), k('new'), p(' '), ty('Anthropic'), p('();')],
+    [c('// The loop: ask, run tools, feed results back, repeat.')],
+    [k('export async function'), p(' '), f('run'), p('(prompt: '), ty('string'), p(') {')],
+    [p('  '), k('const'), p(' messages = [{ role: '), s('"user"'), p(', content: prompt }];')],
+    [p('  '), k('for'), p(' ('), k('let'), p(' turn = '), n('0'), p('; turn < '), n('5'), p('; turn++) {')],
+    [p('    '), k('const'), p(' res = '), k('await'), p(' client.messages.'), f('create'), p('({ messages });')],
+    [p('    '), k('if'), p(' (res.stop_reason !== '), s('"tool_use"'), p(') '), k('return'), p(' res;')],
+    [p('    '), k('const'), p(' result = '), k('await'), p(' '), f('getWeather'), p('(res);')],
+    [p('    messages.'), f('push'), p('({ role: '), s('"user"'), p(', content: result });')],
+    [p('  }')],
+    [p('}')],
+  ],
+}
+
+export const toolsFile: CodeFile = {
+  name: 'tools.ts',
+  badge: 'TS',
+  badgeTone: 'ion',
+  language: 'TypeScript',
+  lines: [
+    [k('export async function'), p(' '), f('getWeather'), p('(res: '), ty('unknown'), p(') {')],
+    [p('  '), k('return'), p(' { type: '), s('"tool_result"'), p(', temp: '), n('21'), p(' };')],
+    [p('}')],
+  ],
+}
+
+export const readmeFile: CodeFile = {
+  name: 'README.md',
+  badge: '#',
+  badgeTone: 'muted',
+  language: 'Markdown',
+  lines: [[p('# First agent loop')], [], [p('Run '), s('npx tsx agent.ts "Weather in Chicago?"'), p('.')]],
+}
+
+// ---- Terminal sample -----------------------------------------------------
+
+const out = (...parts: TerminalPart[]) => parts
+
+export const terminalEntries: TerminalEntry[] = [
+  { kind: 'learner', text: 'why does the loop stop?' },
+  {
+    kind: 'tutor',
+    body: (
+      <>
+        It stops when the model answers with <code>"end_turn"</code> instead of <code>"tool_use"</code>. Look at{' '}
+        <mark>line 10</mark>.
+      </>
+    ),
+    pointer: (
+      <>
+        ↳ highlighted <strong>agent.ts</strong> lines 6–13
+      </>
+    ),
+  },
+  {
+    kind: 'command',
+    command: 'npx tsx agent.ts "Weather in Chicago?"',
+    output: [
+      out(['ion', '→ tool_use   '], ['quiet', 'get_weather({ city: "Chicago" })']),
+      out(['volt', '← tool_result'], ['quiet', ' { temp: 21 }']),
+      out(['ion', '→ end_turn   '], ['text', '“It’s 21° in Chicago.”']),
+    ],
+    summary: '✓ 2 turns · 1 tool call · 1.8s',
+  },
+]
+
+export const outputLines: TerminalPart[][] = [
+  [['ion', 'turn 1 '], ['quiet', 'stop_reason='], ['volt', '"tool_use"'], ['quiet', ' → get_weather']],
+  [['ion', 'turn 2 '], ['quiet', 'stop_reason='], ['volt', '"end_turn"']],
+  [['text', 'It’s 21° and clear in Chicago.']],
+]
+
+export const chapters = [
+  { title: 'Ranked candidates', start: 0 },
+  { title: 'Sharpening the odds', start: 54 },
+  { title: 'Flattening them', start: 135 },
+  { title: 'Picking a setting', start: 189 },
+]
+
+export const cues = [
+  { start: 0, text: 'So the model has a ranked list of candidates for the next token…' },
+  {
+    start: 100,
+    text: 'Temperature divides every score before they become probabilities. Divide by a small number and the gaps get huge.',
+  },
+  { start: 150, text: 'Divide by a big number and everything starts to look the same…' },
+]
+
+export const tokens: [string, string][] = [
+  ['Un', '1844'],
+  ['believ', '31141'],
+  ['ably', '2915'],
+  [',', '11'],
+  [' the', '279'],
+  [' cat', '8415'],
+  [' fetched', '42118'],
+  ['.', '13'],
+]
+
+export const oddsCandidates: [string, number][] = [
+  [' Brew', 3.1],
+  [' One', 2.4],
+  [' Lunar', 1.9],
+  [' Fly', 1.2],
+  [' Zero', 0.6],
+]
