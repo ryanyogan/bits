@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Latent — learn AI by typing to it</title>
+<script src="./support.js"></script>
+<script src="/_blob/37b9a4f22eee5ecb953ef7e3f03a5e1c"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;700;800&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07080D}
+a{color:#C6FF3D}a:hover{color:#E2FF8F}
+.key{transition:transform .12s ease, box-shadow .12s ease, filter .12s ease}
+.key:hover{transform:translateY(-1px);filter:brightness(1.06)}
+.key:active{transform:translateY(3px);box-shadow:0 1px 0 #6E9116 !important}
+.key-dark:active{transform:translateY(3px);box-shadow:0 1px 0 #020305 !important}
+.navlink{color:#B4B9CA !important;text-decoration:none;transition:color .15s}
+.navlink:hover{color:#ECEEF5 !important}
+.chip-link{transition:border-color .15s, color .15s, background .15s}
+.chip-link:hover{border-color:rgba(198,255,61,.55) !important;color:#ECEEF5 !important;background:rgba(198,255,61,.06) !important}
+.card-lift{transition:transform .25s ease, border-color .25s ease}
+.card-lift:hover{transform:translateY(-4px);border-color:rgba(198,255,61,.35) !important}
+.caret{animation:blink 1.05s steps(1) infinite}
+.pulse{animation:pulse 2s ease-in-out infinite}
+.scrollcue{animation:cue 2.4s ease-in-out infinite}
+.prompt-input::placeholder{color:#7A8098}
+.prompt-input:focus{outline:none}
+.prompt-bar:focus-within{border-color:rgba(198,255,61,.6) !important;box-shadow:0 0 0 4px rgba(198,255,61,.12), 0 30px 80px rgba(0,0,0,.5) !important}
+@keyframes blink{0%{opacity:1}50%{opacity:0}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(198,255,61,.55)}50%{box-shadow:0 0 0 6px rgba(198,255,61,0)}}
+@keyframes cue{0%{transform:scaleY(0);transform-origin:top}45%{transform:scaleY(1);transform-origin:top}55%{transform:scaleY(1);transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+@media (max-width:820px){.hud{display:none !important}.trace{display:none !important}}
+@media (prefers-reduced-motion: reduce){.caret,.pulse,.scrollcue{animation:none}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</helmet>
+<div ref="{{setRoot}}" onPointerMove="{{onMove}}" style="position: relative; background: #07080D; color: #ECEEF5; font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; overflow-x: clip; -webkit-font-smoothing: antialiased">
+
+  <!-- Sticky 3D field: pinned behind every section while you scroll -->
+  <div aria-hidden="true" style="position: sticky; top: 0; height: min(100vh, 960px); margin-bottom: calc(-1 * min(100vh, 960px)); z-index: 0; pointer-events: none; overflow: hidden">
+    <canvas ref="{{setCanvas}}" data-field="1" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block"></canvas>
+    <div style="position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px); background-size: 28px 28px; -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000 0%, transparent 75%); mask-image: radial-gradient(ellipse at 50% 40%, #000 0%, transparent 75%)"></div>
+    <div style="position: absolute; inset: 0; background: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(7,8,13,0) 0%, rgba(7,8,13,0.35) 60%, rgba(7,8,13,0.94) 100%)"></div>
+    <div class="hud" style="position: absolute; right: 32px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 16px; align-items: flex-end">
+      <sc-for list="{{stages}}" as="s" hint-placeholder-count="4">
+        <div style="display: flex; align-items: center; gap: 12px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: {{s.color}}; transition: color .4s">
+          <span>{{s.n}} · {{s.l}}</span>
+          <span style="display: block; height: 2px; width: {{s.w}}; background: {{s.bar}}; transition: width .5s ease, background .5s"></span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="position: relative; z-index: 1">
+
+    <!-- NAV -->
+    <header style="max-width: 1280px; margin: 0 auto; padding: 22px 32px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap">
+      <a href="Main.dc.html" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #ECEEF5">
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none" aria-hidden="true">
+          <path d="M7 7 L7 23 L23 23 M7 7 L23 13 L23 23" stroke="#ECEEF5" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"></path>
+          <circle cx="7" cy="7" r="3" fill="#ECEEF5"></circle>
+          <circle cx="7" cy="23" r="3" fill="#ECEEF5"></circle>
+          <circle cx="23" cy="13" r="3" fill="#ECEEF5"></circle>
+          <circle cx="23" cy="23" r="3.6" fill="#C6FF3D"></circle>
+        </svg>
+        <span style="font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.02em">latent</span>
+      </a>
+      <nav aria-label="Primary" style="display: flex; gap: 28px; flex-wrap: wrap; font-size: 15px">
+        <a class="navlink" href="Catalog.dc.html">Courses</a>
+        <a class="navlink" href="#how">How it works</a>
+        <a class="navlink" href="#path">The path</a>
+        <a class="navlink" href="Authoring.dc.html">For authors</a>
+      </nav>
+      <div style="display: flex; gap: 12px; align-items: center">
+        <a class="navlink" href="Auth.dc.html" style="font-size: 15px; padding: 12px 8px">Sign in</a>
+        <a class="key" href="Lesson.dc.html" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; box-sizing: border-box; background: #C6FF3D; color: #0A0C05; font-family: 'Geist Mono', ui-monospace, monospace; font-weight: 500; font-size: 14px; text-decoration: none; border-radius: 11px; box-shadow: 0 4px 0 #6E9116, inset 0 1px 0 rgba(255,255,255,0.55)">Start free</a>
+      </div>
+    </header>
+
+    <!-- HERO -->
+    <section style="max-width: 1280px; margin: 0 auto; padding: 104px 32px 72px; min-height: 820px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 30px">
+      <div style="display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px 8px 12px; border: 1px solid rgba(198,255,61,0.28); border-radius: 999px; background: rgba(7,8,13,0.6); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; color: #C6FF3D">
+        <span class="pulse" style="width: 8px; height: 8px; border-radius: 999px; background: #C6FF3D; display: block"></span>
+        Free courses · from zero to your first agent
+      </div>
+      <h1 style="margin: 0; font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 800; font-size: clamp(46px, 8.4vw, 124px); line-height: 0.94; letter-spacing: -0.045em; text-wrap: balance; max-width: 1100px">Learn AI by <span style="color: #C6FF3D">typing</span> to it.<span class="caret" style="display: inline-block; width: 0.09em; height: 0.82em; margin-left: 0.06em; background: #C6FF3D; vertical-align: -0.04em"></span></h1>
+      <p style="margin: 0; max-width: 640px; font-size: 20px; line-height: 1.55; color: #B4B9CA; text-wrap: pretty">Free, hands-on courses that take you from “what's a token?” to shipping your first agent. Every lesson is a conversation — you write the prompts, run the code, and watch the model think.</p>
+
+      <form onSubmit="{{onSubmit}}" class="prompt-bar" style="width: 100%; max-width: 760px; display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 22px; box-sizing: border-box; background: rgba(12,14,22,0.78); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; box-shadow: 0 30px 80px rgba(0,0,0,0.5); transition: border-color .2s, box-shadow .2s">
+        <span aria-hidden="true" style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 20px; color: #C6FF3D">›</span>
+        <label for="hero-prompt" class="sr">Ask your first question</label>
+        <input id="hero-prompt" class="prompt-input" type="text" value="{{query}}" onChange="{{onQuery}}" onFocus="{{onFocus}}" onBlur="{{onBlur}}" placeholder="{{typed}}" autocomplete="off" style="flex: 1; min-width: 0; height: 52px; background: transparent; border: 0; color: #ECEEF5; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 17px">
+        <a class="key" href="Lesson.dc.html" style="display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 18px; box-sizing: border-box; background: #C6FF3D; color: #0A0C05; font-family: 'Geist Mono', ui-monospace, monospace; font-weight: 500; font-size: 14px; text-decoration: none; border-radius: 11px; box-shadow: 0 4px 0 #6E9116, inset 0 1px 0 rgba(255,255,255,0.55); white-space: nowrap">Ask <span aria-hidden="true" style="padding: 2px 6px; border-radius: 5px; background: rgba(10,12,5,0.12); font-size: 12px">↵</span></a>
+      </form>
+
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; max-width: 760px">
+        <a class="chip-link" href="Lesson.dc.html" style="padding: 10px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); background: rgba(7,8,13,0.55); color: #B4B9CA; text-decoration: none; font-size: 14px">Explain tokens like I'm ten</a>
+        <a class="chip-link" href="Lesson.dc.html" style="padding: 10px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); background: rgba(7,8,13,0.55); color: #B4B9CA; text-decoration: none; font-size: 14px">Why do models make things up?</a>
+        <a class="chip-link" href="CodeLesson.dc.html" style="padding: 10px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); background: rgba(7,8,13,0.55); color: #B4B9CA; text-decoration: none; font-size: 14px">Build me a tiny agent</a>
+      </div>
+
+      <p style="margin: 6px 0 0; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; color: #7A8098">No account needed to start · sign in to save progress</p>
+
+      <div aria-hidden="true" style="margin-top: auto; padding-top: 56px; display: flex; flex-direction: column; align-items: center; gap: 12px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #7A8098">
+        Scroll — the network rewires itself
+        <span class="scrollcue" style="display: block; width: 1px; height: 48px; background: #C6FF3D"></span>
+      </div>
+    </section>
+
+    <!-- 02 · EVERY LESSON IS A CONVERSATION -->
+    <section id="how" style="max-width: 1280px; margin: 0 auto; padding: 120px 32px; box-sizing: border-box">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(500px, 100%), 1fr)); gap: 64px; align-items: center">
+        <div style="display: flex; flex-direction: column; gap: 28px">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: #3DE3FF">02 — How it works</span>
+          <h2 style="margin: 0; font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 700; font-size: clamp(36px, 4.6vw, 64px); line-height: 1.02; letter-spacing: -0.035em; text-wrap: balance">Every lesson is a conversation.</h2>
+          <p style="margin: 0; font-size: 19px; line-height: 1.6; color: #B4B9CA; max-width: 520px; text-wrap: pretty">No 40-minute lectures. A tutor explains one idea, then hands you the keyboard. You type the prompt, the model answers, and the lesson checks what you actually did.</p>
+          <div style="display: flex; flex-direction: column; gap: 2px; border-top: 1px solid rgba(255,255,255,0.08)">
+            <div style="display: flex; gap: 20px; padding: 18px 0; border-bottom: 1px solid rgba(255,255,255,0.08); align-items: baseline">
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; color: #C6FF3D; width: 56px; flex: none">READ</span>
+              <span style="font-size: 17px; line-height: 1.5; color: #D5D8E3">Chat-style lessons you can skim, or switch to terminal mode if that's more your speed.</span>
+            </div>
+            <div style="display: flex; gap: 20px; padding: 18px 0; border-bottom: 1px solid rgba(255,255,255,0.08); align-items: baseline">
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; color: #C6FF3D; width: 56px; flex: none">TYPE</span>
+              <span style="font-size: 17px; line-height: 1.5; color: #D5D8E3">Prompt exercises with live checks — you can't skip ahead by scrolling.</span>
+            </div>
+            <div style="display: flex; gap: 20px; padding: 18px 0; border-bottom: 1px solid rgba(255,255,255,0.08); align-items: baseline">
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; color: #C6FF3D; width: 56px; flex: none">RUN</span>
+              <span style="font-size: 17px; line-height: 1.5; color: #D5D8E3">Real code in a real editor. Copy it, change it, break it on purpose.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- chat lesson preview -->
+        <div style="background: rgba(12,14,22,0.78); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.1); border-radius: 22px; overflow: hidden; box-shadow: 0 40px 120px rgba(0,0,0,0.55)">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); flex-wrap: wrap">
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4">Lesson 2 · Tokens, not words</span>
+            <span style="display: flex; gap: 2px; padding: 3px; border-radius: 9px; background: rgba(255,255,255,0.05); font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px">
+              <span style="padding: 5px 10px; border-radius: 6px; background: rgba(255,255,255,0.1); color: #ECEEF5">Read</span>
+              <span style="padding: 5px 10px; color: #9AA0B4">Watch</span>
+              <span style="padding: 5px 10px; color: #9AA0B4">Terminal</span>
+            </span>
+          </div>
+          <div style="padding: 26px 24px; display: flex; flex-direction: column; gap: 20px">
+            <div style="display: flex; gap: 14px; align-items: flex-start">
+              <span aria-hidden="true" style="flex: none; width: 30px; height: 30px; border-radius: 9px; background: #C6FF3D; display: grid; place-items: center">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="4" cy="4" r="2" fill="#0A0C05"></circle><circle cx="14" cy="4" r="2" fill="#0A0C05"></circle><circle cx="9" cy="14" r="2.4" fill="#0A0C05"></circle><path d="M4 4 L9 14 L14 4" stroke="#0A0C05" stroke-width="1.4"></path></svg>
+              </span>
+              <p style="margin: 3px 0 0; font-size: 16px; line-height: 1.6; color: #D5D8E3">Models don't read words — they read <strong style="color: #ECEEF5">tokens</strong>. Type any sentence and I'll split it the way the model sees it.</p>
+            </div>
+            <div style="align-self: flex-end; max-width: 80%; padding: 12px 16px; border-radius: 16px 16px 4px 16px; background: #1A1E2D; font-size: 16px; color: #ECEEF5">Unbelievably, the cat fetched.</div>
+            <div style="border: 1px solid rgba(61,227,255,0.25); background: rgba(61,227,255,0.04); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+              <div style="display: flex; justify-content: space-between; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #3DE3FF">
+                <span>tokenizer</span><span>8 tokens · 31 characters</span>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px">
+                <sc-for list="{{tokens}}" as="tk" hint-placeholder-count="8">
+                  <span style="display: flex; flex-direction: column; align-items: center; gap: 4px">
+                    <span style="padding: 6px 8px; border-radius: 7px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 15px; white-space: pre; color: #ECEEF5; background: {{tk.bg}}; border: 1px solid {{tk.line}}">{{tk.t}}</span>
+                    <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 10px; color: #7A8098">{{tk.id}}</span>
+                  </span>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display: flex; gap: 14px; align-items: flex-start">
+              <span aria-hidden="true" style="flex: none; width: 30px; height: 30px; border-radius: 9px; background: #C6FF3D; display: grid; place-items: center">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="4" cy="4" r="2" fill="#0A0C05"></circle><circle cx="14" cy="4" r="2" fill="#0A0C05"></circle><circle cx="9" cy="14" r="2.4" fill="#0A0C05"></circle><path d="M4 4 L9 14 L14 4" stroke="#0A0C05" stroke-width="1.4"></path></svg>
+              </span>
+              <div style="display: flex; flex-direction: column; gap: 12px">
+                <p style="margin: 3px 0 0; font-size: 16px; line-height: 1.6; color: #D5D8E3">See how <code style="font-family: 'Geist Mono', ui-monospace, monospace; color: #3DE3FF">“ cat”</code> carries its leading space? Quick check — is it the same token as <code style="font-family: 'Geist Mono', ui-monospace, monospace; color: #3DE3FF">“cat”</code>?</p>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                  <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14); background: transparent; color: #ECEEF5; font-family: 'Geist', ui-sans-serif, sans-serif; font-size: 15px; cursor: pointer">Same token</button>
+                  <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14); background: transparent; color: #ECEEF5; font-family: 'Geist', ui-sans-serif, sans-serif; font-size: 15px; cursor: pointer">Different token</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="padding: 14px; border-top: 1px solid rgba(255,255,255,0.08)">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: #0A0C14; border: 1px solid rgba(198,255,61,0.35)">
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #0A0C05; background: #C6FF3D; padding: 3px 8px; border-radius: 6px">Your turn</span>
+              <span style="flex: 1; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 15px; color: #7A8098">Type a sentence to tokenize<span class="caret" style="color: #C6FF3D">▍</span></span>
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #7A8098">↵ run</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 · THE PATH -->
+    <section id="path" style="max-width: 1280px; margin: 0 auto; padding: 120px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 56px">
+      <div style="display: flex; flex-direction: column; gap: 24px; max-width: 760px">
+        <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: #9D85FF">03 — The path</span>
+        <h2 style="margin: 0; font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 700; font-size: clamp(36px, 4.6vw, 64px); line-height: 1.02; letter-spacing: -0.035em; text-wrap: balance">From one prompt to a team of agents.</h2>
+        <p style="margin: 0; font-size: 19px; line-height: 1.6; color: #B4B9CA; text-wrap: pretty">Four tracks, each one building on the last. Start at the beginning or jump to wherever you're curious — every course is free.</p>
+      </div>
+      <div style="position: relative">
+        <div class="trace" aria-hidden="true" style="position: absolute; left: 36px; right: 36px; top: 35px; height: 0; border-top: 1px dashed rgba(198,255,61,0.4)"></div>
+        <div style="position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 20px">
+          <sc-for list="{{tracks}}" as="tr" hint-placeholder-count="4">
+            <a class="card-lift" href="Catalog.dc.html" style="display: flex; flex-direction: column; gap: 18px; text-decoration: none; color: #ECEEF5">
+              <span style="width: 72px; height: 72px; border-radius: 999px; display: grid; place-items: center; background: #07080D; border: 1px solid {{tr.ring}}; font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 700; font-size: 20px; color: {{tr.color}}; box-shadow: 0 0 0 6px #07080D">{{tr.n}}</span>
+              <span style="display: flex; flex-direction: column; gap: 14px; padding: 24px; border-radius: 18px; background: rgba(12,14,22,0.78); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.09); min-height: 260px; box-sizing: border-box">
+                <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: {{tr.color}}">{{tr.track}}</span>
+                <span style="font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 500; font-size: 22px; line-height: 1.15; letter-spacing: -0.02em">{{tr.title}}</span>
+                <span style="font-size: 15px; line-height: 1.55; color: #9AA0B4">{{tr.desc}}</span>
+                <span style="margin-top: auto; display: flex; flex-direction: column; gap: 6px">
+                  <sc-for list="{{tr.courses}}" as="c" hint-placeholder-count="2">
+                    <span style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #D5D8E3"><span aria-hidden="true" style="width: 5px; height: 5px; border-radius: 99px; background: {{tr.color}}"></span>{{c}}</span>
+                  </sc-for>
+                </span>
+              </span>
+            </a>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 · THREE WAYS IN -->
+    <section style="max-width: 1280px; margin: 0 auto; padding: 120px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 56px">
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; flex-wrap: wrap">
+        <h2 style="margin: 0; font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 700; font-size: clamp(36px, 4.6vw, 64px); line-height: 1.02; letter-spacing: -0.035em; max-width: 720px">Read it. Watch it. <span style="color: #C6FF3D">Run it.</span></h2>
+        <p style="margin: 0; font-size: 17px; line-height: 1.6; color: #B4B9CA; max-width: 380px">Every lesson works as text. Some come with a video. The coding ones hand you a real editor.</p>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 20px">
+        <!-- Read -->
+        <div style="display: flex; flex-direction: column; gap: 20px; padding: 24px; border-radius: 20px; background: rgba(12,14,22,0.8); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.09)">
+          <div aria-hidden="true" style="height: 200px; border-radius: 12px; background: #0A0C14; border: 1px solid rgba(255,255,255,0.06); padding: 18px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px">
+            <span style="height: 8px; width: 82%; border-radius: 4px; background: #262B3C"></span>
+            <span style="height: 8px; width: 64%; border-radius: 4px; background: #262B3C"></span>
+            <span style="align-self: flex-end; margin-top: 6px; height: 28px; width: 46%; border-radius: 10px 10px 3px 10px; background: #1F2436"></span>
+            <span style="margin-top: 6px; height: 8px; width: 74%; border-radius: 4px; background: #262B3C"></span>
+            <span style="margin-top: auto; height: 34px; border-radius: 9px; border: 1px solid rgba(198,255,61,0.45); display: flex; align-items: center; padding: 0 10px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #C6FF3D">› your prompt here▍</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.12em; color: #C6FF3D">TEXT · ALWAYS</span>
+            <span style="font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 500; font-size: 22px; letter-spacing: -0.02em">Chat or terminal</span>
+            <span style="font-size: 15px; line-height: 1.55; color: #9AA0B4">Read the lesson as a conversation with a tutor, or flip to terminal mode for a CLI feel. Either way, you type to move forward.</span>
+          </div>
+        </div>
+        <!-- Watch -->
+        <div style="display: flex; flex-direction: column; gap: 20px; padding: 24px; border-radius: 20px; background: rgba(12,14,22,0.8); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.09)">
+          <div aria-hidden="true" style="position: relative; height: 200px; border-radius: 12px; background: #0A0C14; border: 1px solid rgba(255,255,255,0.06); overflow: hidden; display: grid; place-items: center">
+            <div style="position: absolute; inset: 0; background-image: radial-gradient(rgba(61,227,255,0.18) 1px, transparent 1px); background-size: 14px 14px"></div>
+            <span style="position: relative; width: 60px; height: 60px; border-radius: 999px; background: #ECEEF5; display: grid; place-items: center">
+              <svg width="20" height="22" viewBox="0 0 20 22"><path d="M3 2 L18 11 L3 20 Z" fill="#07080D"></path></svg>
+            </span>
+            <div style="position: absolute; left: 14px; right: 14px; bottom: 14px; display: flex; gap: 4px">
+              <span style="flex: 3; height: 4px; border-radius: 2px; background: #3DE3FF"></span>
+              <span style="flex: 2; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2)"></span>
+              <span style="flex: 4; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2)"></span>
+              <span style="flex: 2; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2)"></span>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.12em; color: #3DE3FF">VIDEO · OPTIONAL</span>
+            <span style="font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 500; font-size: 22px; letter-spacing: -0.02em">Watch when it helps</span>
+            <span style="font-size: 15px; line-height: 1.55; color: #9AA0B4">Chaptered videos with a synced transcript. Jump back to text any time — your place is kept in both.</span>
+          </div>
+        </div>
+        <!-- Run -->
+        <div style="display: flex; flex-direction: column; gap: 20px; padding: 24px; border-radius: 20px; background: rgba(12,14,22,0.8); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.09)">
+          <div aria-hidden="true" style="position: relative; height: 200px; border-radius: 12px; background: #0A0C14; border: 1px solid rgba(255,255,255,0.06); padding: 16px 16px 16px 0; box-sizing: border-box; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; line-height: 1.75; display: grid; grid-template-columns: 36px 1fr">
+            <span style="color: #3B4157; text-align: right; padding-right: 12px; white-space: pre">1
+2
+3
+4
+5
+6</span>
+            <span style="white-space: pre; color: #D5D8E3; overflow: hidden"><span style="color: #9D85FF">while</span> (<span style="color: #3DE3FF">true</span>) {
+  <span style="color: #9D85FF">const</span> res = <span style="color: #9D85FF">await</span> <span style="color: #C6FF3D">think</span>(msgs)
+  <span style="color: #9D85FF">if</span> (!res.<span style="color: #3DE3FF">toolUse</span>) <span style="color: #9D85FF">break</span>
+  msgs.<span style="color: #C6FF3D">push</span>(<span style="color: #9D85FF">await</span> <span style="color: #C6FF3D">act</span>(res))
+}
+<span style="color: #6B7186">// observe → repeat</span></span>
+            <span style="position: absolute; top: 12px; right: 12px; padding: 5px 9px; border-radius: 7px; background: rgba(255,255,255,0.08); color: #ECEEF5; font-size: 11px">Copy</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.12em; color: #C6FF3D">CODE · WHEN IT MATTERS</span>
+            <span style="font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 500; font-size: 22px; letter-spacing: -0.02em">A real editor</span>
+            <span style="font-size: 15px; line-height: 1.55; color: #9AA0B4">Syntax-highlighted, one-click copy, and a “type it yourself” mode for the moments muscle memory matters.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 · PROGRESS -->
+    <section style="max-width: 1280px; margin: 0 auto; padding: 120px 32px; box-sizing: border-box">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr)); gap: 64px; align-items: center">
+        <div style="padding: 28px; border-radius: 24px; background: rgba(12,14,22,0.82); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 24px; box-shadow: 0 40px 120px rgba(0,0,0,0.5)">
+          <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap">
+            <svg width="132" height="132" viewBox="0 0 132 132" role="img" aria-label="Context window 62 percent full">
+              <circle cx="66" cy="66" r="56" stroke="rgba(255,255,255,0.08)" stroke-width="10" fill="none"></circle>
+              <circle cx="66" cy="66" r="56" stroke="#C6FF3D" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="218 352" transform="rotate(-90 66 66)"></circle>
+              <text x="66" y="66" text-anchor="middle" font-family="Unbounded, sans-serif" font-weight="700" font-size="28" fill="#ECEEF5">62%</text>
+              <text x="66" y="88" text-anchor="middle" font-family="Geist Mono, monospace" font-size="10" fill="#9AA0B4">CONTEXT</text>
+            </svg>
+            <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 200px">
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4">Your context window</span>
+              <span style="font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 500; font-size: 22px; line-height: 1.2">Foundations track, 5 of 8 lessons</span>
+              <span style="font-size: 15px; color: #9AA0B4">Up next: Temperature &amp; randomness</span>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+            <div style="padding: 14px; border-radius: 12px; background: #0A0C14; display: flex; flex-direction: column; gap: 4px">
+              <span style="font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 700; font-size: 24px; color: #C6FF3D">12</span>
+              <span style="font-size: 13px; color: #9AA0B4">day streak</span>
+            </div>
+            <div style="padding: 14px; border-radius: 12px; background: #0A0C14; display: flex; flex-direction: column; gap: 4px">
+              <span style="font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 700; font-size: 24px; color: #3DE3FF">1,240</span>
+              <span style="font-size: 13px; color: #9AA0B4">neurons earned</span>
+            </div>
+            <div style="padding: 14px; border-radius: 12px; background: #0A0C14; display: flex; flex-direction: column; gap: 4px">
+              <span style="font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 700; font-size: 24px; color: #ECEEF5">37</span>
+              <span style="font-size: 13px; color: #9AA0B4">prompts written</span>
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap">
+            <sc-for list="{{badges}}" as="b" hint-placeholder-count="5">
+              <span style="display: flex; align-items: center; gap: 8px; padding: 8px 12px 8px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.1); background: #0A0C14; font-size: 13px; color: #D5D8E3">
+                <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M11 1.5 L19.2 6.25 L19.2 15.75 L11 20.5 L2.8 15.75 L2.8 6.25 Z" fill="{{b.fill}}"></path><circle cx="11" cy="11" r="3" fill="#07080D"></circle></svg>
+                {{b.name}}
+              </span>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 24px">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: #C6FF3D">04 — You</span>
+          <h2 style="margin: 0; font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 700; font-size: clamp(36px, 4.6vw, 64px); line-height: 1.02; letter-spacing: -0.035em; text-wrap: balance">Progress you can feel.</h2>
+          <p style="margin: 0; font-size: 19px; line-height: 1.6; color: #B4B9CA; text-wrap: pretty">Sign in once and every prompt you write, every lesson you finish and every badge you earn follows you to any device. Free — no card, no trial, no catch.</p>
+          <div>
+            <a class="key key-dark" href="Profile.dc.html" style="display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 20px; box-sizing: border-box; background: #151826; color: #ECEEF5; border: 1px solid rgba(255,255,255,0.12); font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px; text-decoration: none; border-radius: 12px; box-shadow: 0 4px 0 #020305">See a profile →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 06 · CTA -->
+    <section style="max-width: 1280px; margin: 0 auto; padding: 160px 32px 140px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 36px">
+      <h2 style="margin: 0; font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 800; font-size: clamp(42px, 7vw, 104px); line-height: 0.96; letter-spacing: -0.045em; max-width: 1000px; text-wrap: balance">Your first prompt is waiting.</h2>
+      <div style="display: flex; gap: 14px; flex-wrap: wrap; justify-content: center">
+        <a class="key" href="Lesson.dc.html" style="display: inline-flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 26px; box-sizing: border-box; background: #C6FF3D; color: #0A0C05; font-family: 'Geist Mono', ui-monospace, monospace; font-weight: 500; font-size: 16px; text-decoration: none; border-radius: 13px; box-shadow: 0 5px 0 #6E9116, 0 20px 60px rgba(198,255,61,0.22), inset 0 1px 0 rgba(255,255,255,0.55)">Start lesson 1 →</a>
+        <a class="key key-dark" href="Catalog.dc.html" style="display: inline-flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 26px; box-sizing: border-box; background: #151826; color: #ECEEF5; border: 1px solid rgba(255,255,255,0.12); font-family: 'Geist Mono', ui-monospace, monospace; font-size: 16px; text-decoration: none; border-radius: 13px; box-shadow: 0 5px 0 #020305">Browse courses</a>
+      </div>
+      <p style="margin: 0; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; color: #7A8098">Free forever · progress saves when you sign in</p>
+    </section>
+
+    <footer style="border-top: 1px solid rgba(255,255,255,0.08); background: #07080D">
+      <div style="max-width: 1280px; margin: 0 auto; padding: 36px 32px; display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap">
+        <span style="font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 700; font-size: 16px">latent</span>
+        <nav aria-label="Footer" style="display: flex; gap: 24px; flex-wrap: wrap; font-size: 14px">
+          <a class="navlink" href="Catalog.dc.html">Courses</a>
+          <a class="navlink" href="Authoring.dc.html">Write a course</a>
+          <a class="navlink" href="Auth.dc.html">Sign in</a>
+          <a class="navlink" href="Profile.dc.html">Profile</a>
+        </nav>
+        <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #7A8098">© 2026 [PLATFORM NAME]</span>
+      </div>
+    </footer>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":5400}}'>
+class Component extends DCLogic {
+  state = { stage: 0, typed: "", focused: false, query: "" };
+
+  setCanvas = (el) => {
+    this.canvas = el;
+    if (el && this._mounted && !this.renderer) this.initGL(0);
+  };
+  setRoot = (el) => { this.root = el; };
+  onMove = (e) => {
+    const w = window.innerWidth || 1, h = window.innerHeight || 1;
+    this.mouse = this.mouse || { x: 0, y: 0, tx: 0, ty: 0 };
+    this.mouse.tx = (e.clientX / w) * 2 - 1;
+    this.mouse.ty = (e.clientY / h) * 2 - 1;
+  };
+  onQuery = (e) => this.setState({ query: e.target.value });
+  onFocus = () => this.setState({ focused: true });
+  onBlur = () => this.setState({ focused: false });
+  onSubmit = (e) => { if (e && e.preventDefault) e.preventDefault(); };
+
+  componentDidMount() {
+    this._mounted = true;
+    this.mouse = this.mouse || { x: 0, y: 0, tx: 0, ty: 0 };
+    if (!this.canvas) this.canvas = document.querySelector("canvas[data-field]");
+    this.initGL(0);
+    const prompts = [
+      "Explain tokens like I'm ten",
+      "Why do models make things up?",
+      "Write a haiku about gradient descent",
+      "Build me an agent that plans dinner"
+    ];
+    const tw = { i: 0, c: 0, dir: 1, hold: 0 };
+    this.twTimer = setInterval(() => {
+      if (this.state.focused || this.state.query) return;
+      if (tw.hold > 0) { tw.hold--; return; }
+      const p = prompts[tw.i];
+      if (tw.dir > 0) { tw.c++; if (tw.c >= p.length) { tw.dir = -1; tw.hold = 34; } }
+      else { tw.c -= 2; if (tw.c <= 0) { tw.c = 0; tw.dir = 1; tw.i = (tw.i + 1) % prompts.length; tw.hold = 6; } }
+      this.setState({ typed: p.slice(0, tw.c) });
+    }, 55);
+  }
+
+  componentWillUnmount() {
+    this._mounted = false;
+    clearInterval(this.twTimer);
+    if (this.raf) cancelAnimationFrame(this.raf);
+    if (this.renderer) { this.renderer.dispose(); this.renderer = null; }
+    if (this.disposables) this.disposables.forEach((d) => d.dispose());
+  }
+
+  initGL(tries) {
+    if (this.renderer || !this._mounted) return;
+    const T = window.THREE;
+    if (!T || !this.canvas) {
+      if (tries < 40) setTimeout(() => this.initGL(tries + 1), 100);
+      return;
+    }
+    let renderer;
+    try {
+      renderer = new T.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
+    } catch (err) { return; }
+    this.renderer = renderer;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x000000, 0);
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const scene = new T.Scene();
+    const camera = new T.PerspectiveCamera(50, 1, 0.1, 200);
+    camera.position.set(0, 0, 16);
+    const group = new T.Group();
+    scene.add(group);
+
+    let seed = 11;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+    const gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+
+    const N = 3400;
+    const A = new Float32Array(N * 3), B = new Float32Array(N * 3), C = new Float32Array(N * 3), D = new Float32Array(N * 3);
+    const R = new Float32Array(N), S = new Float32Array(N);
+
+    // Formation A — a layered neural network
+    const layers = [5, 9, 13, 13, 9, 5];
+    const nodes = [];
+    layers.forEach((count, li) => {
+      const x = (li - (layers.length - 1) / 2) * 2.7;
+      for (let k = 0; k < count; k++) nodes.push({ x, y: (k - (count - 1) / 2) * 0.92, z: (rnd() - 0.5) * 1.4, li });
+    });
+    const edges = [];
+    for (let i = 0; i < nodes.length; i++) for (let j = 0; j < nodes.length; j++) {
+      if (nodes[j].li === nodes[i].li + 1 && rnd() < 0.5) edges.push([i, j]);
+    }
+    for (let i = 0; i < N; i++) {
+      R[i] = rnd();
+      let x, y, z;
+      if (i < N * 0.58) {
+        const n = nodes[i % nodes.length];
+        x = n.x + gauss() * 0.08; y = n.y + gauss() * 0.08; z = n.z + gauss() * 0.08;
+        S[i] = 1.1 + rnd() * 0.9;
+      } else {
+        const e = edges[Math.floor(rnd() * edges.length)], a = nodes[e[0]], b = nodes[e[1]], t = rnd();
+        x = a.x + (b.x - a.x) * t; y = a.y + (b.y - a.y) * t; z = a.z + (b.z - a.z) * t;
+        S[i] = 0.45 + rnd() * 0.35;
+      }
+      A[i * 3] = x; A[i * 3 + 1] = y; A[i * 3 + 2] = z;
+    }
+
+    // Formation B — a ribbon of token blocks
+    const blocks = 26;
+    for (let i = 0; i < N; i++) {
+      const b = i % blocks;
+      const cx = (b - (blocks - 1) / 2) * 1.0;
+      const w = 0.78, h = 0.52;
+      let lx, ly;
+      if (rnd() < 0.72) {
+        const t = rnd() * 2 * (w + h);
+        if (t < w) { lx = t - w / 2; ly = -h / 2; }
+        else if (t < w + h) { lx = w / 2; ly = (t - w) - h / 2; }
+        else if (t < 2 * w + h) { lx = (t - w - h) - w / 2; ly = h / 2; }
+        else { lx = -w / 2; ly = (t - 2 * w - h) - h / 2; }
+      } else { lx = (rnd() - 0.5) * w * 0.7; ly = (rnd() - 0.5) * h * 0.5; }
+      B[i * 3] = cx + lx;
+      B[i * 3 + 1] = ly + Math.sin(cx * 0.42) * 1.7;
+      B[i * 3 + 2] = Math.cos(cx * 0.3) * 2.4 + (rnd() - 0.5) * 0.12;
+    }
+
+    // Formation C — an agent loop (torus knot) around a core
+    for (let i = 0; i < N; i++) {
+      let x, y, z;
+      if (i < N * 0.74) {
+        const t = rnd() * Math.PI * 2, p = 2, q = 3, r = Math.cos(q * t) + 2.4;
+        x = r * Math.cos(p * t) * 1.5 + gauss() * 0.1;
+        y = r * Math.sin(p * t) * 1.5 + gauss() * 0.1;
+        z = -Math.sin(q * t) * 1.5 + gauss() * 0.1;
+      } else {
+        const u = rnd() * 2 - 1, th = rnd() * Math.PI * 2, s = Math.sqrt(1 - u * u), rr = 1.05 + gauss() * 0.04;
+        x = s * Math.cos(th) * rr; y = s * Math.sin(th) * rr; z = u * rr;
+      }
+      C[i * 3] = x; C[i * 3 + 1] = y; C[i * 3 + 2] = z;
+    }
+
+    // Formation D — a three-armed galaxy, tilted toward the viewer
+    const tilt = -1.0, ct = Math.cos(tilt), st = Math.sin(tilt);
+    for (let i = 0; i < N; i++) {
+      const arm = i % 3, r = Math.pow(rnd(), 0.62) * 8.2;
+      const ang = arm * (2 * Math.PI / 3) + r * 0.55 + gauss() * 0.2;
+      const x = Math.cos(ang) * r, z0 = Math.sin(ang) * r, y0 = gauss() * 0.16 * (1.3 - r / 9);
+      D[i * 3] = x; D[i * 3 + 1] = y0 * ct - z0 * st; D[i * 3 + 2] = y0 * st + z0 * ct;
+    }
+
+    const geo = new T.BufferGeometry();
+    geo.setAttribute("position", new T.BufferAttribute(A, 3));
+    geo.setAttribute("aB", new T.BufferAttribute(B, 3));
+    geo.setAttribute("aC", new T.BufferAttribute(C, 3));
+    geo.setAttribute("aD", new T.BufferAttribute(D, 3));
+    geo.setAttribute("aR", new T.BufferAttribute(R, 1));
+    geo.setAttribute("aS", new T.BufferAttribute(S, 1));
+
+    const pxr = renderer.getPixelRatio();
+    const mat = new T.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: T.AdditiveBlending,
+      uniforms: {
+        uMorph: { value: 0 }, uTime: { value: 0 }, uPx: { value: pxr },
+        uC1: { value: new T.Color("#C6FF3D") }, uC2: { value: new T.Color("#3DE3FF") }, uAlpha: { value: 1 }
+      },
+      vertexShader: [
+        "uniform float uMorph; uniform float uTime; uniform float uPx;",
+        "attribute vec3 aB; attribute vec3 aC; attribute vec3 aD; attribute float aR; attribute float aS;",
+        "varying float vR;",
+        "void main(){",
+        "  vec3 from = position; vec3 to = aB; float f = uMorph;",
+        "  if (uMorph >= 2.0) { from = aC; to = aD; f = uMorph - 2.0; }",
+        "  else if (uMorph >= 1.0) { from = aB; to = aC; f = uMorph - 1.0; }",
+        "  f = clamp((f - aR * 0.35) / 0.65, 0.0, 1.0);",
+        "  f = f * f * (3.0 - 2.0 * f);",
+        "  vec3 p = mix(from, to, f);",
+        "  float mid = sin(f * 3.14159);",
+        "  p += vec3(sin(uTime * 0.6 + aR * 43.0), cos(uTime * 0.5 + aR * 31.0), sin(uTime * 0.7 + aR * 17.0)) * (0.03 + mid * 1.1);",
+        "  vec4 mv = modelViewMatrix * vec4(p, 1.0);",
+        "  gl_Position = projectionMatrix * mv;",
+        "  float tw = 0.7 + 0.3 * sin(uTime * 2.2 + aR * 60.0);",
+        "  gl_PointSize = aS * tw * uPx * (36.0 / -mv.z);",
+        "  vR = aR;",
+        "}"
+      ].join("\n"),
+      fragmentShader: [
+        "uniform vec3 uC1; uniform vec3 uC2; uniform float uAlpha;",
+        "varying float vR;",
+        "void main(){",
+        "  vec2 c = gl_PointCoord - 0.5; float d = length(c);",
+        "  if (d > 0.5) discard;",
+        "  float a = smoothstep(0.5, 0.0, d); a *= a;",
+        "  vec3 col = mix(uC1, uC2, smoothstep(0.15, 0.85, vR));",
+        "  col = mix(col, vec3(1.0), smoothstep(0.16, 0.0, d) * 0.55);",
+        "  gl_FragColor = vec4(col, a * uAlpha * (0.5 + vR * 0.5));",
+        "}"
+      ].join("\n")
+    });
+    const points = new T.Points(geo, mat);
+    points.frustumCulled = false;
+    group.add(points);
+
+    // Edges of the network (fade out as it morphs)
+    const lp = new Float32Array(edges.length * 6);
+    edges.forEach((e, k) => {
+      const a = nodes[e[0]], b = nodes[e[1]];
+      lp.set([a.x, a.y, a.z, b.x, b.y, b.z], k * 6);
+    });
+    const lgeo = new T.BufferGeometry();
+    lgeo.setAttribute("position", new T.BufferAttribute(lp, 3));
+    const lmat = new T.LineBasicMaterial({ color: 0xC6FF3D, transparent: true, opacity: 0.14, blending: T.AdditiveBlending, depthWrite: false });
+    const lines = new T.LineSegments(lgeo, lmat);
+    group.add(lines);
+
+    // Signals travelling along edges
+    const M = 170;
+    const ps = new Float32Array(M * 3), pe = new Float32Array(M * 3), po = new Float32Array(M);
+    for (let k = 0; k < M; k++) {
+      const e = edges[Math.floor(rnd() * edges.length)], a = nodes[e[0]], b = nodes[e[1]];
+      ps.set([a.x, a.y, a.z], k * 3); pe.set([b.x, b.y, b.z], k * 3); po[k] = rnd();
+    }
+    const sgeo = new T.BufferGeometry();
+    sgeo.setAttribute("position", new T.BufferAttribute(ps, 3));
+    sgeo.setAttribute("aEnd", new T.BufferAttribute(pe, 3));
+    sgeo.setAttribute("aOff", new T.BufferAttribute(po, 1));
+    const smat = new T.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: T.AdditiveBlending,
+      uniforms: { uTime: { value: 0 }, uPx: { value: pxr }, uAlpha: { value: 1 } },
+      vertexShader: [
+        "uniform float uTime; uniform float uPx; attribute vec3 aEnd; attribute float aOff; varying float vA;",
+        "void main(){",
+        "  float t = fract(uTime * 0.3 + aOff);",
+        "  vec3 p = mix(position, aEnd, t);",
+        "  vec4 mv = modelViewMatrix * vec4(p, 1.0);",
+        "  gl_Position = projectionMatrix * mv;",
+        "  gl_PointSize = uPx * (64.0 / -mv.z);",
+        "  vA = sin(t * 3.14159);",
+        "}"
+      ].join("\n"),
+      fragmentShader: [
+        "uniform float uAlpha; varying float vA;",
+        "void main(){",
+        "  float d = length(gl_PointCoord - 0.5); if (d > 0.5) discard;",
+        "  float a = smoothstep(0.5, 0.0, d); a *= a;",
+        "  gl_FragColor = vec4(mix(vec3(0.78, 1.0, 0.24), vec3(1.0), 0.5), a * vA * uAlpha);",
+        "}"
+      ].join("\n")
+    });
+    const signals = new T.Points(sgeo, smat);
+    signals.frustumCulled = false;
+    group.add(signals);
+
+    this.disposables = [geo, mat, lgeo, lmat, sgeo, smat];
+
+    const pal = [
+      ["#C6FF3D", "#3DE3FF"],
+      ["#3DE3FF", "#9D85FF"],
+      ["#9D85FF", "#C6FF3D"],
+      ["#E4FF9E", "#9D85FF"]
+    ].map((p) => [new T.Color(p[0]), new T.Color(p[1])]);
+    const tmp1 = new T.Color(), tmp2 = new T.Color();
+    const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+    let morph = 0, last = performance.now(), time = 0, w0 = 0, h0 = 0;
+    const loop = () => {
+      this.raf = requestAnimationFrame(loop);
+      const c = this.canvas;
+      if (!c) return;
+      const now = performance.now();
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      time += dt * (reduce ? 0.25 : 1);
+
+      const w = c.clientWidth, h = c.clientHeight;
+      if (w && h && (w !== w0 || h !== h0)) {
+        w0 = w; h0 = h;
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      }
+
+      // Scroll → formation. With no scroll (canvas preview) it cycles on its own.
+      let target;
+      const doc = document.scrollingElement || document.documentElement;
+      const vh = window.innerHeight || 1;
+      if (this.root && doc.scrollHeight - vh > 40) {
+        const r = this.root.getBoundingClientRect();
+        const p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - vh)));
+        const m = Math.min(3, p * 3.5), base = Math.floor(m);
+        target = Math.min(3, base + smooth(0.3, 0.85, m - base));
+      } else {
+        const cyc = (time * 0.11) % 6, tri = cyc < 3 ? cyc : 6 - cyc, base = Math.floor(tri);
+        target = Math.min(3, base + smooth(0.45, 1.0, tri - base));
+      }
+      morph += (target - morph) * 0.055;
+
+      const si = Math.min(2, Math.floor(morph)), sf = morph - si;
+      tmp1.copy(pal[si][0]).lerp(pal[si + 1][0], sf);
+      tmp2.copy(pal[si][1]).lerp(pal[si + 1][1], sf);
+      mat.uniforms.uC1.value.copy(tmp1);
+      mat.uniforms.uC2.value.copy(tmp2);
+      mat.uniforms.uMorph.value = morph;
+      mat.uniforms.uTime.value = time;
+      smat.uniforms.uTime.value = time;
+      const netA = 1 - Math.min(1, morph * 1.6);
+      lmat.opacity = 0.15 * netA;
+      smat.uniforms.uAlpha.value = netA;
+      lines.visible = netA > 0.01;
+      signals.visible = netA > 0.01;
+
+      const m = this.mouse;
+      m.x += (m.tx - m.x) * 0.04; m.y += (m.ty - m.y) * 0.04;
+      group.rotation.y = Math.sin(time * 0.09) * 0.45 + m.x * 0.35 + (morph > 2 ? (morph - 2) * time * 0.04 : 0);
+      group.rotation.x = m.y * 0.18 + Math.sin(time * 0.07) * 0.08;
+      camera.position.z = (w < 760 ? 25 : 16) + Math.sin(Math.min(3, morph) * Math.PI) * 1.4;
+
+      renderer.render(scene, camera);
+
+      const stage = Math.max(0, Math.min(3, Math.round(morph)));
+      if (stage !== this.state.stage) this.setState({ stage });
+    };
+    loop();
+  }
+
+  renderVals() {
+    const s = this.state || {};
+    const names = [["01", "Neurons"], ["02", "Tokens"], ["03", "Agents"], ["04", "You"]];
+    const stages = names.map((n, i) => {
+      const on = i === s.stage;
+      return { n: n[0], l: n[1], color: on ? "#C6FF3D" : "#7A8098", w: on ? "36px" : "12px", bar: on ? "#C6FF3D" : "rgba(255,255,255,0.2)" };
+    });
+    const tint = [
+      ["rgba(198,255,61,0.12)", "rgba(198,255,61,0.35)"],
+      ["rgba(61,227,255,0.12)", "rgba(61,227,255,0.35)"],
+      ["rgba(157,133,255,0.14)", "rgba(157,133,255,0.4)"]
+    ];
+    const tokens = [
+      ["Un", "1844"], ["believ", "31141"], ["ably", "2915"], [",", "11"],
+      [" the", "279"], [" cat", "8415"], [" fetched", "42118"], [".", "13"]
+    ].map((t, i) => ({ t: t[0], id: t[1], bg: tint[i % 3][0], line: tint[i % 3][1] }));
+    const tracks = [
+      { n: "01", track: "Foundations", title: "How LLMs think", desc: "Tokens, next-word prediction, temperature and the context window — no math degree required.", color: "#C6FF3D", ring: "rgba(198,255,61,0.55)", courses: ["What is an LLM, really?", "Tokens & temperature"] },
+      { n: "02", track: "Prompting", title: "Talk like you mean it", desc: "Roles, examples, structure and how to tell if a prompt actually got better.", color: "#3DE3FF", ring: "rgba(61,227,255,0.55)", courses: ["Prompting that works", "Context is everything"] },
+      { n: "03", track: "Tools & context", title: "Give the model hands", desc: "Tool calls, retrieval and memory — the pieces every agent is built from.", color: "#9D85FF", ring: "rgba(157,133,255,0.6)", courses: ["Give your model tools", "Retrieval without tears"] },
+      { n: "04", track: "Agents", title: "Close the loop", desc: "Plan, act, observe, repeat. Then ship your agent to the edge.", color: "#C6FF3D", ring: "rgba(198,255,61,0.55)", courses: ["Your first agent loop", "Ship an agent to the edge"] }
+    ];
+    const badges = [
+      { name: "First token", fill: "#C6FF3D" },
+      { name: "Temperature tamer", fill: "#3DE3FF" },
+      { name: "Few-shot", fill: "#9D85FF" },
+      { name: "Streak ×7", fill: "#E4FF9E" },
+      { name: "Tool wielder", fill: "#3B4157" }
+    ];
+    return {
+      setCanvas: this.setCanvas, setRoot: this.setRoot, onMove: this.onMove,
+      onQuery: this.onQuery, onFocus: this.onFocus, onBlur: this.onBlur, onSubmit: this.onSubmit,
+      query: s.query || "", typed: (s.typed || "") + "▍",
+      stages, tokens, tracks, badges
+    };
+  }
+}
+</script>
+</body>
+</html>

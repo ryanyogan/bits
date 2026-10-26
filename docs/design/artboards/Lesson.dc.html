@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Latent — Temperature &amp; randomness</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;700;800&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07080D}
+a{color:#C6FF3D}a:hover{color:#E2FF8F}
+.key{transition:transform .12s ease, box-shadow .12s ease, filter .12s ease}
+.key:hover{transform:translateY(-1px);filter:brightness(1.06)}
+.key:active{transform:translateY(3px);box-shadow:0 1px 0 #6E9116 !important}
+.ghost{transition:background .15s,border-color .15s}
+.ghost:hover{background:rgba(255,255,255,0.06) !important}
+.olink{transition:background .15s}
+.olink:hover{background:rgba(255,255,255,0.04) !important}
+.composer:focus-within{border-color:rgba(198,255,61,0.75) !important;box-shadow:0 0 0 4px rgba(198,255,61,0.12)}
+.composer textarea:focus{outline:none}
+.composer textarea::placeholder{color:#7A8098}
+.bar{transition:width .35s cubic-bezier(.2,.8,.2,1)}
+input[type=range]{accent-color:#C6FF3D}
+.rise{animation:rise .45s cubic-bezier(.2,.8,.2,1) both}
+.pop{animation:pop .6s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{opacity:0;transform:translateY(20px) scale(.9)}100%{opacity:1;transform:none}}
+.caret{animation:blink 1.05s steps(1) infinite}
+@keyframes blink{0%{opacity:1}50%{opacity:0}}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #07080D; color: #ECEEF5; font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; display: flex; flex-direction: column">
+
+  <!-- Lesson bar -->
+  <header style="position: sticky; top: 0; z-index: 5; background: rgba(7,8,13,0.88); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,0.07)">
+    <div style="padding: 12px 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap">
+      <a href="Course.dc.html" aria-label="Back to course" style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); display: grid; place-items: center; text-decoration: none">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#ECEEF5" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M10 3 L5 8 L10 13"></path></svg>
+      </a>
+      <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+        <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4">Tokens &amp; temperature · Lesson 6 of 8</span>
+        <span style="font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 500; font-size: 17px; letter-spacing: -0.02em">Temperature &amp; randomness</span>
+      </div>
+      <div aria-label="Course progress" style="display: flex; gap: 4px; flex: 1 1 160px; max-width: 280px; margin: 0 auto">
+        <span style="flex: 1; height: 5px; border-radius: 3px; background: #C6FF3D"></span>
+        <span style="flex: 1; height: 5px; border-radius: 3px; background: #C6FF3D"></span>
+        <span style="flex: 1; height: 5px; border-radius: 3px; background: #C6FF3D"></span>
+        <span style="flex: 1; height: 5px; border-radius: 3px; background: #C6FF3D"></span>
+        <span style="flex: 1; height: 5px; border-radius: 3px; background: #C6FF3D"></span>
+        <span style="flex: 1; height: 5px; border-radius: 3px; background: {{seg6}}"></span>
+        <span style="flex: 1; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.1)"></span>
+        <span style="flex: 1; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.1)"></span>
+      </div>
+      <div role="tablist" aria-label="Lesson format" style="display: flex; gap: 2px; padding: 3px; border-radius: 11px; background: #0E1018; border: 1px solid rgba(255,255,255,0.08); font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px">
+        <button type="button" role="tab" aria-selected="{{readSel}}" onClick="{{toRead}}" style="min-height: 38px; padding: 0 14px; border: 0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: inherit; background: {{readTab.bg}}; color: {{readTab.fg}}">Read</button>
+        <button type="button" role="tab" aria-selected="{{watchSel}}" onClick="{{toWatch}}" style="min-height: 38px; padding: 0 14px; border: 0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: inherit; background: {{watchTab.bg}}; color: {{watchTab.fg}}">Watch</button>
+        <a href="CodeLesson.dc.html" style="display: flex; align-items: center; min-height: 38px; padding: 0 14px; border-radius: 8px; color: #9AA0B4; text-decoration: none">Terminal</a>
+      </div>
+      <span style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; background: rgba(198,255,61,0.08); border: 1px solid rgba(198,255,61,0.25); font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; color: #E4FF9E">
+        <svg width="14" height="14" viewBox="0 0 22 22" aria-hidden="true"><path d="M11 1.5 L19.2 6.25 L19.2 15.75 L11 20.5 L2.8 15.75 L2.8 6.25 Z" fill="#C6FF3D"></path></svg>
+        {{neurons}}
+      </span>
+    </div>
+  </header>
+
+  <div style="flex: 1; display: flex; flex-wrap: wrap; align-items: flex-start">
+
+    <!-- Outline -->
+    <nav aria-label="Lessons" style="flex: 1 1 260px; max-width: 320px; padding: 28px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; border-right: 1px solid rgba(255,255,255,0.06); align-self: stretch">
+      <span style="padding: 0 12px 10px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.12em; color: #7A8098">IN THIS COURSE</span>
+      <sc-for list="{{outline}}" as="o" hint-placeholder-count="8">
+        <a class="olink" href="Lesson.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 6px 12px; border-radius: 10px; text-decoration: none; color: {{o.fg}}; background: {{o.bg}}; font-size: 14px">
+          <span aria-hidden="true" style="flex: none; width: 20px; height: 20px; border-radius: 99px; display: grid; place-items: center; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 10px; background: {{o.dotBg}}; color: #0A0C05; border: {{o.dotLine}}">{{o.mark}}</span>
+          <span>{{o.title}}</span>
+        </a>
+      </sc-for>
+    </nav>
+
+    <main style="flex: 999 1 560px; min-width: 0; padding: 40px 24px 120px; box-sizing: border-box">
+
+      <!-- READ MODE -->
+      <sc-if value="{{isRead}}" hint-placeholder-val="{{ true }}">
+        <div style="max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px">
+
+          <div style="display: flex; gap: 14px; align-items: flex-start">
+            <span aria-hidden="true" style="flex: none; width: 32px; height: 32px; border-radius: 10px; background: #C6FF3D; display: grid; place-items: center"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="4" cy="4" r="2" fill="#0A0C05"></circle><circle cx="14" cy="4" r="2" fill="#0A0C05"></circle><circle cx="9" cy="14" r="2.4" fill="#0A0C05"></circle><path d="M4 4 L9 14 L14 4" stroke="#0A0C05" stroke-width="1.4"></path></svg></span>
+            <div style="display: flex; flex-direction: column; gap: 14px; font-size: 17px; line-height: 1.7; color: #D5D8E3">
+              <p style="margin: 3px 0 0">Last lesson you saw that a model never picks “the” next word. It gives <strong style="color: #ECEEF5">every possible token a probability</strong>, then rolls a weighted die.</p>
+              <p style="margin: 0"><strong style="color: #ECEEF5">Temperature</strong> reshapes those odds before the roll. Low temperature sharpens them — the favourite almost always wins. High temperature flattens them — long shots get a real chance. Drag it and watch.</p>
+            </div>
+          </div>
+
+          <!-- Probability playground -->
+          <div style="margin-left: 46px; padding: 22px; border-radius: 18px; background: #0E1018; border: 1px solid rgba(61,227,255,0.28); display: flex; flex-direction: column; gap: 18px">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap">
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; color: #9AA0B4">Moon café tagline: <span style="color: #ECEEF5">“___</span></span>
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #3DE3FF">next-token odds</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <sc-for list="{{bars}}" as="b" hint-placeholder-count="5">
+                <div style="display: grid; grid-template-columns: 88px 1fr 56px; gap: 12px; align-items: center">
+                  <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 15px; white-space: pre; color: #ECEEF5">{{b.t}}</span>
+                  <span style="height: 22px; border-radius: 6px; background: rgba(255,255,255,0.05); overflow: hidden"><span class="bar" style="display: block; height: 100%; width: {{b.w}}; background: {{b.c}}; border-radius: 6px"></span></span>
+                  <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; color: #C6CAD6; text-align: right">{{b.p}}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.06)">
+              <label for="temp" style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; color: #9AA0B4; padding-top: 12px">temperature</label>
+              <input id="temp" type="range" min="0" max="150" step="5" value="{{tempInt}}" onChange="{{onTemp}}" style="flex: 1; min-width: 180px; height: 32px; margin-top: 12px">
+              <span style="padding: 6px 10px; margin-top: 12px; border-radius: 8px; background: #0A0C14; border: 1px solid rgba(255,255,255,0.1); font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px; color: #C6FF3D; min-width: 44px; text-align: center">{{tempLabel}}</span>
+            </div>
+            <span style="font-size: 14px; line-height: 1.5; color: #9AA0B4">{{tempNote}}</span>
+          </div>
+
+          <div style="display: flex; gap: 14px; align-items: flex-start">
+            <span aria-hidden="true" style="flex: none; width: 32px; height: 32px; border-radius: 10px; background: #C6FF3D; display: grid; place-items: center"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="4" cy="4" r="2" fill="#0A0C05"></circle><circle cx="14" cy="4" r="2" fill="#0A0C05"></circle><circle cx="9" cy="14" r="2.4" fill="#0A0C05"></circle><path d="M4 4 L9 14 L14 4" stroke="#0A0C05" stroke-width="1.4"></path></svg></span>
+            <p style="margin: 3px 0 0; font-size: 17px; line-height: 1.7; color: #D5D8E3">Your turn. Write a prompt that asks for a <strong style="color: #ECEEF5">tagline for a coffee shop on the moon</strong> with a length limit. Run it once at <code style="font-family: 'Geist Mono', ui-monospace, monospace; color: #3DE3FF">0</code>, then a few times at <code style="font-family: 'Geist Mono', ui-monospace, monospace; color: #3DE3FF">1.0</code>, and compare.</p>
+          </div>
+
+          <!-- Runs -->
+          <sc-for list="{{runs}}" as="r" hint-placeholder-count="0">
+            <div class="rise" style="display: flex; flex-direction: column; gap: 10px">
+              <div style="align-self: flex-end; max-width: 82%; padding: 12px 16px; border-radius: 16px 16px 4px 16px; background: #1A1E2D; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px; line-height: 1.55; color: #ECEEF5; white-space: pre-wrap">{{r.prompt}}</div>
+              <div style="margin-left: 46px; padding: 14px 16px; border-radius: 14px; border: 1px solid rgba(61,227,255,0.25); background: rgba(61,227,255,0.04); display: flex; flex-direction: column; gap: 8px">
+                <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #3DE3FF">model · T={{r.t}} · {{r.tokens}} tokens</span>
+                <span style="font-size: 18px; line-height: 1.5; color: #ECEEF5">{{r.out}}</span>
+              </div>
+            </div>
+          </sc-for>
+
+          <sc-if value="{{passed}}" hint-placeholder-val="{{ false }}">
+            <div class="pop" style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 16px 20px; border-radius: 18px; background: #C6FF3D; color: #0A0C05; box-shadow: 0 24px 70px rgba(198,255,61,0.25)">
+              <svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><path d="M11 1.5 L19.2 6.25 L19.2 15.75 L11 20.5 L2.8 15.75 L2.8 6.25 Z" fill="#0A0C05"></path><path d="M7 11.5 L10 14 L15 8" stroke="#C6FF3D" stroke-width="1.8" fill="none" stroke-linecap="round"></path></svg>
+              <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 2px">
+                <span style="font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 700; font-size: 20px">+40 neurons</span>
+                <span style="font-size: 15px">Same prompt, different answers — and now you know why.</span>
+              </div>
+              <a href="Lesson.dc.html" style="display: inline-flex; align-items: center; min-height: 46px; padding: 0 18px; border-radius: 12px; background: #0A0C05; color: #C6FF3D; text-decoration: none; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px">Next: Top-p →</a>
+            </div>
+          </sc-if>
+
+          <!-- Composer -->
+          <form onSubmit="{{run}}" class="composer" style="display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 18px; background: #0A0C14; border: 1px solid rgba(198,255,61,0.4); transition: border-color .2s, box-shadow .2s">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #0A0C05; background: #C6FF3D; padding: 3px 8px; border-radius: 6px">Your turn</span>
+              <label for="prompt" style="font-size: 14px; color: #9AA0B4">Write the prompt yourself — no pasting the answer</label>
+            </div>
+            <textarea id="prompt" rows="3" value="{{draft}}" onChange="{{onDraft}}" placeholder="Write a tagline for…" style="resize: vertical; min-height: 84px; background: transparent; border: 0; color: #ECEEF5; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 16px; line-height: 1.6"></textarea>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px">
+              <sc-for list="{{checks}}" as="c" hint-placeholder-count="4">
+                <span style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; font-size: 13px; background: {{c.bg}}; color: {{c.fg}}; border: 1px solid {{c.line}}">
+                  <span aria-hidden="true" style="font-family: 'Geist Mono', ui-monospace, monospace">{{c.mark}}</span>{{c.label}}
+                </span>
+              </sc-for>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.06)">
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #7A8098; padding-top: 10px">run at</span>
+              <div role="group" aria-label="Temperature" style="display: flex; gap: 6px; padding-top: 10px">
+                <sc-for list="{{temps}}" as="tp" hint-placeholder-count="3">
+                  <button type="button" onClick="{{tp.pick}}" aria-pressed="{{tp.on}}" style="min-height: 40px; min-width: 52px; padding: 0 10px; border-radius: 9px; cursor: pointer; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; border: 1px solid {{tp.line}}; background: {{tp.bg}}; color: {{tp.fg}}">{{tp.label}}</button>
+                </sc-for>
+              </div>
+              <span style="margin-left: auto; padding-top: 10px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #7A8098">~{{draftTokens}} tokens</span>
+              <button type="submit" class="key" style="margin-top: 10px; min-height: 46px; padding: 0 18px; border: 0; border-radius: 12px; cursor: pointer; background: #C6FF3D; color: #0A0C05; font-family: 'Geist Mono', ui-monospace, monospace; font-weight: 500; font-size: 14px; box-shadow: 0 4px 0 #6E9116, inset 0 1px 0 rgba(255,255,255,0.55)">Run ↵</button>
+            </div>
+          </form>
+        </div>
+      </sc-if>
+
+      <!-- WATCH MODE -->
+      <sc-if value="{{isWatch}}" hint-placeholder-val="{{ false }}">
+        <div class="rise" style="max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px">
+          <div style="position: relative; aspect-ratio: 16 / 9; border-radius: 20px; overflow: hidden; background: #0A0C14; border: 1px solid rgba(255,255,255,0.08)">
+            <div aria-hidden="true" style="position: absolute; inset: 0; background-image: radial-gradient(rgba(61,227,255,0.16) 1px, transparent 1px); background-size: 18px 18px"></div>
+            <div aria-hidden="true" style="position: absolute; left: 12%; right: 12%; top: 22%; display: flex; flex-direction: column; gap: 12px">
+              <span style="height: 26px; width: 78%; border-radius: 6px; background: #3DE3FF; opacity: 0.85"></span>
+              <span style="height: 26px; width: 44%; border-radius: 6px; background: #3DE3FF; opacity: 0.6"></span>
+              <span style="height: 26px; width: 26%; border-radius: 6px; background: #3DE3FF; opacity: 0.45"></span>
+              <span style="height: 26px; width: 12%; border-radius: 6px; background: #3DE3FF; opacity: 0.3"></span>
+            </div>
+            <button type="button" aria-label="Play video" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 84px; height: 84px; border-radius: 999px; border: 0; background: #ECEEF5; display: grid; place-items: center; cursor: pointer; box-shadow: 0 20px 60px rgba(0,0,0,0.5)">
+              <svg width="26" height="30" viewBox="0 0 20 22" aria-hidden="true"><path d="M3 2 L18 11 L3 20 Z" fill="#07080D"></path></svg>
+            </button>
+            <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; background: rgba(7,8,13,0.78)">
+              <div aria-label="Chapters" style="display: flex; gap: 4px">
+                <span style="flex: 2; height: 5px; border-radius: 3px; background: #3DE3FF"></span>
+                <span style="flex: 3; height: 5px; border-radius: 3px; background: linear-gradient(90deg, #3DE3FF 40%, rgba(255,255,255,0.22) 40%)"></span>
+                <span style="flex: 2; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.22)"></span>
+                <span style="flex: 3; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.22)"></span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; color: #D5D8E3">
+                <button type="button" aria-label="Pause" style="width: 40px; height: 40px; border-radius: 10px; border: 0; background: rgba(255,255,255,0.08); display: grid; place-items: center; cursor: pointer"><svg width="12" height="14" viewBox="0 0 12 14" aria-hidden="true"><rect x="1" y="1" width="3.5" height="12" rx="1" fill="#ECEEF5"></rect><rect x="7.5" y="1" width="3.5" height="12" rx="1" fill="#ECEEF5"></rect></svg></button>
+                <span>1:52 / 4:30</span>
+                <span style="margin-left: auto; color: #9AA0B4">Chapter 2 · Sharpening the odds</span>
+                <button type="button" style="min-height: 40px; padding: 0 10px; border-radius: 10px; border: 0; background: rgba(255,255,255,0.08); color: #ECEEF5; font-family: inherit; font-size: 13px; cursor: pointer">1.25×</button>
+                <button type="button" aria-label="Captions on" style="min-height: 40px; padding: 0 10px; border-radius: 10px; border: 0; background: rgba(255,255,255,0.08); color: #ECEEF5; font-family: inherit; font-size: 13px; cursor: pointer">CC</button>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 20px">
+            <div style="flex: 999 1 420px; min-width: 0; padding: 22px; border-radius: 18px; background: #0E1018; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 10px">
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.12em; color: #9AA0B4">TRANSCRIPT · FOLLOWS ALONG</span>
+              <p style="margin: 0; font-size: 16px; line-height: 1.7; color: #7A8098">So the model has a ranked list of candidates for the next token…</p>
+              <p style="margin: 0; padding: 10px 12px; border-radius: 10px; background: rgba(61,227,255,0.08); font-size: 16px; line-height: 1.7; color: #ECEEF5">Temperature divides every score before they become probabilities. Divide by a small number and the gaps get huge.</p>
+              <p style="margin: 0; font-size: 16px; line-height: 1.7; color: #9AA0B4">Divide by a big number and everything starts to look the same…</p>
+            </div>
+            <div style="flex: 1 1 260px; padding: 22px; border-radius: 18px; background: #0E1018; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 14px">
+              <span style="font-size: 15px; line-height: 1.55; color: #D5D8E3">Video is optional. The exercise still happens in text, and your draft is waiting.</span>
+              <button type="button" class="key" onClick="{{toRead}}" style="min-height: 48px; border: 0; border-radius: 12px; cursor: pointer; background: #C6FF3D; color: #0A0C05; font-family: 'Geist Mono', ui-monospace, monospace; font-weight: 500; font-size: 14px; box-shadow: 0 4px 0 #6E9116, inset 0 1px 0 rgba(255,255,255,0.55)">Back to the exercise</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+  state = { mode: "read", temp: 70, runTemp: 0, draft: "Write a tagline for a coffee shop on the moon.", runs: [], hot: 0 };
+
+  toRead = () => this.setState({ mode: "read" });
+  toWatch = () => this.setState({ mode: "watch" });
+  onTemp = (e) => this.setState({ temp: Number(e.target.value) });
+  onDraft = (e) => this.setState({ draft: e.target.value });
+  run = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const s = this.state;
+    const p = (s.draft || "").trim();
+    if (!p) return;
+    const cold = "Brewed beyond gravity.";
+    const hot = [
+      "One small sip for mankind.",
+      "Espresso at escape velocity.",
+      "Low gravity. High caffeine.",
+      "Fly me to the foam.",
+      "Lunar roast, zero atmosphere, full flavour."
+    ];
+    const t = s.runTemp;
+    const out = t === 0 ? cold : hot[s.hot % hot.length];
+    const run = { prompt: p, t: t === 0 ? "0.0" : (t / 100).toFixed(1), out, tokens: Math.max(3, Math.round(out.length / 4)), temp: t };
+    this.setState({ runs: s.runs.concat([run]).slice(-4), hot: t === 0 ? s.hot : s.hot + 1 });
+  };
+
+  renderVals() {
+    const s = this.state;
+    // Next-token odds under temperature
+    const cands = [[" Brew", 3.1], [" One", 2.4], [" Lunar", 1.9], [" Fly", 1.2], [" Zero", 0.6]];
+    const T = s.temp / 100;
+    let probs;
+    if (T < 0.05) probs = cands.map((c, i) => (i === 0 ? 1 : 0));
+    else {
+      const ex = cands.map((c) => Math.exp(c[1] / T));
+      const sum = ex.reduce((a, b) => a + b, 0);
+      probs = ex.map((v) => v / sum);
+    }
+    const bars = cands.map((c, i) => ({
+      t: c[0], w: Math.max(1, probs[i] * 100).toFixed(1) + "%", p: Math.round(probs[i] * 100) + "%",
+      c: i === 0 ? "#3DE3FF" : "rgba(61,227,255,0.45)"
+    }));
+    const tempNote = T < 0.05 ? "At 0 the favourite wins every time. Same prompt → same answer."
+      : T < 0.6 ? "Sharp: the top token dominates, but a runner-up sneaks in now and then."
+      : T < 1.05 ? "Balanced: plausible variety. Most chat apps live around here."
+      : "Flat: long shots get real odds. Creative — and occasionally unhinged.";
+
+    // Live checks on the learner's own prompt
+    const d = s.draft || "";
+    const has = (re) => re.test(d);
+    const ranCold = s.runs.some((r) => r.temp === 0);
+    const ranHot = s.runs.filter((r) => r.temp >= 100).length >= 1;
+    const defs = [
+      ["Asks for a tagline", has(/tagline|slogan/i)],
+      ["Coffee + moon", has(/coffee|caf[eé]/i) && has(/moon|lunar/i)],
+      ["Sets a length limit", has(/\bwords?\b|\bshort\b|\bunder\b|\bmax/i)],
+      ["Ran at 0 and 1.0", ranCold && ranHot]
+    ];
+    const checks = defs.map((c) => ({
+      label: c[0], mark: c[1] ? "✓" : "○",
+      bg: c[1] ? "rgba(198,255,61,0.12)" : "transparent",
+      line: c[1] ? "rgba(198,255,61,0.45)" : "rgba(255,255,255,0.12)",
+      fg: c[1] ? "#E4FF9E" : "#9AA0B4"
+    }));
+    const passed = defs.every((c) => c[1]);
+    const temps = [[0, "0"], [70, "0.7"], [100, "1.0"]].map((t) => {
+      const on = s.runTemp === t[0];
+      return {
+        label: t[1], on: on ? "true" : "false",
+        bg: on ? "#3DE3FF" : "transparent", fg: on ? "#07080D" : "#C6CAD6",
+        line: on ? "#3DE3FF" : "rgba(255,255,255,0.14)",
+        pick: () => this.setState({ runTemp: t[0], temp: t[0] })
+      };
+    });
+    const outlineDefs = ["What is a token?", "Tokenizers are weird", "Counting tokens", "Probabilities, not answers", "Greedy vs. sampled", "Temperature & randomness", "Top-p and friends", "Checkpoint: tune a chatbot"];
+    const outline = outlineDefs.map((t, i) => {
+      const done = i < 5 || (i === 5 && passed), cur = i === 5;
+      return {
+        title: t, mark: done ? "✓" : String(i + 1),
+        fg: cur ? "#ECEEF5" : done ? "#9AA0B4" : "#C6CAD6",
+        bg: cur ? "rgba(61,227,255,0.08)" : "transparent",
+        dotBg: done ? "#C6FF3D" : "transparent",
+        dotLine: done ? "0" : cur ? "2px solid #3DE3FF" : "1px dashed rgba(255,255,255,0.3)"
+      };
+    });
+    const on = { bg: "#1C2030", fg: "#ECEEF5" }, off = { bg: "transparent", fg: "#9AA0B4" };
+    return {
+      isRead: s.mode === "read", isWatch: s.mode === "watch",
+      readSel: s.mode === "read" ? "true" : "false", watchSel: s.mode === "watch" ? "true" : "false",
+      readTab: s.mode === "read" ? on : off, watchTab: s.mode === "watch" ? on : off,
+      toRead: this.toRead, toWatch: this.toWatch,
+      bars, tempInt: s.temp, tempLabel: T.toFixed(2), tempNote, onTemp: this.onTemp,
+      draft: d, onDraft: this.onDraft, draftTokens: Math.max(1, Math.round(d.length / 4)),
+      checks, passed, temps, runs: s.runs, run: this.run, outline,
+      neurons: passed ? "1,280" : "1,240",
+      seg6: passed ? "#C6FF3D" : "linear-gradient(90deg, #3DE3FF 50%, rgba(255,255,255,0.1) 50%)"
+    };
+  }
+}
+</script>
+</body>
+</html>

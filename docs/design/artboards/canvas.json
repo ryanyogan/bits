@@ -1,0 +1,130 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Auth.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "title": "Auth — sign in / create account",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "Authoring.dc.html": {
+      "expand": "fill",
+      "h": 1700,
+      "title": "Authoring — markdown course format + upload",
+      "w": 1440,
+      "x": 1520,
+      "y": 8100
+    },
+    "Catalog.dc.html": {
+      "expand": "fill",
+      "h": 1900,
+      "is_interactive": true,
+      "title": "Browse courses",
+      "w": 1440,
+      "x": 0,
+      "y": 5800
+    },
+    "CodeLesson.dc.html": {
+      "expand": "fill",
+      "h": 1200,
+      "is_interactive": true,
+      "title": "Lesson — terminal mode + code editor",
+      "w": 1440,
+      "x": 4560,
+      "y": 5800
+    },
+    "Course.dc.html": {
+      "expand": "fill",
+      "h": 1800,
+      "title": "Course overview + progress",
+      "w": 1440,
+      "x": 1803,
+      "y": 5277
+    },
+    "Lesson.dc.html": {
+      "expand": "fill",
+      "h": 1400,
+      "is_interactive": true,
+      "title": "Lesson — chat mode, type-to-learn exercise",
+      "w": 1440,
+      "x": 3040,
+      "y": 5800
+    },
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 5400,
+      "is_interactive": true,
+      "title": "Landing — scroll-morphing neural field",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Profile.dc.html": {
+      "expand": "fill",
+      "h": 1600,
+      "title": "Profile + progress",
+      "w": 1440,
+      "x": 0,
+      "y": 8100
+    },
+    "System.dc.html": {
+      "expand": "fill",
+      "h": 1560,
+      "title": "Design system — tokens & components",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-26T13:24:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "row1": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "First impression — landing, auth, system",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "row2": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "Learning — browse, course, lessons",
+      "w": 240,
+      "x": 0,
+      "y": 5520
+    },
+    "row3": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "You & authors — profile, markdown courses",
+      "w": 240,
+      "x": 0,
+      "y": 7820
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Auth.dc.html",
+    "System.dc.html",
+    "Catalog.dc.html",
+    "Course.dc.html",
+    "Lesson.dc.html",
+    "CodeLesson.dc.html",
+    "Profile.dc.html",
+    "Authoring.dc.html"
+  ],
+  "pages": [],
+  "title": "Latent — AI Learning Platform"
+}

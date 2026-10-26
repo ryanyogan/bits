@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Latent — design system</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;700;800&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07080D}
+a{color:#C6FF3D}a:hover{color:#E2FF8F}
+.pulse{animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(61,227,255,.6)}50%{box-shadow:0 0 0 8px rgba(61,227,255,0)}}
+</style>
+</helmet>
+<div style="background: #07080D; color: #ECEEF5; font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased">
+  <div style="max-width: 1280px; margin: 0 auto; padding: 64px 32px 80px; display: flex; flex-direction: column; gap: 64px">
+
+    <header style="display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; flex-wrap: wrap; padding-bottom: 32px; border-bottom: 1px solid rgba(255,255,255,0.08)">
+      <div style="display: flex; flex-direction: column; gap: 14px">
+        <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: #C6FF3D">latent / system</span>
+        <h1 style="margin: 0; font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 800; font-size: 56px; line-height: 1; letter-spacing: -0.04em">Ink, Volt &amp; Ion.</h1>
+      </div>
+      <p style="margin: 0; max-width: 520px; font-size: 16px; line-height: 1.6; color: #9AA0B4">A dark ink ground, one electric accent for “do this”, one cool accent for “the model said this”. Unbounded shouts, Geist reads, Geist Mono is anything you type.</p>
+    </header>
+
+    <!-- COLOR -->
+    <section style="display: flex; flex-direction: column; gap: 24px">
+      <h2 style="margin: 0; font-family: 'Geist Mono', ui-monospace, monospace; font-weight: 500; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: #9AA0B4">Color</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 14px">
+        <sc-for list="{{colors}}" as="c" hint-placeholder-count="11">
+          <div style="display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); background: #0E1018">
+            <div style="height: 96px; background: {{c.hex}}; border-bottom: 1px solid rgba(255,255,255,0.06)"></div>
+            <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 4px">
+              <span style="font-size: 15px; font-weight: 600">{{c.name}}</span>
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #C6CAD6">{{c.hex}}</span>
+              <span style="font-size: 13px; line-height: 1.45; color: #9AA0B4">{{c.use}}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- TYPE -->
+    <section style="display: flex; flex-direction: column; gap: 24px">
+      <h2 style="margin: 0; font-family: 'Geist Mono', ui-monospace, monospace; font-weight: 500; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: #9AA0B4">Type</h2>
+      <div style="display: flex; flex-direction: column; border-top: 1px solid rgba(255,255,255,0.08)">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 24px; align-items: baseline; padding: 22px 0; border-bottom: 1px solid rgba(255,255,255,0.08)">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4; line-height: 1.6">display-xl<br>Unbounded 800 · clamp(46–124) · −0.045em</span>
+          <span style="grid-column: span 3; font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 800; font-size: 88px; line-height: 0.95; letter-spacing: -0.045em">Learn AI</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 24px; align-items: baseline; padding: 22px 0; border-bottom: 1px solid rgba(255,255,255,0.08)">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4; line-height: 1.6">h2<br>Unbounded 700 · 64 / 1.02 · −0.035em</span>
+          <span style="grid-column: span 3; font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 700; font-size: 52px; line-height: 1.02; letter-spacing: -0.035em">Every lesson is a conversation.</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 24px; align-items: baseline; padding: 22px 0; border-bottom: 1px solid rgba(255,255,255,0.08)">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4; line-height: 1.6">h3 / card title<br>Unbounded 500 · 22 / 1.15 · −0.02em</span>
+          <span style="grid-column: span 3; font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 500; font-size: 22px; letter-spacing: -0.02em">Give your model tools</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 24px; align-items: baseline; padding: 22px 0; border-bottom: 1px solid rgba(255,255,255,0.08)">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4; line-height: 1.6">body / lesson<br>Geist 400 · 17 / 1.7 · max 68ch</span>
+          <span style="grid-column: span 3; font-size: 17px; line-height: 1.7; color: #D5D8E3; max-width: 68ch">A model never sees your sentence. It sees a list of numbers, one per token, and guesses which number should come next — then does it again.</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 24px; align-items: baseline; padding: 22px 0; border-bottom: 1px solid rgba(255,255,255,0.08)">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4; line-height: 1.6">mono / input + code<br>Geist Mono 400 · 15 / 1.75</span>
+          <span style="grid-column: span 3; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 15px; color: #ECEEF5"><span style="color: #C6FF3D">›</span> You are a pirate. Answer in exactly 3 bullet points.</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 24px; align-items: baseline; padding: 22px 0; border-bottom: 1px solid rgba(255,255,255,0.08)">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4; line-height: 1.6">eyebrow<br>Geist Mono 500 · 12–13 · +0.14em · caps</span>
+          <span style="grid-column: span 3; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: #3DE3FF">02 — How it works</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMPONENTS -->
+    <section style="display: flex; flex-direction: column; gap: 24px">
+      <h2 style="margin: 0; font-family: 'Geist Mono', ui-monospace, monospace; font-weight: 500; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: #9AA0B4">Components</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); gap: 16px">
+
+        <div style="padding: 24px; border-radius: 18px; background: #0E1018; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 20px">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4">Keycap buttons — rest · hover · pressed</span>
+          <div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center">
+            <button type="button" style="min-height: 48px; padding: 0 20px; border: 0; border-radius: 12px; background: #C6FF3D; color: #0A0C05; font-family: 'Geist Mono', ui-monospace, monospace; font-weight: 500; font-size: 14px; box-shadow: 0 4px 0 #6E9116, inset 0 1px 0 rgba(255,255,255,0.55); cursor: pointer">Start lesson →</button>
+            <button type="button" style="min-height: 48px; padding: 0 20px; border: 0; border-radius: 12px; background: #D4FF66; color: #0A0C05; font-family: 'Geist Mono', ui-monospace, monospace; font-weight: 500; font-size: 14px; box-shadow: 0 5px 0 #6E9116, 0 12px 30px rgba(198,255,61,0.25), inset 0 1px 0 rgba(255,255,255,0.55); transform: translateY(-1px); cursor: pointer">Hover</button>
+            <button type="button" style="min-height: 48px; padding: 0 20px; border: 0; border-radius: 12px; background: #C6FF3D; color: #0A0C05; font-family: 'Geist Mono', ui-monospace, monospace; font-weight: 500; font-size: 14px; box-shadow: 0 1px 0 #6E9116; transform: translateY(3px); cursor: pointer">Pressed</button>
+          </div>
+          <div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center">
+            <button type="button" style="min-height: 48px; padding: 0 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); background: #151826; color: #ECEEF5; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px; box-shadow: 0 4px 0 #020305; cursor: pointer">Browse courses</button>
+            <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14); background: transparent; color: #ECEEF5; font-family: 'Geist', ui-sans-serif, sans-serif; font-size: 15px; cursor: pointer">Ghost</button>
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4; padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 2px 0 rgba(255,255,255,0.08)">⌘ K</span>
+          </div>
+        </div>
+
+        <div style="padding: 24px; border-radius: 18px; background: #0E1018; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 20px">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4">Prompt composer — the most important input on the site</span>
+          <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 16px; background: #0A0C14; border: 1px solid rgba(198,255,61,0.5); box-shadow: 0 0 0 4px rgba(198,255,61,0.1)">
+            <div style="display: flex; align-items: center; gap: 10px">
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #0A0C05; background: #C6FF3D; padding: 3px 8px; border-radius: 6px">Your turn</span>
+              <span style="font-size: 13px; color: #9AA0B4">Make the model answer as a pirate in 3 bullets</span>
+            </div>
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 15px; color: #ECEEF5">You are a salty pirate captain.<span style="color: #C6FF3D">▍</span></span>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #7A8098">
+              <span>8 tokens · temp 0.7</span>
+              <span style="padding: 6px 10px; border-radius: 8px; background: #C6FF3D; color: #0A0C05">Run ↵</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 24px; border-radius: 18px; background: #0E1018; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 20px">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4">Lesson nodes — done · current · next</span>
+          <div style="display: flex; flex-direction: column; gap: 0">
+            <div style="display: flex; align-items: center; gap: 14px; padding: 10px 0">
+              <span style="width: 32px; height: 32px; border-radius: 999px; background: #C6FF3D; display: grid; place-items: center"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5 L5.5 10.5 L11.5 3.5" stroke="#0A0C05" stroke-width="2" fill="none" stroke-linecap="round"></path></svg></span>
+              <span style="font-size: 15px; color: #9AA0B4; text-decoration: line-through; text-decoration-color: rgba(154,160,180,0.4)">What is a token?</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px; padding: 10px 0">
+              <span class="pulse" style="width: 32px; height: 32px; box-sizing: border-box; border-radius: 999px; border: 2px solid #3DE3FF; display: grid; place-items: center"><span style="width: 10px; height: 10px; border-radius: 99px; background: #3DE3FF"></span></span>
+              <span style="font-size: 15px; font-weight: 600; color: #ECEEF5">Temperature &amp; randomness</span>
+              <span style="margin-left: auto; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; color: #3DE3FF">IN PROGRESS</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px; padding: 10px 0">
+              <span style="width: 32px; height: 32px; box-sizing: border-box; border-radius: 999px; border: 1px dashed rgba(255,255,255,0.3)"></span>
+              <span style="font-size: 15px; color: #D5D8E3">The context window</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 24px; border-radius: 18px; background: #0E1018; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 20px">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4">Chips, tabs, token pills</span>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap">
+            <span style="padding: 9px 14px; border-radius: 999px; border: 1px solid rgba(198,255,61,0.6); background: rgba(198,255,61,0.12); color: #E4FF9E; font-size: 14px">Agents</span>
+            <span style="padding: 9px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); color: #B4B9CA; font-size: 14px">Prompting</span>
+            <span style="padding: 9px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); color: #B4B9CA; font-size: 14px">Foundations</span>
+          </div>
+          <div style="display: inline-flex; align-self: flex-start; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(255,255,255,0.05); font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px">
+            <span style="padding: 7px 12px; border-radius: 7px; background: rgba(255,255,255,0.1); color: #ECEEF5">Read</span>
+            <span style="padding: 7px 12px; color: #9AA0B4">Watch</span>
+            <span style="padding: 7px 12px; color: #9AA0B4">Terminal</span>
+          </div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 15px">
+            <span style="padding: 6px 8px; border-radius: 7px; background: rgba(198,255,61,0.12); border: 1px solid rgba(198,255,61,0.35)">Un</span>
+            <span style="padding: 6px 8px; border-radius: 7px; background: rgba(61,227,255,0.12); border: 1px solid rgba(61,227,255,0.35)">believ</span>
+            <span style="padding: 6px 8px; border-radius: 7px; background: rgba(157,133,255,0.14); border: 1px solid rgba(157,133,255,0.4)">ably</span>
+          </div>
+        </div>
+
+        <div style="padding: 24px; border-radius: 18px; background: #0E1018; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 20px">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4">Reward toast — fires when an exercise passes</span>
+          <div style="display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 16px; background: #C6FF3D; color: #0A0C05; box-shadow: 0 20px 60px rgba(198,255,61,0.25)">
+            <svg width="36" height="36" viewBox="0 0 22 22" aria-hidden="true"><path d="M11 1.5 L19.2 6.25 L19.2 15.75 L11 20.5 L2.8 15.75 L2.8 6.25 Z" fill="#0A0C05"></path><path d="M7 11.5 L10 14 L15 8" stroke="#C6FF3D" stroke-width="1.8" fill="none" stroke-linecap="round"></path></svg>
+            <div style="display: flex; flex-direction: column; gap: 2px">
+              <span style="font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 700; font-size: 18px">+40 neurons</span>
+              <span style="font-size: 14px">Prompt passed all 3 checks</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 24px; border-radius: 18px; background: #0E1018; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 20px">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4">Shape &amp; motion</span>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 20px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; color: #D5D8E3">
+            <span style="color: #9AA0B4">radius</span><span>8 · 11 · 14 · 18 · 22 · pill</span>
+            <span style="color: #9AA0B4">space</span><span>4-pt; sections 120 / cards 24</span>
+            <span style="color: #9AA0B4">glass</span><span>#0C0E16 @ 78% · blur 14–18</span>
+            <span style="color: #9AA0B4">keycap press</span><span>120ms · 3px travel</span>
+            <span style="color: #9AA0B4">reveal</span><span>400ms ease · 8px rise</span>
+            <span style="color: #9AA0B4">3D morph</span><span>lerp 0.055 / frame</span>
+            <span style="color: #9AA0B4">reduced motion</span><span>field at ¼ speed, no caret</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      colors: [
+        { name: "Ink", hex: "#07080D", use: "Page ground. Never pure black." },
+        { name: "Surface", hex: "#0E1018", use: "Cards, panels, inputs." },
+        { name: "Raised", hex: "#151826", use: "Dark keycaps, selected tabs." },
+        { name: "Text", hex: "#ECEEF5", use: "Headlines and primary copy." },
+        { name: "Muted", hex: "#9AA0B4", use: "Body secondary, descriptions." },
+        { name: "Dim", hex: "#7A8098", use: "Hints and meta. Smallest allowed grey (4.9:1)." },
+        { name: "Volt", hex: "#C6FF3D", use: "Primary action, your turn, success. Text on it is Ink." },
+        { name: "Volt edge", hex: "#6E9116", use: "Keycap shadow under Volt only." },
+        { name: "Ion", hex: "#3DE3FF", use: "Model output, in-progress, video." },
+        { name: "Synapse", hex: "#9D85FF", use: "3D field and Tools track only." }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

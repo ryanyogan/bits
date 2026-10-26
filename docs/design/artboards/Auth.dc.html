@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Latent — sign in</title>
+<script src="./support.js"></script>
+<script src="/_blob/37b9a4f22eee5ecb953ef7e3f03a5e1c"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;700;800&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07080D}
+a{color:#C6FF3D}a:hover{color:#E2FF8F}
+.key{transition:transform .12s ease, box-shadow .12s ease, filter .12s ease}
+.key:hover{transform:translateY(-1px);filter:brightness(1.06)}
+.key:active{transform:translateY(3px);box-shadow:0 1px 0 #6E9116 !important}
+.ghost{transition:background .15s,border-color .15s}
+.ghost:hover{background:rgba(255,255,255,0.06) !important;border-color:rgba(255,255,255,0.22) !important}
+.field:focus{outline:none;border-color:rgba(198,255,61,0.7) !important;box-shadow:0 0 0 4px rgba(198,255,61,0.12)}
+.field::placeholder{color:#7A8098}
+.caret{animation:blink 1.05s steps(1) infinite}
+@keyframes blink{0%{opacity:1}50%{opacity:0}}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.rise{animation:rise .4s ease both}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; background: #07080D; color: #ECEEF5; font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased">
+
+  <!-- Left: living brain -->
+  <div style="position: relative; flex: 1 1 560px; min-height: 560px; overflow: hidden; border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; justify-content: space-between; padding: 32px; box-sizing: border-box">
+    <canvas ref="{{setCanvas}}" data-brain="1" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block"></canvas>
+    <div aria-hidden="true" style="position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 26px 26px; pointer-events: none"></div>
+    <a href="Main.dc.html" style="position: relative; display: flex; align-items: center; gap: 10px; text-decoration: none; color: #ECEEF5; align-self: flex-start">
+      <svg width="28" height="28" viewBox="0 0 30 30" fill="none" aria-hidden="true">
+        <path d="M7 7 L7 23 L23 23 M7 7 L23 13 L23 23" stroke="#ECEEF5" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"></path>
+        <circle cx="7" cy="7" r="3" fill="#ECEEF5"></circle><circle cx="7" cy="23" r="3" fill="#ECEEF5"></circle><circle cx="23" cy="13" r="3" fill="#ECEEF5"></circle><circle cx="23" cy="23" r="3.6" fill="#C6FF3D"></circle>
+      </svg>
+      <span style="font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 700; font-size: 19px; letter-spacing: -0.02em">latent</span>
+    </a>
+    <div style="position: relative; display: flex; flex-direction: column; gap: 22px; max-width: 520px">
+      <h2 style="margin: 0; font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 800; font-size: clamp(36px, 4.4vw, 60px); line-height: 0.98; letter-spacing: -0.04em">Your neurons,<br><span style="color: #C6FF3D">saved.</span></h2>
+      <div style="padding: 16px 18px; border-radius: 14px; background: rgba(10,12,20,0.78); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; line-height: 1.9; color: #9AA0B4">
+        <div><span style="color: #C6FF3D">›</span> session.restore()</div>
+        <div><span style="color: #3DE3FF">✓</span> 5 lessons · 12-day streak · 1,240 neurons</div>
+        <div><span style="color: #3DE3FF">✓</span> resuming “Temperature &amp; randomness”<span class="caret" style="color: #C6FF3D">▍</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: the form -->
+  <main style="flex: 1 1 480px; display: flex; align-items: center; justify-content: center; padding: 48px 24px; box-sizing: border-box">
+    <div style="width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 26px">
+
+      <div role="tablist" aria-label="Account" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 13px; background: #0E1018; border: 1px solid rgba(255,255,255,0.08)">
+        <button type="button" role="tab" aria-selected="{{isSignin}}" onClick="{{toSignin}}" style="min-height: 44px; border: 0; border-radius: 10px; cursor: pointer; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px; background: {{tabA.bg}}; color: {{tabA.fg}}">Sign in</button>
+        <button type="button" role="tab" aria-selected="{{isSignup}}" onClick="{{toSignup}}" style="min-height: 44px; border: 0; border-radius: 10px; cursor: pointer; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px; background: {{tabB.bg}}; color: {{tabB.fg}}">Create account</button>
+      </div>
+
+      <sc-if value="{{notSent}}" hint-placeholder-val="{{ true }}">
+        <div class="rise" style="display: flex; flex-direction: column; gap: 22px">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <h1 style="margin: 0; font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 700; font-size: 34px; letter-spacing: -0.03em">{{heading}}</h1>
+            <p style="margin: 0; font-size: 16px; line-height: 1.55; color: #9AA0B4">{{sub}}</p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <button type="button" class="ghost" style="min-height: 50px; display: flex; align-items: center; justify-content: center; gap: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); background: #0E1018; color: #ECEEF5; font-family: 'Geist', ui-sans-serif, sans-serif; font-size: 15px; font-weight: 500; cursor: pointer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ECEEF5" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="5" r="2.2"></circle><circle cx="6" cy="19" r="2.2"></circle><circle cx="18" cy="8" r="2.2"></circle><path d="M6 7.2 V16.8 M18 10.2 C18 14 12 13 6.5 16.8"></path></svg>
+              Continue with GitHub
+            </button>
+            <button type="button" class="ghost" style="min-height: 50px; display: flex; align-items: center; justify-content: center; gap: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); background: #0E1018; color: #ECEEF5; font-family: 'Geist', ui-sans-serif, sans-serif; font-size: 15px; font-weight: 500; cursor: pointer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ECEEF5" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12 H21 M12 3 C15 6 15 18 12 21 C9 18 9 6 12 3"></path></svg>
+              Continue with Google
+            </button>
+            <button type="button" class="ghost" style="min-height: 50px; display: flex; align-items: center; justify-content: center; gap: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); background: #0E1018; color: #ECEEF5; font-family: 'Geist', ui-sans-serif, sans-serif; font-size: 15px; font-weight: 500; cursor: pointer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C6FF3D" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="9" r="4"></circle><path d="M11 12 L20 21 M16 17 L18.5 14.5 M18 20 L20 18"></path></svg>
+              Use a passkey
+            </button>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 14px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #7A8098">
+            <span style="flex: 1; height: 1px; background: rgba(255,255,255,0.08)"></span>or use email<span style="flex: 1; height: 1px; background: rgba(255,255,255,0.08)"></span>
+          </div>
+
+          <form onSubmit="{{submit}}" style="display: flex; flex-direction: column; gap: 16px">
+            <sc-if value="{{isSignup}}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-direction: column; gap: 8px">
+                <label for="auth-name" style="font-size: 14px; color: #D5D8E3">What should we call you?</label>
+                <input id="auth-name" class="field" type="text" placeholder="Ada" autocomplete="name" style="min-height: 50px; padding: 0 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); background: #0A0C14; color: #ECEEF5; font-family: 'Geist', ui-sans-serif, sans-serif; font-size: 16px">
+              </div>
+            </sc-if>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <label for="auth-email" style="font-size: 14px; color: #D5D8E3">Email</label>
+              <input id="auth-email" class="field" type="email" value="{{email}}" onChange="{{onEmail}}" placeholder="you@somewhere.dev" autocomplete="email" style="min-height: 50px; padding: 0 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); background: #0A0C14; color: #ECEEF5; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 15px">
+            </div>
+            <sc-if value="{{isSignup}}" hint-placeholder-val="{{ false }}">
+              <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 10px">
+                <legend style="font-size: 14px; color: #D5D8E3; padding: 0; margin-bottom: 10px">What brings you here? <span style="color: #7A8098">— we'll suggest a first course</span></legend>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px">
+                  <sc-for list="{{goals}}" as="g" hint-placeholder-count="4">
+                    <button type="button" onClick="{{g.toggle}}" aria-pressed="{{g.on}}" style="min-height: 44px; padding: 0 14px; border-radius: 999px; cursor: pointer; font-family: 'Geist', ui-sans-serif, sans-serif; font-size: 14px; border: 1px solid {{g.line}}; background: {{g.bg}}; color: {{g.fg}}">{{g.label}}</button>
+                  </sc-for>
+                </div>
+              </fieldset>
+            </sc-if>
+            <button type="submit" class="key" style="margin-top: 4px; min-height: 54px; border: 0; border-radius: 13px; cursor: pointer; background: #C6FF3D; color: #0A0C05; font-family: 'Geist Mono', ui-monospace, monospace; font-weight: 500; font-size: 15px; box-shadow: 0 5px 0 #6E9116, inset 0 1px 0 rgba(255,255,255,0.55)">{{cta}}</button>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #7A8098; text-align: center">No passwords. We'll email you a one-time link and code.</p>
+          </form>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{sent}}" hint-placeholder-val="{{ false }}">
+        <div class="rise" style="display: flex; flex-direction: column; gap: 22px">
+          <div aria-hidden="true" style="width: 64px; height: 64px; border-radius: 18px; background: rgba(198,255,61,0.1); border: 1px solid rgba(198,255,61,0.4); display: grid; place-items: center">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C6FF3D" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"></rect><path d="M3.5 6.5 L12 13 L20.5 6.5"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <h1 style="margin: 0; font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 700; font-size: 32px; letter-spacing: -0.03em">Check your inbox.</h1>
+            <p style="margin: 0; font-size: 16px; line-height: 1.55; color: #9AA0B4">We sent a sign-in link to <span style="color: #ECEEF5; font-family: 'Geist Mono', ui-monospace, monospace">{{shownEmail}}</span>. Or type the 6-digit code from the email:</p>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px">
+            <sc-for list="{{codeBoxes}}" as="cb" hint-placeholder-count="6">
+              <label style="display: block">
+                <span class="sr" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Digit {{cb.n}}</span>
+                <input class="field" inputmode="numeric" maxlength="1" style="width: 100%; box-sizing: border-box; height: 60px; text-align: center; border-radius: 12px; border: 1px solid rgba(255,255,255,0.14); background: #0A0C14; color: #ECEEF5; font-family: 'Unbounded', ui-sans-serif, sans-serif; font-size: 22px">
+              </label>
+            </sc-for>
+          </div>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap">
+            <a class="key" href="Catalog.dc.html" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; min-height: 52px; border-radius: 13px; background: #C6FF3D; color: #0A0C05; text-decoration: none; font-family: 'Geist Mono', ui-monospace, monospace; font-weight: 500; font-size: 15px; box-shadow: 0 5px 0 #6E9116, inset 0 1px 0 rgba(255,255,255,0.55)">Verify &amp; continue</a>
+            <button type="button" class="ghost" onClick="{{back}}" style="min-height: 52px; padding: 0 18px; border-radius: 13px; border: 1px solid rgba(255,255,255,0.12); background: transparent; color: #ECEEF5; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px; cursor: pointer">Use another email</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08)">
+        <a href="Lesson.dc.html" style="font-size: 15px; text-decoration: none">Just exploring? Start lesson 1 without an account →</a>
+        <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #7A8098">By continuing you agree to the <a href="#terms" style="color: #9AA0B4">Terms</a> and <a href="#privacy" style="color: #9AA0B4">Privacy Policy</a>.</p>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  state = { mode: "signin", email: "", sent: false, goals: { curious: true } };
+
+  setCanvas = (el) => { this.canvas = el; if (el && this._mounted && !this.renderer) this.initGL(0); };
+  toSignin = () => this.setState({ mode: "signin", sent: false });
+  toSignup = () => this.setState({ mode: "signup", sent: false });
+  onEmail = (e) => this.setState({ email: e.target.value });
+  submit = (e) => { if (e && e.preventDefault) e.preventDefault(); this.setState({ sent: true }); };
+  back = () => this.setState({ sent: false });
+
+  componentDidMount() {
+    this._mounted = true;
+    if (!this.canvas) this.canvas = document.querySelector("canvas[data-brain]");
+    this.initGL(0);
+  }
+  componentWillUnmount() {
+    this._mounted = false;
+    if (this.raf) cancelAnimationFrame(this.raf);
+    if (this.renderer) this.renderer.dispose();
+    if (this.disposables) this.disposables.forEach((d) => d.dispose());
+  }
+
+  initGL(tries) {
+    if (this.renderer || !this._mounted) return;
+    const T = window.THREE;
+    if (!T || !this.canvas) { if (tries < 40) setTimeout(() => this.initGL(tries + 1), 100); return; }
+    let renderer;
+    try { renderer = new T.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: true }); } catch (err) { return; }
+    this.renderer = renderer;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x000000, 0);
+    const scene = new T.Scene();
+    const camera = new T.PerspectiveCamera(45, 1, 0.1, 100);
+    camera.position.set(0, 0, 12);
+    const group = new T.Group();
+    scene.add(group);
+
+    // Fibonacci sphere that breathes like a thinking brain
+    const N = 2800;
+    const pos = new Float32Array(N * 3), rr = new Float32Array(N);
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < N; i++) {
+      const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), th = golden * i;
+      pos[i * 3] = Math.cos(th) * r * 3; pos[i * 3 + 1] = y * 3; pos[i * 3 + 2] = Math.sin(th) * r * 3;
+      rr[i] = (Math.sin(i * 12.9898) * 43758.5453) % 1;
+    }
+    const geo = new T.BufferGeometry();
+    geo.setAttribute("position", new T.BufferAttribute(pos, 3));
+    geo.setAttribute("aR", new T.BufferAttribute(rr, 1));
+    const mat = new T.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: T.AdditiveBlending,
+      uniforms: { uTime: { value: 0 }, uPx: { value: renderer.getPixelRatio() } },
+      vertexShader: [
+        "uniform float uTime; uniform float uPx; attribute float aR; varying float vH; varying float vR;",
+        "void main(){",
+        "  vec3 n = normalize(position);",
+        "  float w = sin(n.x * 4.0 + uTime * 0.9) * sin(n.y * 5.0 + uTime * 0.7) * sin(n.z * 3.0 + uTime * 1.1);",
+        "  vec3 p = position * (1.0 + w * 0.16);",
+        "  vec4 mv = modelViewMatrix * vec4(p, 1.0);",
+        "  gl_Position = projectionMatrix * mv;",
+        "  gl_PointSize = uPx * (1.0 + max(w, 0.0) * 3.0) * (26.0 / -mv.z);",
+        "  vH = w; vR = abs(aR);",
+        "}"
+      ].join("\n"),
+      fragmentShader: [
+        "varying float vH; varying float vR;",
+        "void main(){",
+        "  float d = length(gl_PointCoord - 0.5); if (d > 0.5) discard;",
+        "  float a = smoothstep(0.5, 0.0, d); a *= a;",
+        "  vec3 c = mix(vec3(0.24, 0.89, 1.0), vec3(0.78, 1.0, 0.24), smoothstep(-0.2, 0.6, vH));",
+        "  gl_FragColor = vec4(c, a * (0.35 + max(vH, 0.0) * 0.9 + vR * 0.2));",
+        "}"
+      ].join("\n")
+    });
+    const pts = new T.Points(geo, mat);
+    group.add(pts);
+
+    // Orbit ring
+    const M = 900, rp = new Float32Array(M * 3);
+    for (let i = 0; i < M; i++) {
+      const a = (i / M) * Math.PI * 2, r = 4.4 + Math.sin(i * 7.1) * 0.08;
+      rp[i * 3] = Math.cos(a) * r; rp[i * 3 + 1] = Math.sin(i * 3.3) * 0.05; rp[i * 3 + 2] = Math.sin(a) * r;
+    }
+    const rgeo = new T.BufferGeometry();
+    rgeo.setAttribute("position", new T.BufferAttribute(rp, 3));
+    const rmat = new T.PointsMaterial({ color: 0x9D85FF, size: 0.045, transparent: true, opacity: 0.7, blending: T.AdditiveBlending, depthWrite: false });
+    const ring = new T.Points(rgeo, rmat);
+    ring.rotation.x = 1.15; ring.rotation.z = 0.3;
+    group.add(ring);
+    this.disposables = [geo, mat, rgeo, rmat];
+
+    let t = 0, last = performance.now(), w0 = 0, h0 = 0;
+    const loop = () => {
+      this.raf = requestAnimationFrame(loop);
+      const c = this.canvas; if (!c) return;
+      const now = performance.now(); t += Math.min(0.05, (now - last) / 1000); last = now;
+      const w = c.clientWidth, h = c.clientHeight;
+      if (w && h && (w !== w0 || h !== h0)) { w0 = w; h0 = h; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+      mat.uniforms.uTime.value = t;
+      group.rotation.y = t * 0.12;
+      ring.rotation.y = -t * 0.3;
+      group.position.y = 0.6;
+      renderer.render(scene, camera);
+    };
+    loop();
+  }
+
+  renderVals() {
+    const s = this.state;
+    const up = s.mode === "signup";
+    const on = { bg: "#1C2030", fg: "#ECEEF5" }, off = { bg: "transparent", fg: "#9AA0B4" };
+    const defs = [["curious", "Curious about AI"], ["work", "Use AI at work"], ["code", "Build with code"], ["teach", "Teach others"]];
+    const goals = defs.map((d) => {
+      const sel = !!s.goals[d[0]];
+      return {
+        label: d[1], on: sel ? "true" : "false",
+        bg: sel ? "rgba(198,255,61,0.12)" : "transparent",
+        line: sel ? "rgba(198,255,61,0.6)" : "rgba(255,255,255,0.14)",
+        fg: sel ? "#E4FF9E" : "#B4B9CA",
+        toggle: () => this.setState({ goals: Object.assign({}, s.goals, { [d[0]]: !sel }) })
+      };
+    });
+    return {
+      setCanvas: this.setCanvas, toSignin: this.toSignin, toSignup: this.toSignup,
+      onEmail: this.onEmail, submit: this.submit, back: this.back,
+      isSignin: up ? "false" : "true", isSignup: up, notSent: !s.sent, sent: !!s.sent,
+      tabA: up ? off : on, tabB: up ? on : off,
+      heading: up ? "Make it yours." : "Welcome back.",
+      sub: up ? "Free forever. Save your progress, streaks and every prompt you write." : "Pick up exactly where you left off — mid-lesson, mid-prompt.",
+      cta: up ? "Create account →" : "Email me a sign-in link →",
+      email: s.email, shownEmail: s.email || "you@somewhere.dev",
+      goals, codeBoxes: [1, 2, 3, 4, 5, 6].map((n) => ({ n }))
+    };
+  }
+}
+</script>
+</body>
+</html>

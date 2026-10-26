@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Latent — The loop (terminal mode)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;700;800&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07080D}
+a{color:#C6FF3D}a:hover{color:#E2FF8F}
+.key{transition:transform .12s ease, box-shadow .12s ease, filter .12s ease}
+.key:hover{transform:translateY(-1px);filter:brightness(1.06)}
+.key:active{transform:translateY(2px)}
+.tbtn{transition:background .15s,border-color .15s,color .15s}
+.tbtn:hover{background:rgba(255,255,255,0.08) !important}
+.term input:focus{outline:none}
+.term input::placeholder{color:#7A8098}
+.term:focus-within{border-color:rgba(198,255,61,0.55) !important}
+.caret{animation:blink 1.05s steps(1) infinite}
+@keyframes blink{0%{opacity:1}50%{opacity:0}}
+.rise{animation:rise .35s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.codeline:hover{background:rgba(255,255,255,0.025)}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #07080D; color: #ECEEF5; font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; display: flex; flex-direction: column">
+
+  <header style="border-bottom: 1px solid rgba(255,255,255,0.07)">
+    <div style="padding: 12px 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap">
+      <a href="Course.dc.html" aria-label="Back to course" style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); display: grid; place-items: center; text-decoration: none">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#ECEEF5" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M10 3 L5 8 L10 13"></path></svg>
+      </a>
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4">Your first agent loop · Lesson 4 of 10</span>
+        <span style="font-family: 'Unbounded', ui-sans-serif, sans-serif; font-weight: 500; font-size: 17px; letter-spacing: -0.02em">The loop</span>
+      </div>
+      <div style="margin-left: auto; display: flex; gap: 2px; padding: 3px; border-radius: 11px; background: #0E1018; border: 1px solid rgba(255,255,255,0.08); font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px">
+        <a href="Lesson.dc.html" style="display: flex; align-items: center; min-height: 38px; padding: 0 14px; border-radius: 8px; color: #9AA0B4; text-decoration: none">Read</a>
+        <a href="Lesson.dc.html" style="display: flex; align-items: center; min-height: 38px; padding: 0 14px; border-radius: 8px; color: #9AA0B4; text-decoration: none">Watch</a>
+        <span aria-current="page" style="display: flex; align-items: center; min-height: 38px; padding: 0 14px; border-radius: 8px; background: #1C2030; color: #ECEEF5">Terminal</span>
+      </div>
+    </div>
+  </header>
+
+  <div style="flex: 1; display: flex; flex-wrap: wrap; gap: 16px; padding: 16px; box-sizing: border-box; align-items: stretch">
+
+    <!-- TERMINAL LESSON -->
+    <section aria-label="Lesson" class="term" style="flex: 1 1 460px; min-width: 0; display: flex; flex-direction: column; border-radius: 18px; background: #090A10; border: 1px solid rgba(255,255,255,0.09); overflow: hidden; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px; line-height: 1.7; transition: border-color .2s">
+      <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 12px; color: #9AA0B4">
+        <span style="color: #C6FF3D">latent</span><span>~/first-agent-loop</span><span style="margin-left: auto">lesson 4/10 · 18% →</span>
+      </div>
+      <div style="flex: 1; padding: 20px 20px 8px; display: flex; flex-direction: column; gap: 18px; color: #C6CAD6">
+        <div><span style="color: #C6FF3D">› </span><span style="color: #ECEEF5">why does the loop check stop_reason?</span></div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span style="color: #C6FF3D">◆ tutor</span>
+          <span style="padding-left: 18px; white-space: pre-wrap; color: #D5D8E3">Every reply comes with a reason the model stopped talking.
+If it's <span style="color: #3DE3FF">"tool_use"</span>, it wants you to run a tool and hand back
+the result. Anything else means it's finished.</span>
+          <span style="padding-left: 18px; color: #9AA0B4">↳ highlighted <span style="color: #ECEEF5">agent.ts</span> lines 12–32</span>
+        </div>
+
+        <div><span style="color: #C6FF3D">› </span><span style="color: #ECEEF5">run it</span></div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span><span style="color: #9D85FF">$ </span><span style="color: #ECEEF5">npx tsx agent.ts "Weather in Chicago?"</span></span>
+          <div style="margin-left: 18px; padding: 12px 14px; border-radius: 10px; background: #0E1018; border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 2px; font-size: 13px">
+            <span><span style="color: #3DE3FF">→ tool_use   </span> get_weather({ city: "Chicago" })</span>
+            <span><span style="color: #C6FF3D">← tool_result</span> { temp_f: 41, sky: "overcast" }</span>
+            <span><span style="color: #3DE3FF">→ end_turn   </span> "41°F and overcast in Chicago."</span>
+            <span style="margin-top: 6px; color: #9AA0B4">✓ 2 turns · 1 tool call · 1.8s</span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span style="color: #C6FF3D">◆ tutor</span>
+          <span style="padding-left: 18px; white-space: pre-wrap; color: #D5D8E3">Two turns: one to ask for the weather, one to answer.
+Now break it on purpose. Delete <span style="color: #ECEEF5; background: rgba(198,255,61,0.14); padding: 0 4px; border-radius: 4px">line 31</span> and run it again.
+Predict first — does it loop forever, or crash?</span>
+          <div style="padding-left: 18px; display: flex; gap: 8px; flex-wrap: wrap">
+            <button type="button" class="tbtn" style="min-height: 40px; padding: 0 12px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.14); background: transparent; color: #ECEEF5; font-family: inherit; font-size: 13px; cursor: pointer">[a] loops forever</button>
+            <button type="button" class="tbtn" style="min-height: 40px; padding: 0 12px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.14); background: transparent; color: #ECEEF5; font-family: inherit; font-size: 13px; cursor: pointer">[b] crashes</button>
+            <button type="button" class="tbtn" style="min-height: 40px; padding: 0 12px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.14); background: transparent; color: #ECEEF5; font-family: inherit; font-size: 13px; cursor: pointer">[c] works fine</button>
+          </div>
+        </div>
+
+        <sc-for list="{{log}}" as="l" hint-placeholder-count="0">
+          <div class="rise" style="display: flex; flex-direction: column; gap: 6px">
+            <div><span style="color: #C6FF3D">› </span><span style="color: #ECEEF5">{{l.q}}</span></div>
+            <span style="color: #C6FF3D">◆ tutor</span>
+            <span style="padding-left: 18px; color: #D5D8E3">{{l.a}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <form onSubmit="{{ask}}" style="display: flex; align-items: center; gap: 10px; margin: 12px; padding: 0 8px 0 14px; border-radius: 12px; background: #0E1018; border: 1px solid rgba(198,255,61,0.35)">
+        <span aria-hidden="true" style="color: #C6FF3D">›</span>
+        <label for="term-in" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Answer or ask the tutor</label>
+        <input id="term-in" value="{{q}}" onChange="{{onQ}}" placeholder="answer, ask, or type “hint”" autocomplete="off" style="flex: 1; min-width: 0; height: 50px; background: transparent; border: 0; color: #ECEEF5; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px">
+        <span style="font-size: 12px; color: #7A8098">↵</span>
+      </form>
+    </section>
+
+    <!-- EDITOR -->
+    <section aria-label="Code editor" style="flex: 1.35 1 580px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+      <div style="flex: 1; display: flex; flex-direction: column; border-radius: 18px; background: #0A0C14; border: 1px solid rgba(255,255,255,0.09); overflow: hidden; box-shadow: 0 30px 90px rgba(0,0,0,0.45)">
+        <div style="display: flex; align-items: stretch; border-bottom: 1px solid rgba(255,255,255,0.07); background: #07080D; flex-wrap: wrap">
+          <div role="tablist" aria-label="Files" style="display: flex; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px">
+            <span role="tab" aria-selected="true" style="display: flex; align-items: center; gap: 8px; padding: 0 16px; min-height: 46px; background: #0A0C14; color: #ECEEF5; border-right: 1px solid rgba(255,255,255,0.07); box-shadow: inset 0 2px 0 #C6FF3D"><span style="color: #3DE3FF">TS</span>agent.ts</span>
+            <span role="tab" aria-selected="false" style="display: flex; align-items: center; gap: 8px; padding: 0 16px; min-height: 46px; color: #9AA0B4; border-right: 1px solid rgba(255,255,255,0.07)"><span style="color: #3DE3FF">TS</span>tools.ts</span>
+            <span role="tab" aria-selected="false" style="display: flex; align-items: center; gap: 8px; padding: 0 16px; min-height: 46px; color: #9AA0B4"><span style="color: #9AA0B4">#</span>.env.example</span>
+          </div>
+          <div style="margin-left: auto; display: flex; align-items: center; gap: 8px; padding: 6px 10px">
+            <button type="button" class="tbtn" aria-pressed="{{typeOn}}" onClick="{{toggleType}}" style="min-height: 34px; padding: 0 12px; border-radius: 8px; cursor: pointer; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; border: 1px solid {{typeBtn.line}}; background: {{typeBtn.bg}}; color: {{typeBtn.fg}}">⌨ Type it</button>
+            <button type="button" class="key" onClick="{{copy}}" style="min-height: 34px; padding: 0 12px; border-radius: 8px; border: 0; cursor: pointer; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; display: flex; align-items: center; gap: 6px; background: {{copyBtn.bg}}; color: {{copyBtn.fg}}; box-shadow: 0 3px 0 {{copyBtn.edge}}">
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="4.5" y="4.5" width="8" height="8" rx="1.5"></rect><path d="M9.5 4.5 V2.5 A1 1 0 0 0 8.5 1.5 H2.5 A1 1 0 0 0 1.5 2.5 V8.5 A1 1 0 0 0 2.5 9.5 H4.5"></path></svg>
+              {{copyLabel}}
+            </button>
+          </div>
+        </div>
+
+        <sc-if value="{{isType}}" hint-placeholder-val="{{ false }}">
+          <div class="rise" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 16px; background: rgba(198,255,61,0.08); border-bottom: 1px solid rgba(198,255,61,0.25); font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #E4FF9E">
+            <span>Type mode — retype the loop from memory. Copy is off.</span>
+            <span style="margin-left: auto; color: #ECEEF5">142 / 486 chars · 97% accurate</span>
+          </div>
+        </sc-if>
+
+        <div style="flex: 1; overflow-x: auto; padding: 14px 0 18px">
+          <div style="min-width: 560px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px; line-height: 1.75">
+            <sc-for list="{{lines}}" as="ln" hint-placeholder-count="33">
+              <div class="codeline" style="display: flex; background: {{ln.bg}}; opacity: {{ln.op}}">
+                <span style="flex: none; width: 4px; background: {{ln.mark}}"></span>
+                <span aria-hidden="true" style="flex: none; width: 44px; padding-right: 16px; text-align: right; color: {{ln.numC}}; user-select: none">{{ln.n}}</span>
+                <span style="white-space: pre"><sc-for list="{{ln.segs}}" as="sg" hint-placeholder-count="3"><span style="color: {{sg.c}}">{{sg.t}}</span></sc-for><sc-if value="{{ln.caret}}" hint-placeholder-val="{{ false }}"><span class="caret" style="color: #C6FF3D">▍</span></sc-if></span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 16px; padding: 8px 16px; border-top: 1px solid rgba(255,255,255,0.07); background: #07080D; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4; flex-wrap: wrap">
+          <span>TypeScript</span><span>UTF-8</span><span>Ln 31, Col 5</span>
+          <span style="margin-left: auto; color: #C6FF3D">● lines 12–32: the loop</span>
+        </div>
+      </div>
+
+      <div style="border-radius: 18px; background: #090A10; border: 1px solid rgba(255,255,255,0.09); overflow: hidden">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.07)">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #9AA0B4">OUTPUT</span>
+          <button type="button" class="key" style="min-height: 36px; padding: 0 14px; border: 0; border-radius: 9px; cursor: pointer; background: #C6FF3D; color: #0A0C05; font-family: 'Geist Mono', ui-monospace, monospace; font-weight: 500; font-size: 12px; box-shadow: 0 3px 0 #6E9116">▶ Run</button>
+        </div>
+        <div style="padding: 14px 16px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; line-height: 1.8; color: #C6CAD6">
+          <div><span style="color: #9D85FF">$</span> npx tsx agent.ts "Weather in Chicago?"</div>
+          <div><span style="color: #3DE3FF">turn 1</span> stop_reason=<span style="color: #C6FF3D">"tool_use"</span> → get_weather</div>
+          <div><span style="color: #3DE3FF">turn 2</span> stop_reason=<span style="color: #C6FF3D">"end_turn"</span></div>
+          <div style="color: #ECEEF5">41°F and overcast in Chicago.</div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  state = { copied: false, type: false, q: "", log: [] };
+
+  toggleType = () => this.setState({ type: !this.state.type });
+  onQ = (e) => this.setState({ q: e.target.value });
+  ask = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const q = (this.state.q || "").trim();
+    if (!q) return;
+    const lower = q.toLowerCase();
+    const a = lower.indexOf("hint") >= 0
+      ? "Look at what the API requires after a tool_use block. What's missing if line 31 is gone?"
+      : "Good guess. Now delete line 31, hit Run, and read the first line of the error out loud.";
+    this.setState({ q: "", log: this.state.log.concat([{ q, a }]).slice(-3) });
+  };
+  copy = () => {
+    if (this.state.type) return;
+    try { if (navigator.clipboard) navigator.clipboard.writeText(this.codeText || ""); } catch (err) {}
+    this.setState({ copied: true });
+    clearTimeout(this.copyT);
+    this.copyT = setTimeout(() => this.setState({ copied: false }), 1600);
+  };
+  componentWillUnmount() { clearTimeout(this.copyT); }
+
+  renderVals() {
+    const s = this.state;
+    const C = { k: "#B9A6FF", s: "#C6FF3D", t: "#3DE3FF", f: "#ECEEF5", p: "#C6CAD6", c: "#7A8098", n: "#3DE3FF" };
+    const raw = [
+      [["k", "import"], ["p", " Anthropic "], ["k", "from"], ["s", " \"@anthropic-ai/sdk\""], ["p", ";"]],
+      [["k", "import"], ["p", " { tools, runTool } "], ["k", "from"], ["s", " \"./tools\""], ["p", ";"]],
+      [],
+      [["k", "const"], ["p", " client = "], ["k", "new"], ["t", " Anthropic"], ["p", "();"]],
+      [],
+      [["k", "type"], ["t", " Msg"], ["p", " = "], ["t", "Anthropic.MessageParam"], ["p", ";"]],
+      [],
+      [["k", "export async function"], ["f", " agent"], ["p", "(task: "], ["t", "string"], ["p", ") {"]],
+      [["k", "  const"], ["p", " messages: "], ["t", "Msg"], ["p", "[] = [{ role: "], ["s", "\"user\""], ["p", ", content: task }];"]],
+      [],
+      [["c", "  // the loop: think → act → observe → repeat"]],
+      [["k", "  while"], ["p", " ("], ["k", "true"], ["p", ") {"]],
+      [["k", "    const"], ["p", " res = "], ["k", "await"], ["p", " client.messages."], ["f", "create"], ["p", "({"]],
+      [["p", "      model: "], ["s", "\"claude-sonnet-5-5\""], ["p", ","]],
+      [["p", "      max_tokens: "], ["n", "1024"], ["p", ","]],
+      [["p", "      tools,"]],
+      [["p", "      messages,"]],
+      [["p", "    });"]],
+      [],
+      [["p", "    messages."], ["f", "push"], ["p", "({ role: "], ["s", "\"assistant\""], ["p", ", content: res.content });"]],
+      [],
+      [["k", "    if"], ["p", " (res.stop_reason !== "], ["s", "\"tool_use\""], ["p", ") {"]],
+      [["k", "      return"], ["p", " res; "], ["c", "// the model is done talking"]],
+      [["p", "    }"]],
+      [],
+      [["k", "    const"], ["p", " results = "], ["k", "await"], ["t", " Promise"], ["p", "."], ["f", "all"], ["p", "("]],
+      [["p", "      res.content"]],
+      [["p", "        ."], ["f", "filter"], ["p", "((b) => b.type === "], ["s", "\"tool_use\""], ["p", ")"]],
+      [["p", "        ."], ["f", "map"], ["p", "(runTool),"]],
+      [["p", "    );"]],
+      [["p", "    messages."], ["f", "push"], ["p", "({ role: "], ["s", "\"user\""], ["p", ", content: results });"]],
+      [["p", "  }"]],
+      [["p", "}"]]
+    ];
+    this.codeText = raw.map((l) => l.map((g) => g[1]).join("")).join("\n");
+    const lines = raw.map((segs, i) => {
+      const n = i + 1;
+      const inLoop = n >= 12 && n <= 32;
+      const focus = n === 31;
+      const ghost = s.type && n > 22;
+      return {
+        n, segs: segs.map((g) => ({ t: g[1], c: C[g[0]] })),
+        bg: focus ? "rgba(198,255,61,0.10)" : inLoop ? "rgba(198,255,61,0.035)" : "transparent",
+        mark: focus ? "#C6FF3D" : inLoop ? "rgba(198,255,61,0.35)" : "transparent",
+        numC: focus ? "#C6FF3D" : inLoop ? "#9AA0B4" : "#4A5068",
+        op: ghost ? "0.28" : "1",
+        caret: s.type && n === 22
+      };
+    });
+    return {
+      lines, log: s.log, q: s.q, onQ: this.onQ, ask: this.ask,
+      copy: this.copy, toggleType: this.toggleType,
+      isType: s.type, typeOn: s.type ? "true" : "false",
+      typeBtn: s.type ? { bg: "rgba(198,255,61,0.14)", fg: "#E4FF9E", line: "rgba(198,255,61,0.5)" } : { bg: "transparent", fg: "#C6CAD6", line: "rgba(255,255,255,0.14)" },
+      copyLabel: s.type ? "Copy off" : s.copied ? "Copied ✓" : "Copy",
+      copyBtn: s.type ? { bg: "#1C2030", fg: "#7A8098", edge: "#020305" } : s.copied ? { bg: "#3DE3FF", fg: "#07080D", edge: "#1A8FA3" } : { bg: "#C6FF3D", fg: "#0A0C05", edge: "#6E9116" }
+    };
+  }
+}
+</script>
+</body>
+</html>
