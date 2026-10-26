@@ -19,7 +19,7 @@ a number.
 Type anything below and watch where the cuts land. Spaces usually stick to the
 start of the next word.
 
-:::tokenizer{sample="Unbelievably, the cat fetched."}
+:::tokenizer{sample="Unbelievably, the cat fetched." illustrative}
 "Un"       1844
 "believ"   31141
 "ably"     2915
@@ -29,6 +29,9 @@ start of the next word.
 " fetched" 42118
 "."        13
 :::
+
+The cuts and ids above are illustrative: Claude's own tokenizer isn't
+public, and every model family splits a little differently.
 
 **Unbelievably** became three tokens, but ` the` is just one. Common words are
 cheap; rare ones get split.

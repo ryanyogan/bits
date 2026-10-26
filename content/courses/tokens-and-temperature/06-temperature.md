@@ -28,9 +28,15 @@ shots get a real chance. Drag it and watch.
 " Zero"  0.6
 :::
 
+An honest catch: you can't turn this dial on Claude. Anthropic's current API
+doesn't accept a temperature, so Claude always samples at **1.0**. In this
+sandbox, `1.0` runs Claude live, and the other settings show saved examples
+of what a low temperature looks like. Next lesson covers what that means for
+you.
+
 Your turn. Write a prompt that asks for a **tagline for a coffee shop on the
-moon** with a length limit. Run it once at `0`, then a few times at `1.0`, and
-compare.
+moon** with a length limit. Look at the `0` examples, then run it a few times
+at `1.0` and compare.
 
 :::prompt{id="moon-tagline" xp=40}
 Write the prompt yourself — no pasting the answer

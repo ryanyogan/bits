@@ -29,6 +29,19 @@ const LLM_LESSONS: { lesson: string; prompt?: [id: string, text: string]; quiz?:
   },
 ]
 
+// Tokens & temperature lessons 1–5, answered so every gate passes.
+const TOKENS_LESSONS: typeof LLM_LESSONS = [
+  { lesson: 'what-is-a-token', quiz: ['common-words', 'a'] },
+  { lesson: 'tokenizers-are-weird', quiz: ['weird-splits', 'b'] },
+  { lesson: 'counting-tokens', prompt: ['short-answer', 'Explain what a token is in under 20 words.'], quiz: ['cheaper-turn', 'b'] },
+  { lesson: 'probabilities-not-answers', prompt: ['one-animal', 'Name one animal. Reply with one word.'], quiz: ['what-odds-mean', 'b'] },
+  {
+    lesson: 'greedy-vs-sampled',
+    prompt: ['sentiment-label', 'Label this review as positive, negative or neutral. Reply with only the label. Review: Arrived late, but it works great.'],
+    quiz: ['consistent', 'b'],
+  },
+]
+
 const filterCourses = (query: Parameters<typeof filter>[0]) => filter(query, catalog.listCourses())
 
 /** Fetches a page signed in (progress shows), or signed out with `{ anonymous: true }`. */
@@ -50,19 +63,17 @@ describe('catalog and course pages', () => {
     ;({ cookie } = await signIn('catalog@example.com'))
     // The artboards' learner: finished the LLM course (passing each gate),
     // then lessons 1–5 of Tokens & temperature (none of these is gated).
-    for (let { lesson, prompt, quiz } of LLM_LESSONS) {
-      let fields: Record<string, string> = {}
-      if (prompt) {
-        cookie = await runAt(cookie, { course: 'what-is-an-llm', lesson, exercise: prompt[0], prompt: prompt[1] }, [100])
-        fields[`prompt.${prompt[0]}`] = prompt[1]
+    for (let [course, lessons] of [['what-is-an-llm', LLM_LESSONS], ['tokens-and-temperature', TOKENS_LESSONS]] as const) {
+      for (let { lesson, prompt, quiz } of lessons) {
+        let fields: Record<string, string> = {}
+        if (prompt) {
+          cookie = await runAt(cookie, { course, lesson, exercise: prompt[0], prompt: prompt[1] }, [100])
+          fields[`prompt.${prompt[0]}`] = prompt[1]
+        }
+        if (quiz) fields[`quiz.${quiz[0]}`] = quiz[1]
+        let response = await completeLesson(cookie, course, lesson, fields)
+        assert.equal(response.status, 303, lesson)
       }
-      if (quiz) fields[`quiz.${quiz[0]}`] = quiz[1]
-      let response = await completeLesson(cookie, 'what-is-an-llm', lesson, fields)
-      assert.equal(response.status, 303, lesson)
-    }
-    for (let slug of ['what-is-a-token', 'tokenizers-are-weird', 'counting-tokens', 'probabilities-not-answers', 'greedy-vs-sampled']) {
-      let response = await completeLesson(cookie, 'tokens-and-temperature', slug)
-      assert.equal(response.status, 303, slug)
     }
   })
   after(() => disposePlatform())
