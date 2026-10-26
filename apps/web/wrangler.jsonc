@@ -72,8 +72,7 @@
   ],
 
   // Non-secret config. Secrets (SESSION_SECRET,
-  // GITHUB_CLIENT_ID/SECRET, GOOGLE_CLIENT_ID/SECRET, ANTHROPIC_API_KEY,
-  // CF_AIG_TOKEN) are set with `wrangler secret put`, and locally in
+  // GITHUB_CLIENT_ID/SECRET, GOOGLE_CLIENT_ID/SECRET, CF_AIG_TOKEN) are set with `wrangler secret put`, and locally in
   // .dev.vars (see .dev.vars.example).
   "vars": {
     "APP_ENV": "production",
@@ -81,9 +80,10 @@
     "CANONICAL_ORIGIN": "https://bits.yogan.dev",
     // Hosts that redirect to CANONICAL_ORIGIN (comma-separated).
     "LEGACY_HOSTS": "bits.ryanyogan.workers.dev",
-    // Live prompts (decision 019): Anthropic through this AI Gateway. Runs
-    // fall back to the lesson's example output until the account id, the
-    // gateway and ANTHROPIC_API_KEY are all set.
+    // Live prompts (decision 019): Anthropic through this AI Gateway, with
+    // the key stored in the gateway (BYOK). Runs fall back to the lesson's
+    // example output until the account id, the gateway and CF_AIG_TOKEN
+    // are all set.
     "AI_GATEWAY_ACCOUNT_ID": "8ad084035b854467eb9d93ae3363d40b",
     "AI_GATEWAY_ID": "bits",
     // Spend guard: live model runs per UTC day, for everyone.

@@ -269,10 +269,14 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
 - "Ran at 0 and 1.0" is checked against journalled runs, never form
   fields. Tests: `runAt(cookie, exercise, [0, 100])` or
   `runPrompt(cookie, input)` from `app/test/auth.ts`. Without
-  `ANTHROPIC_API_KEY` (dev, tests) runs fall back to the examples; live
-  tests stub `globalThis.fetch` for the gateway URL (`app/runs/run.test.ts`).
-- Secrets: `ANTHROPIC_API_KEY`, `CF_AIG_TOKEN`. Vars:
-  `AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_ID`, `RUN_DAILY_LIVE_CAP`.
+  `CF_AIG_TOKEN` or `ANTHROPIC_API_KEY`, runs fall back to the examples.
+  Tests always run without them, whatever `.dev.vars` holds; live tests
+  stub `globalThis.fetch` for the gateway URL (`app/runs/run.test.ts`).
+- Keys: gateway BYOK. The Anthropic key lives in the AI Gateway, and the
+  Worker's secret is `CF_AIG_TOKEN`. Never send a provider key from the
+  Worker: it would override the stored one. `ANTHROPIC_API_KEY` is optional
+  and for local use only. Vars: `AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_ID`,
+  `RUN_DAILY_LIVE_CAP`.
 
 ## Runtime rules
 

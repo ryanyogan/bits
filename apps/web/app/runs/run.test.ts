@@ -171,6 +171,25 @@ describe('/api/run', () => {
     ])
   })
 
+  it('BYOK: with only the gateway token, sends no provider key (the gateway adds its stored one)', async () => {
+    let { cookie } = await signIn('byok@example.com')
+    let env = platform.env as unknown as Record<string, string | undefined>
+    await withGateway(
+      () => sseReply(['Moon ', 'roast.']),
+      async (calls) => {
+        env.ANTHROPIC_API_KEY = undefined
+        let response = await runPrompt(cookie, { ...moon, temperature: 100 })
+        assert.equal(response.headers.get('X-Run-Source'), 'live')
+        assert.equal(await response.text(), 'Moon roast.')
+        assert.equal(calls.length, 1)
+        let headers = calls[0]!.headers
+        assert.equal(headers.get('cf-aig-authorization'), 'Bearer aig-test')
+        assert.equal(headers.get('authorization'), null)
+        assert.equal(headers.get('x-api-key'), null)
+      },
+    )
+  })
+
   it('a rerun (the browser aborting the fetch) stops the model and keeps the partial reply', async () => {
     let { cookie, user } = await signIn('abort@example.com')
     await withGateway(stalledReply, async (calls) => {

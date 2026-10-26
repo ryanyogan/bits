@@ -91,21 +91,38 @@ Two API facts shape the design:
   the gateway or Anthropic rate limiting, auth or network errors. The UI
   shows the example output with a one-line note (`ModelOutput` gained a
   `note` prop).
-- **Secrets and config.** Secrets: `ANTHROPIC_API_KEY` (the key the
-  gateway forwards) and `CF_AIG_TOKEN` (Authenticated Gateway token, sent
-  as `cf-aig-authorization`). Vars: `AI_GATEWAY_ACCOUNT_ID`,
-  `AI_GATEWAY_ID` (`bits`), `RUN_DAILY_LIVE_CAP`. Live runs need the key
-  and both ids. Gateway BYOK (the key stored in the gateway) would leave
-  only `CF_AIG_TOKEN` in the Worker. Cloudflare documents that token as
-  account-scoped (it can use every gateway's stored keys), so the Worker
-  secret was kept for now.
+- **Secrets and config: gateway BYOK is the default** (revised after
+  launch). The Anthropic key is stored in the `bits` gateway as a provider
+  key (alias `default`), and the Worker holds only `CF_AIG_TOKEN`
+  (Authenticated Gateway, sent as `cf-aig-authorization`). AI Gateway
+  picks the provider key in this order:
+  1. a provider key on the request (`x-api-key` / `Authorization`),
+     forwarded unchanged;
+  2. the key stored in the gateway (BYOK);
+  3. unified billing (Cloudflare credits). This account has none, so it
+     fails with "Insufficient unified billing credits".
+
+  So the Worker must send **no** provider key, or it would bypass the
+  stored one. `model.ts` passes `apiKey: null` and `authToken: null`,
+  removes the SDK's `Authorization` and `x-api-key` headers (a `null`
+  default header), and turns off the SDK's default credential chain (it
+  would otherwise read `ANTHROPIC_*` env vars and local config files).
+  A test asserts the outgoing request carries `cf-aig-authorization` and
+  neither header. `ANTHROPIC_API_KEY` stays an optional secret for local
+  use without gateway auth: when it is set, it is sent as both `x-api-key`
+  and `Authorization: Bearer`, as before. Live runs need both gateway ids
+  plus `CF_AIG_TOKEN` (or, locally, the key). Vars:
+  `AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_ID` (`bits`), `RUN_DAILY_LIVE_CAP`.
+  The token is account-scoped (it can use every gateway's stored keys), so
+  treat it like the key it replaces.
 - **Workers bundle.** The SDK keeps Node built-ins in `node.mjs` modules
   that its `browser` field swaps for throwing shims; `scripts/build.ts`
   applies that swap (esbuild honours `browser` maps only for platform
   "browser"), so the Worker still has no `node:` imports and no
-  `nodejs_compat`. The SDK adds about 340 KiB minified. SDK 1.x sends the
-  key as `Authorization: Bearer`; `x-api-key` is also sent, as the
-  gateway's Anthropic docs show.
+  `nodejs_compat`. The SDK adds about 340 KiB minified. With a local
+  key, SDK 1.x sends it as `Authorization: Bearer`, and `x-api-key` is
+  also sent, as the gateway's Anthropic docs show. With BYOK, neither is
+  sent.
 
 ## Consequences
 

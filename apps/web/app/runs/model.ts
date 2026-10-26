@@ -9,7 +9,10 @@ import Anthropic from '@anthropic-ai/sdk'
 
 /** What the model module needs from the Worker env (vars + secrets). */
 export interface ModelEnv {
-  /** Secret: the Anthropic key the gateway forwards. */
+  /**
+   * Optional secret: an Anthropic key to send with each request. Leave it
+   * unset in production: the gateway then adds the key stored in it (BYOK).
+   */
   ANTHROPIC_API_KEY?: string
   /** Secret: AI Gateway token (Authenticated Gateway), sent as cf-aig-authorization. */
   CF_AIG_TOKEN?: string
@@ -71,8 +74,38 @@ export interface RunModelInput {
   env: ModelEnv
 }
 
+/**
+ * Live runs need the gateway and a way to authenticate: the gateway token
+ * (BYOK, production) or, locally, an Anthropic key.
+ */
 export function modelConfigured(env: ModelEnv): boolean {
-  return Boolean(env.ANTHROPIC_API_KEY && env.AI_GATEWAY_ACCOUNT_ID && env.AI_GATEWAY_ID)
+  return Boolean(env.AI_GATEWAY_ACCOUNT_ID && env.AI_GATEWAY_ID && (env.CF_AIG_TOKEN || env.ANTHROPIC_API_KEY))
+}
+
+/**
+ * The gateway authenticates for us, so the client must never look for
+ * credentials of its own (the SDK's default chain reads ANTHROPIC_* env vars
+ * and local config files, and would add a Bearer token).
+ */
+class GatewayAnthropic extends Anthropic {
+  protected override _shouldResolveDefaultCredentials(): boolean {
+    return false
+  }
+}
+
+/**
+ * Auth headers for the gateway. AI Gateway picks the Anthropic key in this
+ * order: (1) a provider key on the request, forwarded unchanged; (2) the key
+ * stored in the gateway (BYOK, alias `default`); (3) unified billing, which
+ * this account has no credits for. So with BYOK the request must carry no
+ * provider key at all: `null` removes the SDK's Authorization and x-api-key.
+ */
+function authHeaders(env: ModelEnv): Record<string, string | null> {
+  let gateway: Record<string, string> = env.CF_AIG_TOKEN ? { 'cf-aig-authorization': `Bearer ${env.CF_AIG_TOKEN}` } : {}
+  if (!env.ANTHROPIC_API_KEY) return { ...gateway, Authorization: null, 'x-api-key': null }
+  // A key of our own (local dev): SDK 1.x sends it as `Authorization: Bearer`;
+  // the gateway's Anthropic docs use x-api-key, so send that too.
+  return { ...gateway, 'x-api-key': env.ANTHROPIC_API_KEY }
 }
 
 export function gatewayBaseUrl(env: ModelEnv): string {
@@ -88,15 +121,12 @@ export async function runModel({ prompt, temperature, signal, env }: RunModelInp
   if (!runsLive(temperature)) throw new Error(`T=${temperature / 100} does not run live`)
   if (!modelConfigured(env)) throw new ModelError('unconfigured')
 
-  let client = new Anthropic({
-    apiKey: env.ANTHROPIC_API_KEY,
+  let client = new GatewayAnthropic({
+    // null: never read ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN from the environment.
+    apiKey: env.ANTHROPIC_API_KEY || null,
+    authToken: null,
     baseURL: gatewayBaseUrl(env),
-    defaultHeaders: {
-      // SDK 1.x sends the key as `Authorization: Bearer`; the gateway's
-      // Anthropic docs use x-api-key, so send that too (same key).
-      'x-api-key': env.ANTHROPIC_API_KEY,
-      ...(env.CF_AIG_TOKEN ? { 'cf-aig-authorization': `Bearer ${env.CF_AIG_TOKEN}` } : {}),
-    },
+    defaultHeaders: authHeaders(env),
     // Fall back to the example rather than make the learner wait on retries.
     maxRetries: 0,
     timeout: TIMEOUT_MS,
