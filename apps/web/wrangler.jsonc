@@ -1,0 +1,44 @@
+// Cloudflare Workers config for the Bits web app.
+// See docs/decisions/ for why each piece is shaped this way.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "bits",
+  // Bundled by scripts/build.ts (`pnpm build`), not by wrangler: the build has
+  // to rewrite each module's import.meta.url so clientEntry IDs stay unique.
+  "main": "build/worker/index.js",
+  // The newest date the installed workerd supports, so `wrangler dev` and
+  // production run the same runtime semantics. Bump with wrangler upgrades.
+  "compatibility_date": "2026-10-19",
+  "workers_dev": true,
+  "preview_urls": true,
+
+  // Fingerprinted browser modules, CSS and fonts compiled ahead of time by
+  // scripts/build.ts, plus apps/web/public. Requests that match a file are
+  // served by the platform without invoking the Worker.
+  "assets": {
+    "directory": "./build/client",
+    "binding": "ASSETS",
+    "not_found_handling": "none",
+    "html_handling": "none"
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bits-db",
+      "database_id": "163b946d-2eeb-443f-a5ed-59ad7f0a945d",
+      // Plain SQL files applied by `wrangler d1 migrations apply`.
+      "migrations_dir": "../../packages/db/migrations"
+    }
+  ],
+
+  "vars": {
+    "APP_ENV": "production"
+  },
+
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.1 }
+  }
+}
