@@ -1,31 +1,19 @@
-# Bits
+# bits
 
-A minimal Remix application starter with a home page.
+Learn AI by typing to it. A free AI-learning app built with Remix 3 on
+Cloudflare Workers and D1.
 
-## Starter Shape
-
-- `app/actions/controller.tsx` owns the top-level route actions.
-- `app/actions/home-page.tsx` and `app/actions/document.tsx` render the route-owned starter UI.
-- `app/actions/public/` contains the browser runtime entry and interactive prompt button.
-- `app/routes.ts` defines the shared route contract used by server and browser modules for type-safe hrefs.
-- `app/router.ts` wires routes to handlers and installs the standard Remix component renderer used by actions.
-- `app/assets.ts` owns the server-side asset pipeline used by the asset route and render middleware.
-- Root `public/` contains static files served unchanged from the app root.
-
-## Growing The App
-
-- Put top-level route actions in `app/actions/controller.tsx`.
-- Add `app/actions/<route-key>/controller.tsx` when a nested route map needs its own actions or middleware.
-- Add directories like `app/data/` or `test/` when the app actually needs them.
-- Move shared UI into `app/ui/` once more than one route needs it.
-
-## Commands
+- Live: https://bits.ryanyogan.workers.dev
+- Product spec: `docs/handoff.md`
+- Design: `docs/design/`
+- Decisions: `docs/decisions/`
+- Working in this repo (agents and humans): `AGENTS.md`
 
 ```sh
-npm i
-npm run dev
-npm run hmr
-npm run start
-npm test
-npm run typecheck
+pnpm i
+pnpm db:migrate:local && pnpm db:seed:local
+pnpm dev        # http://localhost:44100
+pnpm test && pnpm typecheck
+pnpm preview    # the real Worker under wrangler dev
+pnpm deploy
 ```
