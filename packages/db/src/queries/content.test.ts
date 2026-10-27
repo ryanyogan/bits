@@ -8,6 +8,7 @@ import {
   listCourseVersions,
   listLiveCourses,
   listManagedCourses,
+  listNewestVersions,
   markVersionReady,
   recordCourseBuild,
   setLiveVersion,
@@ -93,6 +94,12 @@ describe('course content index', () => {
     assert.equal(rolledBack[0]?.n, 1)
     // First publish time is kept.
     assert.equal(rolledBack[0]?.published_at, 2_000)
+
+    // The newest build per course (decision 036): v3, no longer live.
+    let newest = await listNewestVersions(db)
+    assert.deepEqual(newest.get('tokens'), { slug: 'tokens', id: v3.id, n: 3, status: 'ready', published_at: 3_000, live: false })
+    assert.equal(await setLiveVersion(db, 'tokens', 3, 5_000), true)
+    assert.equal((await listNewestVersions(db)).get('tokens')?.live, true)
   })
 
   it('admins manage every course; authors only their own', async () => {

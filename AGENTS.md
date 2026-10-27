@@ -71,7 +71,7 @@ pnpm db:migrate:local     # wrangler d1 migrations apply (local state shared by 
 pnpm db:migrate:remote    # manual fallback: production migrations (CI runs them before each deploy)
 pnpm db:seed:local        # demo user demo@bits.local / @demo, then upload + publish content/courses/*
 pnpm content validate <dir…>            # build course folders, print path:line problems
-pnpm content upload <dir…> [--publish]  # save as the next version (local; --remote for deployed, --preview for the Workers Previews DB/bucket)
+pnpm content upload <dir…> [--publish]  # save as the next version unless unchanged (local; --remote for deployed, --preview for the Workers Previews DB/bucket; --force)
 pnpm og                   # screenshot /cards/* into apps/web/public/og/*.png + app/ui/og-cards.generated.ts (commit both)
 pnpm cf-typegen           # regenerate apps/web/worker-configuration.d.ts after wrangler.jsonc changes
 pnpm remix:doctor         # `pnpm doctor` is pnpm's own builtin
@@ -82,9 +82,12 @@ Deploys (decision 032) happen in CI (`.github/workflows/ci.yml`), after the
 
 - **Push to master** → `deploy` job (GitHub Environment `production`):
   `wrangler d1 migrations apply DB --remote`, `wrangler deploy` of the
-  checked build, then a smoke test (`/health`, `/`, `/courses`, `/login`
-  must be 200). Deploys never overlap and are never cancelled. Migrations
-  run before the code, so keep them additive.
+  checked build, `pnpm content upload --all --publish --remote` (decision
+  036: only courses whose build changed get a version; a course with
+  errors fails the job after the others are handled), then a smoke test
+  (`/health`, `/`, `/courses`, `/login` must be 200; it runs whenever the
+  deploy step succeeded). Deploys never overlap and are never cancelled.
+  Migrations run before the code, so keep them additive.
 - **Same-repo pull request** → `preview` job (Environment `preview`): a
   Workers Preview at `https://pr-<n>-bits.ryanyogan.workers.dev`,
   commented on the PR. It runs on the separate `bits-preview-db` /
@@ -99,7 +102,7 @@ Deploys (decision 032) happen in CI (`.github/workflows/ci.yml`), after the
   Storage Edit, Account Settings Read, and Workers Routes Edit on
   yogan.dev; and `CLOUDFLARE_ACCOUNT_ID`.
 - Manual fallback: `pnpm db:migrate:remote && pnpm deploy` (needs
-  `wrangler login`). Roll back code with
+  `wrangler login`), then `pnpm content upload --all --publish --remote`. Roll back code with
   `pnpm --filter @bits/web exec wrangler rollback`; migrations stay.
 - Never point the `previews` block at `bits-db` or `bits-content`.
   `scripts/lib/preview-resources.ts` refuses that, and its tests cover it.
@@ -473,6 +476,13 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   isn't `build/`: `.gitignore` drops every `build/` directory.)
 - Publishing only flips `courses.current_version_id` to a `ready`
   version. Builds with errors are recorded as `failed` (report only).
+- Master pushes publish `content/courses/` to production (decision 036).
+  `saveBuild` stamps each manifest in R2 with a hash of the build's output
+  (`build-sha256`), and `uploadCourseFolder` skips a course whose build
+  matches its newest version, so linked videos count as a change. A
+  rollback on `/author` stands until the course changes. CI uploads as no
+  user (trusted CLI, owner and authors untouched); `source` is
+  `ci <sha> (remote)`.
 - Authored content runs on the server, so the build guards it: check
   regexes must fit the allowlist grammar in `compile/regex.ts` (literals,
   `.`, `\b \w \d \s` and their negations, escaped symbols, simple

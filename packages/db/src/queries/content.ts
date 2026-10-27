@@ -41,6 +41,31 @@ export async function listLiveCourses(db: D1DataTableDatabase): Promise<LiveCour
   return result.results
 }
 
+/** A course's newest build, and whether it is the live one (decision 036). */
+export interface NewestVersion {
+  slug: string
+  id: string
+  n: number
+  status: VersionStatus
+  published_at: number | null
+  live: boolean
+}
+
+/**
+ * The newest build of every course, by slug, in one query: what the content
+ * CLI compares a fresh build against before saving another version.
+ */
+export async function listNewestVersions(db: D1DataTableDatabase): Promise<Map<string, NewestVersion>> {
+  let result = await db.d1
+    .prepare(
+      `select c.slug, v.id, v.n, v.status, v.published_at, (c.current_version_id is v.id) as live
+       from courses c join course_versions v on v.course_slug = c.slug
+       where v.n = (select max(n) from course_versions where course_slug = c.slug)`,
+    )
+    .all<Omit<NewestVersion, 'live'> & { live: number }>()
+  return new Map(result.results.map((row) => [row.slug, { ...row, live: row.live === 1 }]))
+}
+
 export async function findCourse(db: D1DataTableDatabase, slug: string): Promise<Course | null> {
   return db.d1.prepare('select * from courses where slug = ?').bind(slug).first<Course>()
 }

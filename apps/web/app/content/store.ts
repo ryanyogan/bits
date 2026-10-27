@@ -229,20 +229,47 @@ export async function saveBuild(
   if (!version) return null
   if (version.status === 'failed' || !build.manifest || !build.lessons) return version
 
-  let put = (key: string, value: unknown) =>
+  let put = (key: string, value: unknown, customMetadata?: Record<string, string>) =>
     bucket.put(key, JSON.stringify(value), {
       httpMetadata: { contentType: 'application/json', cacheControl: 'public, max-age=31536000, immutable' },
+      customMetadata,
     })
   try {
+    let hash = await buildHash(build)
     await Promise.all([...build.lessons].map(([lesson, content]) => put(lessonKey(build.slug, version.n, lesson), content)))
-    // The manifest last: a version whose manifest exists is complete.
-    await put(manifestKey(build.slug, version.n), build.manifest)
+    // The manifest last: a version whose manifest exists is complete. It
+    // carries the build's hash, so the CLI can tell an unchanged build.
+    await put(manifestKey(build.slug, version.n), build.manifest, hash ? { [BUILD_HASH_KEY]: hash } : undefined)
     await markVersionReady(db, version.id)
   } catch (error) {
     await deleteVersion(db, version.id)
     throw error
   }
   return { ...version, status: 'ready' }
+}
+
+// ---- Build hashes (decision 036) ---------------------------------------------
+//
+// A clean build's output (the manifest and every lesson's JSON) hashed. The
+// output already holds the linked video ids and whatever the compiler made
+// of the sources, so two builds with the same hash serve the same course.
+// Stored as custom metadata on the version's manifest object: no column.
+
+const BUILD_HASH_KEY = 'build-sha256'
+
+/** SHA-256 (hex) of a clean build's output; undefined for a build with errors. */
+export async function buildHash(build: CourseBuild): Promise<string | undefined> {
+  if (!build.manifest || !build.lessons) return undefined
+  let lessons = [...build.lessons].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+  let bytes = new TextEncoder().encode(JSON.stringify({ manifest: build.manifest, lessons }))
+  let digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))
+  return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+/** The hash a saved version's manifest carries; undefined for versions saved before 036. */
+export async function readBuildHash(bucket: R2Bucket, slug: string, n: number): Promise<string | undefined> {
+  let object = await bucket.head(manifestKey(slug, n))
+  return object?.customMetadata?.[BUILD_HASH_KEY]
 }
 
 /** Makes version `n` live (publish) or live again (rollback). False if it can't go live. */

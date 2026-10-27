@@ -99,6 +99,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: pnpm exec wrangler d1 migrations apply DB --remote
       - name: Deploy
+        id: deploy
         if: steps.creds.outputs.ready == 'true'
         working-directory: apps/web
         env:
@@ -106,8 +107,21 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           SHA: ${{ github.sha }}
         run: pnpm exec wrangler deploy --message "ci ${SHA}" --tag "${SHA:0:12}"
-      - name: Smoke test https://bits.yogan.dev
+      # After the code that serves them (decision 036). Every folder in
+      # content/courses/ is built against production's ready videos; only a
+      # course whose build differs from its newest version gets a new one,
+      # published at once. A course with errors is recorded as a failed
+      # version after the others are handled, and fails the job.
+      - name: Publish courses (production)
         if: steps.creds.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm content upload --all --publish --remote
+      # Runs whenever the code was deployed, even if publishing failed: the
+      # site must still answer.
+      - name: Smoke test https://bits.yogan.dev
+        if: ${{ !cancelled() && steps.creds.outputs.ready == 'true' && steps.deploy.outcome == 'success' }}
         run: |
           set -euo pipefail
           base=https://bits.yogan.dev
