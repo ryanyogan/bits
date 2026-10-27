@@ -3,7 +3,7 @@ import { css } from 'remix/component'
 
 import { CourseCover, type CoverPattern } from './course-cover.tsx'
 import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
-import { type ForcedState } from './lib/states.ts'
+import { focusOutline, type ForcedState } from './lib/states.ts'
 import { toneVars, type Tone } from './lib/tone.ts'
 import { ProgressBar } from './progress-bar.tsx'
 import { Tag } from './tag.tsx'
@@ -100,7 +100,7 @@ const cardStyle = css({
   borderRadius: 'var(--radius-20)',
   overflow: 'hidden',
   background: 'var(--surface)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   transition:
     'transform var(--duration-card) var(--ease), border-color var(--duration-card) var(--ease), box-shadow var(--duration-card) var(--ease)',
   [LIFT]: {
@@ -111,8 +111,8 @@ const cardStyle = css({
   },
   '&:hover .sigil, &:focus-visible .sigil, &[data-force] .sigil': { transform: 'scale(1.08) translateY(-4px)' },
   '&:focus-visible, &[data-force="focus"]': {
-    outline: '2px solid var(--focus-ring-color)',
-    outlineOffset: '2px',
+    outline: 'var(--focus-outline)',
+    outlineOffset: 'var(--focus-offset)',
     boxShadow: 'var(--shadow-card-hover), var(--focus-ring)',
   },
   '@media (prefers-reduced-motion: reduce)': {
@@ -190,10 +190,10 @@ const writeStyle = css({
   textDecoration: 'none',
   color: 'var(--text)',
   borderRadius: 'var(--radius-20)',
-  border: '1px dashed var(--line-dashed-strong)',
+  border: 'var(--border-w) dashed var(--line-dashed-strong)',
   transition: 'border-color var(--duration-card) var(--ease)',
   '&:hover, &[data-force="hover"]': { color: 'var(--text)', borderColor: 'var(--volt-a40)' },
-  '&:focus-visible, &[data-force="focus"]': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:focus-visible, &[data-force="focus"]': focusOutline,
   '@media (max-width: 480px)': { minHeight: 'auto' },
 })
 const writeMark = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-28)', color: 'var(--volt)' })

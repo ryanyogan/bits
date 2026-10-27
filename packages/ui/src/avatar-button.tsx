@@ -2,7 +2,7 @@ import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
 import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
-import { ACTIVE, DISABLED, FOCUS, HOVER, type ForcedState } from './lib/states.ts'
+import { ACTIVE, DISABLED, FOCUS, focusOutline, HOVER, type ForcedState } from './lib/states.ts'
 
 export interface AvatarButtonProps {
   /** One or two letters, e.g. "JP". */
@@ -46,11 +46,11 @@ const avatarStyle = css({
   flex: 'none',
   display: 'grid',
   placeItems: 'center',
-  width: '40px',
-  height: '40px',
+  width: 'var(--control-compact)',
+  height: 'var(--control-compact)',
   borderRadius: 'var(--radius-12)',
   background: 'var(--raised)',
-  border: '1px solid var(--line-strong)',
+  border: 'var(--border-w) solid var(--line-strong)',
   fontFamily: 'var(--font-display)',
   fontWeight: 700,
   fontSize: 'var(--fs-13)',
@@ -64,5 +64,5 @@ const avatarStyle = css({
     color: 'var(--on-volt)',
     borderColor: 'var(--volt)',
   },
-  [FOCUS]: { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  [FOCUS]: focusOutline,
 })

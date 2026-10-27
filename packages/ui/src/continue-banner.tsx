@@ -5,7 +5,7 @@ import { CourseCover, type CoverPattern } from './course-cover.tsx'
 import { Eyebrow } from './eyebrow.tsx'
 import { keycapFace } from './keycap.tsx'
 import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
-import { type ForcedState } from './lib/states.ts'
+import { focusOutline, type ForcedState } from './lib/states.ts'
 import { toneVars, type Tone } from './lib/tone.ts'
 import { ProgressBar } from './progress-bar.tsx'
 
@@ -68,12 +68,12 @@ const bannerStyle = css({
   color: 'var(--text)',
   borderRadius: 'var(--radius-2xl)',
   overflow: 'hidden',
-  border: '1px solid var(--ion-a30)',
+  border: 'var(--border-w) solid var(--ion-a30)',
   background: 'var(--surface)',
   transition: 'border-color var(--duration-card) var(--ease)',
   '&:hover, &[data-force="hover"]': { color: 'var(--text)', borderColor: 'var(--ion-a50)' },
   '&:hover .key, &[data-force="hover"] .key': { transform: 'translateY(-1px)', background: 'var(--volt-hover)' },
-  '&:focus-visible, &[data-force="focus"]': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:focus-visible, &[data-force="focus"]': focusOutline,
 })
 const bodyStyle = css({
   padding: 'var(--space-7) var(--space-8)',

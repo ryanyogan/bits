@@ -2,7 +2,7 @@ import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
 import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
-import { ACTIVE, DISABLED, FOCUS, FORCED_COLORS, HOVER, type ForcedState } from './lib/states.ts'
+import { ACTIVE, busyStyle, DISABLED, FOCUS, focusOutline, FORCED_COLORS, HOVER, type ForcedState } from './lib/states.ts'
 
 export type KeycapVariant = 'primary' | 'dark' | 'ghost' | 'ghost-mono' | 'inverse' | 'ion' | 'danger'
 export type KeycapSize = 'sm' | 'md' | 'lg'
@@ -91,6 +91,8 @@ export function Keycap(handle: Handle<KeycapProps>) {
       variantStyles[variant],
       glow && variant === 'primary' ? glowStyle : undefined,
       block ? blockStyle : undefined,
+      // Pending (Keycap `loading`, or any submitter while its form is in flight).
+      busyStyle,
       mix,
     ]
     let content = children
@@ -154,44 +156,31 @@ const baseStyle = css({
   WebkitTapHighlightColor: 'transparent',
   transition:
     'transform var(--duration-press) var(--ease), box-shadow var(--duration-press) var(--ease), filter var(--duration-press) var(--ease), background-color var(--duration-press) var(--ease), border-color var(--duration-press) var(--ease)',
-  [FOCUS]: {
-    outline: '2px solid var(--focus-ring-color)',
-    outlineOffset: '2px',
-  },
+  [FOCUS]: focusOutline,
   [DISABLED]: { cursor: 'not-allowed' },
-  // Pending (Keycap `loading`, or any submitter while its form is in flight).
-  '&[aria-busy="true"]': { cursor: 'progress' },
-  // The caret is decoration: the alt text after "/" keeps it out of the accessible name.
-  '&[aria-busy="true"]::after': {
-    content: '"▍" / ""',
-    animation: 'bits-blink var(--duration-caret) steps(1) infinite',
-  },
-  '@media (prefers-reduced-motion: reduce)': {
-    transition: 'none',
-    '&[aria-busy="true"]::after': { animation: 'none' },
-  },
+  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
   // Raised keys have no border, so in forced colours they'd lose their edge.
-  [FORCED_COLORS]: { border: '1px solid ButtonText', '&:disabled, &[aria-disabled="true"]': { borderColor: 'GrayText', color: 'GrayText' } },
+  [FORCED_COLORS]: { border: 'var(--border-w) solid ButtonText', '&:disabled, &[aria-disabled="true"]': { borderColor: 'GrayText', color: 'GrayText' } },
 })
 
 /** Raised keys (primary, dark, inverse, ion). */
 const sizeStyles: Record<KeycapSize, ReturnType<typeof css>> = {
   sm: css({
-    minHeight: '36px',
+    minHeight: 'var(--control-sm)',
     padding: '0 var(--space-3_5)',
     fontSize: 'var(--fs-12)',
     // 36px visual key, 44px hit area (resolutions §7).
     '&::before': { content: '""', position: 'absolute', inset: '-4px 0' },
   }),
-  md: css({ minHeight: '46px', padding: '0 var(--space-5)', fontSize: 'var(--fs-14)' }),
-  lg: css({ minHeight: '56px', padding: '0 var(--space-6_5)', fontSize: 'var(--fs-16)' }),
+  md: css({ minHeight: 'var(--control-md)', padding: '0 var(--space-5)', fontSize: 'var(--fs-14)' }),
+  lg: css({ minHeight: 'var(--control-lg)', padding: '0 var(--space-6_5)', fontSize: 'var(--fs-16)' }),
 }
 
 /** Flat ghost buttons keep the System 44px / radius 10 geometry at `sm`. */
 const ghostSizeStyles: Record<KeycapSize, ReturnType<typeof css>> = {
   sm: css({ minHeight: 'var(--touch-target)', padding: '0 var(--space-4)', borderRadius: 'var(--radius-10)' }),
-  md: css({ minHeight: '46px', padding: '0 var(--space-4_5)', borderRadius: 'var(--radius-10)' }),
-  lg: css({ minHeight: '56px', padding: '0 var(--space-6_5)' }),
+  md: css({ minHeight: 'var(--control-md)', padding: '0 var(--space-4_5)', borderRadius: 'var(--radius-10)' }),
+  lg: css({ minHeight: 'var(--control-lg)', padding: '0 var(--space-6_5)' }),
 }
 
 const variantStyles: Record<KeycapVariant, ReturnType<typeof css>> = {
@@ -221,7 +210,7 @@ const variantStyles: Record<KeycapVariant, ReturnType<typeof css>> = {
   dark: css({
     background: 'var(--raised)',
     color: 'var(--text)',
-    border: '1px solid var(--line-strong)',
+    border: 'var(--border-w) solid var(--line-strong)',
     fontWeight: 400,
     boxShadow: 'var(--shadow-keycap-dark)',
     [HOVER]: { transform: 'translateY(-1px)', filter: 'brightness(1.06)' },
@@ -235,7 +224,7 @@ const variantStyles: Record<KeycapVariant, ReturnType<typeof css>> = {
   ghost: css({
     background: 'transparent',
     color: 'var(--text)',
-    border: '1px solid var(--line-control)',
+    border: 'var(--border-w) solid var(--line-control)',
     fontFamily: 'var(--font-sans)',
     fontSize: 'var(--fs-15)',
     fontWeight: 400,
@@ -247,7 +236,7 @@ const variantStyles: Record<KeycapVariant, ReturnType<typeof css>> = {
   'ghost-mono': css({
     background: 'transparent',
     color: 'var(--text)',
-    border: '1px solid var(--line-control)',
+    border: 'var(--border-w) solid var(--line-control)',
     fontSize: 'var(--fs-14)',
     fontWeight: 400,
     transition: 'background-color var(--duration-fast), border-color var(--duration-fast)',

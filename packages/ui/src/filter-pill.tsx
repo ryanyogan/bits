@@ -2,7 +2,7 @@ import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
 import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
-import { FOCUS, FORCED_COLORS, forcedSelected, type ForcedState } from './lib/states.ts'
+import { FOCUS, focusOutline, FORCED_COLORS, forcedSelected, type ForcedState } from './lib/states.ts'
 
 export interface FilterPillProps {
   /** URL with the filter applied, e.g. `?track=agents` (filters are URL state, resolutions §11). */
@@ -60,7 +60,7 @@ const pillStyle = css({
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-4)',
   borderRadius: 'var(--radius-pill)',
-  border: '1px solid var(--line-control)',
+  border: 'var(--border-w) solid var(--line-control)',
   background: 'transparent',
   color: 'var(--text-quiet)',
   fontFamily: 'var(--font-sans)',
@@ -79,7 +79,7 @@ const pillStyle = css({
     background: 'var(--text)',
     color: 'var(--ink)',
   },
-  [FOCUS]: { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  [FOCUS]: focusOutline,
   [FORCED_COLORS]: { '&[aria-current="true"]': forcedSelected },
 })
 

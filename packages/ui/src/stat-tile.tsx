@@ -33,7 +33,7 @@ const profileTile = css({
   padding: 'var(--space-4_5)',
   borderRadius: 'var(--radius-16)',
   background: 'var(--surface)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   gap: 'var(--space-1_5)',
 })
 const valueStyle = css({ fontFamily: 'var(--font-display)', fontWeight: 700, lineHeight: 'normal', color: 'var(--text)' })

@@ -2,7 +2,7 @@ import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
 import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
-import { FOCUS, FORCED_COLORS, forcedSelected, HOVER, type ForcedState } from './lib/states.ts'
+import { FOCUS, focusOutline, FORCED_COLORS, forcedSelected, HOVER, type ForcedState } from './lib/states.ts'
 
 export interface ChoiceChipProps {
   /** Form field name; the chip is a real checkbox (or radio) inside a label. */
@@ -86,7 +86,7 @@ const chipBase = css({
   alignItems: 'center',
   gap: 'var(--space-2)',
   borderRadius: 'var(--radius-pill)',
-  border: '1px solid var(--line-control)',
+  border: 'var(--border-w) solid var(--line-control)',
   background: 'transparent',
   color: 'var(--text-lead)',
   fontFamily: 'var(--font-sans)',
@@ -112,8 +112,8 @@ const choiceStyle = css({
   '&:hover:not(:has(:disabled)), &[data-force="hover"]': { borderColor: 'var(--line-node-next)' },
   '&:has(:checked)': on,
   '&:has(:focus-visible), &[data-force="focus"]': {
-    outline: '2px solid var(--focus-ring-color)',
-    outlineOffset: '2px',
+    outline: 'var(--focus-outline)',
+    outlineOffset: 'var(--focus-offset)',
     boxShadow: 'var(--focus-ring)',
   },
   '&:has(:disabled)': { cursor: 'not-allowed', color: 'var(--dim)', borderColor: 'var(--line)' },
@@ -137,5 +137,5 @@ const suggestionStyle = css({
     color: 'var(--text)',
     background: 'var(--volt-a06)',
   },
-  [FOCUS]: { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  [FOCUS]: focusOutline,
 })

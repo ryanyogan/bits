@@ -91,7 +91,7 @@ const cardStyle = css({
   padding: 'var(--space-4)',
   borderRadius: 'var(--radius-lg)',
   background: 'var(--surface)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   color: 'var(--text)',
   textDecoration: 'none',
   transition: 'border-color var(--duration-fast), background-color var(--duration-fast)',

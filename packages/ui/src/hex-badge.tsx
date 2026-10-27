@@ -147,7 +147,7 @@ const chipStyle = css({
   gap: 'var(--space-2)',
   padding: 'var(--space-2) var(--space-3) var(--space-2) var(--space-2)',
   borderRadius: 'var(--radius-pill)',
-  border: '1px solid var(--line-panel)',
+  border: 'var(--border-w) solid var(--line-panel)',
   background: 'var(--well)',
   fontSize: 'var(--fs-13)',
   color: 'var(--text-body)',

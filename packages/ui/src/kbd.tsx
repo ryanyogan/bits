@@ -24,7 +24,7 @@ export const kbdStyle = css({
   display: 'inline-block',
   padding: 'var(--space-1) var(--space-2)',
   borderRadius: 'var(--radius-xs)',
-  border: '1px solid var(--line-control)',
+  border: 'var(--border-w) solid var(--line-control)',
   boxShadow: 'var(--shadow-kbd)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',

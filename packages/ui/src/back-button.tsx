@@ -3,7 +3,7 @@ import { css } from 'remix/component'
 
 import { Icon } from './icon.tsx'
 import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
-import { FOCUS, HOVER, type ForcedState } from './lib/states.ts'
+import { ACTIVE, FOCUS, focusOutline, HOVER, type ForcedState } from './lib/states.ts'
 
 export interface BackButtonProps {
   href: string
@@ -34,8 +34,9 @@ const buttonStyle = css({
   width: 'var(--touch-target)',
   height: 'var(--touch-target)',
   borderRadius: 'var(--radius-12)',
-  border: '1px solid var(--line-strong)',
+  border: 'var(--border-w) solid var(--line-strong)',
   transition: 'background-color var(--duration-fast), border-color var(--duration-fast)',
   [HOVER]: { background: 'var(--fill-ghost-hover)', borderColor: 'var(--line-drop)' },
-  [FOCUS]: { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  [ACTIVE]: { background: 'var(--fill-btn)' },
+  [FOCUS]: focusOutline,
 })
