@@ -87,15 +87,20 @@ export const HeroPromptInput = clientEntry(
 const inputStyle = css({
   flex: 1,
   minWidth: 0,
-  height: '52px',
+  // The Ask key's height, so the row (and its centre line) is one size
+  // (decision 040). 16px on phones keeps iOS from zooming on focus.
+  height: 'var(--space-12)',
   padding: 0,
   background: 'transparent',
   border: 0,
   color: 'var(--text)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-17)',
+  lineHeight: 'normal',
+  textOverflow: 'ellipsis',
+  caretColor: 'var(--volt)',
   '&::placeholder': { color: 'var(--dim)', opacity: 1 },
   // The bar shows focus (focus-within border + glow); the input itself does not.
   '&:focus, &:focus-visible': { outline: 'none', boxShadow: 'none' },
-  '@media (max-width: 480px)': { fontSize: 'var(--fs-16)' },
+  '@media (max-width: 480px)': { fontSize: 'var(--fs-16)', height: 'var(--touch-target)' },
 })

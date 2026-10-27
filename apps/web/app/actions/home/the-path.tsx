@@ -2,7 +2,7 @@ import { css, type Handle } from 'remix/component'
 import { Eyebrow } from '@bits/ui/eyebrow'
 
 import { trackHref } from './links.ts'
-import { cardDesc, cardTitle, h2Style, leadStyle, PHONE, sectionStyle, stackSection } from './styles.ts'
+import { cardDesc, cardTitle, h2Style, leadStyle, PHONE, prefetch, REDUCED, sectionStyle, stackSection } from './styles.ts'
 
 type TrackKey = 'foundations' | 'prompting' | 'tools' | 'agents'
 
@@ -25,7 +25,7 @@ const tracks: {
 /** "03 — The path" (Main.md §4): four TrackCards on a dashed trace. */
 export function ThePath(_handle: Handle) {
   return () => (
-    <section id="path" aria-labelledby="path-title" mix={[sectionStyle, stackSection]}>
+    <section id="path" aria-labelledby="path-title" mix={[sectionStyle, stackSection, timeline]}>
       <div mix={introStyle}>
         <Eyebrow tone="synapse" as="p">
           03 — The path
@@ -43,7 +43,7 @@ export function ThePath(_handle: Handle) {
         <ol mix={gridStyle}>
           {tracks.map((t) => (
             <li key={t.key} mix={itemStyle}>
-              <a href={trackHref(t.key)} style={{ '--track': t.color, '--ring': t.ring }} mix={cardLink}>
+              <a href={trackHref(t.key)} style={{ '--track': t.color, '--ring': t.ring }} mix={[cardLink, prefetch]}>
                 <span aria-hidden="true" mix={discStyle}>
                   {t.n}
                 </span>
@@ -69,6 +69,9 @@ export function ThePath(_handle: Handle) {
   )
 }
 
+// Names the view timeline the header's "The path" link follows (decision 040).
+const timeline = css({ viewTimelineName: '--path' })
+
 const introStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', maxWidth: 'var(--read-width)' })
 const trackWrap = css({ position: 'relative' })
 const traceStyle = css({
@@ -78,6 +81,15 @@ const traceStyle = css({
   top: '35px',
   height: 0,
   borderTop: '1px dashed var(--volt-a40)',
+  transformOrigin: 'left',
+  // The trace draws itself left to right as the cards scroll into view:
+  // tied to the reader's scroll, never autonomous (decision 040).
+  '@supports (animation-timeline: view())': {
+    animation: 'landing-trace linear both',
+    animationTimeline: 'view()',
+    animationRange: 'entry 10% cover 50%',
+  },
+  [REDUCED]: { animation: 'none' },
   '@media (max-width: 820px)': { display: 'none' },
 })
 const gridStyle = css({

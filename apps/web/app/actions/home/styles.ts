@@ -1,7 +1,18 @@
 // Layout and type styles shared by the landing page sections (Main.md).
-import { css } from 'remix/component'
+import { attrs, css } from 'remix/component'
 
 export const PHONE = '@media (max-width: 480px)'
+export const REDUCED = '@media (prefers-reduced-motion: reduce)'
+export const FORCED = '@media (forced-colors: active)'
+
+/**
+ * Client navigation prefetch on hover, focus or press (remix guide 05,
+ * "Prefetch links before navigation"). Only for same-origin GET page links:
+ * never on `data-rmx-document`, downloads, OAuth or sign-out links.
+ * `attrs()` sets the attribute through `mix`, so it also reaches links
+ * rendered by @bits/ui components, and it yields to an explicit prop.
+ */
+export const prefetch = attrs({ 'data-rmx-prefetch': 'intent' })
 
 /** `max-width:1280px; margin:0 auto; padding:120px 32px` → 72px 16px on phones. */
 export const sectionStyle = css({

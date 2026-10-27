@@ -1,11 +1,10 @@
 import { css, type Handle } from 'remix/component'
 import { SuggestionChip } from '@bits/ui/chip'
-import { Keycap } from '@bits/ui/keycap'
 
 import { agentLessonHref, lessonOneHref } from './links.ts'
 import { FieldMotionToggle } from './public/field-motion-toggle.tsx'
 import { HeroPromptInput } from './public/hero-prompt-input.tsx'
-import { monoNote, PHONE, voltText } from './styles.ts'
+import { FORCED, monoNote, PHONE, prefetch, REDUCED, voltText } from './styles.ts'
 
 export const typewriterPrompts = [
   "Explain tokens like I'm ten",
@@ -24,11 +23,14 @@ const suggestions = [
  * Hero (Main.md §2). Everything here is server-rendered so the headline is
  * the LCP paint with no JS; only the prompt input's typewriter placeholder
  * hydrates. The prompt bar is a GET form to lesson 1 with `?q=`.
+ *
+ * The h1 never animates (it is the LCP element). The lines around it rise in
+ * once on load, CSS only (decision 040).
  */
 export function Hero(handle: Handle<{ signedIn?: boolean }>) {
   return () => (
     <section aria-labelledby="hero-title" mix={heroStyle}>
-      <p mix={badgeStyle}>
+      <p mix={[badgeStyle, rise[0]]}>
         <span aria-hidden="true" mix={pulseDot} />
         Free courses · from zero to your first agent
       </p>
@@ -36,13 +38,13 @@ export function Hero(handle: Handle<{ signedIn?: boolean }>) {
         Learn AI by <span mix={voltText}>typing</span> to it.
         <span aria-hidden="true" mix={caretStyle} />
       </h1>
-      <p mix={subStyle}>
+      <p mix={[subStyle, rise[1]]}>
         Free, hands-on courses that take you from “what's a token?” to shipping your first agent.
         Every lesson is a conversation — you write the prompts, run the code, and watch the model
         think.
       </p>
 
-      <form method="get" action={lessonOneHref()} mix={barStyle}>
+      <form method="get" action={lessonOneHref()} mix={[barStyle, rise[2]]}>
         <span aria-hidden="true" mix={chevronStyle}>
           ›
         </span>
@@ -50,29 +52,31 @@ export function Hero(handle: Handle<{ signedIn?: boolean }>) {
           Ask your first question
         </label>
         <HeroPromptInput id="hero-prompt" name="q" prompts={typewriterPrompts} />
-        <Keycap type="submit" mix={askStyle}>
+        <button type="submit" mix={askStyle}>
           Ask
           <span aria-hidden="true" mix={enterTile}>
             ↵
           </span>
-        </Keycap>
+        </button>
       </form>
 
-      <ul aria-label="Try asking" mix={chipsStyle}>
+      <ul aria-label="Try asking" mix={[chipsStyle, rise[3]]}>
         {suggestions.map((s) => (
           <li key={s.label}>
-            <SuggestionChip href={s.href}>{s.label}</SuggestionChip>
+            <SuggestionChip href={s.href} mix={[chipStyle, prefetch]}>
+              {s.label}
+            </SuggestionChip>
           </li>
         ))}
       </ul>
 
-      <p mix={[monoNote, noteStyle]}>
+      <p mix={[monoNote, noteStyle, rise[4]]}>
         {handle.props.signedIn
           ? 'Signed in · your progress saves as you go'
           : 'No account needed to start · sign in to save progress'}
       </p>
 
-      <div mix={cueStyle}>
+      <div mix={[cueStyle, rise[5]]}>
         <div aria-hidden="true" mix={cueTextStyle}>
           Scroll — the network rewires itself
           <span mix={cueLine} />
@@ -84,22 +88,42 @@ export function Hero(handle: Handle<{ signedIn?: boolean }>) {
   )
 }
 
+/**
+ * The page's one load sequence: each line around the h1 rises in 70ms after
+ * the last. Opacity and transform only, so nothing shifts layout; reduced
+ * motion shows everything at once.
+ */
+const rise = [0, 1, 2, 3, 4, 5].map((i) =>
+  css({
+    animation: `bits-rise var(--duration-pop) var(--ease-out) ${i * 70}ms both`,
+    [REDUCED]: { animation: 'none' },
+  }),
+)
+
 const heroStyle = css({
   maxWidth: 'var(--page-max)',
   margin: '0 auto',
-  padding: '104px var(--page-gutter) var(--space-18)',
-  minHeight: '820px',
+  // Spec: 104px top, 820px tall. The height is capped by the viewport so
+  // the scroll cue and pause control stay above the fold on a laptop.
+  padding: 'var(--space-24) var(--page-gutter) var(--space-18)',
+  minHeight: 'min(820px, calc(100svh - var(--appbar-h)))',
   boxSizing: 'border-box',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   textAlign: 'center',
-  gap: '30px',
-  [PHONE]: { padding: 'var(--space-16) var(--page-gutter) var(--space-12)', minHeight: 'auto' },
+  gap: 'var(--space-7)',
+  [PHONE]: {
+    padding: 'var(--space-12) var(--page-gutter) var(--space-12)',
+    minHeight: 'auto',
+    gap: 'var(--space-6)',
+  },
 })
 
 const badgeStyle = css({
   margin: 0,
+  maxWidth: '100%',
+  boxSizing: 'border-box',
   display: 'inline-flex',
   alignItems: 'center',
   gap: 'var(--space-2_5)',
@@ -107,23 +131,33 @@ const badgeStyle = css({
   border: '1px solid var(--volt-a28)',
   borderRadius: 'var(--radius-pill)',
   background: 'var(--ink-a60)',
-  WebkitBackdropFilter: 'blur(10px)',
-  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(var(--space-2_5))',
+  backdropFilter: 'blur(var(--space-2_5))',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-13)',
   color: 'var(--volt)',
   textAlign: 'left',
+  textWrap: 'balance',
+  // The 13px line is ~330px wide: on a 360px phone it wrapped into a
+  // two-line pill. 11px with title tracking keeps it on one line.
+  [PHONE]: {
+    gap: 'var(--space-2)',
+    padding: 'var(--space-1_5) var(--space-3) var(--space-1_5) var(--space-2_5)',
+    fontSize: 'var(--fs-11)',
+    letterSpacing: 'var(--tracking-title)',
+  },
 })
 
 const pulseDot = css({
   flex: 'none',
   display: 'block',
-  width: '8px',
-  height: '8px',
+  width: 'var(--space-2)',
+  height: 'var(--space-2)',
   borderRadius: 'var(--radius-pill)',
   background: 'var(--volt)',
   animation: 'bits-pulse-volt var(--duration-pulse) ease-in-out infinite',
-  '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+  [REDUCED]: { animation: 'none' },
+  [FORCED]: { forcedColorAdjust: 'none', background: 'CanvasText' },
 })
 
 const h1Style = css({
@@ -146,7 +180,7 @@ const caretStyle = css({
   verticalAlign: '-0.04em',
   animation: 'bits-blink var(--duration-caret) steps(1) infinite',
   // Handoff: hide the caret entirely under reduced motion.
-  '@media (prefers-reduced-motion: reduce)': { display: 'none' },
+  [REDUCED]: { display: 'none' },
 })
 
 const subStyle = css({
@@ -159,47 +193,106 @@ const subStyle = css({
   [PHONE]: { fontSize: 'var(--fs-17)' },
 })
 
+/*
+ * The prompt bar (components §7.4), reworked in decision 040.
+ *
+ * One row, everything centred on it. The Ask key's edge is drawn inside the
+ * key (an inset shadow), so its box is what you see and the insets around
+ * it are equal: 8px on desktop, 6px on phones. Radii nest: bar = key
+ * radius (10) + inset, so 18 (`--radius-xl`) and 16. The chevron uses the
+ * input's font, size and line box, so its glyph sits on the text's line
+ * instead of floating in a taller 20px line.
+ */
 const barStyle = css({
   width: '100%',
   maxWidth: 'var(--read-width)',
   display: 'flex',
   alignItems: 'center',
   gap: 'var(--space-3)',
-  padding: 'var(--space-2_5) var(--space-2_5) var(--space-2_5) var(--space-5_5)',
+  padding: 'var(--space-2) var(--space-2) var(--space-2) var(--space-5)',
   boxSizing: 'border-box',
-  background: 'var(--glass)',
-  WebkitBackdropFilter: 'blur(var(--blur-prompt))',
-  backdropFilter: 'blur(var(--blur-prompt))',
-  border: '1px solid var(--line-strong)',
+  // Glass over the field: translucent ink, blurred and a little saturated,
+  // so the field glows through without drawing lines behind the text.
+  background: 'var(--ink-a60)',
+  WebkitBackdropFilter: 'blur(var(--blur-prompt)) saturate(1.4)',
+  backdropFilter: 'blur(var(--blur-prompt)) saturate(1.4)',
+  border: '1px solid var(--volt-a28)',
   borderRadius: 'var(--radius-xl)',
-  boxShadow: 'var(--shadow-prompt-bar)',
+  boxShadow: 'inset 0 1px 0 var(--line-glass), var(--shadow-prompt-bar)',
   transition: 'border-color var(--duration-focus), box-shadow var(--duration-focus)',
+  '&:hover': { borderColor: 'var(--volt-a40)' },
   '&:focus-within': {
     borderColor: 'var(--volt-a60)',
-    boxShadow: '0 0 0 4px var(--volt-tint-on), var(--shadow-prompt-bar)',
+    boxShadow: 'inset 0 1px 0 var(--line-glass), var(--focus-ring), var(--shadow-prompt-bar)',
   },
-  [PHONE]: { padding: 'var(--space-2) var(--space-2) var(--space-2) var(--space-4)', gap: 'var(--space-2_5)' },
+  // Without backdrop-filter the bar would be see-through: make it solid.
+  '@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))': {
+    background: 'var(--glass-82)',
+  },
+  [FORCED]: {
+    background: 'Canvas',
+    borderColor: 'CanvasText',
+    '&:focus-within': { outline: '2px solid Highlight', outlineOffset: '2px' },
+  },
+  [PHONE]: {
+    gap: 'var(--space-2_5)',
+    padding: 'var(--space-1_5) var(--space-1_5) var(--space-1_5) var(--space-4)',
+    borderRadius: 'var(--radius-16)',
+  },
 })
 
 const chevronStyle = css({
+  flex: 'none',
   fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-20)',
+  fontSize: 'var(--fs-17)',
+  fontWeight: 500,
+  lineHeight: 'normal',
   color: 'var(--volt)',
+  [PHONE]: { fontSize: 'var(--fs-16)' },
 })
 
 const askStyle = css({
-  minHeight: '48px',
-  padding: '0 var(--space-4_5)',
-  gap: 'var(--space-2_5)',
-  borderRadius: 'var(--radius-md)',
+  flex: 'none',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 'var(--space-2)',
+  minHeight: 'var(--space-12)',
+  padding: '0 var(--space-3) 0 var(--space-4)',
+  boxSizing: 'border-box',
+  border: 0,
+  borderRadius: 'var(--radius-10)',
+  background: 'var(--volt)',
+  color: 'var(--on-volt)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-14)',
+  fontWeight: 500,
+  lineHeight: 1,
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+  WebkitTapHighlightColor: 'transparent',
+  // The keycap edge, inside the key: 2px of --volt-edge along the bottom.
+  boxShadow: 'inset 0 calc(-1 * var(--space-0_5)) 0 var(--volt-edge), inset 0 1px 0 var(--inset-highlight)',
+  transition:
+    'background-color var(--duration-press) var(--ease), box-shadow var(--duration-press) var(--ease), transform var(--duration-press) var(--ease)',
+  '&:hover': { background: 'var(--volt-hover)' },
+  '&:active': { transform: 'translateY(1px)', boxShadow: 'inset 0 1px 0 var(--volt-edge)' },
+  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&[aria-busy="true"]': { cursor: 'progress' },
+  [REDUCED]: { transition: 'none' },
+  [FORCED]: { border: '1px solid ButtonText' },
+  [PHONE]: { minHeight: 'var(--touch-target)', padding: '0 var(--space-2_5) 0 var(--space-3_5)' },
 })
 
 const enterTile = css({
-  padding: '2px 6px',
+  display: 'inline-grid',
+  placeItems: 'center',
+  minWidth: 'var(--space-6)',
+  height: 'var(--space-6)',
+  boxSizing: 'border-box',
+  padding: '0 var(--space-1_5)',
   borderRadius: 'var(--radius-5)',
   background: 'var(--on-volt-a12)',
   fontSize: 'var(--fs-12)',
-  [PHONE]: { display: 'none' },
 })
 
 const chipsStyle = css({
@@ -211,9 +304,18 @@ const chipsStyle = css({
   flexWrap: 'wrap',
   justifyContent: 'center',
   maxWidth: 'var(--read-width)',
+  [PHONE]: { gap: 'var(--space-2)' },
 })
 
-const noteStyle = css({ marginTop: 'var(--space-1_5)' })
+// Chips sit on the field too: give them the badge's glass so they read.
+const chipStyle = css({
+  minHeight: 'var(--touch-target)',
+  background: 'var(--ink-a60)',
+  WebkitBackdropFilter: 'blur(var(--space-2_5))',
+  backdropFilter: 'blur(var(--space-2_5))',
+})
+
+const noteStyle = css({ marginTop: 'var(--space-1_5)', textWrap: 'balance' })
 
 const cueStyle = css({
   marginTop: 'auto',
@@ -222,6 +324,7 @@ const cueStyle = css({
   flexDirection: 'column',
   alignItems: 'center',
   gap: 'var(--space-5)',
+  [PHONE]: { paddingTop: 'var(--space-6)', gap: 'var(--space-4)' },
 })
 
 const cueTextStyle = css({
@@ -239,8 +342,10 @@ const cueTextStyle = css({
 const cueLine = css({
   display: 'block',
   width: '1px',
-  height: '48px',
+  height: 'var(--space-12)',
   background: 'var(--volt)',
   animation: 'bits-cue 2.4s ease-in-out infinite',
-  '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+  [REDUCED]: { animation: 'none' },
+  [FORCED]: { forcedColorAdjust: 'none', background: 'CanvasText' },
+  [PHONE]: { height: 'var(--space-8)' },
 })

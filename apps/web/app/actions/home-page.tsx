@@ -1,11 +1,9 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
-import { AppBar } from '@bits/ui/app-bar'
 import { AvatarButton } from '@bits/ui/avatar-button'
 import { Document } from '@bits/ui/document'
 import { Footer } from '@bits/ui/footer'
 import { Keycap } from '@bits/ui/keycap'
-import { NavLink } from '@bits/ui/nav-link'
 import { XpPill } from '@bits/ui/xp-pill'
 
 import { platform } from '#platform'
@@ -18,10 +16,12 @@ import { canonicalUrl } from '../ui/layout.tsx'
 import { ClosingCta } from './home/closing-cta.tsx'
 import { Hero } from './home/hero.tsx'
 import { HowItWorks } from './home/how-it-works.tsx'
+import { LandingHeader, type LandingLink, navLinkStyle } from './home/landing-header.tsx'
 import { lessonOneHref } from './home/links.ts'
 import { Modes } from './home/modes.tsx'
 import { Progress } from './home/progress.tsx'
 import { NeuralField } from './home/public/neural-field.tsx'
+import { PHONE, prefetch } from './home/styles.ts'
 import { ThePath } from './home/the-path.tsx'
 
 const brandName = `${APP_NAME.charAt(0).toUpperCase()}${APP_NAME.slice(1)}`
@@ -29,10 +29,10 @@ const brandName = `${APP_NAME.charAt(0).toUpperCase()}${APP_NAME.slice(1)}`
 /** "Bits — learn AI by typing to it" (Main.md). */
 export const homeTitle = `${brandName} — learn AI by typing to it`
 
-const navLinks = [
+const navLinks: LandingLink[] = [
   { href: routes.courses.index.href(), label: 'Courses' },
-  { href: '#how', label: 'How it works' },
-  { href: '#path', label: 'The path' },
+  { href: '#how', label: 'How it works', section: 'how' },
+  { href: '#path', label: 'The path', section: 'path' },
   { href: routes.author.index.href(), label: 'For authors' },
 ]
 
@@ -79,24 +79,23 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
           </a>
           <NeuralField />
           <div mix={contentStyle}>
-            <AppBar
+            <LandingHeader
               brand={APP_NAME}
               homeHref={routes.home.href()}
               links={navLinks}
-              variant="marketing"
-              position="static"
+              menuExtras={viewer ? [] : [{ href: routes.login.index.href(), label: 'Sign in' }]}
               actions={
                 viewer ? (
                   <>
                     <XpPill neurons={viewer.xp} />
-                    <AvatarButton initials={viewer.initials} href={routes.me.index.href()} />
+                    <AvatarButton initials={viewer.initials} href={routes.me.index.href()} mix={prefetch} />
                   </>
                 ) : (
                   <>
-                    <NavLink href={routes.login.index.href()} variant="marketing" mix={signInStyle}>
+                    <a href={routes.login.index.href()} mix={[navLinkStyle, signInStyle, prefetch]}>
                       Sign in
-                    </NavLink>
-                    <Keycap href={lessonOneHref()} mix={startFreeStyle}>
+                    </a>
+                    <Keycap href={lessonOneHref()} mix={[startFreeStyle, prefetch]}>
                       Start free
                     </Keycap>
                   </>
@@ -124,15 +123,28 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
   }
 }
 
-// The scroll cue keyframes (Main.md §2.7) are page-specific, so they ship
-// with the page instead of base.css.
-const pageCss = `@layer app{@keyframes bits-cue{0%{transform:scaleY(0);transform-origin:top}45%{transform:scaleY(1);transform-origin:top}55%{transform:scaleY(1);transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}}`
+// Page-specific keyframes ship with the page instead of base.css:
+// - bits-cue: the scroll cue (Main.md §2.7);
+// - landing-bar: the header frosting over the first 120px of scroll;
+// - landing-here: a section link while its section is on screen;
+// - landing-trace: the path's dashed line drawing in (the-path.tsx).
+// (decision 040)
+const pageCss = [
+  '@keyframes bits-cue{0%{transform:scaleY(0);transform-origin:top}45%{transform:scaleY(1);transform-origin:top}55%{transform:scaleY(1);transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}',
+  '@keyframes landing-bar{from{background-color:transparent;border-bottom-color:transparent}to{background-color:var(--appbar-bg);border-bottom-color:var(--line-bar);-webkit-backdrop-filter:blur(var(--blur-glass));backdrop-filter:blur(var(--blur-glass))}}',
+  '@keyframes landing-here{from,to{color:var(--text);background-color:var(--fill-ghost-hover)}}',
+  '@keyframes landing-trace{from{transform:scaleX(0)}to{transform:scaleX(1)}}',
+]
+  .map((rule) => `@layer app{${rule}}`)
+  .join('')
 
 const rootStyle = css({
   position: 'relative',
   background: 'var(--ink)',
   color: 'var(--text)',
   overflowX: 'clip',
+  // The header's section links read the #how / #path view timelines.
+  timelineScope: '--how, --path',
 })
 
 const contentStyle = css({ position: 'relative', zIndex: 1 })
@@ -151,13 +163,13 @@ const skipLinkStyle = css({
   '&:focus': { top: 'var(--space-4)' },
 })
 
-const signInStyle = css({
-  padding: '0 var(--space-2)',
-  '@media (max-width: 420px)': { display: 'none' },
-})
+// Under 420px the bar keeps Start free and the menu; Sign in moves into the
+// menu sheet (menuExtras), so it is never out of reach.
+const signInStyle = css({ '@media (max-width: 420px)': { display: 'none' } })
 
 const startFreeStyle = css({
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-4_5)',
   borderRadius: 'var(--radius-md)',
+  [PHONE]: { padding: '0 var(--space-4)' },
 })
