@@ -47,3 +47,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 042 | [Design-system consistency and link prefetch](042-design-system-consistency-and-prefetch.md) |
 | 043 | [Streaming, loading states and optimistic UI](043-streaming-loading-and-optimistic-ui.md) |
 | 044 | [Sign-in polish: steady tabs, one logo, deferred brain](044-login-polish.md) |
+| 040 | [Landing polish: header capsule, glass prompt bar, phone rhythm](040-landing-polish.md) |
