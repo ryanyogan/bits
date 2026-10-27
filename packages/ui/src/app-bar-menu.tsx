@@ -59,8 +59,8 @@ export const AppBarMenu = clientEntry(
                 <a
                   key={link.href}
                   href={link.href}
-                  data-rmx-prefetch={prefetchFor(link.href)}
                   aria-current={link.href === currentPath ? 'page' : undefined}
+                  data-rmx-prefetch={prefetchFor(link.href)}
                   mix={linkStyle}
                 >
                   {link.label}

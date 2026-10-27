@@ -82,8 +82,8 @@ export function AppBar(handle: Handle<AppBarProps>) {
               <a
                 key={link.href}
                 href={link.href}
-                data-rmx-prefetch={prefetchFor(link.href)}
                 aria-current={link.href === currentPath ? 'page' : undefined}
+                data-rmx-prefetch={prefetchFor(link.href)}
                 mix={[navLinkStyle, navLinkVariants[marketing ? 'marketing' : 'app']]}
               >
                 {link.label}

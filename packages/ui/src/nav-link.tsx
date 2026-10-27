@@ -26,8 +26,8 @@ export function NavLink(handle: Handle<NavLinkProps>) {
     return (
       <a
         href={href}
-        data-rmx-prefetch={prefetchFor(href, prefetch)}
         aria-current={current ? 'page' : undefined}
+        data-rmx-prefetch={prefetchFor(href, prefetch)}
         data-force={forceState}
         mix={[navLinkStyle, navLinkVariants[variant], mix]}
       >

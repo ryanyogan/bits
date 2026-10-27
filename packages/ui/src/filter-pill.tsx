@@ -29,8 +29,8 @@ export function FilterPill(handle: Handle<FilterPillProps>) {
     return (
       <a
         href={href}
-        data-rmx-prefetch={prefetchFor(href, prefetch)}
         aria-current={selected ? 'true' : undefined}
+        data-rmx-prefetch={prefetchFor(href, prefetch)}
         data-force={forceState}
         mix={[pillStyle, mix]}
       >

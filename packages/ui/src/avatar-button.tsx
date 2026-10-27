@@ -27,11 +27,11 @@ export function AvatarButton(handle: Handle<AvatarButtonProps>) {
     return (
       <a
         href={href}
-        data-rmx-prefetch={prefetchFor(href, prefetch)}
         // The name ends with the initials the link shows, so voice control can
         // target what it sees (WCAG 2.5.3; decision 031).
         aria-label={`${label}, ${initials}`}
         aria-current={current ? 'page' : undefined}
+        data-rmx-prefetch={prefetchFor(href, prefetch)}
         data-force={forceState}
         mix={[avatarStyle, mix]}
       >
