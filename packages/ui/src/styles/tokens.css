@@ -317,6 +317,8 @@
     --output-panel-height: 240px; /* :::terminal / code output */
     --toast-width: 480px; /* RewardRegion overlay */
     --z-toast: 20; /* above the sticky bars (5) */
+    --z-nav-progress: 30; /* navigation progress bar (decision 024), above everything in the page */
+    --nav-progress-h: 3px;
     --bp-mobile: 760px; /* resolutions §8 (documentation only: CSS cannot read it in @media) */
     /* App shell (decision 022): the sticky header stack. Bars are fixed to
        these heights so sticky offsets and scroll-padding agree. */

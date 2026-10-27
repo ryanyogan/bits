@@ -92,6 +92,13 @@ describe('router smoke test', () => {
     assert.match(html, /bits \/ system/)
   })
 
+  it('GET / drops the "no account needed" note when signed in', async () => {
+    let { cookie } = await signIn('home-viewer@example.com')
+    let html = await (await fetchAs(cookie, routes.home.href())).text()
+    assert.match(html, /Signed in · your progress saves as you go/)
+    assert.doesNotMatch(html, /No account needed to start/)
+  })
+
   it('GET /styleguide shows the signed-in account in the bar (decision 022)', async () => {
     let { cookie } = await signIn('styleguide-viewer@example.com')
     let html = await (await fetchAs(cookie, routes.styleguide.index.href())).text()

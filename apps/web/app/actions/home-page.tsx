@@ -100,7 +100,7 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
               }
             />
             <main id="main" tabIndex={-1} mix={mainStyle}>
-              <Hero />
+              <Hero signedIn={viewer !== null} />
               <HowItWorks />
               <ThePath />
               <Modes />
