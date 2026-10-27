@@ -1,30 +1,23 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
-import { Logo } from '@bits/ui/logo'
 
 import { BrainCanvas } from '../public/brain-canvas.tsx'
 
-export interface BrainPaneProps {
-  brand: string
-  homeHref: string
-}
-
 /**
  * The Auth "living brain" pane (Auth spec, left pane): WebGL point cloud,
- * dot grid, logo, "Your neurons, saved." and the decorative SessionPanel.
+ * dot grid, "Your neurons, saved." and the decorative SessionPanel. The
+ * logo is AuthShell's, laid over this pane's top row (decision 044).
  *
  * Responsive (resolutions §8): stacked above the form below 1040px; below
  * 760px it moves under the form as a 200px band with no canvas and no
  * session panel; at 520px and narrower it is hidden.
  */
-export function BrainPane(handle: Handle<BrainPaneProps>) {
+export function BrainPane(_handle: Handle) {
   return () => {
-    let { brand, homeHref } = handle.props
     return (
-      <header mix={paneStyle}>
+      <aside aria-label="About accounts" mix={paneStyle}>
         <BrainCanvas />
         <div aria-hidden="true" mix={dotGridStyle} />
-        <Logo brand={brand} href={homeHref} variant="auth" mix={logoStyle} />
         <div mix={bottomStyle}>
           {/* Not a heading: the form's <h1> must come first (Auth spec, accessibility). */}
           <p mix={displayStyle}>
@@ -45,7 +38,7 @@ export function BrainPane(handle: Handle<BrainPaneProps>) {
             </div>
           </div>
         </div>
-      </header>
+      </aside>
     )
   }
 }
@@ -59,14 +52,14 @@ const paneStyle = css({
   borderRight: '1px solid var(--line-hair)',
   display: 'flex',
   flexDirection: 'column',
-  justifyContent: 'space-between',
-  padding: 'var(--space-8)',
+  justifyContent: 'flex-end',
+  // The top row is AuthShell's logo (an --appbar-h row at the page gutter).
+  padding: 'var(--appbar-h) var(--page-gutter) var(--space-8)',
   '@media (max-width: 1039px)': { borderRight: 0, borderBottom: '1px solid var(--line-hair)' },
   '@media (max-width: 759px)': {
     flexBasis: '100%',
     minHeight: '200px',
-    justifyContent: 'flex-end',
-    padding: 'var(--space-6) var(--space-4)',
+    padding: 'var(--space-6) var(--page-gutter)',
     borderBottom: 0,
     borderTop: '1px solid var(--line-hair)',
   },
@@ -79,12 +72,6 @@ const dotGridStyle = css({
   backgroundImage: 'radial-gradient(var(--dot-grid) 1px, transparent 1px)',
   backgroundSize: '26px 26px',
   pointerEvents: 'none',
-})
-
-const logoStyle = css({
-  position: 'relative',
-  alignSelf: 'flex-start',
-  '@media (max-width: 759px)': { display: 'none' },
 })
 
 const bottomStyle = css({

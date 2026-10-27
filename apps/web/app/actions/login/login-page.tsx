@@ -57,7 +57,7 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
     return (
       <AuthShell title={text.title} mode={mode} next={next}>
         <div mix={[riseStyle, blockStyle]}>
-          <div mix={headingGroupStyle}>
+          <div data-rmx-key="heading" mix={headingGroupStyle}>
             <h1 mix={formHeadingStyle}>{text.heading}</h1>
             <p mix={subStyle}>{text.sub}</p>
           </div>
@@ -68,7 +68,7 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
             </Callout>
           ) : null}
 
-          <div mix={providersStyle}>
+          <div data-rmx-key="providers" mix={providersStyle}>
             <PasskeyButton
               optionsUrl={routes.api.passkey.href({ step: 'login-options' })}
               action={routes.login.passkey.href()}
@@ -89,13 +89,13 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
             </ProviderButton>
           </div>
 
-          <div mix={dividerStyle}>
+          <div data-rmx-key="divider" mix={dividerStyle}>
             <span aria-hidden="true" mix={ruleStyle} />
             or use email
             <span aria-hidden="true" mix={ruleStyle} />
           </div>
 
-          <form method="post" action={routes.login.action.href()} mix={formStyle} noValidate>
+          <form data-rmx-key="email-form" method="post" action={routes.login.action.href()} mix={formStyle} noValidate>
             {issues?.length ? (
               <Callout tone="danger" role="alert" compact>
                 {issues.length === 1 ? 'Check the highlighted field.' : 'Check the highlighted fields.'}
@@ -103,37 +103,47 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
             ) : null}
             <input type="hidden" name="mode" value={mode} />
             {next ? <input type="hidden" name="next" value={next} /> : null}
+            {/*
+              Keyed slots (decision 044): switching tabs reconciles this form
+              in place, and without keys the sign-in email box was reused as
+              sign-up's name box, carrying the typed email into "name".
+              Keyed, the email box keeps its node and what was typed in it.
+            */}
             {signup ? (
-              <TextField
-                id="auth-name"
-                name="displayName"
-                label="What should we call you?"
-                placeholder="Ada"
-                value={values.displayName}
-                error={nameError}
-                autoComplete="name"
-                enterKeyHint="next"
-                maxLength={60}
-                autoFocus={Boolean(nameError)}
-              />
+              <div data-rmx-key="name" mix={slotStyle}>
+                <TextField
+                  id="auth-name"
+                  name="displayName"
+                  label="What should we call you?"
+                  placeholder="Ada"
+                  value={values.displayName}
+                  error={nameError}
+                  autoComplete="name"
+                  enterKeyHint="next"
+                  maxLength={60}
+                  autoFocus={Boolean(nameError)}
+                />
+              </div>
             ) : null}
-            <TextField
-              id="auth-email"
-              name="email"
-              label="Email"
-              type="email"
-              placeholder="you@somewhere.dev"
-              value={values.email}
-              error={emailError}
-              autoComplete={signup ? 'email' : 'email webauthn'}
-              inputMode="email"
-              enterKeyHint={signup ? 'next' : 'send'}
-              required
-              mono
-              autoFocus={Boolean(emailError) && !nameError}
-            />
+            <div data-rmx-key="email" mix={slotStyle}>
+              <TextField
+                id="auth-email"
+                name="email"
+                label="Email"
+                type="email"
+                placeholder="you@somewhere.dev"
+                value={values.email}
+                error={emailError}
+                autoComplete={signup ? 'email' : 'email webauthn'}
+                inputMode="email"
+                enterKeyHint={signup ? 'next' : 'send'}
+                required
+                mono
+                autoFocus={Boolean(emailError) && !nameError}
+              />
+            </div>
             {signup ? (
-              <fieldset mix={goalsFieldsetStyle}>
+              <fieldset data-rmx-key="goals" mix={goalsFieldsetStyle}>
                 <legend mix={legendStyle}>
                   What brings you here? <span mix={legendHintStyle}>— we'll suggest a first course</span>
                 </legend>
@@ -152,14 +162,17 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
                 </div>
               </fieldset>
             ) : null}
-            {signup ? <TimezoneField /> : null}
-            <div mix={submitWrapStyle}>
+            {signup ? (
+              <div data-rmx-key="timezone" mix={slotStyle}>
+                <TimezoneField />
+              </div>
+            ) : null}
+            <div data-rmx-key="submit" mix={submitWrapStyle}>
               <PendingSubmit label={text.cta} pendingLabel="Sending…" block />
             </div>
-            <p mix={noteStyle}>No passwords. We'll email you a one-time link and code.</p>
-            <p mix={noteStyle}>
-              By continuing you agree to the <a href={routes.legal.terms.href()} mix={legalLinkStyle}>Terms</a> and{' '}
-              <a href={routes.legal.privacy.href()} mix={legalLinkStyle}>Privacy</a> policy.
+            {/* The terms line is the shell footer's, shared with the code step. */}
+            <p data-rmx-key="note" mix={noteStyle}>
+              No passwords. We'll email you a one-time link and code.
             </p>
           </form>
         </div>
@@ -213,7 +226,8 @@ const chipStyle = css({
 
 const submitWrapStyle = css({ marginTop: 'var(--space-1)', display: 'flex' })
 
-const legalLinkStyle = css({ color: 'var(--muted)', '&:hover': { color: 'var(--text)' } })
+/** A keyed wrapper that adds no box: the field lays out as the form's own child. */
+const slotStyle = css({ display: 'contents' })
 
 const noteStyle = css({
   margin: 0,
