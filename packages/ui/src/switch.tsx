@@ -1,6 +1,8 @@
 import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
+import { FORCED_COLORS, forcedSelected } from './lib/states.ts'
+
 export interface SwitchOption {
   value: string
   label: string
@@ -79,8 +81,9 @@ const optionStyle = css({
   color: 'var(--muted)',
   cursor: 'pointer',
   transition: 'background-color var(--duration-fast), color var(--duration-fast)',
-  '&:hover': { color: 'var(--text)' },
+  '&:hover:not(:has(:disabled))': { color: 'var(--text)' },
   '&:has(:checked)': { background: 'var(--selected)', color: 'var(--text)' },
+  [FORCED_COLORS]: { '&:has(:checked)': forcedSelected },
   '&:has(:focus-visible)': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
   'fieldset:disabled &': { cursor: 'not-allowed' },
 })

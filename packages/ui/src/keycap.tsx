@@ -1,7 +1,7 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
-import { ACTIVE, DISABLED, FOCUS, HOVER, type ForcedState } from './lib/states.ts'
+import { ACTIVE, DISABLED, FOCUS, FORCED_COLORS, HOVER, type ForcedState } from './lib/states.ts'
 
 export type KeycapVariant = 'primary' | 'dark' | 'ghost' | 'ghost-mono' | 'inverse' | 'ion' | 'danger'
 export type KeycapSize = 'sm' | 'md' | 'lg'
@@ -38,7 +38,11 @@ export interface KeycapProps {
   value?: string
   form?: string
   disabled?: boolean
-  /** Shows a blinking caret after the label and sets `aria-busy`. */
+  /**
+   * Pending: sets `aria-busy`, which draws a blinking caret after the label.
+   * The app's form-pending runtime sets the same attribute on any submitter
+   * while its form is in flight, so a server-only Keycap gets the look too.
+   */
   loading?: boolean
   'aria-label'?: string
   'aria-pressed'?: boolean
@@ -85,16 +89,7 @@ export function Keycap(handle: Handle<KeycapProps>) {
       block ? blockStyle : undefined,
       mix,
     ]
-    let content = (
-      <>
-        {children}
-        {loading ? (
-          <span aria-hidden="true" mix={caretStyle}>
-            ▍
-          </span>
-        ) : null}
-      </>
-    )
+    let content = children
     let common = {
       'aria-label': handle.props['aria-label'],
       'aria-describedby': handle.props['aria-describedby'],
@@ -159,7 +154,19 @@ const baseStyle = css({
     outlineOffset: '2px',
   },
   [DISABLED]: { cursor: 'not-allowed' },
-  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+  // Pending (Keycap `loading`, or any submitter while its form is in flight).
+  '&[aria-busy="true"]': { cursor: 'progress' },
+  // The caret is decoration: the alt text after "/" keeps it out of the accessible name.
+  '&[aria-busy="true"]::after': {
+    content: '"▍" / ""',
+    animation: 'bits-blink var(--duration-caret) steps(1) infinite',
+  },
+  '@media (prefers-reduced-motion: reduce)': {
+    transition: 'none',
+    '&[aria-busy="true"]::after': { animation: 'none' },
+  },
+  // Raised keys have no border, so in forced colours they'd lose their edge.
+  [FORCED_COLORS]: { border: '1px solid ButtonText', '&:disabled, &[aria-disabled="true"]': { borderColor: 'GrayText', color: 'GrayText' } },
 })
 
 /** Raised keys (primary, dark, inverse, ion). */
@@ -289,8 +296,3 @@ const glowStyle = css({
 })
 
 const blockStyle = css({ width: '100%' })
-
-const caretStyle = css({
-  animation: 'bits-blink var(--duration-caret) steps(1) infinite',
-  '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
-})

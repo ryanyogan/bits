@@ -133,7 +133,16 @@ the new page into the old DOM. Write for that:
   spot. Reset per-page state with a `data-rmx-key` on a wrapping element,
   as the lesson `<main>` does (`view.key`).
 - Pending UI resets on `handle.frame`'s `reloadComplete`, not only on
-  `pageshow` (`login/public/pending-submit.tsx`).
+  `pageshow` (`@bits/ui/pending-submit`).
+- Every native form already gets pending feedback (decision 022):
+  `app/actions/public/navigation-feedback.ts` marks the form
+  `data-pending` and its submitter `aria-busy`, drops a second POST, and
+  shows the top progress bar on slow navigations. Keycap draws its caret
+  from `aria-busy`. A custom submit button should style `[aria-busy="true"]`.
+  Use `PendingSubmit` only when the label should change.
+- After a 422, put `autoFocus` on the first invalid field (the
+  navigation's focus reset lands there). Forms that re-render in place
+  (search, quiz) set `data-rmx-reset-focus="manual"`.
 - Re-render failures as 4xx pages, not 5xx: the runtime treats a 5xx as a
   failed navigation. `entry.ts` then falls back to a document load.
 - Cover the enhanced path with an e2e test (`app/*.test.e2e.ts`, Playwright
@@ -201,6 +210,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | NavLink | nav-link.tsx | href, variant, current | static |
 | Icon | icon.tsx | name (`iconNames`), size, color, label | static |
 | Keycap | keycap.tsx | variant primary/dark/ghost/ghost-mono/inverse/ion, size sm/md/lg, href, document, download, type, loading, glow, block, disabled | static |
+| PendingSubmit | pending-submit.tsx | label, pendingLabel, variant, size, block, grow, name, value | island |
 | ToolButton | tool-button.tsx | variant outline/quiz/video, square, label, pressed | static |
 | ProviderButton | provider-button.tsx | icon, href (always data-rmx-document) or type/name/value, busy | static |
 | BackButton | back-button.tsx | href, label | static |
@@ -209,10 +219,10 @@ Rationale: `docs/decisions/010-component-library.md`.
 | ChoiceChip / Chip / SuggestionChip | chip.tsx | name, value, type, defaultChecked / selected / href | static |
 | FilterPill | filter-pill.tsx | href, dot, count, selected | static |
 | Tag | tag.tsx | variant, color | static |
-| TextField | text-field.tsx | name, label, type, value, error, hint, mono, compact | static |
+| TextField | text-field.tsx | name, label, type, value, error, hint, mono, compact, enterKeyHint, autoCapitalize, spellCheck | static |
 | SearchField | search-field.tsx | action, name, value, label, shortcut | static |
 | SearchShortcut | search-shortcut.tsx | target (input id; `/` and Cmd/Ctrl-K focus it) | island |
-| CodeInput | code-input.tsx | name, length, error, autoSubmit, value | island (one input without JS) |
+| CodeInput | code-input.tsx | name, length, error, autoSubmit, autoFocus, value | island (one input without JS) |
 | Switch | switch.tsx | name, legend, options, value | static (native radios) |
 | QuizChoice | quiz-choice.tsx | name, question, options, multiple, explanation, action | static (POST form) |
 | Card | card.tsx | variant default/page/compact/dashed/glass, as, label | static |

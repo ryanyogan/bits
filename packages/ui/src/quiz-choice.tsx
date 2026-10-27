@@ -1,6 +1,8 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
+import { FORCED_COLORS, forcedSelected } from './lib/states.ts'
+
 export interface QuizOption {
   value: string
   label: string
@@ -33,7 +35,19 @@ export function QuizChoice(handle: Handle<QuizChoiceProps>) {
   return () => {
     let { name, question, options, multiple, explanation, action, formAction, mix } = handle.props
     return (
-      <form method="post" action={formAction} mix={[cardStyle, mix]}>
+      // Checking re-renders this same card: keep focus on the Check key and
+      // the scroll where it is, so keyboard and screen-reader users stay in
+      // place (scrolling to the action's #fragment would blur the key), and
+      // don't stack a history entry per attempt. Without JS the fragment
+      // brings the browser back to the card.
+      <form
+        method="post"
+        action={formAction}
+        data-rmx-reset-focus="manual"
+        data-rmx-reset-scroll="manual"
+        data-rmx-history="replace"
+        mix={[cardStyle, mix]}
+      >
         <fieldset mix={fieldsetStyle}>
           <legend mix={questionStyle}>{question}</legend>
           {options.map((option) => (
@@ -55,11 +69,10 @@ export function QuizChoice(handle: Handle<QuizChoiceProps>) {
             </label>
           ))}
         </fieldset>
-        {explanation ? (
-          <p role="status" mix={explanationStyle}>
-            {explanation}
-          </p>
-        ) : null}
+        {/* Always mounted, so the explanation is announced when a check adds it. */}
+        <div role="status" mix={statusStyle}>
+          {explanation ? <p mix={explanationStyle}>{explanation}</p> : null}
+        </div>
         {action ? <div>{action}</div> : null}
       </form>
     )
@@ -89,11 +102,17 @@ const optionStyle = css({
   color: 'var(--text-quiet)',
   cursor: 'pointer',
   transition: 'background-color var(--duration-fast), border-color var(--duration-fast)',
-  '&:hover': { borderColor: 'var(--line-node-next)' },
+  '&:not([data-result]):hover': { borderColor: 'var(--line-node-next)' },
   '&:has(:checked)': { borderColor: 'var(--volt-a60)', background: 'var(--volt-tint-on)', color: 'var(--volt-soft)' },
   '&:has(:focus-visible)': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
   '&[data-result="correct"]': { borderColor: 'var(--volt-a45)', background: 'var(--volt-tint-on)', color: 'var(--volt-soft)' },
   '&[data-result="incorrect"]': { borderColor: 'var(--warn-line)', background: 'var(--warn-tint)', color: 'var(--warn)' },
+  // The ✓ / ! marks carry the result in forced colours; selection gets the highlight pair.
+  [FORCED_COLORS]: { '&:has(:checked)': forcedSelected },
+})
+// Empty: out of the flex flow (no extra gap) but still a live region.
+const statusStyle = css({
+  '&:empty': { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clipPath: 'inset(50%)' },
 })
 const markStyle = css({ fontFamily: 'var(--font-mono)', width: '1em', textAlign: 'center' })
 const explanationStyle = css({ margin: 0, fontSize: 'var(--fs-14)', lineHeight: 1.55, color: 'var(--muted)' })

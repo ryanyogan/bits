@@ -80,5 +80,13 @@ export const confirmButtonStyle = css({
   transition: 'background-color var(--duration-fast), border-color var(--duration-fast)',
   '&:hover': { background: 'var(--danger-tint)', borderColor: 'var(--danger)' },
   '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  // While the removal is in flight (the navigation runtime sets aria-busy).
+  '&[aria-busy="true"]': { cursor: 'progress' },
+  '&[aria-busy="true"]::after': {
+    content: '"▍" / ""',
+    marginLeft: 'var(--space-1_5)',
+    animation: 'bits-blink var(--duration-caret) steps(1) infinite',
+  },
+  '@media (prefers-reduced-motion: reduce)': { '&[aria-busy="true"]::after': { animation: 'none' } },
   '@media (max-width: 480px)': { padding: '0 var(--space-3)' },
 })
