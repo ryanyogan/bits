@@ -1,4 +1,4 @@
-// GET /media/videos/:id.mp4 (decision 029): a ready lesson video from R2,
+// GET /media/videos/:id.mp4 (decisions 029 and 035): a ready lesson video from R2,
 // with Range support so <video> can seek and stream. The bucket stays
 // private (it also holds unpublished course builds); this route is the only
 // way to the files. Objects only appear in R2 once the Worker completes their
@@ -6,7 +6,6 @@
 // lookup is needed. Keys are random per upload and never rewritten, so the
 // response is immutable.
 import type { R2Object, R2ObjectBody, R2Range } from '@cloudflare/workers-types/index.ts'
-import type { RequestContext } from 'remix/router'
 
 import { contentBucket } from '../content/request.ts'
 import { videoKey } from './keys.ts'
@@ -55,12 +54,15 @@ function unsatisfiable(size?: number) {
   return new Response('Range not satisfiable', { status: 416, headers })
 }
 
-export async function serveVideo(context: RequestContext<any, any>): Promise<Response> {
-  let id = String(context.params.id)
+/**
+ * Serves one video. Called by the `serveMedia()` router middleware, ahead of
+ * the session and D1 (decision 035), so it must only use R2.
+ */
+export async function serveVideo(request: Request, id: string): Promise<Response> {
   if (!ID.test(id)) return new Response('Not found', { status: 404 })
-  if (isHotlink(context.request)) return new Response('Forbidden', { status: 403 })
+  if (isHotlink(request)) return new Response('Forbidden', { status: 403 })
 
-  let headers = context.request.headers
+  let headers = request.headers
   let range = parseRange(headers.get('Range'))
   if (range === null) return unsatisfiable()
   let etag = headers.get('If-None-Match')?.replace(/^W\//, '').replaceAll('"', '')

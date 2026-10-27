@@ -25,6 +25,11 @@ function decode(row: Record<string, unknown> | null): Video | null {
   return { ...(row as unknown as Video), parts }
 }
 
+/** A `videos` row as a Video, with its parts decoded. */
+export function videoFromRow(row: Record<string, unknown>): Video {
+  return decode(row)!
+}
+
 export async function getVideo(db: D1DataTableDatabase, id: string): Promise<Video | null> {
   return decode(await db.d1.prepare('select * from videos where id = ?1').bind(id).first())
 }

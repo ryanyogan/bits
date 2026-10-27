@@ -32,10 +32,12 @@ import certificatesController from './actions/certificates/controller.tsx'
 import cardsController from './actions/cards/controller.tsx'
 import { loadAuth } from './auth/identity.ts'
 import { loadSession } from './auth/session.ts'
+import { profileReadOptions } from './actions/profile/data.ts'
 import { errorFields, log } from './log.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { cspNonce } from './middleware/csp-nonce.tsx'
 import { responseHeaders } from './middleware/headers.ts'
+import { serveMedia } from './middleware/media.ts'
 import { routes } from './routes.ts'
 
 export const router = createRouter({
@@ -43,6 +45,9 @@ export const router = createRouter({
     // Outermost, so every response gets the security and cache headers. It
     // also makes the request's CSP nonce (decision 027).
     responseHeaders(),
+    // Lesson videos answer here, before cop, D1, the session and auth: every
+    // Range request would otherwise read the session (decision 035).
+    serveMedia(),
     platform.middleware,
     // Rejects cross-origin POSTs (Sec-Fetch-Site, then Origin). Webhooks are
     // server-to-server and verify their own signatures. See decision 015.
@@ -60,6 +65,9 @@ export const router = createRouter({
         let match = /^\/courses\/([^/]+)\/([^/]+)\/?$/.exec(context.url.pathname)
         return match ? { courseId: decodeURIComponent(match[1]!), lessonSlug: decodeURIComponent(match[2]!) } : undefined
       },
+      // /me's profile rows come along as well, so it is one round trip (decision 035).
+      withProfile: (context) =>
+        context.method === 'GET' && /^\/me\/?$/.test(context.url.pathname) ? profileReadOptions() : undefined,
     }),
     // A course folder upload is many small text files (POST /api/author/upload;
     // the DropZone sends media as names only, so videos never come through here).

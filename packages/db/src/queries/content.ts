@@ -3,7 +3,8 @@
 // itself lives in R2; the app's content store (apps/web/app/content/store.ts)
 // writes and reads it.
 import type { D1DataTableDatabase } from '../d1/database.ts'
-import type { Course, CourseVersion, ReportItem, VersionStatus } from '../tables.ts'
+import type { Course, CourseVersion, ReportItem, Video, VersionStatus } from '../tables.ts'
+import { videoFromRow } from './videos.ts'
 
 type VersionRow = Omit<CourseVersion, 'report'> & { report: string }
 
@@ -73,6 +74,58 @@ export async function listManagedCourses(db: D1DataTableDatabase, user: { id: st
           )
           .bind(user.id)
   return (await statement.all<Course>()).results
+}
+
+/** A course with everything /author shows about it. */
+export interface AuthorCourseRows {
+  course: Course
+  /** Every build, newest first. */
+  versions: CourseVersion[]
+  authorIds: string[]
+  /** Uploads that haven't failed, by lesson file path; the newest wins. */
+  videos: Map<string, Video>
+}
+
+/**
+ * Courses for /author with their builds, authors and videos, in one batch
+ * (decision 035). `scope` is the courses a user may manage (all of them for
+ * admins, else the ones they author), or one course by slug.
+ */
+export async function readAuthorCourses(
+  db: D1DataTableDatabase,
+  scope: { user: { id: string; role: string } } | { slug: string },
+): Promise<AuthorCourseRows[]> {
+  // The courses as a slug subquery over ?1 (or no parameter, for admins).
+  let slugs: string
+  let params: unknown[]
+  if ('slug' in scope) {
+    slugs = 'select ?1'
+    params = [scope.slug]
+  } else if (scope.user.role === 'admin') {
+    slugs = 'select slug from courses'
+    params = []
+  } else {
+    slugs = 'select course_slug from course_authors where user_id = ?1'
+    params = [scope.user.id]
+  }
+  let statement = (sql: string) => db.d1.prepare(sql).bind(...params)
+  let [courses, versions, authors, videos] = await db.batch<Record<string, unknown>>([
+    statement(`select * from courses where slug in (${slugs}) order by sort, slug`),
+    statement(`select ${versionColumns} from course_versions v where v.course_slug in (${slugs}) order by v.n desc`),
+    statement(`select course_slug, user_id from course_authors where course_slug in (${slugs})`),
+    statement(`select * from videos where course_id in (${slugs}) and status != 'failed' order by updated_at asc`),
+  ])
+  let bySlug = new Map<string, AuthorCourseRows>()
+  for (let course of (courses?.results ?? []) as unknown as Course[]) {
+    bySlug.set(course.slug, { course, versions: [], authorIds: [], videos: new Map() })
+  }
+  for (let row of (versions?.results ?? []) as unknown as VersionRow[]) bySlug.get(row.course_slug)?.versions.push(toVersion(row))
+  for (let row of (authors?.results ?? []) as { course_slug: string; user_id: string }[]) bySlug.get(row.course_slug)?.authorIds.push(row.user_id)
+  for (let row of videos?.results ?? []) {
+    let video = videoFromRow(row)
+    bySlug.get(video.course_id)?.videos.set(video.path, video)
+  }
+  return [...bySlug.values()]
 }
 
 export async function listCourseAuthorIds(db: D1DataTableDatabase, slug: string): Promise<string[]> {

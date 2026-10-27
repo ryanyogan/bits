@@ -2,7 +2,7 @@
 // lesson_progress, never stored. It exists while the user has completed
 // every lesson of the live course, and is visible when their profile is
 // public (or to themselves). It carries only what the public profile shows.
-import { findUserByHandle, listCompletedLessons, type D1DataTableDatabase, type User } from '@bits/db'
+import { readUserWithCompleted, type D1DataTableDatabase, type User } from '@bits/db'
 
 import type { Catalog } from '../../content/catalog.ts'
 import type { CourseDetail } from '../../content/types.ts'
@@ -33,9 +33,11 @@ export async function getCertificate(
   courseSlug: string,
   viewer: Pick<User, 'id'> | null,
 ): Promise<Certificate | undefined> {
-  let user = await findUserByHandle(db, handle)
-  if (!user || (!user.is_public && viewer?.id !== user.id)) return undefined
-  let rows = await listCompletedLessons(db, user.id)
+  // The user and their progress in one batch (decision 035).
+  let found = await readUserWithCompleted(db, handle)
+  if (!found) return undefined
+  let { user, completed: rows } = found
+  if (!user.is_public && viewer?.id !== user.id) return undefined
   let completed = new Map(rows.map((row) => [`${row.course_id}/${row.lesson_slug}`, row.completed_at]))
   let course = catalog.getCourse(courseSlug, completed)
   if (!course) return undefined

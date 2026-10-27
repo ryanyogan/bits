@@ -1,16 +1,14 @@
 // Profile data for /me and /u/:handle (docs/design/spec/pages/Profile.md),
 // read from D1: progress, the XP ledger, badges, the prompt journal and
-// activity days (decision 016).
+// activity days (decision 016). All of it is one batch (decision 035); on
+// /me that batch is the session read itself.
 import {
-  countAttempts,
-  findUserByHandle,
-  listActivityDays,
-  listAttempts,
-  listCompletedLessons,
-  listIdentities,
-  listUserBadges,
+  readProfileRows,
+  readPublicProfile,
   type D1DataTableDatabase,
   type ExerciseAttempt,
+  type ProfileOptions,
+  type ProfileRows,
   type User,
 } from '@bits/db'
 import type { ActivityLevel } from '@bits/ui/activity-grid'
@@ -79,6 +77,16 @@ export function activityTitles(levels: ActivityLevel[], end: string): string[] {
 
 const DAYS = 182
 
+/**
+ * What to read for a profile at `now`. The heatmap ends on the user's local
+ * today, which is within a day of UTC's, so the read starts one day early
+ * and works for any timezone before the user row is known; the extra day is
+ * never drawn.
+ */
+export function profileReadOptions(now = Date.now()): ProfileOptions {
+  return { activitySince: addDays(localDay(now, 'UTC'), -DAYS) }
+}
+
 /** Heatmap levels for the last 182 local days ending `today`. */
 function activityLevels(rows: { day: string; actions: number }[], today: string): ActivityLevel[] {
   let byDay = new Map(rows.map((row) => [row.day, row.actions]))
@@ -97,17 +105,10 @@ const goalPhrases: Record<string, string> = {
 
 const methodLabels = { github: 'GitHub', google: 'Google' } as const
 
-/** A user's profile, read from D1 (lesson_progress, xp, badges, journal, activity). */
-async function profileFor(db: D1DataTableDatabase, catalog: Catalog, user: User, now = Date.now()): Promise<Profile> {
+/** A user's profile from their rows (lesson_progress, xp, badges, journal, activity). */
+async function profileFor(catalog: Catalog, user: User, rows: ProfileRows, now: number): Promise<Profile> {
   let today = localDay(now, user.timezone)
-  let [completedRows, attempts, promptsWritten, held, activity, identities] = await Promise.all([
-    listCompletedLessons(db, user.id),
-    listAttempts(db, user.id, 50),
-    countAttempts(db, user.id),
-    listUserBadges(db, user.id),
-    listActivityDays(db, user.id, addDays(today, -(DAYS - 1))),
-    listIdentities(db, user.id),
-  ])
+  let { completed: completedRows, attempts, promptsWritten, badges: held, activity, identities } = rows
   let completed: Completed = new Map(completedRows.map((row) => [`${row.course_id}/${row.lesson_slug}`, row.completed_at]))
   let level = levelFor(user.xp_total)
   let earned = new Set(held.map((row) => row.badge_id))
@@ -161,15 +162,24 @@ async function journalEntry(catalog: Catalog, attempt: ExerciseAttempt): Promise
   }
 }
 
-/** The signed-in user's own profile (`/me`). */
-export function getOwnProfile(db: D1DataTableDatabase, catalog: Catalog, user: User): Promise<Profile> {
-  return profileFor(db, catalog, user)
+/**
+ * The signed-in user's own profile (`/me`). Pass the rows read with the
+ * session (`profileLoadedWith`); without them they are read here, in one batch.
+ */
+export async function getOwnProfile(
+  db: D1DataTableDatabase,
+  catalog: Catalog,
+  user: User,
+  rows?: ProfileRows,
+  now = Date.now(),
+): Promise<Profile> {
+  return profileFor(catalog, user, rows ?? (await readProfileRows(db, user.id, profileReadOptions(now))), now)
 }
 
-/** A public profile by handle; private or unknown handles return undefined (404). */
-export async function getPublicProfile(db: D1DataTableDatabase, catalog: Catalog, handle: string): Promise<Profile | undefined> {
-  let user = await findUserByHandle(db, handle)
-  return user?.is_public ? profileFor(db, catalog, user) : undefined
+/** A public profile by handle, in one batch; private or unknown handles return undefined (404). */
+export async function getPublicProfile(db: D1DataTableDatabase, catalog: Catalog, handle: string, now = Date.now()): Promise<Profile | undefined> {
+  let found = await readPublicProfile(db, handle, profileReadOptions(now))
+  return found ? profileFor(catalog, found.user, found.rows, now) : undefined
 }
 
 /** Journal entries the profile shows before "All →". */

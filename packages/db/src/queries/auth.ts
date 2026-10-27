@@ -8,6 +8,7 @@ import type { D1PreparedStatement } from '../d1/types.ts'
 import type { EmailTokenPurpose, OAuthProvider, User } from '../tables.ts'
 import { draftsFromRows, type DraftRow, type SavedDraft } from './drafts.ts'
 import type { CompletedLesson } from './progress.ts'
+import { profileRowsFrom, profileStatements, type ProfileOptions, type ProfileRows } from './profile.ts'
 import { userFromRawRow } from './users.ts'
 
 // ---------------------------------------------------------------------------
@@ -28,19 +29,23 @@ export interface SessionRead {
   completed?: CompletedLesson[]
   /** The user's drafts in one lesson, when asked for and signed in. */
   drafts?: Record<string, SavedDraft>
+  /** The user's profile rows (`/me`), when asked for and signed in. */
+  profile?: ProfileRows
 }
 
 /**
  * Reads an unexpired session row by the hash of its id, with its signed-in
  * user in the same statement. With `completed`, the user's completed lessons
- * come in the same batch. Either way it is one D1 round trip where the
- * session, then the user, then progress used to be three (decision 026).
+ * come in the same batch, and so do a lesson's `drafts` (decision 029) and
+ * the `profile` rows for `/me` (decision 035). Either way it is one D1 round
+ * trip where the session, then the user, then progress used to be three
+ * (decision 026).
  */
 export async function readSessionWithUser(
   db: D1DataTableDatabase,
   idHash: string,
   now: number,
-  options: { completed?: boolean; drafts?: { courseId: string; lessonSlug: string } } = {},
+  options: { completed?: boolean; drafts?: { courseId: string; lessonSlug: string }; profile?: ProfileOptions } = {},
 ): Promise<SessionRead | null> {
   // users has no data/user_id/last_seen_at columns, so `u.*` can't shadow them.
   let sessionStatement = db.d1
@@ -79,11 +84,19 @@ export async function readSessionWithUser(
         .bind(idHash, now, options.drafts.courseId, options.drafts.lessonSlug),
     )
   }
+  let profileCount = 0
+  if (options.profile) {
+    let statements = profileStatements(db, { sql: sessionUser, params: [idHash, now] }, options.profile)
+    profileCount = statements.length
+    extras.push(...statements)
+  }
+  let profile: ProfileRows | undefined
   if (extras.length) {
     let [sessions, ...rest] = await db.batch<Record<string, unknown>>([sessionStatement, ...extras])
     row = sessions?.results[0]
     if (options.completed) completed = rest.shift()?.results as unknown as CompletedLesson[] | undefined
     if (options.drafts) drafts = draftsFromRows((rest.shift()?.results ?? []) as unknown as DraftRow[])
+    if (options.profile) profile = profileRowsFrom(rest.splice(0, profileCount))
   } else {
     row = await sessionStatement.first<Record<string, unknown>>()
   }
@@ -92,7 +105,7 @@ export async function readSessionWithUser(
   let session = { data, user_id, last_seen_at } as StoredSession
   let user = userColumns.id != null && userColumns.id === user_id ? userFromRawRow(userColumns) : null
   if (!user) return { session, user }
-  return { session, user, ...(completed && { completed }), ...(drafts && { drafts }) }
+  return { session, user, ...(completed && { completed }), ...(drafts && { drafts }), ...(profile && { profile }) }
 }
 
 export interface SaveSessionInput {

@@ -2,11 +2,8 @@
 // read from the content index in D1 (courses, course_versions,
 // course_authors) and the built manifests in R2 (decision 018).
 import {
-  findCourse,
-  listCourseAuthorIds,
-  listCourseVersions,
-  listCourseVideos,
-  listManagedCourses,
+  readAuthorCourses,
+  type AuthorCourseRows,
   type Course,
   type CourseVersion as VersionRow,
   type D1DataTableDatabase,
@@ -88,27 +85,23 @@ export function canManageCourse(user: { id: string; role: string }, item: Pick<A
   return user.role === 'author' && item.ownerIds.includes(user.id)
 }
 
-/** The courses this user may open in /author. */
+/** The courses this user may open in /author: one D1 batch, then the manifests (decision 035). */
 export async function getManagedCourses(
   db: D1DataTableDatabase,
   bucket: R2Bucket,
   user: { id: string; role: string },
 ): Promise<AuthorCourse[]> {
-  let rows = await listManagedCourses(db, user)
-  return Promise.all(rows.map((row) => authorCourse(db, bucket, row)))
+  let rows = await readAuthorCourses(db, { user })
+  return Promise.all(rows.map((row) => authorCourse(bucket, row)))
 }
 
 export async function getAuthoredCourse(db: D1DataTableDatabase, bucket: R2Bucket, slug: string): Promise<AuthorCourse | undefined> {
-  let row = await findCourse(db, slug)
-  return row ? authorCourse(db, bucket, row) : undefined
+  let [row] = await readAuthorCourses(db, { slug })
+  return row ? authorCourse(bucket, row) : undefined
 }
 
-async function authorCourse(db: D1DataTableDatabase, bucket: R2Bucket, row: Course, now = Date.now()): Promise<AuthorCourse> {
-  let [versions, ownerIds, uploads] = await Promise.all([
-    listCourseVersions(db, row.slug),
-    listCourseAuthorIds(db, row.slug),
-    listCourseVideos(db, row.slug),
-  ])
+async function authorCourse(bucket: R2Bucket, rows: AuthorCourseRows, now = Date.now()): Promise<AuthorCourse> {
+  let { course: row, versions, authorIds: ownerIds, videos: uploads } = rows
   let latest = versions[0]
   let live = versions.find((version) => version.id === row.current_version_id)
   let ready = versions.find((version) => version.status === 'ready')
