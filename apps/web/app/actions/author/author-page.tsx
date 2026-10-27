@@ -94,7 +94,7 @@ function AuthorCourseRow(handle: Handle<{ item: AuthorCourse }>) {
       `last push ${item.lastPush}`,
     ].join(' · ')
     return (
-      <a href={routes.author.course.index.href({ course: course.slug })} mix={rowStyle}>
+      <a data-rmx-prefetch="intent" href={routes.author.course.index.href({ course: course.slug })} mix={rowStyle}>
         <CourseCover pattern={course.pattern} tone={course.tone} sigil={course.sigil} variant="thumb" mix={thumbStyle} />
         <span mix={bodyStyle}>
           <span mix={titleStyle}>{course.title}</span>

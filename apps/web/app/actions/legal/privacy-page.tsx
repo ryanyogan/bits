@@ -42,7 +42,7 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null; analytics: b
             <li>No ads, no analytics, no tracking cookies, no third-party scripts. We don't sell or share your data.</li>
           )}
           <li>
-            You can download everything or delete your account at any time in <a href={settings}>Settings</a>.
+            You can download everything or delete your account at any time in <a data-rmx-prefetch="intent" href={settings}>Settings</a>.
           </li>
         </ul>
 
@@ -115,7 +115,7 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null; analytics: b
         <p>
           Profiles are public by default at <code>/u/your-handle</code>: your name, handle, stats, courses, badges and
           activity heatmap. Certificates for finished courses are public with it. Your email and your prompt journal are
-          never shown. You can make your profile (and certificates) private in <a href={settings}>Settings</a>.
+          never shown. You can make your profile (and certificates) private in <a data-rmx-prefetch="intent" href={settings}>Settings</a>.
         </p>
 
         <h2>Who else handles your data</h2>

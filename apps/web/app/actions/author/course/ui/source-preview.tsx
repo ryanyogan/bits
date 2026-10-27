@@ -272,7 +272,7 @@ const tutorText = css({
   '& strong': { color: 'var(--text)' },
 })
 const oddsStyle = css({
-  marginLeft: '38px',
+  marginLeft: 'calc(26px + var(--space-3))', // under the text: avatar + row gap
   padding: 'var(--space-3_5)',
   borderRadius: 'var(--radius-lg)',
   border: '1px solid var(--ion-a28)',

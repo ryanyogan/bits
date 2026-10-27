@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { clientEntry, css } from 'remix/component'
+import { clientEntry, css, on } from 'remix/component'
 import { Keycap } from '@bits/ui/keycap'
 
 import { whenPassed } from './lesson-state.ts'
@@ -31,11 +31,32 @@ export interface LessonCompleteProps {
  * checks passed) enables it. The server re-runs every check on submit.
  * Lessons without exercises are open from the start. Client entry; without
  * JS a gated lesson stays disabled, since running prompts needs JS.
+ *
+ * Saving is optimistic (decision 043). As soon as the form submits, the
+ * lesson reads as complete while the POST is in flight: the ✓ status, plus
+ * the `[data-lesson-passed]` marker that turns the outline node and progress
+ * segment volt. Success navigates to `href`, which replaces this island,
+ * because the lesson `<main>` is keyed. If the server refuses (a 422
+ * re-renders this lesson with `issues`), the frame's `reloadComplete` rolls
+ * it back.
  */
 export const LessonComplete = clientEntry(
   import.meta.url,
   function LessonComplete(handle: Handle<LessonCompleteProps>) {
     let passedNow = false
+    /** The save is in flight: the lesson shows as complete until the frame settles. */
+    let saving = false
+    let settle = () => {
+      if (!saving) return
+      saving = false
+      handle.update()
+    }
+    // Whatever the outcome, the frame's navigation settling ends the in-flight
+    // state (guide 09; decision 024), as does a back/forward-cache restore.
+    handle.queueTask(() => {
+      handle.frame.addEventListener('reloadComplete', settle, { signal: handle.signal })
+      window.addEventListener('pageshow', settle, { signal: handle.signal })
+    })
 
     handle.queueTask(() => {
       if (handle.props.passed || !handle.props.gated) return
@@ -51,6 +72,7 @@ export const LessonComplete = clientEntry(
       let hintId = `${handle.id}-hint`
       let issuesId = `${handle.id}-issues`
       let checksPassed = gated && (passed || passedNow)
+      let showDone = checksPassed || saving
       return (
         <div mix={wrapStyle}>
           {issues?.length ? (
@@ -60,12 +82,16 @@ export const LessonComplete = clientEntry(
               ))}
             </ul>
           ) : null}
-          {checksPassed ? (
+          {showDone ? (
             <span mix={doneStyle}>
               <span aria-hidden="true">✓ </span>
-              {passed ? 'Lesson complete' : 'Checks passed'}
+              {passed || saving ? 'Lesson complete' : 'Checks passed'}
             </span>
           ) : null}
+          {/* Mounted empty, so the text is announced when it arrives (decision 031). */}
+          <span role="status" class="sr-only">
+            {saving ? 'Saving your progress' : ''}
+          </span>
           {!open ? (
             <span id={hintId} mix={hintStyle}>
               Pass every check to finish
@@ -80,22 +106,37 @@ export const LessonComplete = clientEntry(
               </Keycap>
             )
           ) : (
-            <form id={form.id} method="post" action={form.action} mix={formStyle}>
+            <form
+              id={form.id}
+              method="post"
+              action={form.action}
+              mix={[
+                formStyle,
+                // A submit an earlier listener cancelled isn't a save. The
+                // runtime still sends the POST (this handler doesn't prevent it).
+                on('submit', (event) => {
+                  if (event.defaultPrevented || saving) return
+                  saving = true
+                  handle.update()
+                }),
+              ]}
+            >
               {form.fields.map(([name, value]) => (
                 <input key={`${name}=${value}`} type="hidden" name={name} value={value} />
               ))}
               <Keycap
                 type="submit"
                 disabled={!open}
+                loading={saving}
                 aria-describedby={!open ? hintId : issues?.length ? issuesId : undefined}
               >
                 {open ? label : 'Complete lesson'}
               </Keycap>
             </form>
           )}
-          {checksPassed ? <span data-lesson-passed="" hidden /> : null}
+          {showDone ? <span data-lesson-passed="" hidden /> : null}
           {passedNow && loginHref ? (
-            <a href={loginHref} mix={nudgeStyle}>
+            <a data-rmx-prefetch="intent" href={loginHref} mix={nudgeStyle}>
               Sign in to keep these neurons →
             </a>
           ) : null}

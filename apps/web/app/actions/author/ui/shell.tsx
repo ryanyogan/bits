@@ -1,17 +1,18 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 import { Eyebrow } from '@bits/ui/eyebrow'
+import { pageShell } from '../../../ui/page-shell.ts'
 
 /** The Authoring `<main>` column (spec §2): 1280 max, 56/32/96, gap 40. */
-export const authorMain = css({
-  maxWidth: 'var(--page-max)',
-  margin: '0 auto',
-  padding: 'var(--space-14) var(--page-gutter) var(--space-24)',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--space-10)',
-  '@media (max-width: 480px)': { padding: 'var(--space-8) var(--space-4) var(--space-16)', gap: 'var(--space-7)' },
-})
+export const authorMain = [
+  pageShell,
+  css({
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 'var(--space-10)',
+    '@media (max-width: 480px)': { gap: 'var(--space-7)' },
+  }),
+]
 
 export interface AuthorHeaderProps {
   eyebrow: string

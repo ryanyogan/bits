@@ -25,11 +25,11 @@ export function CourseHero(handle: Handle<CourseHeroProps>) {
         <div mix={innerStyle}>
           <div mix={textCol}>
             <nav aria-label="Breadcrumb" mix={crumbStyle}>
-              <a href={coursesHref} mix={crumbLink}>
+              <a data-rmx-prefetch="intent" href={coursesHref} mix={crumbLink}>
                 Courses
               </a>
               <span aria-hidden="true">/</span>
-              <a href={trackHref} mix={[crumbLink, crumbTrack]}>
+              <a data-rmx-prefetch="intent" href={trackHref} mix={[crumbLink, crumbTrack]}>
                 {course.track}
               </a>
             </nav>

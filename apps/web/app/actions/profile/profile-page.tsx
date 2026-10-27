@@ -12,6 +12,7 @@ import { StatTile } from '@bits/ui/stat-tile'
 
 import type { Viewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
+import { busyCaret } from '../../ui/busy-caret.ts'
 import { Layout } from '../../ui/layout.tsx'
 import { activityTitles, RECENT_JOURNAL, type Profile } from './data.ts'
 import { ShareButton } from './public/share-button.tsx'
@@ -96,7 +97,7 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
               <section aria-labelledby="journal-heading" mix={sectionStyle}>
                 <div mix={sectionHeader}>
                   <MonoHeading id="journal-heading">PROMPT JOURNAL · {profile.journal.length} PROMPTS</MonoHeading>
-                  <a href={routes.me.index.href()} mix={headerLink}>
+                  <a data-rmx-prefetch="intent" href={routes.me.index.href()} mix={headerLink}>
                     ← Overview
                   </a>
                 </div>
@@ -137,7 +138,7 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
                   <section aria-labelledby="journal-heading" mix={sectionStyle}>
                     <div mix={sectionHeader}>
                       <MonoHeading id="journal-heading">PROMPT JOURNAL</MonoHeading>
-                      <a href={journalHref} mix={headerLink} aria-label={`All ${profile.journal.length} journal entries`}>
+                      <a data-rmx-prefetch="intent" href={journalHref} mix={headerLink} aria-label={`All ${profile.journal.length} journal entries`}>
                         All {profile.journal.length} →
                       </a>
                     </div>
@@ -171,14 +172,14 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
                   ]}
                 />
                 <div mix={accountLinks}>
-                  <a href={`${routes.settings.index.href()}#export`} mix={accountLink}>
+                  <a data-rmx-prefetch="intent" href={`${routes.settings.index.href()}#export`} mix={accountLink}>
                     Download my data
                   </a>
-                  <a href={routes.settings.index.href()} mix={[accountLink, quietLink]}>
+                  <a data-rmx-prefetch="intent" href={routes.settings.index.href()} mix={[accountLink, quietLink]}>
                     Settings →
                   </a>
                   <form method="post" action={routes.logout.action.href()} mix={signOutForm}>
-                    <button type="submit" mix={[accountLink, quietLink, signOutButton]}>
+                    <button type="submit" mix={[accountLink, quietLink, signOutButton, busyCaret]}>
                       Sign out
                     </button>
                   </form>

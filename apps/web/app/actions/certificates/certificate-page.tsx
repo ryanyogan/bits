@@ -53,7 +53,7 @@ export function CertificatePage(handle: Handle<CertificatePageProps>) {
           {certificate.isPrivate ? (
             <Callout tone="info" title="Only you can see this.">
               Your profile is private, so this certificate is too. Make your profile public in{' '}
-              <a href={routes.settings.index.href()}>Settings</a> to share it.
+              <a data-rmx-prefetch="intent" href={routes.settings.index.href()}>Settings</a> to share it.
             </Callout>
           ) : null}
           <article aria-labelledby="certificate-title" mix={certStyle}>
@@ -69,7 +69,7 @@ export function CertificatePage(handle: Handle<CertificatePageProps>) {
               </h1>
               <p mix={awardStyle}>
                 Finished by{' '}
-                <a href={routes.profile.index.href({ handle: certificate.handle })} mix={nameStyle}>
+                <a data-rmx-prefetch="intent" href={routes.profile.index.href({ handle: certificate.handle })} mix={nameStyle}>
                   {name}
                 </a>{' '}
                 <span mix={handleStyle}>@{certificate.handle}</span>

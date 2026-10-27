@@ -12,6 +12,7 @@ import { CourseAside } from './ui/course-aside.tsx'
 import { CourseHero } from './ui/course-hero.tsx'
 import { Syllabus } from './ui/syllabus.tsx'
 import { toneStyles } from './ui/tone.ts'
+import { pageShell } from '../../../ui/page-shell.ts'
 
 export interface CoursePageProps {
   view: CourseView
@@ -69,16 +70,16 @@ export function CoursePage(handle: Handle<CoursePageProps>) {
 
 const MOBILE = '@media (max-width: 480px)'
 
-const bodyStyle = css({
-  maxWidth: 'var(--page-max)',
-  margin: '0 auto',
-  padding: 'var(--space-14) var(--page-gutter) var(--space-24)',
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 'var(--space-10)',
-  alignItems: 'flex-start',
-  [MOBILE]: { padding: 'var(--space-8) var(--page-gutter) var(--space-16)', gap: 'var(--space-7)' },
-})
+const bodyStyle = [
+  pageShell,
+  css({
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 'var(--space-10)',
+    alignItems: 'flex-start',
+    [MOBILE]: { gap: 'var(--space-7)' },
+  }),
+]
 const mainCol = css({
   flex: '999 1 560px',
   minWidth: 0,

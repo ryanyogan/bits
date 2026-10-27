@@ -37,7 +37,7 @@ export function CourseRow(handle: Handle<CourseRowProps>) {
             <span mix={titleStyle}>{course.title}</span>
             <span mix={finishedMeta}>Finished · certificate ready</span>
           </span>
-          <a
+          <a data-rmx-prefetch="intent"
             href={routes.certificates.show.href({ handle: owner, course: course.slug })}
             mix={certificateLink}
             aria-label={`View certificate for ${course.title}`}
@@ -50,7 +50,7 @@ export function CourseRow(handle: Handle<CourseRowProps>) {
 
     let colour = toneColour[course.tone]
     return (
-      <a href={href} mix={[rowStyle, linkRow]}>
+      <a data-rmx-prefetch="intent" href={href} mix={[rowStyle, linkRow]}>
         <CourseCover pattern={course.pattern} tone={course.tone} sigil={course.sigil} variant="thumb" mix={thumbStyle} />
         <span mix={bodyStyle}>
           <span mix={titleStyle}>{course.title}</span>

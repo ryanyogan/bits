@@ -81,7 +81,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
         {view.draft ? (
           <p mix={draftStyle}>
             <span>{`DRAFT · ${view.draft.version} preview — not visible to learners`}</span>
-            <a href={view.draft.backHref} mix={draftLink}>
+            <a data-rmx-prefetch="intent" href={view.draft.backHref} mix={draftLink}>
               Back to validation →
             </a>
           </p>

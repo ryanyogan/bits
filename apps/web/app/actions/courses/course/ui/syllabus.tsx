@@ -48,7 +48,7 @@ function SyllabusRow(handle: Handle<{ lesson: SyllabusLesson }>) {
             mix={traceStyle}
           />
         ) : null}
-        <a
+        <a data-rmx-prefetch="intent"
           href={lesson.href}
           aria-current={lesson.state === 'current' ? 'step' : undefined}
           data-state={lesson.state}
@@ -186,11 +186,12 @@ const xpStyle = css({
   fontSize: 'var(--fs-12)',
   color: 'var(--muted)',
   whiteSpace: 'nowrap',
-  [MOBILE]: { flexBasis: '100%', paddingLeft: '56px' },
+  // Under the title: the 40px node slot plus the row's gap.
+  [MOBILE]: { flexBasis: '100%', paddingLeft: 'calc(40px + var(--space-4))' },
 })
 
 const calloutStyle = css({
-  margin: 'var(--space-1_5) 0 var(--space-3_5) 56px',
+  margin: 'var(--space-1_5) 0 var(--space-3_5) calc(40px + var(--space-4))',
   padding: 'var(--space-4_5)',
   borderRadius: 'var(--radius-16)',
   background: 'var(--surface)',

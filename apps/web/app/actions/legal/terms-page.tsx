@@ -23,7 +23,7 @@ export function TermsPage(handle: Handle<{ viewer: Viewer | null }>) {
         <p>
           {APP_TITLE} is a free place to learn AI engineering: short lessons, small exercises and a sandbox where your
           prompts run against a real model. There's nothing to pay and no paid tier. By using it you agree to these
-          terms and to how we handle data as set out in the <a href={routes.legal.privacy.href()}>Privacy</a> page.
+          terms and to how we handle data as set out in the <a data-rmx-prefetch="intent" href={routes.legal.privacy.href()}>Privacy</a> page.
         </p>
 
         <h2>Your account</h2>

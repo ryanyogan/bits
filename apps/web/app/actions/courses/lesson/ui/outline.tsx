@@ -23,7 +23,7 @@ function OutlineList(handle: Handle<{ view: LessonView }>) {
           let canPass = viewing && lesson.state !== 'done'
           return (
             <li key={lesson.slug}>
-              <a
+              <a data-rmx-prefetch="intent"
                 href={view.href.lesson(lesson.slug)}
                 aria-current={viewing ? 'page' : undefined}
                 data-state={lesson.state}

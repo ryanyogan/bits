@@ -53,7 +53,7 @@ export function CourseAside(handle: Handle<CourseAsideProps>) {
           <p mix={sourceText}>
             {`This course is ${view.source.files} markdown files. Spot a typo? Fix it in one pull request.`}
           </p>
-          <a href={sourceHref} mix={sourceLink}>
+          <a data-rmx-prefetch="intent" href={sourceHref} mix={sourceLink}>
             {`${view.source.path} →`}
           </a>
           <p mix={bylineStyle}>

@@ -39,13 +39,13 @@ export function LegalPage(handle: Handle<LegalPageProps>) {
           </header>
           <div mix={proseStyle}>{children}</div>
           <nav aria-label="Policies" mix={otherStyle}>
-            <a href={terms} aria-current={path === terms ? 'page' : undefined}>
+            <a data-rmx-prefetch="intent" href={terms} aria-current={path === terms ? 'page' : undefined}>
               Terms
             </a>
-            <a href={privacy} aria-current={path === privacy ? 'page' : undefined}>
+            <a data-rmx-prefetch="intent" href={privacy} aria-current={path === privacy ? 'page' : undefined}>
               Privacy
             </a>
-            <a href={routes.settings.index.href()}>Settings: export or delete your data</a>
+            <a data-rmx-prefetch="intent" href={routes.settings.index.href()}>Settings: export or delete your data</a>
           </nav>
         </article>
       </Layout>

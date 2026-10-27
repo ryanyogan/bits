@@ -22,6 +22,7 @@ import { HandleField } from './ui/handle-field.tsx'
 import { MethodRow } from './ui/method-row.tsx'
 import { ReauthBlock } from './ui/reauth-block.tsx'
 import { Layout } from '../../ui/layout.tsx'
+import { pageShell } from '../../ui/page-shell.ts'
 
 export type SettingsSection = 'profile' | 'email' | 'sign-in' | 'data' | 'sessions' | 'danger'
 
@@ -143,7 +144,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                       prompt journal are never shown.
                     </p>
                     {viewer.isPublic ? (
-                      <a href={routes.profile.index.href({ handle: profileHandle })} mix={monoLinkStyle}>
+                      <a data-rmx-prefetch="intent" href={routes.profile.index.href({ handle: profileHandle })} mix={monoLinkStyle}>
                         View public profile →
                       </a>
                     ) : null}
@@ -415,15 +416,15 @@ const pendingTextStyle = css({ margin: 0, fontSize: 'var(--fs-15)', lineHeight: 
 
 const pendingEmailStyle = css({ color: 'var(--text)', fontFamily: 'var(--font-mono)', overflowWrap: 'anywhere' })
 
-const pageStyle = css({
-  maxWidth: 'var(--page-max)',
-  margin: '0 auto',
-  padding: 'var(--space-14) var(--page-gutter) var(--space-24)',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--space-10)',
-  '@media (max-width: 480px)': { padding: 'var(--space-8) var(--space-4) var(--space-16)', gap: 'var(--space-7)' },
-})
+const pageStyle = [
+  pageShell,
+  css({
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 'var(--space-10)',
+    '@media (max-width: 480px)': { gap: 'var(--space-7)' },
+  }),
+]
 
 const headerStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-3_5)' })
 

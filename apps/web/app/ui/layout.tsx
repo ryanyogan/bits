@@ -15,6 +15,7 @@ import type { RewardNotice } from '../progress/reward.ts'
 import { routes } from '../routes.ts'
 import { HOME_ALT, ogImage } from './og.ts'
 import { BadgeNotice } from './badge-notice.tsx'
+import { pageShell } from './page-shell.ts'
 
 export interface LayoutProps {
   /** Page name; the document title becomes "<title> · Bits". Omit on the landing page. */
@@ -139,7 +140,7 @@ export function Layout(handle: Handle<LayoutProps>) {
               </>
             ) : (
               <>
-                <a href={routes.login.index.href()} mix={signInStyle}>
+                <a data-rmx-prefetch="intent" href={routes.login.index.href()} mix={signInStyle}>
                   Sign in
                 </a>
                 <Keycap href={routes.courses.index.href()}>Start free</Keycap>
@@ -186,9 +187,4 @@ const signInStyle = css({
 })
 
 const skipTargetStyle = css({ '&:focus': { outline: 'none' } })
-const mainStyle = css({
-  display: 'block',
-  maxWidth: 'var(--page-max)',
-  margin: '0 auto',
-  padding: 'var(--space-12) var(--page-gutter) var(--space-section)',
-})
+const mainStyle = [pageShell, css({ display: 'block' })]
