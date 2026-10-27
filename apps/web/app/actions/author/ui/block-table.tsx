@@ -35,8 +35,8 @@ export function BlockTable(handle: Handle<{ label?: string }>) {
 const wrapStyle = css({
   overflowX: 'auto',
   borderRadius: 'var(--radius-xl)',
-  border: '1px solid var(--line)',
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  border: 'var(--border-w) solid var(--line)',
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: '2px' },
 })
 const tableStyle = css({ width: '100%', minWidth: '760px', borderCollapse: 'collapse', fontSize: 'var(--fs-14)' })
 const headRow = css({ background: 'var(--surface)', textAlign: 'left' })
@@ -48,7 +48,7 @@ const thStyle = css({
   color: 'var(--muted)',
   textAlign: 'left',
 })
-const bodyRow = css({ borderTop: '1px solid var(--line-bar)' })
+const bodyRow = css({ borderTop: 'var(--border-w) solid var(--line-bar)' })
 const tdStyle = css({ padding: 'var(--space-3_5) var(--space-4_5)', textAlign: 'left' })
 const nameStyle = css({ fontFamily: 'var(--font-mono)', fontWeight: 400, color: 'var(--volt)', whiteSpace: 'nowrap' })
 const attrsStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--synapse-soft)' })

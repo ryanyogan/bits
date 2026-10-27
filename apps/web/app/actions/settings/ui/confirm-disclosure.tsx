@@ -1,6 +1,8 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
+import { busyCaret } from '../../../ui/busy-caret.ts'
+
 export interface ConfirmDisclosureProps {
   /** Closed-state label, e.g. "Remove". Open, the summary reads "Cancel". */
   label: string
@@ -46,7 +48,7 @@ export const summaryStyle = css({
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-4)',
   borderRadius: 'var(--radius-10)',
-  border: '1px solid var(--line-control)',
+  border: 'var(--border-w) solid var(--line-control)',
   background: 'transparent',
   color: 'var(--text)',
   fontFamily: 'var(--font-mono)',
@@ -58,35 +60,31 @@ export const summaryStyle = css({
   '&::-webkit-details-marker': { display: 'none' },
   '&::marker': { content: '""' },
   '&:hover': { background: 'var(--fill-ghost-hover)', borderColor: 'var(--line-drop)' },
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: '2px' },
   '@media (max-width: 480px)': { padding: '0 var(--space-3)' },
 })
 
 /** Danger-outline confirm (Settings §3, proposed danger recipe). */
-export const confirmButtonStyle = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: 'var(--touch-target)',
-  padding: '0 var(--space-4)',
-  borderRadius: 'var(--radius-10)',
-  border: '1px solid var(--danger-line)',
-  background: 'transparent',
-  color: 'var(--danger)',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-14)',
-  whiteSpace: 'nowrap',
-  cursor: 'pointer',
-  transition: 'background-color var(--duration-fast), border-color var(--duration-fast)',
-  '&:hover': { background: 'var(--danger-tint)', borderColor: 'var(--danger)' },
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+export const confirmButtonStyle = [
+  css({
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 'var(--touch-target)',
+    padding: '0 var(--space-4)',
+    borderRadius: 'var(--radius-10)',
+    border: 'var(--border-w) solid var(--danger-line)',
+    background: 'transparent',
+    color: 'var(--danger)',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--fs-14)',
+    whiteSpace: 'nowrap',
+    cursor: 'pointer',
+    transition: 'background-color var(--duration-fast), border-color var(--duration-fast)',
+    '&:hover': { background: 'var(--danger-tint)', borderColor: 'var(--danger)' },
+    '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: '2px' },
+    '@media (max-width: 480px)': { padding: '0 var(--space-3)' },
+  }),
   // While the removal is in flight (the navigation runtime sets aria-busy).
-  '&[aria-busy="true"]': { cursor: 'progress' },
-  '&[aria-busy="true"]::after': {
-    content: '"▍" / ""',
-    marginLeft: 'var(--space-1_5)',
-    animation: 'bits-blink var(--duration-caret) steps(1) infinite',
-  },
-  '@media (prefers-reduced-motion: reduce)': { '&[aria-busy="true"]::after': { animation: 'none' } },
-  '@media (max-width: 480px)': { padding: '0 var(--space-3)' },
-})
+  busyCaret,
+]

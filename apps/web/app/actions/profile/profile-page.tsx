@@ -9,9 +9,11 @@ import { Keycap } from '@bits/ui/keycap'
 import { KeyValueList } from '@bits/ui/key-value-list'
 import { ProgressBar } from '@bits/ui/progress-bar'
 import { StatTile } from '@bits/ui/stat-tile'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import type { Viewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
+import { busyCaret } from '../../ui/busy-caret.ts'
 import { Layout } from '../../ui/layout.tsx'
 import { activityTitles, RECENT_JOURNAL, type Profile } from './data.ts'
 import { ShareButton } from './public/share-button.tsx'
@@ -96,7 +98,7 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
               <section aria-labelledby="journal-heading" mix={sectionStyle}>
                 <div mix={sectionHeader}>
                   <MonoHeading id="journal-heading">PROMPT JOURNAL · {profile.journal.length} PROMPTS</MonoHeading>
-                  <a href={routes.me.index.href()} mix={headerLink}>
+                  <a href={routes.me.index.href()} data-rmx-prefetch={prefetchFor(routes.me.index.href())} mix={headerLink}>
                     ← Overview
                   </a>
                 </div>
@@ -137,7 +139,7 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
                   <section aria-labelledby="journal-heading" mix={sectionStyle}>
                     <div mix={sectionHeader}>
                       <MonoHeading id="journal-heading">PROMPT JOURNAL</MonoHeading>
-                      <a href={journalHref} mix={headerLink} aria-label={`All ${profile.journal.length} journal entries`}>
+                      <a href={journalHref} data-rmx-prefetch={prefetchFor(journalHref)} mix={headerLink} aria-label={`All ${profile.journal.length} journal entries`}>
                         All {profile.journal.length} →
                       </a>
                     </div>
@@ -171,14 +173,14 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
                   ]}
                 />
                 <div mix={accountLinks}>
-                  <a href={`${routes.settings.index.href()}#export`} mix={accountLink}>
+                  <a href={`${routes.settings.index.href()}#export`} data-rmx-prefetch={prefetchFor(`${routes.settings.index.href()}#export`)} mix={accountLink}>
                     Download my data
                   </a>
-                  <a href={routes.settings.index.href()} mix={[accountLink, quietLink]}>
+                  <a href={routes.settings.index.href()} data-rmx-prefetch={prefetchFor(routes.settings.index.href())} mix={[accountLink, quietLink]}>
                     Settings →
                   </a>
                   <form method="post" action={routes.logout.action.href()} mix={signOutForm}>
-                    <button type="submit" mix={[accountLink, quietLink, signOutButton]}>
+                    <button type="submit" mix={[accountLink, quietLink, signOutButton, busyCaret]}>
                       Sign out
                     </button>
                   </form>
@@ -201,7 +203,7 @@ function EmptyCourses() {
 const MOBILE = '@media (max-width: 480px)'
 
 const bandStyle = css({
-  borderBottom: '1px solid var(--line-bar)',
+  borderBottom: 'var(--border-w) solid var(--line-bar)',
   backgroundImage: 'radial-gradient(var(--dot-grid) 1px, transparent 1px)',
   backgroundSize: '24px 24px',
 })
@@ -306,7 +308,7 @@ const accountLinks = css({
   flexDirection: 'column',
   gap: 'var(--space-1)',
   paddingTop: 'var(--space-2)',
-  borderTop: '1px solid var(--line-bar)',
+  borderTop: 'var(--border-w) solid var(--line-bar)',
 })
 // Drawn at 40px; raised to the 44px touch target (spec a11y).
 const accountLink = css({

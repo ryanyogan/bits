@@ -165,8 +165,9 @@ describe('/author and /author/:course', () => {
     assert.equal((await fetchAs(loser.cookie, page)).status, 403)
     // Only the winner's build was recorded.
     let html = await (await request(page)).text()
-    assert.match(html, /v1/)
-    assert.doesNotMatch(html, /v2/)
+    assert.match(html, /\bv1\b/)
+    // Whole words: generated class names (rmxc-…) can contain "v2".
+    assert.doesNotMatch(html, /\bv2\b/)
   })
 
   it('unknown courses are a 404', async () => {

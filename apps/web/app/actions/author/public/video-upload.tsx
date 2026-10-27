@@ -206,7 +206,7 @@ const fileInput = css({
     marginRight: 'var(--space-2)',
     padding: '0 var(--space-3)',
     borderRadius: 'var(--radius-10)',
-    border: '1px solid var(--line-control)',
+    border: 'var(--border-w) solid var(--line-control)',
     background: 'transparent',
     color: 'var(--text)',
     font: 'inherit',

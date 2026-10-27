@@ -142,6 +142,39 @@ describe('client navigation', () => {
     assert.equal(await page.evaluate(() => document.activeElement?.id), 'auth-email', 'focus on the invalid field')
   })
 
+  it('shows the lesson complete while it saves, and rolls back when the server refuses (decision 043)', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    await page.goto(temperature)
+    await page.getByText('Pass every check to finish').waitFor()
+    // Pass the checks in the browser only: the server finds no journalled runs,
+    // so it answers the save with a 422 re-render of this lesson.
+    await page.waitForFunction(() => {
+      window.dispatchEvent(new CustomEvent('bits:reward', { detail: { xp: 0, message: 'test' } }))
+      return !document.body.textContent?.includes('Pass every check to finish')
+    })
+    let release!: () => void
+    let held = new Promise<void>((resolve) => (release = resolve))
+    await page.route('**/complete', async (route) => {
+      if (route.request().method() === 'POST') await held
+      await route.continue()
+    })
+    // Untouched before the save: the checks passed, nothing is saved yet.
+    await page.getByText('Checks passed').waitFor()
+    await page.getByRole('button', { name: /Next: Top-p and friends/ }).click()
+
+    // Optimistic: complete at once, while the POST is held.
+    await page.getByText(/^✓ Lesson complete$/).waitFor()
+    assert.equal(await page.getByRole('status').filter({ hasText: 'Saving your progress' }).count(), 1)
+    assert.equal(await page.locator('form[action$="/complete"] button[aria-busy="true"]').count(), 1)
+
+    release()
+    await page.getByText(/Not saved/).waitFor()
+    // Rolled back: the server's answer wins.
+    assert.equal(await page.getByText(/^✓ Lesson complete$/).count(), 0)
+    assert.equal(await page.getByRole('status').filter({ hasText: 'Saving your progress' }).count(), 0)
+    assert.equal(await page.locator('[aria-busy="true"]').count(), 0, 'pending cleared')
+  })
+
   it('keeps focus on the quiz Check key and announces the explanation', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.goto(firstLesson)

@@ -48,7 +48,7 @@ const tileStyle = css({
   height: '64px',
   borderRadius: 'var(--radius-xl)',
   background: 'var(--volt-tint)',
-  border: '1px solid var(--volt-a40)',
+  border: 'var(--border-w) solid var(--volt-a40)',
   display: 'grid',
   placeItems: 'center',
 })

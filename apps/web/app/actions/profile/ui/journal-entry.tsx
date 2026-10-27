@@ -40,7 +40,7 @@ const entryStyle = css({
   padding: 'var(--space-4) var(--space-4_5)',
   borderRadius: 'var(--radius-lg)',
   background: 'var(--well)',
-  border: '1px solid var(--line-bar)',
+  border: 'var(--border-w) solid var(--line-bar)',
 })
 const promptStyle = css({
   margin: 0,

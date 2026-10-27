@@ -5,6 +5,7 @@ import { Icon } from '@bits/ui/icon'
 import { Keycap } from '@bits/ui/keycap'
 import { ProgressBar } from '@bits/ui/progress-bar'
 import { Tag } from '@bits/ui/tag'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import type { CourseView } from '../course-data.ts'
 import { toneAlpha } from './tone.ts'
@@ -25,11 +26,11 @@ export function CourseHero(handle: Handle<CourseHeroProps>) {
         <div mix={innerStyle}>
           <div mix={textCol}>
             <nav aria-label="Breadcrumb" mix={crumbStyle}>
-              <a href={coursesHref} mix={crumbLink}>
+              <a href={coursesHref} data-rmx-prefetch={prefetchFor(coursesHref)} mix={crumbLink}>
                 Courses
               </a>
               <span aria-hidden="true">/</span>
-              <a href={trackHref} mix={[crumbLink, crumbTrack]}>
+              <a href={trackHref} data-rmx-prefetch={prefetchFor(trackHref)} mix={[crumbLink, crumbTrack]}>
                 {course.track}
               </a>
             </nav>
@@ -87,7 +88,7 @@ export function CourseHero(handle: Handle<CourseHeroProps>) {
 const MOBILE = '@media (max-width: 480px)'
 
 const bandStyle = css({
-  borderBottom: '1px solid var(--line-bar)',
+  borderBottom: 'var(--border-w) solid var(--line-bar)',
   background: `repeating-linear-gradient(115deg, ${toneAlpha(0)} 0 22px, ${toneAlpha(6)} 22px 23px), var(--ink)`,
 })
 const innerStyle = css({
@@ -171,7 +172,7 @@ const chipStyle = css({
   padding: 'var(--space-3) var(--space-3_5)',
   borderRadius: 'var(--radius-lg)',
   background: 'var(--ink-a86)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   [MOBILE]: { left: 'var(--space-3)', right: 'var(--space-3)', bottom: 'var(--space-3)' },
 })
 const chipText = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--tone)', whiteSpace: 'nowrap' })

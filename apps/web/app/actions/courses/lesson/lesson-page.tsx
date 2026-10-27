@@ -3,6 +3,7 @@ import { css, unsafeHTML } from 'remix/component'
 import { Keycap } from '@bits/ui/keycap'
 import { LessonBar, LessonModes } from '@bits/ui/lesson-bar'
 import type { SegmentState } from '@bits/ui/progress-bar'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import type { RewardNotice } from '../../../progress/reward.ts'
 import { APP_TITLE } from '../../../config.ts'
@@ -81,7 +82,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
         {view.draft ? (
           <p mix={draftStyle}>
             <span>{`DRAFT · ${view.draft.version} preview — not visible to learners`}</span>
-            <a href={view.draft.backHref} mix={draftLink}>
+            <a href={view.draft.backHref} data-rmx-prefetch={prefetchFor(view.draft.backHref)} mix={draftLink}>
               Back to validation →
             </a>
           </p>
@@ -175,7 +176,7 @@ const draftStyle = css({
   columnGap: 'var(--space-4)',
   padding: 'var(--space-2_5) var(--space-6)',
   background: 'var(--warn-tint)',
-  borderBottom: '1px solid var(--warn-line)',
+  borderBottom: 'var(--border-w) solid var(--warn-line)',
   color: 'var(--warn)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',
@@ -226,7 +227,7 @@ const footerStyle = css({
   flexWrap: 'wrap',
   gap: 'var(--space-3)',
   paddingTop: 'var(--space-6)',
-  borderTop: '1px solid var(--line-hair)',
+  borderTop: 'var(--border-w) solid var(--line-hair)',
   // Keycaps don't wrap by default; "Next: <long lesson title> →" must, or it
   // overflows a 360px screen.
   [MOBILE]: {

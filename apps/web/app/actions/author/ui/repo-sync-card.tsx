@@ -66,7 +66,7 @@ const cardStyle = css({
   padding: 'var(--space-7)',
   borderRadius: 'var(--radius-20)',
   background: 'var(--surface)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   '@media (max-width: 480px)': { padding: 'var(--space-5)' },
 })
 const headStyle = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' })
