@@ -158,6 +158,16 @@ describe('catalog and course pages', () => {
     assert.match(html, /href="\/courses\/tokens-and-temperature"/)
   })
 
+  it('draws the rabbit-hole background as pure CSS, hidden from assistive tech (decision 041)', async () => {
+    let { html } = await page(routes.courses.index.href(), { anonymous: true })
+    assert.match(html, /@keyframes catalog-bg-drop/)
+    assert.match(html, /<main[^>]*>\s*<div[^>]*>\s*<div aria-hidden="true"/)
+    assert.match(html, /data-rmx-key="catalog-bg:all"/)
+    // Eight rings, five neurons: no script and nothing focusable in the layer.
+    assert.equal(count(html, /<span style="--i: ?\d+;?"/), 8)
+    assert.equal(count(html, /<i [^>]*style="--i:/), 5)
+  })
+
   let path = routes.courses.course.index.href({ course: 'tokens-and-temperature' })
 
   it('renders the syllabus with lesson states and the resume callout', async () => {
