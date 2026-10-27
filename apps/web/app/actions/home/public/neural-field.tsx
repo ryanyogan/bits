@@ -276,7 +276,9 @@ const hudStyle = css({
   flexDirection: 'column',
   gap: 'var(--space-4)',
   alignItems: 'flex-end',
-  '@media (max-width: 820px)': { display: 'none' },
+  // Below this the hero copy and prompt bar reach the right gutter, and the
+  // HUD would sit on top of them.
+  '@media (max-width: 1180px)': { display: 'none' },
 })
 
 const hudItem = css({
