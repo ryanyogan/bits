@@ -238,7 +238,7 @@ const cardStyle = css({
   padding: 'var(--space-6)',
   borderRadius: 'var(--radius-20)',
   background: 'var(--surface)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   '@media (max-width: 480px)': { padding: 'var(--space-4_5)' },
 })
 const headStyle = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-3_5)', flexWrap: 'wrap' })
@@ -285,7 +285,7 @@ const confirmStyle = css({
   padding: 'var(--space-6)',
   borderRadius: 'var(--radius-20)',
   background: 'var(--surface)',
-  border: '1px solid var(--line-control)',
+  border: 'var(--border-w) solid var(--line-control)',
   color: 'var(--text)',
   boxShadow: 'var(--shadow-float)',
   '&::backdrop': { background: 'var(--ink-a70)' },
@@ -306,7 +306,7 @@ const cancelKey = css({
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-4)',
   borderRadius: 'var(--radius-12)',
-  border: '1px solid var(--line-control)',
+  border: 'var(--border-w) solid var(--line-control)',
   background: 'transparent',
   color: 'var(--text)',
   fontFamily: 'var(--font-mono)',
@@ -321,7 +321,7 @@ const noticeStyle = css({
   padding: 'var(--space-2_5) var(--space-3)',
   borderRadius: 'var(--radius-10)',
   background: 'var(--volt-a08)',
-  border: '1px solid var(--volt-a35)',
+  border: 'var(--border-w) solid var(--volt-a35)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-13)',
   color: 'var(--volt)',
@@ -344,8 +344,8 @@ const itemStyle = css({
   background: 'var(--well)',
   color: 'var(--text-body)',
   overflowWrap: 'anywhere',
-  '&[data-level="warning"]': { background: 'var(--warn-tint)', border: '1px solid var(--warn-line)', color: 'var(--warn)' },
-  '&[data-level="error"]': { background: 'var(--danger-tint)', border: '1px solid var(--danger-line)', color: 'var(--danger)' },
+  '&[data-level="warning"]': { background: 'var(--warn-tint)', border: 'var(--border-w) solid var(--warn-line)', color: 'var(--warn)' },
+  '&[data-level="error"]': { background: 'var(--danger-tint)', border: 'var(--border-w) solid var(--danger-line)', color: 'var(--danger)' },
 })
 const glyphStyle = css({ '[data-level="ok"] > &': { color: 'var(--volt)' } })
 
@@ -357,7 +357,7 @@ const panelStyle = css({
   padding: 'var(--space-6)',
   borderRadius: 'var(--radius-20)',
   background: 'var(--surface)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   '@media (max-width: 480px)': { padding: 'var(--space-4_5)' },
 })
 const panelHead = css({ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 'var(--space-3)' })
@@ -369,7 +369,7 @@ const rowStyle = css({
   flexWrap: 'wrap',
   minHeight: '60px',
   padding: 'var(--space-2_5) 0',
-  borderTop: '1px solid var(--line-bar)',
+  borderTop: 'var(--border-w) solid var(--line-bar)',
   '&:first-child': { borderTop: 0, paddingTop: 0 },
 })
 const versionNo = css({ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--fs-16)', minWidth: '28px' })

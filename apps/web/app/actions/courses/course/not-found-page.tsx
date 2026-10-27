@@ -6,6 +6,7 @@ import { Keycap } from '@bits/ui/keycap'
 import type { Viewer } from '../../../auth/identity.ts'
 import { routes } from '../../../routes.ts'
 import { Layout } from '../../../ui/layout.tsx'
+import { pageShell } from '../../../ui/page-shell.ts'
 
 export interface CourseNotFoundPageProps {
   slug: string
@@ -39,12 +40,7 @@ export function CourseNotFoundPage(handle: Handle<CourseNotFoundPageProps>) {
   }
 }
 
-const pageStyle = css({
-  maxWidth: 'var(--page-max)',
-  margin: '0 auto',
-  padding: 'var(--space-14) var(--page-gutter) var(--space-24)',
-  '@media (max-width: 480px)': { padding: 'var(--space-8) var(--page-gutter) var(--space-16)' },
-})
+const pageStyle = pageShell
 const boxStyle = css({
   display: 'flex',
   flexDirection: 'column',
@@ -52,7 +48,7 @@ const boxStyle = css({
   gap: 'var(--space-4)',
   padding: 'var(--space-16) var(--space-12)',
   borderRadius: 'var(--radius-20)',
-  border: '1px dashed var(--line-dashed)',
+  border: 'var(--border-w) dashed var(--line-dashed)',
   textAlign: 'center',
   '@media (max-width: 480px)': { padding: 'var(--space-10) var(--space-5)' },
 })

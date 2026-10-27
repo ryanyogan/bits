@@ -98,7 +98,7 @@ const inputStyle = css({
   minHeight: '50px',
   padding: '0 var(--space-4)',
   borderRadius: 'var(--radius-12)',
-  border: '1px solid var(--line-strong)',
+  border: 'var(--border-w) solid var(--line-strong)',
   background: 'var(--well)',
   color: 'var(--text)',
   fontFamily: 'var(--font-mono)',

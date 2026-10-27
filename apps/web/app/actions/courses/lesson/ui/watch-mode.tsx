@@ -65,7 +65,7 @@ const sideCard = css({
   padding: 'var(--space-5_5)',
   borderRadius: 'var(--radius-xl)',
   background: 'var(--surface)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
 })
 const sideText = css({ margin: 0, fontSize: 'var(--fs-15)', lineHeight: 1.55, color: 'var(--text-body)' })
 const sideKey = css({ minHeight: '48px' })

@@ -5,6 +5,7 @@ import { Keycap } from '@bits/ui/keycap'
 import { Tag } from '@bits/ui/tag'
 
 import { routes } from '../../../routes.ts'
+import { busyCaret } from '../../../ui/busy-caret.ts'
 import type { MethodKind, SignInMethod } from '../data.ts'
 import { confirmButtonStyle, ConfirmDisclosure, summaryStyle } from './confirm-disclosure.tsx'
 
@@ -103,7 +104,7 @@ const rowStyle = css({
   gap: 'var(--space-2) var(--space-3)',
   padding: 'var(--space-1_5) var(--space-2) var(--space-1_5) var(--space-4)',
   borderRadius: 'var(--radius-12)',
-  border: '1px solid var(--line-strong)',
+  border: 'var(--border-w) solid var(--line-strong)',
   background: 'var(--well)',
 })
 
@@ -136,16 +137,17 @@ const renameInputStyle = css({
   maxWidth: '14rem',
   padding: '0 var(--space-3)',
   borderRadius: 'var(--radius-10)',
-  border: '1px solid var(--line-control)',
+  border: 'var(--border-w) solid var(--line-control)',
   background: 'var(--ink)',
   color: 'var(--text)',
   fontFamily: 'var(--font-sans)',
   fontSize: 'var(--fs-15)',
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: '2px' },
 })
 
-// Ghost-mono, like the summaries; a summary style reused on a real button.
-const saveButtonStyle = summaryStyle
+// Ghost-mono, like the summaries; a summary style reused on a real button,
+// plus the pending caret while the rename is in flight (decision 024).
+const saveButtonStyle = [summaryStyle, busyCaret]
 
 // The action wraps to its own line under the label on narrow rows (Settings, responsive).
 const actionStyle = css({
@@ -154,7 +156,7 @@ const actionStyle = css({
   alignItems: 'center',
   flexWrap: 'wrap',
   gap: 'var(--space-2)',
-  '@media (max-width: 480px)': { flexBasis: '100%', marginLeft: '30px', paddingBottom: 'var(--space-1_5)' },
+  '@media (max-width: 480px)': { flexBasis: '100%', marginLeft: 'calc(18px + var(--space-3))' /* under the label: icon + gap */, paddingBottom: 'var(--space-1_5)' },
 })
 
 const alwaysOnStyle = css({ marginRight: 'var(--space-2)', color: 'var(--muted)' })

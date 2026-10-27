@@ -10,6 +10,7 @@ import { KeyValueList } from '@bits/ui/key-value-list'
 import { Switch } from '@bits/ui/switch'
 import { Tag } from '@bits/ui/tag'
 import { TextField } from '@bits/ui/text-field'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import type { Viewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
@@ -22,6 +23,7 @@ import { HandleField } from './ui/handle-field.tsx'
 import { MethodRow } from './ui/method-row.tsx'
 import { ReauthBlock } from './ui/reauth-block.tsx'
 import { Layout } from '../../ui/layout.tsx'
+import { pageShell } from '../../ui/page-shell.ts'
 
 export type SettingsSection = 'profile' | 'email' | 'sign-in' | 'data' | 'sessions' | 'danger'
 
@@ -143,7 +145,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                       prompt journal are never shown.
                     </p>
                     {viewer.isPublic ? (
-                      <a href={routes.profile.index.href({ handle: profileHandle })} mix={monoLinkStyle}>
+                      <a href={routes.profile.index.href({ handle: profileHandle })} data-rmx-prefetch={prefetchFor(routes.profile.index.href({ handle: profileHandle }))} mix={monoLinkStyle}>
                         View public profile →
                       </a>
                     ) : null}
@@ -393,7 +395,7 @@ const pendingStyle = css({
   gap: 'var(--space-4)',
   padding: 'var(--space-4)',
   borderRadius: 'var(--radius-12)',
-  border: '1px solid var(--line-strong)',
+  border: 'var(--border-w) solid var(--line-strong)',
   background: 'var(--well)',
 })
 
@@ -405,7 +407,7 @@ const pendingTileStyle = css({
   height: '64px',
   borderRadius: 'var(--radius-xl)',
   background: 'var(--volt-tint)',
-  border: '1px solid var(--volt-a40)',
+  border: 'var(--border-w) solid var(--volt-a40)',
   display: 'grid',
   placeItems: 'center',
   '@media (max-width: 480px)': { width: '48px', height: '48px' },
@@ -415,15 +417,15 @@ const pendingTextStyle = css({ margin: 0, fontSize: 'var(--fs-15)', lineHeight: 
 
 const pendingEmailStyle = css({ color: 'var(--text)', fontFamily: 'var(--font-mono)', overflowWrap: 'anywhere' })
 
-const pageStyle = css({
-  maxWidth: 'var(--page-max)',
-  margin: '0 auto',
-  padding: 'var(--space-14) var(--page-gutter) var(--space-24)',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--space-10)',
-  '@media (max-width: 480px)': { padding: 'var(--space-8) var(--space-4) var(--space-16)', gap: 'var(--space-7)' },
-})
+const pageStyle = [
+  pageShell,
+  css({
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 'var(--space-10)',
+    '@media (max-width: 480px)': { gap: 'var(--space-7)' },
+  }),
+]
 
 const headerStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-3_5)' })
 
@@ -495,7 +497,7 @@ const sectionStyle = css({
 
 const dangerSectionStyle = css({
   gap: 'var(--space-4_5)',
-  border: '1px dashed var(--danger-a35)',
+  border: 'var(--border-w) dashed var(--danger-a35)',
   background: 'var(--danger-a04)',
 })
 

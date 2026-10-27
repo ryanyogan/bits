@@ -47,7 +47,7 @@ const blockStyle = css({
   gap: 'var(--space-3)',
   padding: 'var(--space-4)',
   borderRadius: 'var(--radius-12)',
-  border: '1px dashed var(--line-strong)',
+  border: 'var(--border-w) dashed var(--line-strong)',
 })
 
 const textStyle = css({ margin: 0, fontSize: 'var(--fs-15)', lineHeight: 1.55, color: 'var(--text-body)' })

@@ -2,6 +2,7 @@ import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 import { Keycap } from '@bits/ui/keycap'
 import { LessonNode } from '@bits/ui/lesson-node'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import { kindLabels, type SyllabusLesson, type SyllabusModuleView } from '../course-data.ts'
 
@@ -51,6 +52,7 @@ function SyllabusRow(handle: Handle<{ lesson: SyllabusLesson }>) {
         <a
           href={lesson.href}
           aria-current={lesson.state === 'current' ? 'step' : undefined}
+          data-rmx-prefetch={prefetchFor(lesson.href)}
           data-state={lesson.state}
           mix={rowStyle}
         >
@@ -162,7 +164,7 @@ const rowStyle = css({
   transition: 'background-color var(--duration-fast)',
   '&:hover': { color: 'var(--text)', background: 'var(--fill-row-hover)' },
   '&[data-state="current"]': { background: 'var(--ion-a06)' },
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: '2px' },
   [MOBILE]: { flexWrap: 'wrap', rowGap: 'var(--space-1)' },
 })
 const slotStyle = css({ flex: 'none', width: '40px', height: '40px', display: 'grid', placeItems: 'center' })
@@ -186,15 +188,16 @@ const xpStyle = css({
   fontSize: 'var(--fs-12)',
   color: 'var(--muted)',
   whiteSpace: 'nowrap',
-  [MOBILE]: { flexBasis: '100%', paddingLeft: '56px' },
+  // Under the title: the 40px node slot plus the row's gap.
+  [MOBILE]: { flexBasis: '100%', paddingLeft: 'calc(40px + var(--space-4))' },
 })
 
 const calloutStyle = css({
-  margin: 'var(--space-1_5) 0 var(--space-3_5) 56px',
+  margin: 'var(--space-1_5) 0 var(--space-3_5) calc(40px + var(--space-4))',
   padding: 'var(--space-4_5)',
   borderRadius: 'var(--radius-16)',
   background: 'var(--surface)',
-  border: '1px solid var(--ion-a30)',
+  border: 'var(--border-w) solid var(--ion-a30)',
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--space-3_5)',

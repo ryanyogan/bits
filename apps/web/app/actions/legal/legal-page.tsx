@@ -1,6 +1,7 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 import { Eyebrow } from '@bits/ui/eyebrow'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import type { Viewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
@@ -39,13 +40,13 @@ export function LegalPage(handle: Handle<LegalPageProps>) {
           </header>
           <div mix={proseStyle}>{children}</div>
           <nav aria-label="Policies" mix={otherStyle}>
-            <a href={terms} aria-current={path === terms ? 'page' : undefined}>
+            <a href={terms} aria-current={path === terms ? 'page' : undefined} data-rmx-prefetch={prefetchFor(terms)}>
               Terms
             </a>
-            <a href={privacy} aria-current={path === privacy ? 'page' : undefined}>
+            <a href={privacy} aria-current={path === privacy ? 'page' : undefined} data-rmx-prefetch={prefetchFor(privacy)}>
               Privacy
             </a>
-            <a href={routes.settings.index.href()}>Settings: export or delete your data</a>
+            <a href={routes.settings.index.href()} data-rmx-prefetch={prefetchFor(routes.settings.index.href())}>Settings: export or delete your data</a>
           </nav>
         </article>
       </Layout>
@@ -97,7 +98,7 @@ const otherStyle = css({
   flexWrap: 'wrap',
   gap: 'var(--space-2) var(--space-6)',
   paddingTop: 'var(--space-6)',
-  borderTop: '1px solid var(--line)',
+  borderTop: 'var(--border-w) solid var(--line)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-13)',
   '& a': {

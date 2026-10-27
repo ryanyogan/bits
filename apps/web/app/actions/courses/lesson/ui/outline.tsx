@@ -1,6 +1,7 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 import { LessonNode } from '@bits/ui/lesson-node'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import type { LessonView } from '../lesson-view.ts'
 import { PASSED_ROOT } from '../public/lesson-state.ts'
@@ -26,6 +27,7 @@ function OutlineList(handle: Handle<{ view: LessonView }>) {
               <a
                 href={view.href.lesson(lesson.slug)}
                 aria-current={viewing ? 'page' : undefined}
+                data-rmx-prefetch={prefetchFor(view.href.lesson(lesson.slug))}
                 data-state={lesson.state}
                 mix={itemStyle}
               >
@@ -118,7 +120,7 @@ const navStyle = css({
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--space-1)',
-  borderRight: '1px solid var(--line-hair)',
+  borderRight: 'var(--border-w) solid var(--line-hair)',
   [MOBILE]: { display: 'none' },
 })
 const headingStyle = css({
@@ -148,7 +150,7 @@ const itemStyle = css({
   '&:hover': { background: 'var(--fill-hover)', color: 'var(--text)' },
   '&[aria-current="page"], &[aria-current="page"]:hover': { background: 'var(--ion-a08)', color: 'var(--text)' },
   // Forced colours drop the tint, so the lesson you're on needs a frame (decision 025).
-  '@media (forced-colors: active)': { '&[aria-current="page"]': { outline: '2px solid Highlight', outlineOffset: '-2px' } },
+  '@media (forced-colors: active)': { '&[aria-current="page"]': { outline: 'var(--focus-outline-w) solid Highlight', outlineOffset: '-2px' } },
 })
 const titleStyle = css({ minWidth: 0 })
 const pendingOnly = css({ display: 'contents', [PASSED]: { display: 'none' } })
@@ -158,7 +160,7 @@ const disclosureNav = css({ display: 'none', [MOBILE]: { display: 'block' } })
 const detailsStyle = css({
   borderRadius: 'var(--radius-md)',
   background: 'var(--surface)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   '&[open]': { paddingBottom: 'var(--space-2)' },
   '&[open] > summary > span:last-child': { transform: 'rotate(180deg)' },
 })
