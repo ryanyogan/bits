@@ -97,16 +97,62 @@ session. `register-options` returns 403 `reauth_required` without one.
   `users.email = changed_to`; the check sits in the `WHERE`, so it is
   atomic. It then restores the old address, withdraws pending changes and
   other revert links, **deletes every session** of the user, and
-  **deletes passkeys created since the day before the change**. Then the
+  **deletes passkeys and OAuth identities created since the day before the
+  change** (identities since 2026-10-27, see below). Then the
   user signs in again. A revert link whose `changed_to` no longer matches
   shows as expired.
 
 ### Sessions on change
 
-A completed change keeps the user's other sessions. Ending them would only
-help an attacker, who already holds a session and would push the owner
-out. The owner's protection is the revert link: it ends every session and
-drops new passkeys. "Sign out everywhere" (decision 015) stays available.
+~~A completed change keeps the user's other sessions.~~ Superseded on
+2026-10-27: a completed change signs out the user's other sessions. See
+"Security review follow-up" below.
+
+## Security review follow-up (2026-10-27)
+
+A review of the live code found three gaps. All are fixed.
+
+1. **Linking GitHub or Google needed no step-up (high).** A signed-in
+   session that goes through OAuth links the identity to the account. That
+   adds a way in, as a passkey does, but it had no recent-auth check. An
+   attacker with a stale stolen session could link their own GitHub, sign
+   in through it, get a fresh `at` and pass step-up for everything else.
+   Now `/auth/oauth/:provider` (start) and the callback both refuse a
+   signed-in session that isn't recent. They redirect to
+   `/settings?saved=reauth&for=connect#sign-in`, which shows the
+   "confirm it's you" block. The callback checks before it finishes the
+   OAuth exchange and before anything is linked. The session may have gone
+   stale since the start, or the start may have been skipped. Signed-out
+   OAuth is a sign-in, and step-up doesn't apply to it.
+
+   We don't treat a sign-in through a recently linked identity as weaker.
+   With the gate, every identity is linked either by a session that has
+   just proved it owns the account (an email code or a passkey), or while
+   signed out to the account with the same provider-verified email, which
+   is the same proof as an email code. So a sign-in through it proves as
+   much as any other sign-in. Identities linked before the fix are covered
+   by the revert (item 2) and are listed with their date in Settings.
+2. **The revert left new identities behind (medium).** `revertEmailChange`
+   now also deletes `identities` rows created since the same cutoff as
+   passkeys (the day before the change), in the same batch, behind the
+   same `spent` guard. `identities.created_at` already existed (0001),
+   so no migration was needed. The old-address notice and the undo page
+   say so.
+3. **A completed change kept other sessions (medium).** Settings said
+   "your other devices are signed out", but they weren't. The earlier
+   reasoning was that ending sessions only helps an attacker push the
+   owner out. But an owner who changes the email because they suspect a
+   problem expects other devices to be signed out, and the revert link
+   still ends every session if the change was hostile. `completeEmailChange`
+   now deletes the user's other sessions in the same batch, behind the
+   `spent` guard, and keeps the confirming session (`keepSessionIdHash`,
+   the SHA-256 of `context.session.id`). This applies to confirmation by
+   code in Settings and by link. The revert link works as before.
+
+Tests: `auth.test.ts` ("connecting to a signed-in account needs a recent
+sign-in, at start and at the callback") and `email-change.test.ts`
+("signs out other sessions", the link test, "new passkeys and identities
+gone").
 
 ## Consequences
 

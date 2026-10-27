@@ -39,7 +39,12 @@ export default createController(routes.auth.email, {
         if (!open) return emailLinkExpired()
         let user = currentUser(context)
         if (!user || user.id !== open.user_id) return signInFirst(context, open.user_id, open.email, 403)
-        let result = await confirmEmailChangeLink(context.db, { token, user, origin: context.url.origin })
+        let result = await confirmEmailChangeLink(context.db, {
+          token,
+          user,
+          origin: context.url.origin,
+          sessionId: context.session.id,
+        })
         if (!result.ok) return result.reason === 'taken' ? settingsEmail('email-taken') : emailLinkExpired()
         return settingsEmail('email-changed')
       },

@@ -41,7 +41,7 @@ export interface SettingsErrors {
 export interface SettingsPageProps {
   viewer: Viewer
   account: AccountSettings
-  /** Signed in within the last 10 minutes: email change and new passkeys need it (decision 030). */
+  /** Signed in within the last 10 minutes: email change, new passkeys and connecting a provider need it (decision 030). */
   recentAuth: boolean
   notice?: SettingsNotice
   errors?: SettingsErrors
@@ -255,7 +255,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                     <AddPasskey optionsUrl={routes.api.passkey.href({ step: 'register-options' })} />
                   </form>
                 ) : (
-                  <ReauthBlock what="add a passkey" email={viewer.email} />
+                  <ReauthBlock what="add a passkey or connect GitHub or Google" email={viewer.email} />
                 )}
                 <p mix={noteStyle}>
                   {passkeyCount === 1 ? 'You have 1 passkey.' : `You have ${passkeyCount} passkeys.`} Email sign-in

@@ -188,7 +188,12 @@ export default createController(routes.settings, {
         if (!parsed.success) {
           return invalid(context, user, 'email', { code: 'Enter the 6-digit code from the email.' }, ['code'])
         }
-        let result = await confirmEmailChangeCode(context.db, { user, code: parsed.value.code, origin: context.url.origin })
+        let result = await confirmEmailChangeCode(context.db, {
+          user,
+          code: parsed.value.code,
+          origin: context.url.origin,
+          sessionId: context.session.id,
+        })
         if (!result.ok) {
           let text = {
             wrong: 'That code isn’t right. Check the newest email and try again.',
@@ -365,7 +370,7 @@ export function noticeFor(params: URLSearchParams): SettingsNotice | undefined {
       }
     case 'reauth':
       return {
-        section: params.get('for') === 'passkey' ? 'sign-in' : 'email',
+        section: params.get('for') === 'email' ? 'email' : 'sign-in',
         tone: 'warning',
         text: 'For your safety, confirm it’s you first: we’ll email a code to your current address, or use a passkey.',
       }

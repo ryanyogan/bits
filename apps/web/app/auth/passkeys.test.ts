@@ -120,7 +120,7 @@ describe('passkeys', () => {
     assert.match(late.headers.get('Location')!, /saved=reauth&for=passkey#sign-in$/)
     assert.equal((await listPasskeys(testDb, user.id)).length, 1)
     let page = await (await fetchAs(cookie, routes.settings.index.href())).text()
-    assert.match(page, /To add a passkey, confirm it’s you first/)
+    assert.match(page, /To add a passkey or connect GitHub or Google, confirm it’s you first/)
 
     let stepUp = await passkeySignIn(await authenticator.authenticate(await loginOptions()), '/settings')
     let fresh = sessionCookieFrom(stepUp)!
