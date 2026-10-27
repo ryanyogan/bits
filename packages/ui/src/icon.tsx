@@ -1,6 +1,8 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
+import { FORCED_COLORS, forcedSvgPaint } from './lib/states.ts'
+
 /**
  * The icon set from components.md §2, copied verbatim and re-coloured through
  * tokens. Every icon is decorative (`aria-hidden`, not focusable) unless a
@@ -259,4 +261,4 @@ export function Icon(handle: Handle<IconProps>) {
 
 // Icons keep their drawn size inside tight flex rows (e.g. the XP pill in a
 // 360px app bar) instead of being squeezed to a sliver.
-const iconStyle = css({ flex: 'none' })
+const iconStyle = css({ flex: 'none', [FORCED_COLORS]: forcedSvgPaint })

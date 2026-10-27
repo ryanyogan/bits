@@ -2,6 +2,7 @@ import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
 import { Icon } from './icon.tsx'
+import { FORCED_COLORS, forcedFill } from './lib/states.ts'
 
 export type LessonState = 'done' | 'current' | 'next'
 export type LessonNodeSize = 32 | 30 | 20
@@ -37,7 +38,7 @@ export function LessonNode(handle: Handle<LessonNodeProps>) {
           mini ? (
             '✓'
           ) : (
-            <Icon name="check" size={size === 30 ? 13 : 14} color="var(--on-volt)" />
+            <Icon name="check" size={size === 30 ? 13 : 14} color="currentColor" />
           )
         ) : shown === 'current' && !mini ? (
           <span mix={dotStyle} />
@@ -58,6 +59,8 @@ const nodeStyle = css({
   '&[data-state="done"]': { background: 'var(--volt)', color: 'var(--on-volt)' },
   '&[data-state="current"]': { border: '2px solid var(--ion)' },
   '&[data-state="next"]': { border: '1px dashed var(--line-node-next)' },
+  // Forced colours: done is a filled disc (it was only a background), current a ring, next a dashed ring.
+  [FORCED_COLORS]: { '&[data-state="done"]': { forcedColorAdjust: 'none', background: 'CanvasText', color: 'Canvas' } },
 })
 
 const sizeStyles: Record<LessonNodeSize, ReturnType<typeof css>> = {
@@ -84,6 +87,7 @@ const dotStyle = css({
   height: '10px',
   borderRadius: 'var(--radius-pill)',
   background: 'var(--ion)',
+  [FORCED_COLORS]: forcedFill,
 })
 // The System `.pulse`: an ion ring breathing out to 8px from the node itself.
 const pulseStyle = css({

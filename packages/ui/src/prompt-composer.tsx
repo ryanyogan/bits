@@ -5,7 +5,7 @@ import { CheckChip, checkListStyle } from './check-chip.tsx'
 import { Keycap } from './keycap.tsx'
 import { runNote, streamRun, type RunEndpoint } from './lib/run-stream.ts'
 import { createFollower, scrollWindowStyle } from './lib/stable.tsx'
-import { FOCUS_WITHIN } from './lib/states.ts'
+import { FOCUS_WITHIN, FORCED_COLORS, forcedSelected } from './lib/states.ts'
 import { TEMPERATURE_EVENT } from './odds-bars.tsx'
 import { announceReward, RewardToast, type RewardNext } from './reward-toast.tsx'
 import { Tag } from './tag.tsx'
@@ -115,7 +115,9 @@ const DEFAULT_TEMPS: TemperatureOption[] = [
  * flight), or the canned `examples` without it. Runs land in a fixed-height
  * window above the composer that scrolls inside and follows the newest
  * reply while you're at its bottom (decision 023), so a streaming reply
- * never pushes the page. When every check passes a RewardToast joins the
+ * never pushes the page. Until the first run the window is a compact hint;
+ * the first run grows it once and scrolls by the growth, so the composer
+ * stays put (decision 025). When every check passes a RewardToast joins the
  * reply that earned it (later runs land below it) and `bits:reward` fires. The draft is kept in
  * localStorage. With JS off the composer renders with Run disabled and a
  * note in the same slot as the keyboard hint. Client entry.
@@ -134,6 +136,7 @@ export const PromptComposer = clientEntry(
     let rewardedRun: number | undefined
     let runCount = 0
     let textarea: HTMLTextAreaElement | undefined
+    let composer: HTMLFormElement | undefined
     let follower = createFollower()
 
     let storageKey = () => `bits:draft:${handle.props.id}`
@@ -198,9 +201,17 @@ export const PromptComposer = clientEntry(
       running = true
       let id = ++runCount
       let entry: Run = { id, prompt, temperature, output: '', state: 'streaming', tokens: 0 }
+      // The first run grows the compact empty window to its full height in
+      // one step. Scroll by the growth so the composer stays where the
+      // learner is looking: the window opens upwards (decision 025).
+      let before = runs.length ? undefined : composer?.getBoundingClientRect().top
       runs = [...runs, entry].slice(-(handle.props.keepRuns ?? 4))
       follower.pin()
       await handle.update()
+      if (before !== undefined && composer) {
+        let grown = composer.getBoundingClientRect().top - before
+        if (grown > 0) window.scrollBy({ top: grown, behavior: 'instant' })
+      }
       let counted: boolean
       if (endpoint) {
         counted = await serverRun(endpoint, entry)
@@ -270,6 +281,7 @@ export const PromptComposer = clientEntry(
             data-force={forceFocus ? 'focus' : undefined}
             mix={[
               composerStyle,
+              ref((node) => (composer = node)),
               on('submit', (event) => {
                 event.preventDefault()
                 void run()
@@ -368,7 +380,9 @@ const runWindowStyle = css({
   borderRadius: 'var(--radius-xl)',
   // Always 1px, only coloured while empty, so the first run doesn't resize it.
   border: '1px dashed transparent',
-  '&[data-empty]': { borderColor: 'var(--line-dashed)' },
+  // Empty: just the hint. The first run (always the learner's own action)
+  // grows it to --run-log-height once; after that the height never changes.
+  '&[data-empty]': { height: 'var(--run-log-empty-height)', borderColor: 'var(--line-dashed)' },
   '&:focus-visible': { outlineOffset: '4px' },
 })
 const emptyStyle = css({
@@ -449,6 +463,8 @@ const tempStyle = css({
   '&:hover': { borderColor: 'var(--line-node-next)' },
   '&:has(:checked)': { background: 'var(--ion)', borderColor: 'var(--ion)', color: 'var(--ink)' },
   '&:has(:focus-visible)': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  // Forced colours drop the fill, so the picked temperature looked like the others.
+  [FORCED_COLORS]: { '&:has(:checked)': forcedSelected },
 })
 // Tabular digits and a min width: the estimate changing doesn't nudge the Run key.
 const tokensStyle = css({

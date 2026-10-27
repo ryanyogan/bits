@@ -311,6 +311,9 @@
     /* Fixed-size windows for content that fills in (decision 023): they
      * scroll inside instead of pushing the page. */
     --run-log-height: clamp(220px, 42svh, 420px); /* composer runs */
+    /* Before the first run the window holds only its hint; the first run
+       grows it to --run-log-height in one step (decision 025). */
+    --run-log-empty-height: 76px;
     /* terminal-mode log: never taller than the room under the sticky header,
        so the whole panel fits on screen at once (floor for short landscapes). */
     --terminal-height: max(320px, min(clamp(420px, 72svh, 760px), calc(100svh - var(--shell-h) - var(--space-8))));
@@ -424,6 +427,9 @@
     :root {
       --appbar-h: 64px;
       --lessonbar-h: 56px;
+      /* Phones: the terminal takes all the room under the sticky header
+         (decision 025); 72svh left the log ~115px tall at 360×640. */
+      --terminal-height: max(360px, calc(100svh - var(--shell-h) - var(--space-4)));
     }
   }
 

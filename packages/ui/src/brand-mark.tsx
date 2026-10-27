@@ -1,4 +1,7 @@
 import type { Handle } from 'remix/component'
+import { css } from 'remix/component'
+
+import { FORCED_COLORS, forcedSvgPaint } from './lib/states.ts'
 
 export interface BrandMarkProps {
   /** Rendered size in px. */
@@ -10,7 +13,7 @@ export function BrandMark(handle: Handle<BrandMarkProps>) {
   return () => {
     let size = handle.props.size ?? 30
     return (
-      <svg width={size} height={size} viewBox="0 0 30 30" fill="none" aria-hidden="true">
+      <svg width={size} height={size} viewBox="0 0 30 30" fill="none" aria-hidden="true" mix={markStyle}>
         <path
           d="M7 7 L7 23 L23 23 M7 7 L23 13 L23 23"
           stroke="var(--text)"
@@ -27,3 +30,5 @@ export function BrandMark(handle: Handle<BrandMarkProps>) {
     )
   }
 }
+
+const markStyle = css({ flex: 'none', [FORCED_COLORS]: forcedSvgPaint })

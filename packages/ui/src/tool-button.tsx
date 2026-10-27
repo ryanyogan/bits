@@ -70,8 +70,11 @@ export const toolButtonBase = css({
   [FOCUS]: { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
   '&:disabled': { color: 'var(--dim)', cursor: 'not-allowed', borderColor: 'var(--line)' },
   '&[aria-busy="true"]': { cursor: 'progress' },
-  [FORCED_COLORS]: { '&[aria-pressed="true"]': forcedSelected },
 })
+
+// Each variant repeats this after its own pressed colours: a rule in the base
+// mixin loses to the variant's (each css() is its own layer; decision 025).
+const forcedPressed = { '&[aria-pressed="true"]': forcedSelected }
 
 const baseStyle = toolButtonBase
 
@@ -81,6 +84,7 @@ const variantStyles: Record<ToolButtonVariant, ReturnType<typeof css>> = {
     padding: '0 var(--space-3)',
     borderRadius: 'var(--radius-sm)',
     '&[aria-pressed="true"]': { background: 'var(--volt-a14)', color: 'var(--volt-soft)', borderColor: 'var(--volt-a50)' },
+    [FORCED_COLORS]: forcedPressed,
   }),
   quiz: css({
     minHeight: '40px',
@@ -90,6 +94,7 @@ const variantStyles: Record<ToolButtonVariant, ReturnType<typeof css>> = {
     fontSize: 'var(--fs-13)',
     '&::before': { inset: '-2px -1px' },
     '&[aria-pressed="true"]': { background: 'var(--volt-tint-on)', color: 'var(--volt-soft)', borderColor: 'var(--volt-a60)' },
+    [FORCED_COLORS]: forcedPressed,
   }),
   video: css({
     minHeight: '40px',
@@ -103,6 +108,7 @@ const variantStyles: Record<ToolButtonVariant, ReturnType<typeof css>> = {
     '&::before': { inset: '-2px' },
     [HOVER]: { background: 'var(--fill-tab-on)' },
     '&[aria-pressed="true"]': { color: 'var(--ion)' },
+    [FORCED_COLORS]: forcedPressed,
   }),
 }
 

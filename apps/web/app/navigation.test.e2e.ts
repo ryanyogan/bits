@@ -134,6 +134,27 @@ describe('client navigation', () => {
     assert.notEqual((await quiz.getByRole('status').textContent())?.trim(), '')
   })
 
+  it('opens the run window on the first run without moving the composer (decision 025)', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    await page.goto(temperature)
+    let runs = page.getByRole('region', { name: 'Your runs' })
+    let composer = runs.locator('xpath=following-sibling::form')
+    let run = composer.getByRole('button', { name: /^Run/ })
+    await page.waitForFunction(() => !document.querySelector('form textarea[name="prompt"]')?.closest('form')?.querySelector('button[type=submit][disabled]'))
+    await composer.evaluate((form) => form.scrollIntoView({ block: 'center' }))
+    let empty = await runs.evaluate((node) => node.getBoundingClientRect().height)
+    let before = await composer.evaluate((form) => form.getBoundingClientRect().top)
+
+    await run.click()
+    await runs.locator('li').first().waitFor()
+
+    let full = await runs.evaluate((node) => node.getBoundingClientRect().height)
+    let after = await composer.evaluate((form) => form.getBoundingClientRect().top)
+    assert.ok(empty < 100, `compact while empty (${empty}px)`)
+    assert.ok(full > empty + 100, `full height after the first run (${full}px)`)
+    assert.ok(Math.abs(after - before) <= 1, `composer stays put (moved ${after - before}px)`)
+  })
+
   it('keeps focus in the catalog search after Enter', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.goto(routes.courses.index.href())

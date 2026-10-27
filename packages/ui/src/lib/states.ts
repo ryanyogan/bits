@@ -29,6 +29,31 @@ export const forcedSelected = {
   borderColor: 'Highlight',
 } as const
 /**
+ * A bar or dot that shows an amount with its background (progress fills,
+ * odds bars, the current-lesson dot). Forced colours would drop it, so keep
+ * it painted in the text colour (decision 025).
+ */
+export const forcedFill = { forcedColorAdjust: 'none', background: 'CanvasText' } as const
+/**
+ * The same for a fill whose colour arrives as an inline `background` (the
+ * inline style beats any rule): an inset shadow paints over it instead.
+ */
+export const forcedInlineFill = { forcedColorAdjust: 'none', boxShadow: 'inset 0 0 0 999px CanvasText' } as const
+/** The empty part of a bar: a hairline frame, so the fill reads as a share of it. */
+export const forcedTrack = { outline: '1px solid CanvasText', outlineOffset: '0' } as const
+/**
+ * SVG drawn with token colours in its attributes (icons, the brand mark):
+ * forced colours never touch `fill`/`stroke`, so a light glyph vanished on a
+ * light high-contrast canvas. CSS beats presentation attributes, so draw
+ * every painted part in the (forced) text colour.
+ */
+export const forcedSvgPaint = {
+  '& [fill]:not([fill="none"])': { fill: 'currentColor' },
+  '& [stroke]:not([stroke="none"])': { stroke: 'currentColor' },
+} as const
+/** `<mark>` with a translucent tint: forced colours keep the alpha, so paint the Mark pair solid. */
+export const forcedMark = { forcedColorAdjust: 'none', background: 'Mark', color: 'MarkText' } as const
+/**
  * Fields that draw focus with a border + glow hide the outline. A transparent
  * outline is invisible normally, but forced-colors paints it, so keyboard
  * focus never disappears in high-contrast mode.

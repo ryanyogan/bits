@@ -258,9 +258,9 @@ Rationale: `docs/decisions/010-component-library.md`.
 | AttentionMap | attention-map.tsx | tokens, links {from, to, weight}, caption, illustrative (`:::attention`) | island (fallback: from → to table) |
 | ComparePanel | compare-panel.tsx | left, right, rows {prompt?, left, right}, illustrative (`:::compare`) | static |
 | RabbitHole | rabbit-hole.tsx | links {kind video/read, title, by, url, mins, deep}, id (`:::rabbithole`) | static |
-| PromptComposer | prompt-composer.tsx | id, task, checks, temperatures, examples, reward, keepRuns, submit, run (/api/run); runs fill a fixed window (`--run-log-height`) that follows the newest reply | island (Enter runs, Shift+Enter newline) |
+| PromptComposer | prompt-composer.tsx | id, task, checks, temperatures, examples, reward, keepRuns, submit, run (/api/run); runs fill a fixed window (`--run-log-height`) that follows the newest reply; compact (`--run-log-empty-height`) until the first run, which grows it once and scrolls so the composer stays put | island (Enter runs, Shift+Enter newline) |
 | CodeEditor | code-editor.tsx | files, highlight, focusLine, typeMode | island (@remix-run/ui tabs) |
-| TerminalLog | terminal.tsx | path, entries, replies, placeholder; fixed height (`--terminal-height`, capped below the header), log scrolls inside | island |
+| TerminalLog | terminal.tsx | path, entries, replies, placeholder; fixed height (`--terminal-height`, capped below the header; all the room under it on phones), log scrolls inside | island |
 | TerminalOutput | terminal.tsx | lines | static |
 | OutputPanel | terminal.tsx | command, lines (replayed); a Ghost holds the full size, scrolls past `--output-panel-height` | island |
 | VideoPlayer | video-player.tsx | title, duration, chapters, cues, transcriptOpen | island (visual shell, simulated clock) |
@@ -272,7 +272,13 @@ states reserve their size). A box that fills with data gets a fixed height
 from a token and scrolls inside; a toy whose content changes ghosts its
 larger states. Measure with a `layout-shift` PerformanceObserver.
 `lib/states.ts` has the forced hover/focus/active selectors and
-`forcedSelected` (decision 024).
+`forcedSelected` (decision 024), plus the forced-colours helpers
+`forcedFill`, `forcedInlineFill`, `forcedTrack`, `forcedMark` and
+`forcedSvgPaint` (decision 025). A state drawn only with a background
+vanishes in forced colours: give it a system-colour rule in the same
+`css()` mixin as the colours it overrides (each mixin is its own layer, so a
+base-mixin rule loses to a variant's). Check with Playwright
+`page.emulateMedia({ forcedColors: 'active' })` in dark and light.
 
 Island rule: JSX passed as an island prop is serialized, so it must not carry
 `mix` or component elements; use plain elements and let the island style them.

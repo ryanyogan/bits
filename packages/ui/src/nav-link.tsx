@@ -1,7 +1,7 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
-import { ACTIVE, DISABLED, FOCUS, HOVER, type ForcedState } from './lib/states.ts'
+import { ACTIVE, DISABLED, FOCUS, FORCED_COLORS, HOVER, type ForcedState } from './lib/states.ts'
 
 export type NavLinkVariant = 'app' | 'marketing' | 'footer'
 
@@ -46,6 +46,9 @@ export const navLinkStyle = css({
   [HOVER]: { color: 'var(--text)' },
   [FOCUS]: { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px', borderRadius: 'var(--radius-4)' },
   '&[aria-current="page"]': { color: 'var(--text)', borderBottomColor: 'var(--volt)' },
+  // Forced colours paint the transparent borders, which underlined every
+  // link: hide them in the canvas colour and mark only the current page.
+  [FORCED_COLORS]: { borderColor: 'Canvas', '&[aria-current="page"]': { borderBottomColor: 'Highlight' } },
 })
 
 export const navLinkVariants: Record<NavLinkVariant, ReturnType<typeof css>> = {

@@ -21,7 +21,8 @@ export function TutorAvatar(handle: Handle<TutorAvatarProps>) {
   }
 }
 
-const avatarStyle = css({ flex: 'none', display: 'grid', placeItems: 'center', background: 'var(--volt)' })
+// The brand glyph (decorative) keeps its colours in forced colours; otherwise it vanishes.
+const avatarStyle = css({ flex: 'none', display: 'grid', placeItems: 'center', background: 'var(--volt)', color: 'var(--on-volt)', forcedColorAdjust: 'none' })
 const avatarSizes = {
   32: css({ width: '32px', height: '32px', borderRadius: 'var(--radius-10)', '@media (max-width: 480px)': { width: '28px', height: '28px' } }),
   30: css({ width: '30px', height: '30px', borderRadius: 'var(--radius-9)' }),
