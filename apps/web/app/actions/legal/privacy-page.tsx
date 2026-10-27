@@ -13,9 +13,10 @@ export const PRIVACY_UPDATED = '27 October 2026'
  * Written from the code (migrations, app/runs, app/auth, worker.ts's daily
  * clean-up). When those change, change this page in the same commit.
  */
-export function PrivacyPage(handle: Handle<{ viewer: Viewer | null }>) {
+export function PrivacyPage(handle: Handle<{ viewer: Viewer | null; analytics: boolean }>) {
   return () => {
     let settings = routes.settings.index.href()
+    let { analytics } = handle.props
     return (
       <LegalPage
         title="Privacy"
@@ -32,7 +33,14 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null }>) {
           <li>
             Prompts you run go to Anthropic's Claude so it can answer. Nothing else about you goes with them.
           </li>
-          <li>No ads, no analytics, no tracking cookies, no third-party scripts. We don't sell or share your data.</li>
+          {analytics ? (
+            <li>
+              No ads and no tracking cookies. We count page views with Cloudflare Web Analytics, which sets no cookies
+              and doesn't follow you around. We don't sell or share your data.
+            </li>
+          ) : (
+            <li>No ads, no analytics, no tracking cookies, no third-party scripts. We don't sell or share your data.</li>
+          )}
           <li>
             You can download everything or delete your account at any time in <a href={settings}>Settings</a>.
           </li>
@@ -86,8 +94,22 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null }>) {
           We set one cookie, <code>__Host-session</code>, which keeps you signed in and holds your signed-out progress.
           It is strictly necessary, so there is no cookie banner. Drafts of prompts you're writing are kept in your
           browser's local storage and never leave your device until you run them. Fonts and scripts are served from
-          our own site.
+          our own site{analytics ? ', apart from the Web Analytics script below' : ''}.
         </p>
+
+        {analytics ? (
+          <>
+            <h2>Page views</h2>
+            <p>
+              To see which pages people read and how fast they load, every page loads Cloudflare Web Analytics' script
+              from <code>static.cloudflareinsights.com</code>. It reports the page's address, the page you came from, load
+              timings, and your browser, operating system, device type and country to Cloudflare. It sets no cookies and
+              uses no local storage, and Cloudflare says it doesn't fingerprint visitors by IP address or user agent. We
+              only see totals, never a list of visitors. If your browser sends Global Privacy Control, the script isn't
+              loaded at all.
+            </p>
+          </>
+        ) : null}
 
         <h2>Your public profile</h2>
         <p>
@@ -100,7 +122,7 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null }>) {
         <ul>
           <li>
             <strong>Cloudflare</strong> hosts {APP_TITLE}: the app (Workers), the database (D1, in the United States),
-            course files (R2), sign-in email and the AI Gateway. Cloudflare keeps short-lived request logs (paths,
+            course files (R2), sign-in email{analytics ? ', page-view counts (Web Analytics)' : ''} and the AI Gateway. Cloudflare keeps short-lived request logs (paths,
             status codes and errors) that we use to fix bugs.
           </li>
           <li>

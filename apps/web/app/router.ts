@@ -36,6 +36,7 @@ import { errorFields, log } from './log.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { cspNonce } from './middleware/csp-nonce.tsx'
 import { responseHeaders } from './middleware/headers.ts'
+import { webAnalytics } from './middleware/web-analytics.tsx'
 import { routes } from './routes.ts'
 
 export const router = createRouter({
@@ -73,6 +74,8 @@ export const router = createRouter({
     }),
     // Every page renders inside <CspNonce>, so Document can nonce its scripts.
     cspNonce(),
+    // With WEB_ANALYTICS_TOKEN set, pages also get the nonced beacon (decision 033).
+    webAnalytics(),
   ],
 })
 

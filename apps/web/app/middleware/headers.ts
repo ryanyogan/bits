@@ -4,6 +4,7 @@ import { platform } from '#platform'
 import type { PlatformCsp } from '../platform/types.ts'
 
 import { cspNonceContext, createNonce } from './csp-nonce.tsx'
+import { WEB_ANALYTICS_CONNECT_SRC, webAnalyticsToken } from './web-analytics.tsx'
 
 // Response headers for every Worker response (decisions 020 and 027). Static
 // assets never reach the Worker; their headers come from build/client/_headers.
@@ -33,17 +34,24 @@ export const CSP_REPORT_PATH = '/csp-report'
  *   would switch `'unsafe-inline'` off.
  * - Everything else is this origin only: fonts, images (and SVG data URIs),
  *   `/api/run`, the passkey endpoints. AI Gateway is called from the Worker.
+ *   With a Web Analytics token, `connect-src` also allows the beacon's report
+ *   endpoint (decision 033); the beacon script itself is nonced.
  * - `frame-ancestors 'self'`, not `'none'`: same-origin breakpoint iframes.
  *   `form-action 'self'`: OAuth starts are links, not forms.
  */
-export function contentSecurityPolicy(nonce: string, csp: PlatformCsp = platform.csp): string {
+export function contentSecurityPolicy(
+  nonce: string,
+  csp: PlatformCsp = platform.csp,
+  analytics: boolean = webAnalyticsToken() !== undefined,
+): string {
+  let connectSrc = ["'self'", ...csp.connectSrc, ...(analytics ? [WEB_ANALYTICS_CONNECT_SRC] : [])]
   return [
     "default-src 'self'",
     `script-src 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval' https: 'unsafe-inline'`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    ["connect-src 'self'", ...csp.connectSrc].join(' '),
+    `connect-src ${connectSrc.join(' ')}`,
     "object-src 'none'",
     "base-uri 'none'",
     "frame-ancestors 'self'",

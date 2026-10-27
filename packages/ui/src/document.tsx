@@ -2,6 +2,7 @@ import type { Handle, RemixNode } from 'remix/component'
 import { ImportMap, type ImportMapData } from 'remix/component/server'
 
 import { cspNonce } from './csp-nonce.tsx'
+import { WEB_ANALYTICS_BEACON_SRC, webAnalyticsToken } from './web-analytics.tsx'
 
 /** The browser runtime entry, as returned by the app's asset layer. */
 export interface DocumentScriptEntry {
@@ -63,12 +64,21 @@ const LAYER_ORDER = '@layer reset, tokens, base, rmx-reset, rmx, app;'
  * client navigation) and the entry module, whose imports inherit its trust.
  * Inline styles need no nonce: the policy allows them (`style-src
  * 'unsafe-inline'`), since Remix's `<style data-rmx-style>` tags carry none.
+ *
+ * Inside `WebAnalytics` it adds Cloudflare's Web Analytics beacon (decision
+ * 033), as Cloudflare documents it for manual setup: a module script
+ * (deferred, fetched with CORS) with the site token in `data-cf-beacon`. It
+ * carries the nonce, so `'strict-dynamic'` lets it run; it reports to
+ * `cloudflareinsights.com` (the app's `connect-src`). Its single-page
+ * tracking follows the Navigation API's `navigate` events, which is how
+ * Remix's client navigation moves between pages.
  */
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
     let { assets, title, description, url, siteName, image, head, children } = handle.props
     let { entry, stylesheets, fontPreloads } = assets
     let nonce = cspNonce(handle)
+    let analyticsToken = webAnalyticsToken(handle)
 
     return (
       <html lang="en">
@@ -110,6 +120,14 @@ export function Document(handle: Handle<DocumentProps>) {
             <link key={href} rel="modulepreload" href={href} nonce={nonce} />
           ))}
           <script type="module" src={entry.href} nonce={nonce}></script>
+          {analyticsToken ? (
+            <script
+              type="module"
+              src={WEB_ANALYTICS_BEACON_SRC}
+              data-cf-beacon={JSON.stringify({ token: analyticsToken })}
+              nonce={nonce}
+            ></script>
+          ) : null}
         </head>
         <body>{children}</body>
       </html>
