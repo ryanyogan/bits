@@ -1,54 +1,62 @@
-import { findUserById } from '@bits/db'
+import { findUserById, type User } from '@bits/db'
 import { redirect } from 'remix/response/redirect'
 import { createController } from 'remix/router'
 
 import { confirmEmailChangeLink, peekEmailChangeLink } from '../../../auth/email-change.ts'
 import { currentUser } from '../../../auth/identity.ts'
-import { startUserSession } from '../../../auth/users.ts'
 import { rateLimit } from '../../../middleware/rate-limit.tsx'
 import { routes } from '../../../routes.ts'
 import { readText } from '../../login/schema.ts'
-import { ConfirmEmailPage } from './confirm-email-page.tsx'
+import { EmailLinkPage } from './confirm-email-page.tsx'
 
 const settingsEmail = (saved: string) =>
   redirect(`${routes.settings.index.href(undefined, { searchParams: { saved } })}#email`, 303)
 
-const linkExpired = () =>
+export const emailLinkExpired = () =>
   redirect(routes.login.index.href(undefined, { searchParams: { error: 'email-link-expired' } }), 303)
 
-// The confirm-new-email link (decision 030). It works on any device: the
-// token was mailed to the new address, which is proof enough, and it signs
-// that browser in to the account, like a magic link.
+const pageHeaders = { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' }
+
+// The confirm-new-email link (decision 030). The link proves the new inbox;
+// only the account's own signed-in session can use it, and it never signs
+// anyone in. Anyone else is told which account it belongs to and to sign in.
 export default createController(routes.auth.email, {
   actions: {
     async index(context) {
       let token = context.url.searchParams.get('token') ?? ''
       let open = await peekEmailChangeLink(context.db, token)
-      if (!open) return linkExpired()
-      return context.render(<ConfirmEmailPage token={token} email={open.email} />, {
-        headers: { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' },
-      })
+      if (!open) return emailLinkExpired()
+      let user = currentUser(context)
+      if (user?.id !== open.user_id) return signInFirst(context, open.user_id, open.email, 200)
+      return context.render(<EmailLinkPage kind="confirm" token={token} email={open.email} />, { headers: pageHeaders })
     },
 
     action: {
       middleware: [rateLimit('RL_SIGNIN')],
       async handler(context) {
-        let signedIn = currentUser(context)
-        let result = await confirmEmailChangeLink(context.db, {
-          token: readText(context.formData, 'token'),
-          signedInUserId: signedIn?.id ?? null,
-          sessionId: context.session.id,
-        })
-        if (!result.ok) {
-          if (result.reason === 'taken') return signedIn ? settingsEmail('email-taken') : linkExpired()
-          return linkExpired()
-        }
-        if (signedIn?.id !== result.userId) {
-          let user = await findUserById(context.db, result.userId)
-          if (user) await startUserSession(context, user, 'email')
-        }
+        let token = readText(context.formData, 'token')
+        let open = await peekEmailChangeLink(context.db, token)
+        if (!open) return emailLinkExpired()
+        let user = currentUser(context)
+        if (!user || user.id !== open.user_id) return signInFirst(context, open.user_id, open.email, 403)
+        let result = await confirmEmailChangeLink(context.db, { token, user, origin: context.url.origin })
+        if (!result.ok) return result.reason === 'taken' ? settingsEmail('email-taken') : emailLinkExpired()
         return settingsEmail('email-changed')
       },
     },
   },
 })
+
+async function signInFirst(
+  context: { db: Parameters<typeof findUserById>[0]; render: (node: any, init?: ResponseInit) => Response | Promise<Response> },
+  userId: string,
+  email: string,
+  status: number,
+) {
+  let owner: User | null = await findUserById(context.db, userId)
+  if (!owner) return emailLinkExpired()
+  return context.render(<EmailLinkPage kind="sign-in-first" email={email} account={owner.email} />, {
+    status,
+    headers: pageHeaders,
+  })
+}

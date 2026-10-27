@@ -83,11 +83,11 @@ export default createController(routes.login, {
       async handler(context) {
         let next = safeNextPath(readText(context.formData, 'next'))
         let result = await verifyPasskeySignIn(context.db, {
-          rp: relyingParty(context.url),
+          rp: relyingParty(context.url, context.headers.get('Origin')),
           response: readText(context.formData, 'response'),
         })
         if (!result.ok) {
-          let rp = relyingParty(context.url)
+          let rp = relyingParty(context.url, context.headers.get('Origin'))
           return context.render(
             <LoginPage
               mode="signin"
@@ -143,6 +143,16 @@ function noticeFor(code: string | null): LoginNotice | undefined {
       }
     case 'link-expired':
       return { tone: 'warning', text: 'That sign-in link has expired or was already used. Ask for a new one.' }
+    case 'email-reverted':
+      return {
+        tone: 'ok',
+        text: 'Done: your old email is back and every device is signed out. Sign in with it below.',
+      }
+    case 'email-revert-taken':
+      return {
+        tone: 'danger',
+        text: 'That email now belongs to another Bits account, so it couldn’t be put back. Nothing changed.',
+      }
     case 'email-link-expired':
       return {
         tone: 'warning',

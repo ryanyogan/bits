@@ -1,18 +1,21 @@
 // Changing the sign-in email (decision 030). A signed-in user asks for a new
 // address; it gets a 6-digit code and a link (the sign-in primitives: hashed,
 // 15 minutes, single use, 5 code tries). Nothing changes until one of them
-// comes back. Then one D1 batch moves the email, and the old address gets a
-// notice.
+// comes back, from the account's own session. Then one D1 batch moves the
+// email, and the old address gets a notice with a 7-day revert link.
 import {
   cancelEmailChanges,
   completeEmailChange,
   findPendingEmailChange,
   findUserByEmail,
-  findUserById,
   insertEmailToken,
   peekEmailChange,
   reserveEmailChangeAttempt,
+  peekEmailRevert,
+  revertEmailChange,
   type D1DataTableDatabase,
+  type EmailRevertResult,
+  type OpenEmailRevert,
   type PendingEmailChange,
   type User,
 } from '@bits/db'
@@ -93,10 +96,15 @@ export type EmailChangeConfirmResult =
   | { ok: true; userId: string; email: string }
   | { ok: false; reason: 'wrong' | 'expired' | 'taken' }
 
-/** Confirms with the 6-digit code from the signed-in session that asked. */
+/** How long the old address can undo a change (decision 030). */
+export const REVERT_TTL_DAYS = 7
+/** On revert, passkeys added this long before the change (or since) are removed too. */
+const REVERT_PASSKEY_WINDOW_MS = 24 * 60 * 60 * 1000
+
+/** Confirms with the 6-digit code, from the signed-in session of the account. */
 export async function confirmEmailChangeCode(
   db: D1DataTableDatabase,
-  input: { user: User; code: string; sessionId: string },
+  input: { user: User; code: string; origin: string },
 ): Promise<EmailChangeConfirmResult> {
   let now = Date.now()
   let open = await reserveEmailChangeAttempt(db, input.user.id, now, MAX_CODE_ATTEMPTS)
@@ -104,45 +112,68 @@ export async function confirmEmailChangeCode(
   if (!digestsEqual(await codeHash(open.token_hash, input.code), open.code_hash)) {
     return { ok: false, reason: open.attempts < MAX_CODE_ATTEMPTS ? 'wrong' : 'expired' }
   }
-  return finish(db, { tokenHash: open.token_hash, userId: input.user.id, oldEmail: input.user.email, sessionId: input.sessionId })
+  return finish(db, { tokenHash: open.token_hash, user: input.user, origin: input.origin })
 }
 
 /**
- * Confirms with the link. `sessionId` is kept signed in when it already
- * belongs to the account; the caller signs this browser in otherwise.
+ * Confirms with the link. Only the account's own signed-in session can: the
+ * link proves the new inbox, the session proves the account, and a link
+ * never signs anyone in.
  */
 export async function confirmEmailChangeLink(
   db: D1DataTableDatabase,
-  input: { token: string; signedInUserId: string | null; sessionId: string },
+  input: { token: string; user: User; origin: string },
 ): Promise<EmailChangeConfirmResult> {
   let open = await peekEmailChangeLink(db, input.token)
-  if (!open) return { ok: false, reason: 'expired' }
-  let owner = await findUserById(db, open.user_id)
-  if (!owner) return { ok: false, reason: 'expired' }
-  return finish(db, {
-    tokenHash: open.token_hash,
-    userId: open.user_id,
-    oldEmail: owner.email,
-    sessionId: input.signedInUserId === open.user_id ? input.sessionId : null,
-  })
+  if (!open || open.user_id !== input.user.id) return { ok: false, reason: 'expired' }
+  return finish(db, { tokenHash: open.token_hash, user: input.user, origin: input.origin })
 }
 
 async function finish(
   db: D1DataTableDatabase,
-  input: { tokenHash: string; userId: string; oldEmail: string; sessionId: string | null },
+  input: { tokenHash: string; user: User; origin: string },
 ): Promise<EmailChangeConfirmResult> {
+  let now = Date.now()
+  let revertToken = randomToken()
   let result = await completeEmailChange(db, {
     tokenHash: input.tokenHash,
-    userId: input.userId,
-    now: Date.now(),
-    keepSessionHash: input.sessionId ? await sha256Hex(input.sessionId) : null,
+    userId: input.user.id,
+    now,
+    revertTokenHash: await sha256Hex(revertToken),
+    revertExpiresAt: now + REVERT_TTL_DAYS * 24 * 60 * 60 * 1000,
   })
   if (!result.ok) return result
+  let revertLink = new URL(
+    routes.auth.emailRevert.index.href(undefined, { searchParams: { token: revertToken } }),
+    input.origin,
+  ).href
   try {
-    await sendMail(emailChangedMail({ to: input.oldEmail, newEmail: result.email }))
+    await sendMail(emailChangedMail({ to: input.user.email, newEmail: result.email, revertLink, days: REVERT_TTL_DAYS }))
   } catch (error) {
     // The change is done; a failed notice is logged by the mailer, not fatal.
     if (!(error instanceof MailError)) throw error
   }
-  return { ok: true, userId: input.userId, email: result.email }
+  return { ok: true, userId: input.user.id, email: result.email }
+}
+
+/** The open revert behind a link, without spending it (confirmation page). */
+export async function peekEmailRevertLink(db: D1DataTableDatabase, token: string): Promise<OpenEmailRevert | null> {
+  if (!isTokenShaped(token)) return null
+  return peekEmailRevert(db, await sha256Hex(token), Date.now())
+}
+
+/**
+ * Undoes a change from the old address: the old email comes back, every
+ * session ends and passkeys added around the change are removed. Like the
+ * change link, it never signs anyone in; the owner signs in again with the
+ * restored email.
+ */
+export async function revertEmailChangeLink(db: D1DataTableDatabase, token: string): Promise<EmailRevertResult> {
+  let open = await peekEmailRevertLink(db, token)
+  if (!open) return { ok: false, reason: 'expired' }
+  return revertEmailChange(db, {
+    tokenHash: open.token_hash,
+    now: Date.now(),
+    passkeysSince: open.created_at - REVERT_PASSKEY_WINDOW_MS,
+  })
 }

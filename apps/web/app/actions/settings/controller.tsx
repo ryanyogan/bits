@@ -20,7 +20,8 @@ import {
   confirmEmailChangeCode,
   requestEmailChange,
 } from '../../auth/email-change.ts'
-import { requireUser, toViewer } from '../../auth/identity.ts'
+import { requestEmailSignIn } from '../../auth/email-sign-in.ts'
+import { recentlyAuthenticated, requireUser, signedInRecently, toViewer } from '../../auth/identity.ts'
 import { registerPasskey, relyingParty } from '../../auth/passkeys.ts'
 import { rateLimit } from '../../middleware/rate-limit.tsx'
 import { currentStreak } from '../../progress/days.ts'
@@ -43,6 +44,7 @@ export default createController(routes.settings, {
         <SettingsPage
           viewer={toViewer(user)}
           account={await getAccountSettings(context.db, user, context.session.id)}
+          recentAuth={recentlyAuthenticated(context)}
           notice={noticeFor(context.url.searchParams)}
         />,
       )
@@ -143,6 +145,9 @@ export default createController(routes.settings, {
           await cancelEmailChange(context.db, user.id)
           return saved('email-cancelled')
         }
+        // Moving the account's email is a takeover if the session is stolen
+        // or left open: only a fresh sign-in may ask (decision 030).
+        if (!recentlyAuthenticated(context)) return saved('reauth', { for: 'email' })
         let parsed = s.parseSafe(emailForm, context.formData)
         if (!parsed.success) {
           return invalid(context, user, 'email', { email: 'Enter an email address like you@somewhere.dev.' }, ['email'])
@@ -173,7 +178,7 @@ export default createController(routes.settings, {
         if (!parsed.success) {
           return invalid(context, user, 'email', { code: 'Enter the 6-digit code from the email.' }, ['code'])
         }
-        let result = await confirmEmailChangeCode(context.db, { user, code: parsed.value.code, sessionId: context.session.id })
+        let result = await confirmEmailChangeCode(context.db, { user, code: parsed.value.code, origin: context.url.origin })
         if (!result.ok) {
           let text = {
             wrong: 'That code isn’t right. Check the newest email and try again.',
@@ -201,9 +206,10 @@ export default createController(routes.settings, {
           let response = readText(context.formData, 'response')
           // Without JS the button still submits, with no response.
           if (!response) return saved('passkey-needs-js')
+          if (!recentlyAuthenticated(context)) return saved('reauth', { for: 'passkey' })
           let result = await registerPasskey(context.db, {
             user,
-            rp: relyingParty(context.url),
+            rp: relyingParty(context.url, context.headers.get('Origin')),
             response,
             name: deviceLabel(context.headers.get('User-Agent')),
           })
@@ -227,6 +233,26 @@ export default createController(routes.settings, {
         // remove:<credential id>; only the owner's rows match.
         let removed = await deletePasskey(context.db, user.id, intent.slice('remove:'.length))
         return saved(removed ? 'removed' : 'methods-error')
+      },
+    },
+
+    // Step-up before an email change or a new passkey: a sign-in code to the
+    // CURRENT address, back to Settings. (The Settings page also offers a
+    // passkey, through /login/passkey.) Signing in again refreshes `at`.
+    reauth: {
+      middleware: [rateLimit('RL_SIGNIN')],
+      async handler(context) {
+        let user = context.auth.identity
+        let next = routes.settings.index.href()
+        let result = await requestEmailSignIn(context.db, {
+          email: user.email,
+          signup: null,
+          next,
+          ip: context.headers.get('CF-Connecting-IP'),
+          origin: context.url.origin,
+        })
+        if (!result.ok) return saved('reauth-failed')
+        return redirect(routes.login.check.index.href(undefined, { searchParams: { email: user.email, next } }), 303)
       },
     },
 
@@ -265,6 +291,7 @@ async function invalid(
     <SettingsPage
       viewer={toViewer(user)}
       account={await getAccountSettings(context.db, user, context.session.id)}
+      recentAuth={signedInRecently(context.session)}
       errors={{ section, fields, values }}
     />,
     { status },
@@ -288,6 +315,8 @@ const anchors: Record<string, SettingsSection> = {
   'email-changed': 'email',
   'email-cancelled': 'email',
   'email-taken': 'email',
+  reauth: 'email',
+  'reauth-failed': 'email',
   removed: 'sign-in',
   renamed: 'sign-in',
   'passkey-added': 'sign-in',
@@ -304,7 +333,8 @@ const anchors: Record<string, SettingsSection> = {
 
 function saved(what: string, extra: Record<string, string> = {}) {
   let href = routes.settings.index.href(undefined, { searchParams: { saved: what, ...extra } })
-  return redirect(`${href}#${anchors[what] ?? 'profile'}`, 303)
+  let anchor = what === 'reauth' && extra.for === 'passkey' ? 'sign-in' : (anchors[what] ?? 'profile')
+  return redirect(`${href}#${anchor}`, 303)
 }
 
 const providerNames: Record<string, string> = { github: 'GitHub', google: 'Google' }
@@ -322,6 +352,18 @@ export function noticeFor(params: URLSearchParams): SettingsNotice | undefined {
         section: 'email',
         tone: 'ok',
         text: 'Email changed. Sign-in links go there now, and your other devices are signed out.',
+      }
+    case 'reauth':
+      return {
+        section: params.get('for') === 'passkey' ? 'sign-in' : 'email',
+        tone: 'warning',
+        text: 'For your safety, confirm it’s you first: we’ll email a code to your current address, or use a passkey.',
+      }
+    case 'reauth-failed':
+      return {
+        section: 'email',
+        tone: 'warning',
+        text: 'We couldn’t send the code just now (or sent too many). Try again in a few minutes.',
       }
     case 'email-taken':
       return {

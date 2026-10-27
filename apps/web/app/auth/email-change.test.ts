@@ -1,13 +1,15 @@
 // Changing the sign-in email (decision 030): code and link confirmation,
-// uniqueness, the old-address notice and what happens to other sessions.
-import { findUserByEmail, findUserById } from '@bits/db'
+// recent sign-in, uniqueness, and the old address's 7-day revert link.
+import { findUserByEmail, findUserById, listPasskeys } from '@bits/db'
+import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/server'
 import * as assert from 'remix/assert'
 import { after, describe, it } from 'remix/test'
 
 import { disposePlatform } from '#platform'
 
 import { routes } from '../routes.ts'
-import { fetchAs, form, requestCode, sessionCookieFrom, signIn, testDb, testIp } from '../test/auth.ts'
+import { ageSessions, fetchAs, form, requestCode, signIn, testDb, testIp } from '../test/auth.ts'
+import { createSoftAuthenticator } from '../test/webauthn.ts'
 import { outbox } from './mailer.ts'
 
 const post = (fields: Record<string, string>) => ({
@@ -28,11 +30,16 @@ async function askToChange(cookie: string, email: string) {
   }
 }
 
+function revertTokenFor(oldEmail: string): string {
+  let notice = outbox.findLast((m) => m.to === oldEmail && /email was changed/.test(m.subject))!
+  return /\/auth\/email\/revert\?token=([A-Za-z0-9_-]+)/.exec(notice.text)![1]!
+}
+
 // One flat suite: remix test runs after() around every describe.
 describe('email change', () => {
   after(() => disposePlatform())
 
-  it('confirms with the code: swaps the email, keeps this session, signs out the others, tells the old address', async () => {
+  it('confirms with the code: swaps the email, keeps sessions, mails the old address a revert link', async () => {
     let { cookie, user } = await signIn('move-me@example.com')
     let { cookie: laptop } = await signIn('move-me@example.com')
     let { code, message } = await askToChange(cookie, 'moved@example.com')
@@ -57,37 +64,111 @@ describe('email change', () => {
     let notice = outbox.findLast((m) => m.to === 'move-me@example.com')!
     assert.match(notice.subject, /email was changed/)
     assert.match(notice.text, /moved@example\.com/)
+    assert.match(notice.text, /within 7 days/)
+    assert.ok(revertTokenFor('move-me@example.com'))
 
-    assert.equal((await fetchAs(cookie, routes.settings.index.href())).status, 200, 'this session stays')
-    assert.equal((await fetchAs(laptop, routes.settings.index.href())).status, 303, 'other sessions are signed out')
+    // Sessions stay until the old address objects (the revert link ends them).
+    assert.equal((await fetchAs(cookie, routes.settings.index.href())).status, 200)
+    assert.equal((await fetchAs(laptop, routes.settings.index.href())).status, 200)
 
-    // The new address signs in to the same account; the old one would make a new account.
+    // The new address signs in to the same account.
     let again = await signIn('moved@example.com')
     assert.equal(again.user.id, user.id)
   })
 
-  it('confirms with the link on another device and signs that browser in', async () => {
+  it('needs a recent sign-in to ask; a code to the current address or a passkey refreshes it', async () => {
+    let { cookie, user } = await signIn('stale@example.com')
+    await ageSessions(user.id)
+    let page = await (await fetchAs(cookie, routes.settings.index.href())).text()
+    assert.match(page, /To change your email, confirm it’s you first/)
+    assert.match(page, /action="\/settings\/reauth"/)
+    assert.doesNotMatch(page, /Send confirmation link/)
+
+    let refused = await fetchAs(cookie, routes.settings.email.href(), post({ email: 'stale-new@example.com' }))
+    assert.match(refused.headers.get('Location')!, /saved=reauth&for=email#email$/)
+    assert.equal(outbox.findLast((m) => m.to === 'stale-new@example.com'), undefined, 'no mail to the new address')
+
+    // Step-up by email: a sign-in code to the CURRENT address, back to settings.
+    let reauth = await fetchAs(cookie, routes.settings.reauth.href(), post({}))
+    assert.equal(reauth.status, 303)
+    assert.match(reauth.headers.get('Location')!, /^\/login\/check\?email=stale%40example\.com&next=%2Fsettings/)
+    let mail = outbox.findLast((m) => m.to === 'stale@example.com')!
+    let code = /code is (\d{6})/.exec(mail.text)![1]!
+    let verified = await fetchAs(cookie, routes.auth.verify.action.href(), post({ email: 'stale@example.com', code }))
+    assert.equal(verified.headers.get('Location'), '/settings')
+    let fresh = verified.headers.getSetCookie().find((c) => c.startsWith('__Host-session='))!.split(';')[0]!
+    await askToChange(fresh, 'stale-new@example.com')
+  })
+
+  it('confirms with the link only from the account’s own session, and never signs anyone in', async () => {
     let { cookie, user } = await signIn('link-move@example.com')
     let { token } = await askToChange(cookie, 'link-moved@example.com')
     assert.ok(token)
 
+    // Another device (or whoever got the link): told which account, asked to sign in.
     let page = await fetchAs(null, routes.auth.email.index.href(undefined, { searchParams: { token: token! } }))
     assert.equal(page.status, 200)
     assert.equal(page.headers.get('Cache-Control'), 'no-store')
-    assert.match(await page.text(), /link-moved@example\.com/)
-    // Looking doesn't spend it.
+    let html = await page.text()
+    assert.match(html, /Sign in first/)
+    assert.match(html, /link-move@example\.com/)
+    let { cookie: stranger } = await signIn('stranger@example.com')
+    for (let who of [null, stranger]) {
+      let refused = await fetchAs(who, routes.auth.email.action.href(), post({ token: token! }))
+      assert.equal(refused.status, 403)
+      assert.equal(refused.headers.getSetCookie().length, 0, 'no session from a link')
+    }
     assert.equal((await findUserById(testDb, user.id))!.email, 'link-move@example.com')
 
-    let confirmed = await fetchAs(null, routes.auth.email.action.href(), post({ token: token! }))
+    // The account's own session: a confirm button, then the change.
+    assert.match(
+      await (await fetchAs(cookie, routes.auth.email.index.href(undefined, { searchParams: { token: token! } }))).text(),
+      /Confirm new email/,
+    )
+    let confirmed = await fetchAs(cookie, routes.auth.email.action.href(), post({ token: token! }))
     assert.equal(confirmed.status, 303)
     assert.match(confirmed.headers.get('Location')!, /saved=email-changed/)
-    let session = sessionCookieFrom(confirmed)
-    assert.ok(session)
-    assert.match(await (await fetchAs(session, routes.settings.index.href())).text(), /link-moved@example\.com/)
-    assert.equal((await fetchAs(cookie, routes.settings.index.href())).status, 303, 'the asking session is signed out too')
+    assert.equal((await findUserById(testDb, user.id))!.email, 'link-moved@example.com')
 
-    let reused = await fetchAs(null, routes.auth.email.action.href(), post({ token: token! }))
+    let reused = await fetchAs(cookie, routes.auth.email.action.href(), post({ token: token! }))
     assert.equal(reused.headers.get('Location'), '/login?error=email-link-expired')
+  })
+
+  it('the old address can undo it: email back, every session out, new passkeys gone', async () => {
+    let { cookie, user } = await signIn('victim@example.com')
+    // "The attacker" adds a passkey, then moves the email.
+    let authenticator = await createSoftAuthenticator()
+    let options = (await (
+      await fetchAs(cookie, routes.api.passkey.href({ step: 'register-options' }), { method: 'POST' })
+    ).json()) as PublicKeyCredentialCreationOptionsJSON
+    await fetchAs(
+      cookie,
+      routes.settings.methods.href(),
+      post({ intent: 'add-passkey', response: JSON.stringify(await authenticator.register(options)) }),
+    )
+    assert.equal((await listPasskeys(testDb, user.id)).length, 1)
+    let { code } = await askToChange(cookie, 'attacker@example.com')
+    await fetchAs(cookie, routes.settings.emailConfirm.href(), post({ code: code! }))
+    assert.equal((await findUserById(testDb, user.id))!.email, 'attacker@example.com')
+
+    let token = revertTokenFor('victim@example.com')
+    let page = await fetchAs(null, routes.auth.emailRevert.index.href(undefined, { searchParams: { token } }))
+    assert.equal(page.status, 200)
+    assert.match(await page.text(), /Undo the change\?/)
+    assert.equal((await findUserById(testDb, user.id))!.email, 'attacker@example.com', 'looking changes nothing')
+
+    let undone = await fetchAs(null, routes.auth.emailRevert.action.href(), post({ token }))
+    assert.equal(undone.status, 303)
+    assert.equal(undone.headers.get('Location'), '/login?notice=email-reverted')
+    assert.equal(undone.headers.getSetCookie().some((c) => /^__Host-session=[^;]+;/.test(c)), false, 'no session')
+    assert.equal((await findUserById(testDb, user.id))!.email, 'victim@example.com')
+    assert.equal((await fetchAs(cookie, routes.settings.index.href())).status, 303, 'every session is out')
+    assert.equal((await listPasskeys(testDb, user.id)).length, 0)
+
+    let twice = await fetchAs(null, routes.auth.emailRevert.action.href(), post({ token }))
+    assert.equal(twice.headers.get('Location'), '/login?error=email-link-expired')
+    // The victim signs in again with their own address.
+    assert.equal((await signIn('victim@example.com')).user.id, user.id)
   })
 
   it('never reveals a taken address, and never lets two accounts share one', async () => {
@@ -110,21 +191,23 @@ describe('email change', () => {
     assert.equal((await findUserById(testDb, user.id))!.email, 'wants-it@example.com')
   })
 
-  it('keeps sign-in and email-change tokens apart', async () => {
+  it('keeps sign-in, email-change and revert tokens apart', async () => {
     let { cookie } = await signIn('apart@example.com')
     let { code, token } = await askToChange(cookie, 'apart-new@example.com')
     // The change code can't sign anyone in as the new address...
     let signInWithIt = await fetchAs(null, routes.auth.verify.action.href(), post({ email: 'apart-new@example.com', code: code! }))
     assert.equal(signInWithIt.status, 422)
     assert.equal(await findUserByEmail(testDb, 'apart-new@example.com'), null)
-    // ...and its link isn't a magic link.
+    // ...its link isn't a magic link or a revert link.
     let magic = await fetchAs(null, routes.auth.verify.index.href(undefined, { searchParams: { token: token! } }))
     assert.equal(magic.headers.get('Location'), '/login?error=link-expired')
+    let revert = await fetchAs(null, routes.auth.emailRevert.index.href(undefined, { searchParams: { token: token! } }))
+    assert.equal(revert.headers.get('Location'), '/login?error=email-link-expired')
     // A sign-in code can't confirm a change.
     let signin = await requestCode('apart@example.com')
     let crossed = await fetchAs(cookie, routes.settings.emailConfirm.href(), post({ code: signin.code }))
     assert.equal(crossed.status, 422)
-    let viaLink = await fetchAs(null, routes.auth.email.action.href(), post({ token: signin.token }))
+    let viaLink = await fetchAs(cookie, routes.auth.email.action.href(), post({ token: signin.token }))
     assert.equal(viaLink.headers.get('Location'), '/login?error=email-link-expired')
   })
 
@@ -132,7 +215,7 @@ describe('email change', () => {
     let { cookie } = await signIn('retry@example.com')
     let first = await askToChange(cookie, 'retry-a@example.com')
     let second = await askToChange(cookie, 'retry-b@example.com')
-    let stale = await fetchAs(null, routes.auth.email.index.href(undefined, { searchParams: { token: first.token! } }))
+    let stale = await fetchAs(cookie, routes.auth.email.index.href(undefined, { searchParams: { token: first.token! } }))
     assert.equal(stale.status, 303, 'the first link is withdrawn')
     let wrong = second.code === '000000' ? '111111' : '000000'
     for (let i = 0; i < 5; i++) await fetchAs(cookie, routes.settings.emailConfirm.href(), post({ code: wrong }))

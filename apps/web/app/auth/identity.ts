@@ -26,6 +26,24 @@ export interface Viewer {
   isPublic: boolean
 }
 
+/**
+ * How recent a sign-in must be for the account's keys: changing the email
+ * and adding a passkey (decision 030). Older sessions confirm it's them
+ * first, with a code to the current address or a passkey.
+ */
+export const RECENT_AUTH_MS = 10 * 60 * 1000
+
+/** True when this session signed in within RECENT_AUTH_MS. */
+export function recentlyAuthenticated(context: AnyContext, now = Date.now()): boolean {
+  let session = context.get(Session)
+  return session ? signedInRecently(session, now) : false
+}
+
+export function signedInRecently(session: Session, now = Date.now()): boolean {
+  let record = readUserRecord(session)
+  return record != null && now - record.at < RECENT_AUTH_MS
+}
+
 /** Renew a signed-in session (row expiry and cookie Max-Age) at most once a day. */
 const RENEW_AFTER_MS = 24 * 60 * 60 * 1000
 

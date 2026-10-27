@@ -54,24 +54,26 @@ export function emailTakenMail(input: { to: string }): MailMessage {
   }
 }
 
-/** To the old address once the change is done. */
-export function emailChangedMail(input: { to: string; newEmail: string }): MailMessage {
+/** To the old address once the change is done, with the revert link. */
+export function emailChangedMail(input: { to: string; newEmail: string; revertLink: string; days: number }): MailMessage {
+  let { to, newEmail, revertLink, days } = input
   let text = [
-    `Your ${APP_TITLE} sign-in email is now ${input.newEmail}.`,
+    `Your ${APP_TITLE} sign-in email is now ${newEmail}.`,
     '',
-    `Sign-in links and codes go there from now on, and we signed you out on your other devices.`,
+    `Sign-in links and codes go there from now on.`,
     '',
-    `If you didn't make this change, sign in with a passkey or a connected GitHub or Google account,`,
-    `change the email back in Settings and choose "Sign out everywhere".`,
+    `If you didn't make this change, open this link within ${days} days to undo it.`,
+    `It puts this address back, signs out every device and removes passkeys added since the day before the change:`,
+    revertLink,
   ].join('\n')
   return {
-    to: input.to,
+    to,
     subject: `Your ${APP_TITLE} email was changed`,
     text,
     html: layout(`
-      <p style="margin:0 0 16px;font-size:15px;line-height:1.5">Your ${APP_TITLE} sign-in email is now <strong>${escapeHtml(input.newEmail)}</strong>.</p>
-      <p style="margin:0 0 16px;font-size:15px;line-height:1.5">Sign-in links and codes go there from now on, and we signed you out on your other devices.</p>
-      <p style="margin:0;font-size:13px;line-height:1.5;color:#5c5c66">If you didn't make this change, sign in with a passkey or a connected GitHub or Google account, change the email back in Settings and choose “Sign out everywhere”.</p>`),
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.5">Your ${APP_TITLE} sign-in email is now <strong>${escapeHtml(newEmail)}</strong>. Sign-in links and codes go there from now on.</p>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.5">If you didn't make this change, undo it within ${days} days. That puts this address back, signs out every device and removes passkeys added since the day before the change.</p>
+      <p style="margin:0"><a href="${escapeHtml(revertLink)}" style="display:inline-block;padding:12px 20px;border-radius:8px;background:#16161a;color:#ffffff;font-weight:600;text-decoration:none">This wasn't me: undo it</a></p>`),
   }
 }
 

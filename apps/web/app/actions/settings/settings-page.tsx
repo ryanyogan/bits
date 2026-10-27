@@ -20,6 +20,7 @@ import { DeleteConfirm } from './public/delete-confirm.tsx'
 import { summaryStyle } from './ui/confirm-disclosure.tsx'
 import { HandleField } from './ui/handle-field.tsx'
 import { MethodRow } from './ui/method-row.tsx'
+import { ReauthBlock } from './ui/reauth-block.tsx'
 import { Layout } from '../../ui/layout.tsx'
 
 export type SettingsSection = 'profile' | 'email' | 'sign-in' | 'data' | 'sessions' | 'danger'
@@ -40,6 +41,8 @@ export interface SettingsErrors {
 export interface SettingsPageProps {
   viewer: Viewer
   account: AccountSettings
+  /** Signed in within the last 10 minutes: email change and new passkeys need it (decision 030). */
+  recentAuth: boolean
   notice?: SettingsNotice
   errors?: SettingsErrors
 }
@@ -56,7 +59,7 @@ const outline: Array<{ id: SettingsSection; label: string }> = [
 /** `/settings` (docs/design/spec/pages/Settings.md). Every action is a plain POST form. */
 export function SettingsPage(handle: Handle<SettingsPageProps>) {
   return () => {
-    let { viewer, account, notice, errors } = handle.props
+    let { viewer, account, recentAuth, notice, errors } = handle.props
     let err = (section: SettingsSection, field: string) =>
       errors?.section === section ? errors.fields[field] : undefined
     let val = (section: SettingsSection, field: string, fallback: string) =>
@@ -210,30 +213,34 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                     </form>
                   </div>
                 ) : null}
-                <details mix={disclosureStyle} open={err('email', 'email') ? true : undefined}>
-                  <summary mix={summaryStyle}>{account.pendingEmail ? 'Use a different address' : 'Change email'}</summary>
-                  <form method="post" action={routes.settings.email.href()} mix={formStyle} noValidate>
-                    <TextField
-                      name="email"
-                      label="New email"
-                      type="email"
-                      placeholder="you@somewhere.dev"
-                      value={val('email', 'email', '')}
-                      error={err('email', 'email')}
-                      autoComplete="email"
-                      inputMode="email"
-                      enterKeyHint="send"
-                      required
-                      mono
-                      autoFocus={Boolean(err('email', 'email'))}
-                    />
-                    <div mix={footerStyle}>
-                      <Keycap type="submit" mix={footerKeyStyle}>
-                        Send confirmation link →
-                      </Keycap>
-                    </div>
-                  </form>
-                </details>
+                {recentAuth ? (
+                  <details mix={disclosureStyle} open={err('email', 'email') ? true : undefined}>
+                    <summary mix={summaryStyle}>{account.pendingEmail ? 'Use a different address' : 'Change email'}</summary>
+                    <form method="post" action={routes.settings.email.href()} mix={formStyle} noValidate>
+                      <TextField
+                        name="email"
+                        label="New email"
+                        type="email"
+                        placeholder="you@somewhere.dev"
+                        value={val('email', 'email', '')}
+                        error={err('email', 'email')}
+                        autoComplete="email"
+                        inputMode="email"
+                        enterKeyHint="send"
+                        required
+                        mono
+                        autoFocus={Boolean(err('email', 'email'))}
+                      />
+                      <div mix={footerStyle}>
+                        <Keycap type="submit" mix={footerKeyStyle}>
+                          Send confirmation link →
+                        </Keycap>
+                      </div>
+                    </form>
+                  </details>
+                ) : (
+                  <ReauthBlock what="change your email" email={viewer.email} />
+                )}
               </Section>
 
               {/* 3. Sign-in methods */}
@@ -243,9 +250,13 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                     <MethodRow key={method.id} method={method} />
                   ))}
                 </ul>
-                <form method="post" action={routes.settings.methods.href()}>
-                  <AddPasskey optionsUrl={routes.api.passkey.href({ step: 'register-options' })} />
-                </form>
+                {recentAuth ? (
+                  <form method="post" action={routes.settings.methods.href()}>
+                    <AddPasskey optionsUrl={routes.api.passkey.href({ step: 'register-options' })} />
+                  </form>
+                ) : (
+                  <ReauthBlock what="add a passkey" email={viewer.email} />
+                )}
                 <p mix={noteStyle}>
                   {passkeyCount === 1 ? 'You have 1 passkey.' : `You have ${passkeyCount} passkeys.`} Email sign-in
                   always works, so you can't lock yourself out.

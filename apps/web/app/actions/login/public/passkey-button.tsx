@@ -22,6 +22,8 @@ export interface PasskeyButtonProps {
    * still on the device). Signalled to the browser so it can drop it.
    */
   unknownCredential?: { rpId: string; credentialId: string }
+  /** Start a conditional (autofill) request on load (default). Off where no field offers passkeys. */
+  autofill?: boolean
 }
 
 /**
@@ -55,7 +57,7 @@ export const PasskeyButton = clientEntry(
           () => {},
         )
       }
-      if (await browserSupportsWebAuthnAutofill()) void autofill()
+      if (handle.props.autofill !== false && (await browserSupportsWebAuthnAutofill())) void autofill()
     })
 
     async function options(): Promise<PublicKeyCredentialRequestOptionsJSON> {

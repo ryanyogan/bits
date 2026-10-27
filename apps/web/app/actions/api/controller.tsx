@@ -1,7 +1,7 @@
 import * as s from 'remix/data-schema'
 import { createController } from 'remix/router'
 
-import { currentUser } from '../../auth/identity.ts'
+import { currentUser, recentlyAuthenticated } from '../../auth/identity.ts'
 import { registrationOptions, relyingParty, signInOptions } from '../../auth/passkeys.ts'
 import { rateLimit } from '../../middleware/rate-limit.tsx'
 import { routes } from '../../routes.ts'
@@ -36,13 +36,14 @@ export default createController(routes.api, {
     passkey: {
       middleware: [rateLimit('RL_SIGNIN', () => jsonError('rate_limited', 429, { retryAfter: 60 }))],
       async handler(context) {
-        let rp = relyingParty(context.url)
+        let rp = relyingParty(context.url, context.headers.get('Origin'))
         switch (context.params.step) {
           case 'login-options':
             return noStoreJson(await signInOptions(context.db, rp))
           case 'register-options': {
             let user = currentUser(context)
             if (!user) return jsonError('unauthorized', 401)
+            if (!recentlyAuthenticated(context)) return jsonError('reauth_required', 403)
             let result = await registrationOptions(context.db, user, rp)
             return result.ok ? noStoreJson(result.options) : jsonError('too_many_passkeys', 409)
           }

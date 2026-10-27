@@ -12,7 +12,7 @@ import { after, describe, it } from 'remix/test'
 import { disposePlatform } from '#platform'
 
 import { routes } from '../routes.ts'
-import { fetchAs, form, sessionCookieFrom, signIn, testDb } from '../test/auth.ts'
+import { ageSessions, fetchAs, form, sessionCookieFrom, signIn, testDb } from '../test/auth.ts'
 import { createSoftAuthenticator, type SoftAuthenticator } from '../test/webauthn.ts'
 
 const post = (fields: Record<string, string>) => ({ method: 'POST', body: form(fields) })
@@ -98,6 +98,33 @@ describe('passkeys', () => {
       again.excludeCredentials?.map((credential) => credential.id),
       [authenticator.credentialId],
     )
+  })
+
+  it('adding a passkey needs a recent sign-in; signing in with a passkey refreshes it', async () => {
+    let { cookie, user } = await signIn('pk-stale@example.com')
+    let authenticator = await createSoftAuthenticator()
+    // Register while fresh, so there is a passkey to step up with.
+    assert.equal((await addPasskey(cookie, authenticator)).status, 303)
+    let options = (await (await registerOptions(cookie)).json()) as PublicKeyCredentialCreationOptionsJSON
+    await ageSessions(user.id)
+
+    let refused = await registerOptions(cookie)
+    assert.equal(refused.status, 403)
+    assert.equal((await refused.json()).error, 'reauth_required')
+    let second = await createSoftAuthenticator()
+    let late = await fetchAs(
+      cookie,
+      routes.settings.methods.href(),
+      post({ intent: 'add-passkey', response: JSON.stringify(await second.register(options)) }),
+    )
+    assert.match(late.headers.get('Location')!, /saved=reauth&for=passkey#sign-in$/)
+    assert.equal((await listPasskeys(testDb, user.id)).length, 1)
+    let page = await (await fetchAs(cookie, routes.settings.index.href())).text()
+    assert.match(page, /To add a passkey, confirm it’s you first/)
+
+    let stepUp = await passkeySignIn(await authenticator.authenticate(await loginOptions()), '/settings')
+    let fresh = sessionCookieFrom(stepUp)!
+    assert.equal((await registerOptions(fresh)).status, 200)
   })
 
   it('rejects a registration from another origin, without user verification, or for another user', async () => {

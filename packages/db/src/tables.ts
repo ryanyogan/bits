@@ -12,7 +12,7 @@ export type UserRole = (typeof userRoles)[number]
 export const oauthProviders = ['github', 'google'] as const
 export type OAuthProvider = (typeof oauthProviders)[number]
 
-export const emailTokenPurposes = ['sign-in', 'email-change'] as const
+export const emailTokenPurposes = ['sign-in', 'email-change', 'email-revert'] as const
 export type EmailTokenPurpose = (typeof emailTokenPurposes)[number]
 
 // D1 stores booleans as 0/1 and JSON as text. The driver encodes on write;
@@ -114,7 +114,7 @@ export const emailTokens = table({
     ip_hash: c.text().nullable(),
     /** Sign-up answers as JSON text, applied when the user row is created. */
     signup: c.text().nullable(),
-    /** 'sign-in' (magic link + code) or 'email-change' (confirm a new address). */
+    /** 'sign-in' (magic link + code), 'email-change' (confirm a new address) or 'email-revert' (undo from the old one). */
     purpose: c.enum(emailTokenPurposes),
     /** The account an 'email-change' token belongs to; null for sign-in. */
     user_id: c.text().nullable(),

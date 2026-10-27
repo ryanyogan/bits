@@ -9,8 +9,10 @@
 -- request can spend a challenge.
 --
 -- Email change reuses email_tokens (hashed token + code, 15 minutes, attempt
--- counting). `purpose` keeps the two kinds apart: sign-in queries only ever
--- see 'sign-in' rows, and an 'email-change' row belongs to `user_id`.
+-- counting). `purpose` keeps the kinds apart: sign-in queries only ever see
+-- 'sign-in' rows. An 'email-change' row (to the new address) and an
+-- 'email-revert' row (to the old address, 7 days, link only) belong to
+-- `user_id`.
 
 alter table passkeys add column backed_up integer not null default 0 check (backed_up in (0, 1));
 -- 'singleDevice' or 'multiDevice' as the verifier reports it.
@@ -30,8 +32,8 @@ create table webauthn_challenges (
 
 create index webauthn_challenges_expires_at on webauthn_challenges (expires_at);
 
-alter table email_tokens add column purpose text not null default 'sign-in' check (purpose in ('sign-in', 'email-change'));
--- The account an 'email-change' token moves to `email`. Null for sign-in.
+alter table email_tokens add column purpose text not null default 'sign-in' check (purpose in ('sign-in', 'email-change', 'email-revert'));
+-- The account an 'email-change' or 'email-revert' token moves to `email`. Null for sign-in.
 alter table email_tokens add column user_id text references users (id) on delete cascade;
 
 create index email_tokens_user_purpose on email_tokens (user_id, purpose, created_at);

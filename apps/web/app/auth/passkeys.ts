@@ -53,16 +53,26 @@ export interface RelyingParty {
 
 /**
  * Production binds passkeys to CANONICAL_ORIGIN's host (bits.yogan.dev; the
- * Worker 301s every other host there). Elsewhere the request's own origin
- * is used: localhost in development, tests and `pnpm preview`.
+ * Worker 301s every other host there). Elsewhere it is the browser's own
+ * origin: the request's `Origin` header, else its URL. (`wrangler dev`
+ * rewrites request URLs to the custom domain, so the header is what knows
+ * the page is on localhost.) Development, tests and `pnpm preview` only.
  */
-export function relyingParty(url: URL): RelyingParty {
+export function relyingParty(url: URL, originHeader: string | null): RelyingParty {
   let canonical = platform.env.CANONICAL_ORIGIN
   if (isProduction && canonical) {
     let origin = new URL(canonical)
     return { id: origin.hostname, origin: origin.origin }
   }
-  return { id: url.hostname, origin: url.origin }
+  let source = url
+  if (originHeader && originHeader !== 'null') {
+    try {
+      source = new URL(originHeader)
+    } catch {
+      // Malformed header: fall back to the URL.
+    }
+  }
+  return { id: source.hostname, origin: source.origin }
 }
 
 /** The WebAuthn user handle: the user id's bytes. Stable, so one device keeps one passkey per account. */
