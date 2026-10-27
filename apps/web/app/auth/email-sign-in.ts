@@ -15,6 +15,7 @@ import {
 } from '@bits/db'
 
 import { routes } from '../routes.ts'
+import { isPreview } from './config.ts'
 import { digestsEqual, randomCode, randomToken, sha256Hex } from './crypto.ts'
 import { reserveMail } from './mail-quota.ts'
 import { MailError, sendMail } from './mailer.ts'
@@ -27,7 +28,8 @@ const PER_EMAIL = { limit: 3, windowMs: 10 * 60 * 1000 }
 const PER_IP = { limit: 20, windowMs: 60 * 60 * 1000 }
 
 export type EmailRequestResult =
-  | { ok: true }
+  /** `shownCode`: on a Workers Preview the code isn't mailed; the caller shows it (decision 038). */
+  | { ok: true; shownCode?: string }
   | { ok: false; reason: 'rate-email' | 'rate-ip' | 'rate-global' | 'send-failed' }
 
 export interface EmailRequest {
@@ -82,6 +84,10 @@ export async function requestEmailSignIn(db: D1DataTableDatabase, input: EmailRe
     expiresAt: now + TOKEN_TTL_MINUTES * 60 * 1000,
     now,
   })
+
+  // A Workers Preview has no mail (decision 038): hand the code back for
+  // the page to show, to this browser only. Every check above still ran.
+  if (isPreview()) return { ok: true, shownCode: code }
 
   let link = new URL(routes.auth.verify.index.href(undefined, { searchParams: { token } }), input.origin).href
   try {

@@ -1,10 +1,13 @@
 // Outgoing mail. Production sends through the Cloudflare Email Sending
 // binding (`EMAIL`, wrangler.jsonc). Development and tests never send: the
 // message lands in `outbox` and, in development, in the server log, so you can
-// sign in locally by copying the code or link from the terminal.
+// sign in locally by copying the code or link from the terminal. Workers
+// Previews send nothing and keep nothing (decision 038): sign-in shows its
+// code on the page instead (email-sign-in.ts), and other mail is dropped.
 import { platform } from '#platform'
 
-import { appEnv, emailFrom, isProduction } from './config.ts'
+import { log } from '../log.ts'
+import { appEnv, emailFrom, isPreview, isProduction } from './config.ts'
 
 export interface MailMessage {
   to: string
@@ -27,6 +30,12 @@ export class MailError extends Error {
 }
 
 export async function sendMail(message: MailMessage): Promise<void> {
+  if (isPreview()) {
+    // Never the subject or body: they carry codes and links, and preview
+    // logs are kept by Workers Observability.
+    log('info', 'Mail is off on previews; not sent')
+    return
+  }
   if (!isProduction) {
     outbox.push(message)
     if (outbox.length > 50) outbox.shift()

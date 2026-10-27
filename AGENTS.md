@@ -94,9 +94,12 @@ Deploys (decision 032) happen in CI (`.github/workflows/ci.yml`), after the
   `bits-preview-content`, shared by all previews and never production
   (`previews` block in `wrangler.jsonc`). It migrates and publishes
   `content/courses/` there only (`scripts/preview.ts migrate`,
-  `pnpm content upload --all --publish --preview`). There's no sign-in
-  mail and no live runs on previews. Fork and Dependabot PRs get `check`
-  only. `preview-cleanup.yml` deletes the Preview when the PR closes.
+  `pnpm content upload --all --publish --preview`). Previews send no
+  mail and make no live runs. Sign-in shows its code on the page instead
+  (decision 038: `isPreview()` needs `APP_ENV=preview`, no
+  `CANONICAL_ORIGIN` and no `EMAIL`; `checkPreviewMode()` guards the
+  config). Other mail is dropped there, and OAuth is hidden. Fork and
+  Dependabot PRs get `check` only. `preview-cleanup.yml` deletes the Preview when the PR closes.
 - Secrets (in both Environments): `CLOUDFLARE_API_TOKEN`, an
   account-owned token with Workers Scripts Edit, D1 Edit, Workers R2
   Storage Edit, Account Settings Read, and Workers Routes Edit on
