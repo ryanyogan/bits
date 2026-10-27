@@ -418,7 +418,7 @@ export function Catalogue(handle: Handle) {
                 <ToolButton variant="video">1.25×</ToolButton>
               </State>
               <State label="video CC on">
-                <ToolButton variant="video" pressed label="Captions">
+                <ToolButton variant="video" pressed label="CC: captions">
                   CC
                 </ToolButton>
               </State>

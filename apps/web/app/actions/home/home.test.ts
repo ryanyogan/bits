@@ -93,6 +93,6 @@ describe('landing page', () => {
     await testDb.update(users, user.id, { xp_total: 1240 })
     let signedIn = { html: await (await fetchAs(cookie, routes.home.href())).text() }
     assert.match(signedIn.html, /1,240<\/span><span class="sr-only"> neurons/)
-    assert.match(signedIn.html, /aria-label="Your profile"/)
+    assert.match(signedIn.html, /aria-label="Your profile, [^"]+"/)
   })
 })

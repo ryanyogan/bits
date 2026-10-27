@@ -38,7 +38,7 @@ export function AuthShell(handle: Handle<AuthShellProps>) {
         </a>
         <div mix={rootStyle}>
           <BrainPane brand={APP_NAME} homeHref={routes.home.href()} />
-          <main id="main" mix={formPaneStyle}>
+          <main id="main" tabIndex={-1} mix={[skipTargetStyle, formPaneStyle]}>
             <div mix={columnStyle}>
               <Logo brand={APP_NAME} href={routes.home.href()} variant="auth" mix={mobileLogoStyle} />
               <SegmentedTabs
@@ -121,6 +121,8 @@ const rootStyle = css({
   fontFamily: 'var(--font-sans)',
 })
 
+// The skip link's target takes focus (tabIndex -1) without drawing a ring round the pane (decision 031).
+const skipTargetStyle = css({ '&:focus': { outline: 'none' } })
 const formPaneStyle = css({
   flex: '1 1 480px',
   minWidth: 0,

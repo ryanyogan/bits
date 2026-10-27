@@ -162,6 +162,8 @@ export const CodeEditor = clientEntry(
                     <div
                       role="region"
                       aria-label={file.name}
+                      // Long lines scroll sideways: focusable for keyboard scrolling (decision 031).
+                      tabIndex={0}
                       mix={[codeAreaStyle, typing && fileIndex === 0 ? on('click', () => input?.focus()) : undefined]}
                     >
                       <div mix={codeInner}>
@@ -186,7 +188,7 @@ export const CodeEditor = clientEntry(
                                 {typing && fileIndex === 0 && n <= cursorLine
                                   ? renderTypedLine(file, index, source, typed)
                                   : line.map(([kind, text], i) => (
-                                      <span key={i} mix={syntax[kind]}>
+                                      <span key={i} mix={ghost ? ghostText : syntax[kind]}>
                                         {text}
                                       </span>
                                     ))}
@@ -331,7 +333,11 @@ const bannerStats = css({ marginLeft: 'auto', color: 'var(--text)', fontVariantN
 const panelsStyle = css({ flex: 1 })
 // A hidden panel keeps its box (invisible, out of the a11y tree and tab order).
 const panelStyle = css({ minWidth: 0, '&[hidden]': { display: 'block', visibility: 'hidden' } })
-const codeAreaStyle = css({ overflowX: 'auto', padding: 'var(--space-3_5) 0 var(--space-4_5)' })
+const codeAreaStyle = css({
+  overflowX: 'auto',
+  padding: 'var(--space-3_5) 0 var(--space-4_5)',
+  '&:focus-visible': { outlineOffset: '-2px' },
+})
 const codeInner = css({
   minWidth: '560px',
   fontFamily: 'var(--font-mono)',
@@ -344,8 +350,10 @@ const lineStyle = css({
   '&:hover': { background: 'var(--fill-codeline-hover)' },
   '&[data-line="range"]': { background: 'var(--volt-a035)' },
   '&[data-line="focus"]': { background: 'var(--volt-tint)' },
-  '&[data-ghost]': { opacity: 0.28 },
 })
+// Lines still to type: plain --dim instead of faded syntax colours, so the
+// reference stays readable (4.5:1; decision 031) while it reads as "not yet".
+const ghostText = css({ color: 'var(--dim)' })
 const markerStyle = css({
   flex: 'none',
   width: '4px',
@@ -377,7 +385,7 @@ const syntax: Record<SyntaxKind, ReturnType<typeof css>> = {
 }
 const typedChar = css({ color: 'var(--text)' })
 const wrongChar = css({ color: 'var(--warn)', background: 'var(--warn-tint)', borderRadius: '2px' })
-const restStyle = css({ color: 'var(--muted)', opacity: 0.5 })
+const restStyle = css({ color: 'var(--dim)' })
 const caretStyle = css({
   color: 'var(--volt)',
   marginRight: '-0.6em',

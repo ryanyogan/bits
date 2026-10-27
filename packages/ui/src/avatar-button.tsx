@@ -24,7 +24,9 @@ export function AvatarButton(handle: Handle<AvatarButtonProps>) {
     return (
       <a
         href={href}
-        aria-label={label}
+        // The name ends with the initials the link shows, so voice control can
+        // target what it sees (WCAG 2.5.3; decision 031).
+        aria-label={`${label}, ${initials}`}
         aria-current={current ? 'page' : undefined}
         data-force={forceState}
         mix={[avatarStyle, mix]}

@@ -87,7 +87,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
           </p>
         ) : null}
         {mode === 'terminal' ? (
-          <main id="main" data-rmx-key={view.key} mix={workspaceMain}>
+          <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, workspaceMain]}>
             <LessonModes segments={segments} progressLabel={progressLabel} modes={modeItems} />
             <TerminalMode view={view} />
             <div mix={hasCode(content) ? undefined : soloFooter}>
@@ -97,7 +97,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
         ) : (
           <div mix={bodyStyle}>
             <OutlineNav view={view} />
-            <main id="main" data-rmx-key={view.key} mix={mainStyle}>
+            <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, mainStyle]}>
               <LessonModes segments={segments} progressLabel={progressLabel} modes={modeItems} />
               <OutlineDisclosure view={view} />
               {mode === 'watch' ? <WatchMode view={view} /> : <ReadMode view={view} />}
@@ -198,6 +198,8 @@ const bodyStyle = css({
   margin: '0 auto',
   [MOBILE]: { display: 'block' },
 })
+// The skip link's target takes focus (tabIndex -1) without drawing a ring round the page (decision 031).
+const skipTargetStyle = css({ '&:focus': { outline: 'none' } })
 const mainStyle = css({
   flex: '999 1 560px',
   minWidth: 0,

@@ -293,7 +293,7 @@ export const VideoPlayer = clientEntry(
                 </ToolButton>
                 <ToolButton
                   variant="video"
-                  label="Captions"
+                  label="CC: captions"
                   pressed={captions}
                   mix={on('click', () => {
                     captions = !captions
