@@ -12,6 +12,8 @@ export interface CourseRowProps {
   course: CourseSummary
   /** Own profile says "Resume →"; the public profile links to the course. */
   own: boolean
+  /** The profile's handle, for the certificate link of a finished course. */
+  handle: string
 }
 
 /**
@@ -20,7 +22,7 @@ export interface CourseRowProps {
  */
 export function CourseRow(handle: Handle<CourseRowProps>) {
   return () => {
-    let { course, own } = handle.props
+    let { course, own, handle: owner } = handle.props
     let href = routes.courses.course.index.href({ course: course.slug })
 
     if (course.pct >= 100) {
@@ -35,8 +37,11 @@ export function CourseRow(handle: Handle<CourseRowProps>) {
             <span mix={titleStyle}>{course.title}</span>
             <span mix={finishedMeta}>Finished · certificate ready</span>
           </span>
-          {/* Certificates have no route yet (handoff open decision); the course page carries the anchor. */}
-          <a href={`${href}#certificate`} mix={certificateLink} aria-label={`View certificate for ${course.title}`}>
+          <a
+            href={routes.certificates.show.href({ handle: owner, course: course.slug })}
+            mix={certificateLink}
+            aria-label={`View certificate for ${course.title}`}
+          >
             View certificate
           </a>
         </div>

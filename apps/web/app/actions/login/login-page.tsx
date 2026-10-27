@@ -150,6 +150,10 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
               <PendingSubmit label={text.cta} pendingLabel="Sending…" block />
             </div>
             <p mix={noteStyle}>No passwords. We'll email you a one-time link and code.</p>
+            <p mix={noteStyle}>
+              By continuing you agree to the <a href={routes.legal.terms.href()} mix={legalLinkStyle}>Terms</a> and{' '}
+              <a href={routes.legal.privacy.href()} mix={legalLinkStyle}>Privacy</a> policy.
+            </p>
           </form>
         </div>
       </AuthShell>
@@ -201,6 +205,8 @@ const chipStyle = css({
 })
 
 const submitWrapStyle = css({ marginTop: 'var(--space-1)', display: 'flex' })
+
+const legalLinkStyle = css({ color: 'var(--muted)', '&:hover': { color: 'var(--text)' } })
 
 const noteStyle = css({
   margin: 0,

@@ -4,7 +4,10 @@ import { Keycap } from '@bits/ui/keycap'
 import { LessonBar, LessonModes } from '@bits/ui/lesson-bar'
 import type { SegmentState } from '@bits/ui/progress-bar'
 
+import type { RewardNotice } from '../../../progress/reward.ts'
+import { APP_TITLE } from '../../../config.ts'
 import { routes } from '../../../routes.ts'
+import { ogImage } from '../../../ui/og.ts'
 import { Layout } from '../../../ui/layout.tsx'
 import { exercisesOf, hasCode } from './content.ts'
 import { lessonAward, type LessonMode, type LessonView } from './lesson-view.ts'
@@ -27,9 +30,9 @@ const modeLabels: Record<LessonMode, string> = { read: 'Read', watch: 'Watch', t
  * The shell is the app's (decision 022): the sticky AppBar with the lesson
  * sub-bar as its second row, and the reward XP island in the bar's XP slot.
  */
-export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[] }>) {
+export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[]; reward?: RewardNotice }>) {
   return () => {
-    let { view, issues } = handle.props
+    let { view, issues, reward } = handle.props
     let { course, lesson, content, mode, viewer } = view
     let modes: LessonMode[] = content.video ? ['read', 'watch', 'terminal'] : ['read', 'terminal']
     let segments: SegmentState[] = view.lessons.map((l) =>
@@ -46,11 +49,13 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[] 
         title={`${content.title} · ${course.title}${view.draft ? ' (draft)' : ''}`}
         description={`Lesson ${view.index + 1} of ${view.total} in ${course.title}.`}
         canonicalPath={view.draft ? undefined : view.href.lesson(lesson.slug)}
+        image={ogImage(`course-${course.slug}`, `${course.title}: a free ${APP_TITLE} course`)}
         // The title in the sub-bar is Unbounded 500, the lesson's first big text.
         preloadFonts={['unbounded-latin-500-normal.woff2']}
         currentPath={view.draft ? routes.author.index.href() : routes.courses.index.href()}
         head={<style innerHTML={unsafeHTML(pageStyles)} />}
         viewer={viewer}
+        reward={reward}
         xp={
           viewer ? (
             <span data-rmx-key={view.key} mix={contentsStyle}>

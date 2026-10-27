@@ -3,6 +3,7 @@ import { createController } from 'remix/router'
 import { getViewer } from '../../../auth/identity.ts'
 import { getCatalog } from '../../../content/request.ts'
 import { loadCompleted } from '../../../progress/progress.ts'
+import { takeReward } from '../../../progress/reward.ts'
 import { routes } from '../../../routes.ts'
 import { trackSlug } from '../catalog.ts'
 import { buildCourseView } from './course-data.ts'
@@ -35,6 +36,7 @@ export default createController(routes.courses.course, {
         <CoursePage
           view={view}
           viewer={viewer}
+          reward={takeReward(context)}
           coursesHref={coursesHref}
           trackHref={routes.courses.index.href(undefined, {
             searchParams: { track: trackSlug(course.track) },

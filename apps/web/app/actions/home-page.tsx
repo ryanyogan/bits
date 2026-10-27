@@ -13,6 +13,7 @@ import { platform } from '#platform'
 import { APP_NAME, APP_TAGLINE } from '../config.ts'
 import type { Viewer } from '../auth/identity.ts'
 import { routes } from '../routes.ts'
+import { HOME_ALT, ogImage } from '../ui/og.ts'
 import { canonicalUrl } from '../ui/layout.tsx'
 import { ClosingCta } from './home/closing-cta.tsx'
 import { Hero } from './home/hero.tsx'
@@ -40,6 +41,8 @@ const footerLinks = [
   { href: routes.author.index.href(), label: 'Write a course' },
   { href: routes.login.index.href(), label: 'Sign in' },
   { href: routes.me.index.href(), label: 'Profile' },
+  { href: routes.legal.terms.href(), label: 'Terms' },
+  { href: routes.legal.privacy.href(), label: 'Privacy' },
 ]
 
 /**
@@ -56,6 +59,7 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
       <Document
         assets={platform.assets}
         title={homeTitle}
+        image={ogImage('home', HOME_ALT)}
         url={canonicalUrl(routes.home.href())}
         siteName={APP_NAME}
         description={`${APP_TAGLINE} Free, hands-on courses from “what's a token?” to shipping your first agent.`}

@@ -1,11 +1,12 @@
 import { redirect } from 'remix/response/redirect'
 import { createController } from 'remix/router'
 
-import { getViewer } from '../../../auth/identity.ts'
+import { currentUser, getViewer } from '../../../auth/identity.ts'
 import { getCatalog } from '../../../content/request.ts'
 import { rateLimit } from '../../../middleware/rate-limit.tsx'
 import { readSubmission } from '../../../progress/check.ts'
 import { completeLesson, loadCompleted } from '../../../progress/progress.ts'
+import { flashReward, rewardNotice, takeReward } from '../../../progress/reward.ts'
 import { routes } from '../../../routes.ts'
 import { LessonPage } from './lesson-page.tsx'
 import { buildLessonView } from './lesson-view.ts'
@@ -26,7 +27,7 @@ export default createController(routes.courses.lesson, {
           { status: 404 },
         )
       }
-      return context.render(<LessonPage view={view} />)
+      return context.render(<LessonPage view={view} reward={takeReward(context)} />)
     },
 
     // "Complete lesson": re-run every check on the submitted prompts, save
@@ -59,6 +60,10 @@ export default createController(routes.courses.lesson, {
             .map((exercise) => `Not saved: “${exercise.failed.join('”, “')}” didn’t pass for “${exercise.task}”.`)
           return context.render(<LessonPage view={view} issues={issues} />, { status: 422 })
         }
+
+        // New badges show as a toast on the page we land on (decision 028).
+        let user = currentUser(context)
+        if (user) flashReward(context, rewardNotice(result.badges, user.handle))
 
         let next = found.next
         return redirect(

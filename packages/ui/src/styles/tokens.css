@@ -316,6 +316,12 @@
     --terminal-height: max(320px, min(clamp(420px, 72svh, 760px), calc(100svh - var(--shell-h) - var(--space-8))));
     --output-panel-height: 240px; /* :::terminal / code output */
     --toast-width: 480px; /* RewardRegion overlay */
+    /* Link-preview cards (decision 028): the Open Graph large-image size. */
+    --og-width: 1200px;
+    --og-height: 630px;
+    --og-art: 400px; /* the cover square on a card */
+    --og-badge: 96px; /* the certificate card's hex */
+    --fs-64: 64px; /* card titles */
     --z-toast: 20; /* above the sticky bars (5) */
     --z-nav-progress: 30; /* navigation progress bar (decision 024), above everything in the page */
     --nav-progress-h: 3px;

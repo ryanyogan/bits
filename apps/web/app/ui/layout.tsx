@@ -1,7 +1,7 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 import { AppBar } from '@bits/ui/app-bar'
-import { Document } from '@bits/ui/document'
+import { Document, type DocumentImage } from '@bits/ui/document'
 import { AvatarButton } from '@bits/ui/avatar-button'
 import { Keycap } from '@bits/ui/keycap'
 import { StreakPill } from '@bits/ui/streak-pill'
@@ -11,7 +11,10 @@ import { platform } from '#platform'
 
 import { APP_NAME, APP_TAGLINE, pageTitle } from '../config.ts'
 import type { Viewer } from '../auth/identity.ts'
+import type { RewardNotice } from '../progress/reward.ts'
 import { routes } from '../routes.ts'
+import { HOME_ALT, ogImage } from './og.ts'
+import { BadgeNotice } from './badge-notice.tsx'
 
 export interface LayoutProps {
   /** Page name; the document title becomes "<title> · Bits". Omit on the landing page. */
@@ -24,6 +27,10 @@ export interface LayoutProps {
   /** `sticky` for app pages, `static` over the landing hero. */
   bar?: 'static' | 'sticky'
   head?: RemixNode
+  /** The link-preview card (`ogImage()` from ui/og.ts); the landing card when omitted. */
+  image?: DocumentImage
+  /** A badge the server just awarded (`takeReward()`): shown once as a toast (decision 028). */
+  reward?: RewardNotice
   /**
    * Extra self-hosted faces this page shows above the fold, by file name
    * (`unbounded-latin-500-normal.woff2`). Preloaded after the two every page
@@ -78,6 +85,8 @@ export function Layout(handle: Handle<LayoutProps>) {
       canonicalPath,
       bar = 'sticky',
       head,
+      image = ogImage('home', HOME_ALT),
+      reward,
       preloadFonts = [],
       viewer,
       xp,
@@ -92,6 +101,7 @@ export function Layout(handle: Handle<LayoutProps>) {
         assets={platform.assets}
         url={canonicalPath ? canonicalUrl(canonicalPath) : undefined}
         siteName={APP_NAME}
+        image={image}
         title={pageTitle(title)}
         description={description}
         head={
@@ -144,6 +154,7 @@ export function Layout(handle: Handle<LayoutProps>) {
             {children}
           </main>
         )}
+        {reward ? <BadgeNotice reward={reward} /> : null}
       </Document>
     )
   }

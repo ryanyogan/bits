@@ -30,9 +30,21 @@ export interface DocumentProps {
   url?: string
   /** `og:site_name`, the app's name (passed in; the UI package has no brand). */
   siteName?: string
+  /**
+   * The link-preview card: an absolute PNG URL, its alt text and size. With
+   * one, X shows the large card (`summary_large_image`); without, `summary`.
+   */
+  image?: DocumentImage
   /** Extra `<head>` content for the page (meta, preloads). */
   head?: RemixNode
   children?: RemixNode
+}
+
+export interface DocumentImage {
+  url: string
+  alt: string
+  width: number
+  height: number
 }
 
 /** Must match the order at the top of styles/tokens.css. */
@@ -46,7 +58,7 @@ const LAYER_ORDER = '@layer reset, tokens, base, rmx-reset, rmx, app;'
  */
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
-    let { assets, title, description, url, siteName, head, children } = handle.props
+    let { assets, title, description, url, siteName, image, head, children } = handle.props
     let { entry, stylesheets, fontPreloads } = assets
 
     return (
@@ -65,7 +77,16 @@ export function Document(handle: Handle<DocumentProps>) {
           {description ? <meta property="og:description" content={description} /> : null}
           {url ? <meta property="og:url" content={url} /> : null}
           {siteName ? <meta property="og:site_name" content={siteName} /> : null}
-          <meta name="twitter:card" content="summary" />
+          {image ? (
+            <>
+              <meta property="og:image" content={image.url} />
+              <meta property="og:image:type" content="image/png" />
+              <meta property="og:image:width" content={String(image.width)} />
+              <meta property="og:image:height" content={String(image.height)} />
+              <meta property="og:image:alt" content={image.alt} />
+            </>
+          ) : null}
+          <meta name="twitter:card" content={image ? 'summary_large_image' : 'summary'} />
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           <style>{LAYER_ORDER}</style>
           {fontPreloads.map((href) => (
