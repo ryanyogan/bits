@@ -307,6 +307,20 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
 - Secrets: `SESSION_SECRET` (required in production),
   `GITHUB_CLIENT_ID/SECRET` and
   `GOOGLE_CLIENT_ID/SECRET`. See `apps/web/.dev.vars.example`.
+- Passkeys (decision 030): `app/auth/passkeys.ts` (`@simplewebauthn/server`,
+  Web Crypto only). Options come from `/api/passkey/*-options` as JSON, and
+  the response goes back in a native form POST. Challenges are single-use
+  D1 rows (`webauthn_challenges`, 10 min). The RP is `CANONICAL_ORIGIN` in
+  production, else the request's Origin (use `localhost`, never an IP).
+- Sensitive changes (email, adding a passkey) need `recentlyAuthenticated`
+  (10 min); otherwise render `ReauthBlock` (code to the current address or
+  a passkey). Email change (`app/auth/email-change.ts`) uses
+  purpose-tagged `email_tokens`. Links never start a session. The old
+  address gets a 7-day revert link, and while one is open, further changes
+  are refused. Sign-in queries must filter `purpose = 'sign-in'`.
+- Passkey tests: `createSoftAuthenticator()` (`app/test/webauthn.ts`),
+  `ageSessions(userId)` to make a session stale. E2E uses a CDP virtual
+  authenticator on `localhost` (`app/passkeys.test.e2e.ts`).
 
 ## Progress (decision 016)
 
