@@ -101,7 +101,9 @@ export const routes = route({
     authorVideoComplete: post('/author/videos/:id/complete'),
   }),
 
-  // Uploaded lesson videos from R2, with Range support: actions/media/controller.tsx
+  // Uploaded lesson videos from R2, with Range support: answered by the
+  // serveMedia() router middleware ahead of the session and D1 (decision 035);
+  // actions/media/controller.tsx keeps the map whole.
   media: route('/media', {
     video: get('/videos/:id.mp4'),
   }),

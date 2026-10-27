@@ -131,6 +131,24 @@ describe('lesson videos', () => {
     assert.equal((await fetchAs(null, routes.media.video.href({ id: 'nope' }))).status, 404)
   })
 
+  it('serves media without touching D1 or the session, with the security headers (decision 035)', async () => {
+    let { cookie } = await signIn('video-viewer@example.com')
+    // Signed in, any other page reads the session from D1 and says so in
+    // Server-Timing. A video range request reads nothing.
+    let range = await fetchAs(cookie, mediaHref(testVideo.id), { headers: { Range: 'bytes=0-9' } })
+    assert.equal(range.status, 206)
+    assert.equal(range.headers.get('Server-Timing'), null)
+    assert.equal(range.headers.get('Set-Cookie'), null)
+    assert.equal(range.headers.get('X-Content-Type-Options'), 'nosniff')
+    assert.equal(range.headers.get('Cross-Origin-Resource-Policy'), 'same-origin')
+    assert.equal(range.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
+    assert.equal(range.headers.get('Content-Security-Policy'), null)
+    await range.arrayBuffer()
+    let page = await fetchAs(cookie, routes.courses.index.href())
+    assert.match(page.headers.get('Server-Timing') ?? '', /queries/)
+    await page.text()
+  })
+
   it('parses single byte ranges only', () => {
     assert.deepEqual(parseRange('bytes=0-99'), { offset: 0, length: 100 })
     assert.deepEqual(parseRange('bytes=100-'), { offset: 100 })

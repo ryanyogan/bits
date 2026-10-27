@@ -87,6 +87,19 @@ describe('/me and /u/:handle', () => {
     assert.doesNotMatch(html, /Edit profile/)
   })
 
+  it('costs /me one D1 round trip and a public profile one batch (decision 035)', async () => {
+    // Session, user and the six profile reads come back in one batch.
+    let me = await getSignedIn(routes.me.index.href())
+    assert.equal(me.status, 200)
+    assert.match(me.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="7 queries, 1 round trips"$/)
+    await me.text()
+    // Signed out: the user by handle and the same six reads, one batch.
+    let profile = await get(routes.profile.index.href({ handle: 'jamie_park' }))
+    assert.equal(profile.status, 200)
+    assert.match(profile.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="7 queries, 1 round trips"$/)
+    await profile.text()
+  })
+
   for (let handle of ['private-sam', 'nobody-here']) {
     it(`/u/${handle} is a 404 that says the profile is private`, async () => {
       if (handle === 'private-sam') {

@@ -59,6 +59,16 @@ describe('/author and /author/:course', () => {
     assert.match(html, /id, xp, multiple\?/)
   })
 
+  it('reads /author and /author/:course in one batch after the session (decision 035)', async () => {
+    for (let href of [routes.author.index.href(), routes.author.course.index.href({ course: 'tokens-and-temperature' })]) {
+      let response = await request(href)
+      assert.equal(response.status, 200)
+      // The session read, then courses, builds, authors and videos together.
+      assert.match(response.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="5 queries, 2 round trips"$/, href)
+      await response.text()
+    }
+  })
+
   it('saving repo settings redirects back with a status', async () => {
     let response = await post(routes.author.repo.href(), { repository: 'a/b', branch: 'main' })
     assert.equal(response.status, 303)

@@ -339,6 +339,12 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   one `db.batch`, never as sequential awaits. The session read already
   brings the user (`readSessionWithUser`) and, on `GET /courses…`, the
   completed lessons, so a signed-in lesson page is one round trip.
+- Several reads about one user or course go in one `db.batch`, keyed by a
+  subquery (decision 035): `queries/profile.ts` (`UserRef`) for `/me`,
+  `/u/:handle` and certificates, and `readAuthorCourses` for `/author`. A
+  page whose reads are known from its URL can join the session batch, as
+  `/me` does (`loadSession({ withProfile })`, `profileLoadedWith`). Pin a
+  page's count with a `Server-Timing` assertion in its controller test.
 
 ## Auth (decision 015)
 
@@ -490,7 +496,11 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   …/:id/parts/:n`, `POST …/:id/complete`) by the `VideoUpload` island on
   `/author/:course`. The Worker marks the `videos` row ready itself; there
   is no webhook. `GET /media/videos/:id.mp4` serves them with Range and
-  immutable caching, and refuses cross-site requests.
+  immutable caching, and refuses cross-site requests. It is answered by
+  the `serveMedia()` router middleware, right after `responseHeaders()`,
+  so it never reads the session or D1 (decision 035). A public, immutable,
+  non-HTML response that needs neither belongs there too, not after
+  `loadSession`.
 - Builds link a lesson's `video:` path to the newest ready upload:
   callers pass `buildCourse(files, { videos: await loadVideoLinks(db) })`.
   No ready upload → a warning, no `content.video`, text-only. Check with

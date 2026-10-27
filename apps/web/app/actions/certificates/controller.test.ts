@@ -49,6 +49,10 @@ describe('certificates and the badge toast', () => {
     assert.match(html, /<meta property="og:image" content="[^"]*\/og\/certificate-context-is-everything\.png\?v=/)
     assert.match(html, /<meta name="twitter:card" content="summary_large_image"/)
     assert.doesNotMatch(html, /name="robots" content="noindex"/)
+    // The holder and their progress come back in one batch (decision 035).
+    let timed = await fetchAs(null, href)
+    assert.match(timed.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="2 queries, 1 round trips"$/)
+    await timed.text()
 
     // /me and the public profile link to it from the finished course row.
     let me = await page(cookie, routes.me.index.href())
