@@ -1,6 +1,8 @@
 import type { Handle } from 'remix/component'
 import { clientEntry, css, on, ref } from 'remix/component'
 
+import { hiddenOutline } from './lib/states.ts'
+
 export interface CodeInputProps {
   /** Field name of the combined code. */
   name?: string
@@ -14,6 +16,12 @@ export interface CodeInputProps {
   /** Prefill (e.g. after a 422 re-render). */
   value?: string
   disabled?: boolean
+  /**
+   * Focus the first box on load, and after a client-navigation re-render
+   * (the navigation's focus reset lands on the `autofocus` element), so a
+   * wrong code puts the cursor straight back in the boxes.
+   */
+  autoFocus?: boolean
 }
 
 /**
@@ -34,8 +42,12 @@ export const CodeInput = clientEntry(
       let length = handle.props.length ?? 6
       let initial = (handle.props.value ?? '').replace(/\D/g, '').slice(0, length)
       digits = Array.from({ length }, (_, i) => initial[i] ?? '')
+      // The server-rendered single input may hold focus (autofocus); hand it to the first box.
+      let hadFocus = root?.contains(document.activeElement) ?? false
       enhanced = true
-      handle.update()
+      handle.update().then(() => {
+        if (hadFocus || (handle.props.autoFocus && document.activeElement === document.body)) boxes[0]?.focus()
+      })
     })
 
     function setFrom(index: number, text: string) {
@@ -54,8 +66,9 @@ export const CodeInput = clientEntry(
     }
 
     return () => {
-      let { name = 'code', label = '6-digit code', length = 6, error, disabled } = handle.props
+      let { name = 'code', label = '6-digit code', length = 6, error, disabled, autoFocus } = handle.props
       let errorId = error ? `${name}-code-error` : undefined
+      let focusFirst = Boolean(autoFocus)
 
       return (
         <fieldset
@@ -73,10 +86,13 @@ export const CodeInput = clientEntry(
                     <span class="sr-only">{`Digit ${index + 1}`}</span>
                     <input
                       inputMode="numeric"
+                      enterkeyhint="go"
                       autoComplete={index === 0 ? 'one-time-code' : 'off'}
                       maxLength={length}
                       value={digit}
+                      autoFocus={index === 0 && focusFirst ? true : undefined}
                       aria-invalid={error ? 'true' : undefined}
+                      aria-describedby={errorId}
                       mix={[
                         boxStyle,
                         ref((node) => (boxes[index] = node)),
@@ -122,17 +138,21 @@ export const CodeInput = clientEntry(
               pattern={`[0-9 ]{${length},${length + 1}}`}
               maxLength={length + 1}
               autoComplete="one-time-code"
+              enterkeyhint="go"
+              required
               defaultValue={handle.props.value}
+              autoFocus={focusFirst ? true : undefined}
               aria-label={label}
               aria-invalid={error ? 'true' : undefined}
+              aria-describedby={errorId}
               mix={[boxStyle, singleStyle]}
             />
           )}
-          {error ? (
-            <p id={errorId} aria-live="polite" mix={errorStyle}>
-              {error}
-            </p>
-          ) : null}
+          {/* Always mounted, so a new error is announced (a live region that
+              appears together with its text often isn't). */}
+          <p id={`${name}-code-error`} aria-live="polite" mix={errorStyle}>
+            {error ?? ''}
+          </p>
         </fieldset>
       )
     }
@@ -168,9 +188,12 @@ const boxStyle = css({
   fontSize: 'var(--fs-22)',
   caretColor: 'var(--volt)',
   transition: 'border-color var(--duration-focus), box-shadow var(--duration-focus)',
-  '&:focus': { outline: 'none', borderColor: 'var(--focus-border)', boxShadow: 'var(--focus-ring)' },
+  '&:focus': { ...hiddenOutline, borderColor: 'var(--focus-border)', boxShadow: 'var(--focus-ring)' },
   '&[aria-invalid="true"]': { borderColor: 'var(--danger-line)' },
   '&[aria-invalid="true"]:focus': { borderColor: 'var(--danger)', boxShadow: '0 0 0 4px var(--danger-tint)' },
+  // Read-only while the form submits (PendingSubmit), disabled with the fieldset.
+  '&:read-only': { borderStyle: 'dashed' },
+  '&:disabled': { color: 'var(--dim)', borderColor: 'var(--line)', borderStyle: 'solid', cursor: 'not-allowed' },
 })
 
 const singleStyle = css({
@@ -179,4 +202,7 @@ const singleStyle = css({
   fontFamily: 'var(--font-mono)',
 })
 
-const errorStyle = css({ margin: 0, fontSize: 'var(--fs-13)', lineHeight: 1.5, color: 'var(--danger)' })
+const errorStyle = css({
+  // Empty: out of the layout but still in the accessibility tree, so it stays a live region.
+  '&:empty': { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clipPath: 'inset(50%)' },
+  margin: 0, fontSize: 'var(--fs-13)', lineHeight: 1.5, color: 'var(--danger)' })

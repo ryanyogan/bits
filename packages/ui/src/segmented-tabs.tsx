@@ -1,7 +1,7 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
-import { FOCUS, HOVER, type ForcedState } from './lib/states.ts'
+import { FOCUS, FORCED_COLORS, forcedSelected, HOVER, type ForcedState } from './lib/states.ts'
 
 export interface SegmentedTabItem {
   label: RemixNode
@@ -122,6 +122,7 @@ export const itemBase = css({
     color: 'var(--text)',
   },
   [FOCUS]: { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px', zIndex: 1 },
+  [FORCED_COLORS]: { '&[aria-current="page"], &[aria-selected="true"]': forcedSelected },
 })
 
 export const modeItem = css({

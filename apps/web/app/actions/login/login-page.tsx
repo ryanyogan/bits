@@ -7,7 +7,7 @@ import { TextField } from '@bits/ui/text-field'
 
 import { routes } from '../../routes.ts'
 import { PasskeyButton } from './public/passkey-button.tsx'
-import { PendingSubmit } from './public/pending-submit.tsx'
+import { PendingSubmit } from '@bits/ui/pending-submit'
 import { TimezoneField } from './public/timezone-field.tsx'
 import { issueFor, signupGoals, type FormIssue, type LoginMode, type SignupGoal } from './schema.ts'
 import { AuthShell, formHeadingStyle, headingGroupStyle, riseStyle, subStyle } from './ui/auth-shell.tsx'
@@ -105,6 +105,7 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
                 value={values.displayName}
                 error={nameError}
                 autoComplete="name"
+                enterKeyHint="next"
                 maxLength={60}
                 autoFocus={Boolean(nameError)}
               />
@@ -119,6 +120,7 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
               error={emailError}
               autoComplete={signup ? 'email' : 'email webauthn'}
               inputMode="email"
+              enterKeyHint={signup ? 'next' : 'send'}
               required
               mono
               autoFocus={Boolean(emailError) && !nameError}

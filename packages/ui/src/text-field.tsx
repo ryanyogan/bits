@@ -1,6 +1,8 @@
 import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
+import { hiddenOutline } from './lib/states.ts'
+
 export interface TextFieldProps {
   name: string
   label: string
@@ -16,6 +18,15 @@ export interface TextFieldProps {
   readOnly?: boolean
   autoComplete?: string
   inputMode?: 'text' | 'email' | 'numeric' | 'url' | 'tel' | 'search'
+  /** The mobile keyboard's return key: `go`, `send`, `next`, `done`, `search`. */
+  enterKeyHint?: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send'
+  /**
+   * Defaults suit the type: `email`, `url` and mono fields don't
+   * auto-capitalise or spell-check (an "Ada@…" or a red squiggle under a
+   * handle helps nobody).
+   */
+  autoCapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
+  spellCheck?: boolean
   pattern?: string
   maxLength?: number
   /** Focus on load, e.g. the first invalid field after a 422 re-render. */
@@ -45,8 +56,12 @@ export function TextField(handle: Handle<TextFieldProps>) {
       id = `field-${name}`,
       forceFocus,
       mix,
+      autoCapitalize,
+      spellCheck,
+      enterKeyHint,
       ...input
     } = handle.props
+    let literal = type === 'email' || type === 'url' || type === 'password' || mono
     let describedBy = [error ? `${id}-error` : null, hint ? `${id}-hint` : null].filter(Boolean).join(' ') || undefined
 
     return (
@@ -60,6 +75,9 @@ export function TextField(handle: Handle<TextFieldProps>) {
           name={name}
           type={type as 'text'}
           defaultValue={value}
+          autoCapitalize={autoCapitalize ?? (literal ? 'none' : undefined)}
+          spellCheck={spellCheck ?? (literal ? false : undefined)}
+          enterkeyhint={enterKeyHint}
           aria-invalid={error ? 'true' : undefined}
           aria-describedby={describedBy}
           data-force={forceFocus ? 'focus' : undefined}
@@ -99,14 +117,15 @@ export const inputStyle = css({
   transition: 'border-color var(--duration-focus), box-shadow var(--duration-focus)',
   '&::placeholder': { color: 'var(--dim)', opacity: 1 },
   '&:focus, &[data-force="focus"]': {
-    outline: 'none',
+    ...hiddenOutline,
     borderColor: 'var(--focus-border)',
     boxShadow: 'var(--focus-ring)',
   },
   '&[aria-invalid="true"]': { borderColor: 'var(--danger-line)' },
   '&[aria-invalid="true"]:focus': { borderColor: 'var(--danger)', boxShadow: '0 0 0 4px var(--danger-tint)' },
-  '&:disabled': { color: 'var(--dim)', cursor: 'not-allowed', borderColor: 'var(--line)' },
-  '&:read-only': { borderStyle: 'dashed' },
+  '&:disabled': { color: 'var(--dim)', cursor: 'not-allowed', borderColor: 'var(--line)', borderStyle: 'solid' },
+  // Read-only (and read-only while its form is pending): dashed, no caret change.
+  '&:read-only:not(:disabled)': { borderStyle: 'dashed' },
 })
 
 const monoStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-15)' })

@@ -5,7 +5,7 @@ import { Icon } from '@bits/ui/icon'
 import { Keycap } from '@bits/ui/keycap'
 
 import { routes } from '../../../routes.ts'
-import { PendingSubmit } from '../public/pending-submit.tsx'
+import { PendingSubmit } from '@bits/ui/pending-submit'
 import { issueFor, type FormIssue, type LoginMode } from '../schema.ts'
 import { AuthShell, formHeadingStyle, headingGroupStyle, riseStyle, subStyle } from '../ui/auth-shell.tsx'
 
@@ -45,7 +45,8 @@ export function CheckEmailPage(handle: Handle<CheckEmailPageProps>) {
           <form method="post" action={routes.auth.verify.action.href()} mix={formStyle} noValidate>
             <input type="hidden" name="email" value={email} />
             {next ? <input type="hidden" name="next" value={next} /> : null}
-            <CodeInput name="code" label="6-digit code" value={code} error={error} autoSubmit />
+            {/* The page exists to take this code: focus it (and again after a wrong one). */}
+            <CodeInput name="code" label="6-digit code" value={code} error={error} autoSubmit autoFocus />
             <div mix={actionsStyle}>
               <PendingSubmit label="Verify & continue" pendingLabel="Verifying…" grow />
               <Keycap
@@ -126,4 +127,8 @@ const linkButtonStyle = css({
   position: 'relative',
   '&::before': { content: '""', position: 'absolute', inset: '-14px -6px' },
   '&:hover': { color: 'var(--volt-link-hover)' },
+  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  // While the resend is in flight (the navigation runtime sets aria-busy).
+  '&[aria-busy="true"]': { cursor: 'progress', color: 'var(--muted)', textDecoration: 'none' },
+  '&[aria-busy="true"]::after': { content: '" …" / ""' },
 })

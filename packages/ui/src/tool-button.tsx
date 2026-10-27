@@ -1,7 +1,7 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
-import { FOCUS, HOVER, type ForcedState } from './lib/states.ts'
+import { FOCUS, FORCED_COLORS, forcedSelected, HOVER, type ForcedState } from './lib/states.ts'
 
 export type ToolButtonVariant = 'outline' | 'quiz' | 'video'
 
@@ -69,6 +69,8 @@ export const toolButtonBase = css({
   [HOVER]: { background: 'var(--fill-btn)' },
   [FOCUS]: { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
   '&:disabled': { color: 'var(--dim)', cursor: 'not-allowed', borderColor: 'var(--line)' },
+  '&[aria-busy="true"]': { cursor: 'progress' },
+  [FORCED_COLORS]: { '&[aria-pressed="true"]': forcedSelected },
 })
 
 const baseStyle = toolButtonBase

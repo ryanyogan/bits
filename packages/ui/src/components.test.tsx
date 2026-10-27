@@ -19,6 +19,9 @@ import { RabbitHole } from './rabbit-hole.tsx'
 import { checkPasses, draftTokens } from './prompt-composer.tsx'
 import { SegmentedTabs } from './segmented-tabs.tsx'
 import { TextField } from './text-field.tsx'
+import { CodeInput } from './code-input.tsx'
+import { QuizChoice } from './quiz-choice.tsx'
+import { SearchField } from './search-field.tsx'
 import { sparkPoints, TrainingScrubber } from './training-scrubber.tsx'
 import { formatTime } from './video-player.tsx'
 
@@ -50,10 +53,11 @@ describe('Keycap', () => {
     assert.match(html, /aria-disabled="true"/)
   })
 
-  it('shows a busy caret while loading', async () => {
+  it('marks itself busy while loading, keeping the caret out of its name', async () => {
     let html = await renderToString(<Keycap loading>Sending</Keycap>)
     assert.match(html, /aria-busy="true"/)
-    assert.match(html, /▍/)
+    // The caret is CSS on [aria-busy] (so any busy submitter gets it), not text.
+    assert.match(html, /<button[^>]*>Sending<\/button>/)
   })
 
   it('exposes forced states for the style guide', async () => {
@@ -97,6 +101,44 @@ describe('TextField', () => {
     assert.match(html, /aria-invalid="true"/)
     assert.match(html, /aria-describedby="field-email-error"/)
     assert.match(html, /id="field-email-error"/)
+  })
+
+  it('keeps literal fields free of auto-capitalisation and spell-check', async () => {
+    let html = await renderToString(<TextField name="email" label="Email" type="email" enterKeyHint="send" />)
+    assert.match(html, /autocapitalize="none"/i)
+    assert.match(html, /spellcheck="false"/i)
+    assert.match(html, /enterkeyhint="send"/)
+    let prose = await renderToString(<TextField name="name" label="Name" />)
+    assert.doesNotMatch(prose, /autocapitalize|spellcheck/i)
+  })
+})
+
+describe('SearchField', () => {
+  it('keeps focus in the field when Enter re-renders the results', async () => {
+    let html = await renderToString(<SearchField action="/courses" shortcut={false} />)
+    assert.match(html, /data-rmx-reset-focus="manual"/)
+    assert.match(html, /enterkeyhint="search"/)
+  })
+})
+
+describe('QuizChoice', () => {
+  it('keeps a live region mounted and focus in place across checks', async () => {
+    let options = [{ value: 'a', label: 'A' }]
+    let fresh = await renderToString(<QuizChoice name="q" question="Q?" options={options} />)
+    assert.match(fresh, /role="status"/)
+    assert.match(fresh, /data-rmx-reset-focus="manual"/)
+    let checked = await renderToString(<QuizChoice name="q" question="Q?" options={options} explanation="Because." />)
+    assert.match(checked, /role="status"[^>]*><p[^>]*>Because\.<\/p>/)
+  })
+})
+
+describe('CodeInput (server render)', () => {
+  it('describes the field by its error and can take focus', async () => {
+    let html = await renderToString(<CodeInput name="code" error="Wrong code." autoFocus />)
+    assert.match(html, /aria-describedby="code-code-error"/)
+    assert.match(html, /aria-invalid="true"/)
+    assert.match(html, /autofocus/)
+    assert.match(html, /id="code-code-error"[^>]*>Wrong code\./)
   })
 })
 

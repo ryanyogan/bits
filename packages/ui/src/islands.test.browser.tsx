@@ -3,6 +3,8 @@ import { render } from 'remix/component/test'
 import { describe, it } from 'remix/test'
 
 import { AttentionMap } from './attention-map.tsx'
+import { CodeInput } from './code-input.tsx'
+import { PendingSubmit } from './pending-submit.tsx'
 import { NextTokenPlayer } from './next-token.tsx'
 import { OddsBars } from './odds-bars.tsx'
 import { PromptComposer } from './prompt-composer.tsx'
@@ -134,6 +136,70 @@ describe('PromptComposer', () => {
     assert.match(runs(), /Lunar lattes\./)
     assert.match(runs(), /model · T=1\.0/)
     assert.equal($('li[data-passed]')?.getAttribute('data-passed'), 'true')
+  })
+})
+
+describe('PendingSubmit', () => {
+  it('swaps its label, goes busy and locks the fields until the page is shown again', async (t) => {
+    // Keep the test page from navigating; this runs after the island's own listener.
+    let stop = (event: Event) => event.preventDefault()
+    document.addEventListener('submit', stop)
+    t.after(() => document.removeEventListener('submit', stop))
+    let { $, act, cleanup } = render(
+      <form method="post" action="/nowhere">
+        <input name="email" />
+        <PendingSubmit label="Send" pendingLabel="Sending…" />
+      </form>,
+    )
+    t.after(cleanup)
+    await act(() => tick())
+    let key = () => $('button') as HTMLButtonElement
+    let field = $('input[name="email"]') as HTMLInputElement
+
+    await act(() => ($('form') as HTMLFormElement).requestSubmit())
+    assert.equal(key().textContent, 'Sending…')
+    assert.equal(key().getAttribute('aria-busy'), 'true')
+    assert.equal(field.readOnly, true)
+
+    await act(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })))
+    assert.equal(key().textContent, 'Send')
+    assert.equal(key().getAttribute('aria-busy'), null)
+    assert.equal(field.readOnly, false)
+  })
+
+  it('ignores a submit that was already cancelled', async (t) => {
+    let { $, act, cleanup } = render(
+      <form method="post" action="/nowhere">
+        <PendingSubmit label="Send" pendingLabel="Sending…" />
+      </form>,
+    )
+    t.after(cleanup)
+    await act(() => tick())
+    let form = $('form') as HTMLFormElement
+    form.addEventListener('submit', (event) => event.preventDefault(), { capture: true })
+    await act(() => form.requestSubmit())
+    assert.equal(($('button') as HTMLButtonElement).textContent, 'Send')
+  })
+})
+
+describe('CodeInput', () => {
+  it('describes every box by the error and fills all six from a paste', async (t) => {
+    let { $, $$, act, cleanup } = render(<CodeInput name="code" error="Wrong code." />)
+    t.after(cleanup)
+    await act(() => tick())
+    let boxes = Array.from($$('input[inputmode="numeric"]')) as HTMLInputElement[]
+    assert.equal(boxes.length, 6)
+    for (let box of boxes) {
+      assert.equal(box.getAttribute('aria-describedby'), 'code-code-error')
+      assert.equal(box.getAttribute('aria-invalid'), 'true')
+    }
+    assert.equal($('#code-code-error')?.textContent, 'Wrong code.')
+
+    let data = new DataTransfer()
+    data.setData('text', '123 456')
+    await act(() => boxes[0]!.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true })))
+    await act(() => tick())
+    assert.equal(($('input[type="hidden"]') as HTMLInputElement).value, '123456')
   })
 })
 

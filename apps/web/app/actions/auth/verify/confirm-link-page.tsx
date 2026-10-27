@@ -3,7 +3,7 @@ import { css } from 'remix/component'
 import { Icon } from '@bits/ui/icon'
 
 import { routes } from '../../../routes.ts'
-import { PendingSubmit } from '../../login/public/pending-submit.tsx'
+import { PendingSubmit } from '@bits/ui/pending-submit'
 import { AuthShell, formHeadingStyle, headingGroupStyle, riseStyle, subStyle } from '../../login/ui/auth-shell.tsx'
 
 export interface ConfirmLinkPageProps {

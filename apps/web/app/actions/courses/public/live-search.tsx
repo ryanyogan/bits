@@ -49,6 +49,16 @@ export const LiveSearch = clientEntry(import.meta.url, function LiveSearch(handl
       },
       { signal: handle.signal },
     )
+    // Enter submits the form itself: drop the queued keystroke navigation,
+    // which would otherwise repeat the same search a moment later.
+    form.addEventListener(
+      'submit',
+      () => {
+        clearTimeout(timer)
+        last = field.value.trim()
+      },
+      { signal: handle.signal },
+    )
     handle.signal.addEventListener('abort', () => clearTimeout(timer))
   })
 

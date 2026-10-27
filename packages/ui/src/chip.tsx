@@ -1,7 +1,7 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
-import { FOCUS, HOVER, type ForcedState } from './lib/states.ts'
+import { FOCUS, FORCED_COLORS, forcedSelected, HOVER, type ForcedState } from './lib/states.ts'
 
 export interface ChoiceChipProps {
   /** Form field name; the chip is a real checkbox (or radio) inside a label. */
@@ -106,7 +106,7 @@ const choiceStyle = css({
   padding: '0 var(--space-3_5)',
   cursor: 'pointer',
   userSelect: 'none',
-  '&:hover, &[data-force="hover"]': { borderColor: 'var(--line-node-next)' },
+  '&:hover:not(:has(:disabled)), &[data-force="hover"]': { borderColor: 'var(--line-node-next)' },
   '&:has(:checked)': on,
   '&:has(:focus-visible), &[data-force="focus"]': {
     outline: '2px solid var(--focus-ring-color)',
@@ -114,11 +114,14 @@ const choiceStyle = css({
     boxShadow: 'var(--focus-ring)',
   },
   '&:has(:disabled)': { cursor: 'not-allowed', color: 'var(--dim)', borderColor: 'var(--line)' },
+  '&:has(:checked:disabled)': { opacity: 0.6 },
+  [FORCED_COLORS]: { '&:has(:checked)': forcedSelected },
 })
 
 const staticStyle = css({
   padding: 'var(--space-2_25) var(--space-3_5)',
   '&[data-selected="true"]': on,
+  [FORCED_COLORS]: { '&[data-selected="true"]': forcedSelected },
 })
 
 const suggestionStyle = css({

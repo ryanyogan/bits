@@ -35,6 +35,7 @@ import { OddsBars } from '@bits/ui/odds-bars'
 import { ProgressBar, SegmentedProgress } from '@bits/ui/progress-bar'
 import { ProgressRing } from '@bits/ui/progress-ring'
 import { PromptComposer } from '@bits/ui/prompt-composer'
+import { PendingSubmit } from '@bits/ui/pending-submit'
 import { ProviderButton } from '@bits/ui/provider-button'
 import { QuizChoice } from '@bits/ui/quiz-choice'
 import { RabbitHole } from '@bits/ui/rabbit-hole'
@@ -346,7 +347,7 @@ export function Catalogue(handle: Handle) {
           </div>
         </Specimen>
         <div mix={specimenGrid}>
-          <Specimen caption="Keycap — sizes, glow, loading, link">
+          <Specimen caption="Keycap — sizes, glow, pending (aria-busy), link">
             <div mix={row}>
               <Keycap size="sm">sm Copy</Keycap>
               <Keycap size="md">md Resume →</Keycap>
@@ -361,6 +362,30 @@ export function Catalogue(handle: Handle) {
                 Link keycap
               </Keycap>
             </div>
+            <div mix={row}>
+              <State label="pending · dark">
+                <Keycap variant="dark" loading>
+                  Signing out
+                </Keycap>
+              </State>
+              <State label="pending · danger">
+                <Keycap variant="danger" loading>
+                  Deleting
+                </Keycap>
+              </State>
+              <State label="pending · ghost">
+                <Keycap variant="ghost-mono" size="sm" loading>
+                  Rolling back
+                </Keycap>
+              </State>
+            </div>
+          </Specimen>
+          <Specimen caption="Pending submit (live) — any form submit marks its submitter aria-busy and drops a second POST until the navigation settles; PendingSubmit also swaps its label and makes the fields read-only">
+            <form method="get" action="/styleguide" mix={column}>
+              <input type="hidden" name="demo" value="pending" />
+              <TextField name="sg-pending-note" label="Note (read-only while pending)" value="Try me" compact />
+              <PendingSubmit label="Submit (reloads this page)" pendingLabel="Submitting…" size="md" />
+            </form>
           </Specimen>
           <Specimen caption="ToolButton — outline (34) · quiz (40) · video (40); aria-pressed">
             <div mix={stateGrid}>
@@ -487,6 +512,11 @@ export function Catalogue(handle: Handle) {
                   Disabled
                 </ChoiceChip>
               </State>
+              <State label="on · disabled">
+                <ChoiceChip name="goals" value="y" defaultChecked disabled>
+                  Locked in
+                </ChoiceChip>
+              </State>
               <State label="Chip selected">
                 <Chip selected>Agents</Chip>
               </State>
@@ -543,6 +573,16 @@ export function Catalogue(handle: Handle) {
               ]}
               value="full"
             />
+            <Switch
+              name="motion-off"
+              legend="Disabled"
+              options={[
+                { value: 'full', label: 'Full motion' },
+                { value: 'reduced', label: 'Reduced' },
+              ]}
+              value="reduced"
+              disabled
+            />
             <QuizChoice
               name="quiz-a"
               question="Same prompt at T=0 twice. Same token?"
@@ -577,7 +617,8 @@ export function Catalogue(handle: Handle) {
               <TextField name="sg-name" label="Display name" value="Jamie" forceFocus />
               <TextField name="sg-email-bad" label="Email" type="email" value="jamie@" error="Enter a full email address." mono />
               <TextField name="sg-handle" label="Handle" hint="Lowercase letters and dashes." value="jamie" />
-              <TextField name="sg-disabled" label="Disabled" value="read only" disabled />
+              <TextField name="sg-disabled" label="Disabled" value="can't edit" disabled />
+              <TextField name="sg-readonly" label="Read-only (also: pending form)" value="read only" readOnly />
               <TextField name="sg-slug" label="Course slug" compact mono value="tokens-temperature" />
             </div>
           </Specimen>
@@ -586,6 +627,7 @@ export function Catalogue(handle: Handle) {
             <SearchField action="#sg-inputs" id="sg-search-focus" label="Search courses (focused)" value="agents" forceFocus />
             <CodeInput name="sg-code" label="6-digit code" />
             <CodeInput name="sg-code-bad" label="6-digit code (error)" value="123456" error="That code didn’t match. Check the latest email." />
+            <CodeInput name="sg-code-off" label="6-digit code (disabled)" value="12" disabled />
           </Specimen>
         </div>
       </Section>

@@ -5,6 +5,8 @@ import {
 } from 'remix/multiple-import-maps-polyfill'
 import { run } from 'remix/component'
 
+import { installNavigationFeedback } from './navigation-feedback.ts'
+
 const app = run({
   async loadModule(moduleUrl, exportName) {
     let mod = await importModule(moduleUrl)
@@ -21,6 +23,9 @@ const app = run({
     return []
   },
 })
+
+// Pending forms (aria-busy submitter, no double submit) and the top progress bar.
+installNavigationFeedback(app.frames.top)
 
 // A failed enhanced navigation falls back to the browser's own (guide 12,
 // "Handle browser runtime errors at the app root"). The default resolver

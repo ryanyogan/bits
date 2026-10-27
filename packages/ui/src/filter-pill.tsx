@@ -1,7 +1,7 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
-import { FOCUS, type ForcedState } from './lib/states.ts'
+import { FOCUS, FORCED_COLORS, forcedSelected, type ForcedState } from './lib/states.ts'
 
 export interface FilterPillProps {
   /** URL with the filter applied, e.g. `?track=agents` (filters are URL state, resolutions §11). */
@@ -76,6 +76,7 @@ const pillStyle = css({
     color: 'var(--ink)',
   },
   [FOCUS]: { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  [FORCED_COLORS]: { '&[aria-current="true"]': forcedSelected },
 })
 
 const dotStyle = css({

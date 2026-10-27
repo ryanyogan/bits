@@ -188,6 +188,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                       error={err('email', 'email')}
                       autoComplete="email"
                       inputMode="email"
+                      enterKeyHint="send"
                       required
                       mono
                       autoFocus={Boolean(err('email', 'email'))}

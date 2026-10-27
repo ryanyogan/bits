@@ -2,6 +2,7 @@ import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
 import { Icon } from './icon.tsx'
+import { hiddenOutline } from './lib/states.ts'
 import { SearchShortcut } from './search-shortcut.tsx'
 
 export interface SearchFieldProps {
@@ -41,14 +42,25 @@ export function SearchField(handle: Handle<SearchFieldProps>) {
       mix,
     } = handle.props
     return (
-      <form method="get" action={action} role="search" mix={[formStyle, mix]}>
+      // Enter re-renders the results in place: keep focus in the field
+      // (the navigation's default focus reset would drop it on <body>).
+      <form method="get" action={action} role="search" data-rmx-reset-focus="manual" mix={[formStyle, mix]}>
         {hidden
           ? Object.entries(hidden).map(([key, val]) => <input key={key} type="hidden" name={key} value={val} />)
           : null}
         <label data-force={forceFocus ? 'focus' : undefined} mix={fieldStyle}>
           <Icon name="search" />
           <span class="sr-only">{label}</span>
-          <input id={id} type="search" name={name} defaultValue={value} placeholder={placeholder} mix={inputStyle} />
+          <input
+            id={id}
+            type="search"
+            name={name}
+            defaultValue={value}
+            placeholder={placeholder}
+            enterkeyhint="search"
+            autoCapitalize="none"
+            mix={inputStyle}
+          />
           {shortcut ? <SearchShortcut target={id} /> : null}
         </label>
       </form>
@@ -70,6 +82,7 @@ const fieldStyle = css({
   cursor: 'text',
   transition: 'border-color var(--duration-focus), box-shadow var(--duration-focus)',
   '&:focus-within, &[data-force="focus"]': {
+    ...hiddenOutline,
     borderColor: 'var(--volt-a60)',
     boxShadow: '0 0 0 4px var(--volt-tint)',
   },
