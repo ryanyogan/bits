@@ -150,6 +150,25 @@ the new page into the old DOM. Write for that:
 - Cover the enhanced path with an e2e test (`app/*.test.e2e.ts`, Playwright
   via `remix test`).
 
+## Accessibility (decision 031)
+
+- `app/a11y.test.e2e.ts` runs axe-core on every page type and on key
+  states at 360×800 and 1440×900, in the dark and light schemes. A serious
+  or critical violation fails `pnpm test`. When you add a page, toy or
+  state, add it there: `publicPages` for signed-out pages, or an `it` for
+  signed-in or interactive states. Run it alone with
+  `cd apps/web && NODE_ENV=test npx remix test a11y`.
+- axe is injected with `page.evaluate` (DevTools protocol), so it works
+  under the strict CSP. Never add test markup or loosen the policy for it.
+- An `aria-label` on a control with visible text must contain that text
+  (WCAG 2.5.3), e.g. `Your profile, RY` or `CC: captions`.
+- A box that scrolls sideways takes `tabIndex={0}`, plus a role and name.
+- Live regions stay rendered while empty, never `display: none`. Text that
+  is already there on load isn't announced: render it outside the region
+  and move it in after hydration (`RewardRegion`'s `initial`).
+- A page's `<main id="main">` takes `tabIndex={-1}`, so the skip link
+  moves focus into it.
+
 ## Responses (decisions 020, 027)
 
 - `app/middleware/headers.ts` adds the security headers and the HTML
