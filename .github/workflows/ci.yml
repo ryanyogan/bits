@@ -232,7 +232,7 @@ jobs:
           URL: ${{ steps.preview.outputs.url }}
         run: |
           set -euo pipefail
-          for path in /health / /courses; do
+          for path in /health / /courses /login; do
             status=000
             for _ in 1 2 3 4 5; do
               status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "${URL%/}$path" || echo 000)
@@ -252,8 +252,8 @@ jobs:
           set -euo pipefail
           marker='<!-- bits-preview -->'
           # shellcheck disable=SC2016 # the backticks are Markdown
-          body="$(printf '%s\n**Preview:** %s\n\nCommit `%s`. Runs on the shared preview database and bucket (`bits-preview-db`, `bits-preview-content`), never production data. No sign-in mail or live model runs on previews (decision 032).\n' \
-            "$marker" "$URL" "${SHA:0:12}")"
+          body="$(printf '%s\n**Preview:** %s\n\nCommit `%s`. Runs on the shared preview database and bucket (`bits-preview-db`, `bits-preview-content`), never production data. No live model runs (decision 032).\n\n**Sign in:** mail is off on previews, so the sign-in code is shown on the page (decision 038). Use a made-up address such as `you+pr%s@example.com`: anyone can sign in as any address on a preview. GitHub and Google sign-in are hidden. New accounts are learners; to test author pages, see decision 038.\n' \
+            "$marker" "$URL" "${SHA:0:12}" "$PR")"
           id="$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
             --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id" | sed -n 1p)"
           if [ -n "$id" ]; then

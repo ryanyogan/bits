@@ -4,9 +4,20 @@
 // clone and the test suite run without setup; production fails closed.
 import { platform } from '#platform'
 
+import { previewMode, type PreviewSignals } from './preview-mode.ts'
+
 const env = platform.env
 export const appEnv: string = env.APP_ENV ?? 'development'
 export const isProduction = appEnv === 'production'
+
+/**
+ * A Workers Preview (decision 038): sign-in shows its code on the page
+ * instead of mailing it, and OAuth is hidden. Read per call (not at
+ * import), so tests can switch it. The rule is in `preview-mode.ts`.
+ */
+export function isPreview(signals: PreviewSignals = env): boolean {
+  return previewMode(signals)
+}
 
 /** 30 days; renewed when a signed-in session is used (see identity.ts). */
 export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60

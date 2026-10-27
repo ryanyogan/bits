@@ -145,11 +145,14 @@
   // none of the bindings or vars above: what isn't listed here doesn't
   // exist in a Preview. Every Preview shares this one preview database and
   // bucket, so no Preview reads or writes production data. Left out on
-  // purpose: send_email (no real mail; outside production the mailer keeps
-  // it in memory), the AI Gateway vars (runs fall back to the lesson's
+  // purpose: send_email (no mail on a Preview: sign-in shows its code on the
+  // page instead, decision 038), the AI Gateway vars (runs fall back to the lesson's
   // examples), CANONICAL_ORIGIN and LEGACY_HOSTS (a Preview answers on its
   // own host). Cron triggers never run on a Preview.
   "previews": {
+    // APP_ENV=preview, no CANONICAL_ORIGIN and no send_email together turn
+    // on preview sign-in (code on the page, decision 038). The top level
+    // must never have all three; scripts/lib/preview-resources.ts checks.
     "vars": {
       "APP_ENV": "preview",
       "EMAIL_FROM": "signin@bits.yogan.dev",

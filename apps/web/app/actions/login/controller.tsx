@@ -9,6 +9,7 @@ import { startUserSession } from '../../auth/users.ts'
 import { rateLimit } from '../../middleware/rate-limit.tsx'
 import { routes } from '../../routes.ts'
 import { LoginPage, type LoginNotice } from './login-page.tsx'
+import { flashPreviewCode } from './preview-code.ts'
 import { issueField, loginForm, readGoals, readText, safeNextPath, type FormIssue, type LoginMode } from './schema.ts'
 
 export default createController(routes.login, {
@@ -66,6 +67,7 @@ export default createController(routes.login, {
           let failure = emailFailures[result.reason]
           return rerender(failure.status, { notice: { tone: failure.tone ?? 'danger', text: failure.text } })
         }
+        if (result.shownCode) flashPreviewCode(context, email, result.shownCode)
 
         return redirect(
           routes.login.check.index.href(undefined, {

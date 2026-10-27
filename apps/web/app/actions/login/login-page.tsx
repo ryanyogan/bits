@@ -5,6 +5,7 @@ import { ChoiceChip } from '@bits/ui/chip'
 import { ProviderButton } from '@bits/ui/provider-button'
 import { TextField } from '@bits/ui/text-field'
 
+import { isPreview } from '../../auth/config.ts'
 import { routes } from '../../routes.ts'
 import { PasskeyButton } from './public/passkey-button.tsx'
 import { PendingSubmit } from '@bits/ui/pending-submit'
@@ -34,12 +35,14 @@ const copy = {
     heading: 'Welcome back.',
     sub: 'Pick up exactly where you left off — mid-lesson, mid-prompt.',
     cta: 'Email me a sign-in link →',
+    previewCta: 'Get a sign-in code →',
   },
   signup: {
     title: 'Create account',
     heading: 'Make it yours.',
     sub: 'Free forever. Save your progress, streaks and every prompt you write.',
     cta: 'Create account →',
+    previewCta: 'Create account →',
   },
 } as const
 
@@ -49,6 +52,9 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
     let { mode, next, values = {}, issues, notice, unknownPasskey } = handle.props
     let signup = mode === 'signup'
     let text = copy[mode]
+    // Workers Previews (decision 038): no OAuth (the apps' callbacks are
+    // production's and previews get no client secrets) and no mail.
+    let preview = isPreview()
     let nextParam = next ? { next } : {}
     let nameError = issueFor(issues, 'displayName')?.message
     let emailError = issueFor(issues, 'email')?.message
@@ -75,18 +81,22 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
               next={next}
               unknownCredential={unknownPasskey}
             />
-            <ProviderButton
-              icon="github"
-              href={routes.auth.oauth.start.href({ provider: 'github' }, { searchParams: nextParam })}
-            >
-              Continue with GitHub
-            </ProviderButton>
-            <ProviderButton
-              icon="globe"
-              href={routes.auth.oauth.start.href({ provider: 'google' }, { searchParams: nextParam })}
-            >
-              Continue with Google
-            </ProviderButton>
+            {preview ? null : (
+              <>
+                <ProviderButton
+                  icon="github"
+                  href={routes.auth.oauth.start.href({ provider: 'github' }, { searchParams: nextParam })}
+                >
+                  Continue with GitHub
+                </ProviderButton>
+                <ProviderButton
+                  icon="globe"
+                  href={routes.auth.oauth.start.href({ provider: 'google' }, { searchParams: nextParam })}
+                >
+                  Continue with Google
+                </ProviderButton>
+              </>
+            )}
           </div>
 
           <div data-rmx-key="divider" mix={dividerStyle}>
@@ -168,11 +178,17 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
               </div>
             ) : null}
             <div data-rmx-key="submit" mix={submitWrapStyle}>
-              <PendingSubmit label={text.cta} pendingLabel="Sending…" block />
+              <PendingSubmit
+                label={preview ? text.previewCta : text.cta}
+                pendingLabel={preview ? 'Working…' : 'Sending…'}
+                block
+              />
             </div>
             {/* The terms line is the shell footer's, shared with the code step. */}
             <p data-rmx-key="note" mix={noteStyle}>
-              No passwords. We'll email you a one-time link and code.
+              {preview
+                ? 'No passwords. Mail is off on this preview, so the one-time code is shown on the next page.'
+                : "No passwords. We'll email you a one-time link and code."}
             </p>
           </form>
         </div>

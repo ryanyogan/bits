@@ -1,9 +1,11 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
+import { Callout } from '@bits/ui/callout'
 import { CodeInput } from '@bits/ui/code-input'
 import { Icon } from '@bits/ui/icon'
 import { Keycap } from '@bits/ui/keycap'
 
+import { isPreview } from '../../../auth/config.ts'
 import { routes } from '../../../routes.ts'
 import { PendingSubmit } from '@bits/ui/pending-submit'
 import { issueFor, type FormIssue, type LoginMode } from '../schema.ts'
@@ -14,6 +16,8 @@ export interface CheckEmailPageProps {
   mode?: LoginMode
   next?: string
   code?: string
+  /** On a Workers Preview, the code POST /login flashed for this browser (decision 038). */
+  previewCode?: string
   issues?: readonly FormIssue[]
   /** "Send again" posts to /login, so it carries its own bot check. */
 }
@@ -24,29 +28,51 @@ export interface CheckEmailPageProps {
  */
 export function CheckEmailPage(handle: Handle<CheckEmailPageProps>) {
   return () => {
-    let { email, mode = 'signin', next, code, issues } = handle.props
+    let { email, mode = 'signin', next, code, previewCode, issues } = handle.props
     let nextParam = next ? { next } : {}
     let error = issueFor(issues, 'code')?.message ?? issueFor(issues, 'email')?.message
+    // A Workers Preview sends no mail: the code is on this page instead.
+    let preview = isPreview()
 
     return (
-      <AuthShell title="Check your inbox" mode={mode} next={next}>
+      <AuthShell title={preview ? 'Your sign-in code' : 'Check your inbox'} mode={mode} next={next}>
         <div mix={[riseStyle, blockStyle]}>
           <div aria-hidden="true" mix={tileStyle}>
             <Icon name="mail" />
           </div>
           <div mix={headingGroupStyle}>
-            <h1 mix={[formHeadingStyle, checkHeadingStyle]}>Check your inbox.</h1>
-            <p mix={subStyle}>
-              We sent a sign-in link to <span mix={emailStyle}>{email || 'your email'}</span>. Or type the 6-digit
-              code from the email:
-            </p>
+            <h1 mix={[formHeadingStyle, checkHeadingStyle]}>{preview ? 'Enter your code.' : 'Check your inbox.'}</h1>
+            {preview ? (
+              <p mix={subStyle}>
+                Mail is off on this preview, so the code for <span mix={emailStyle}>{email || 'your email'}</span>{' '}
+                is shown here instead of emailed.
+              </p>
+            ) : (
+              <p mix={subStyle}>
+                We sent a sign-in link to <span mix={emailStyle}>{email || 'your email'}</span>. Or type the 6-digit
+                code from the email:
+              </p>
+            )}
           </div>
+
+          {preview ? (
+            <Callout tone="info" compact>
+              {previewCode ? (
+                <span>
+                  Preview sign-in code: <span mix={previewCodeStyle}>{previewCode}</span> (filled in below). Anyone can
+                  sign in to any address on a preview, so use a made-up one.
+                </span>
+              ) : (
+                'The code is shown once, right after you ask for it. Use “Send again” for a new one.'
+              )}
+            </Callout>
+          ) : null}
 
           <form method="post" action={routes.auth.verify.action.href()} mix={formStyle} noValidate>
             <input type="hidden" name="email" value={email} />
             {next ? <input type="hidden" name="next" value={next} /> : null}
             {/* The page exists to take this code: focus it (and again after a wrong one). */}
-            <CodeInput name="code" label="6-digit code" value={code} error={error} autoSubmit autoFocus />
+            <CodeInput name="code" label="6-digit code" value={code ?? previewCode} error={error} autoSubmit autoFocus />
             <div mix={actionsStyle}>
               <PendingSubmit label="Verify & continue" pendingLabel="Verifying…" grow />
               <Keycap
@@ -92,6 +118,8 @@ const tileStyle = css({
 })
 
 const checkHeadingStyle = css({ fontSize: 'var(--fs-32)', '@media (max-width: 380px)': { fontSize: 'var(--fs-28)' } })
+
+const previewCodeStyle = css({ fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.1em' })
 
 const emailStyle = css({ color: 'var(--text)', fontFamily: 'var(--font-mono)', overflowWrap: 'anywhere' })
 
