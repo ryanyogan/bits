@@ -417,6 +417,12 @@
     }
   }
 
+  /* The page's own header (a child of <body>) with a sub-bar grows the
+     sticky stack; a specimen header inside the page (styleguide) doesn't. */
+  :root:has(> body > header[data-shell="sub"]) {
+    --shell-h: calc(var(--appbar-h) + var(--lessonbar-h));
+  }
+
   /* ≤480px: 16px page gutter (tokens §7.1, proposed for 360px support). */
   @media (max-width: 480px) {
     :root {

@@ -15,13 +15,14 @@ export default createController(routes.courses.lesson, {
   actions: {
     async index(context) {
       let [catalog, completed] = await Promise.all([getCatalog(context), loadCompleted(context)])
+      let viewer = getViewer(context)
       let view = await buildLessonView(catalog, context.params.course, context.params.lesson, context.url, {
-        viewer: getViewer(context),
+        viewer,
         completed,
       })
       if (!view) {
         return context.render(
-          <LessonNotFoundPage course={context.params.course} currentPath={context.url.pathname} />,
+          <LessonNotFoundPage course={context.params.course} currentPath={context.url.pathname} viewer={viewer} />,
           { status: 404 },
         )
       }

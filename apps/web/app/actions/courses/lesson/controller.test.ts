@@ -104,6 +104,14 @@ describe('lesson page and author preview', () => {
     assert.equal((await page(lessonHref({ course: 'nope', lesson: 'temperature' }))).status, 404)
   })
 
+  it('shows the signed-in account on the lesson 404 (decision 022)', async () => {
+    let { cookie } = await signIn('lesson-404@example.com')
+    let missing = await page(lessonHref({ course: 'tokens-and-temperature', lesson: 'nope' }), cookie)
+    assert.equal(missing.status, 404)
+    assert.match(missing.html, /aria-label="Your profile"/)
+    assert.doesNotMatch(missing.html, />Start free</)
+  })
+
   it('renders the same lesson under a Draft banner for an admin', async () => {
     let { cookie } = await signIn('preview-admin@example.com', { role: 'admin' })
     let { status, html } = await page(routes.author.course.preview.href(temperature), cookie)
