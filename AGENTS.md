@@ -189,6 +189,9 @@ the new page into the old DOM. Write for that:
   (`app/middleware/rate-limit.tsx`). Tiers are bindings in
   `wrangler.jsonc`; after adding one, run `pnpm cf-typegen`.
 - Log with `log(level, message, fields)` from `app/log.ts` (JSON lines).
+- Web Analytics (decision 033): the nonced beacon renders only when the
+  `WEB_ANALYTICS_TOKEN` var is set and the request has no `Sec-GPC: 1`.
+  Keep the dashboard's automatic injection off; its copy has no nonce.
 - Browser-only packages go in `BROWSER_ONLY` in `scripts/build.ts`, so
   they never reach the Worker bundle.
 - The Worker is code-split (decision 026): wrangler uploads `build/worker`
