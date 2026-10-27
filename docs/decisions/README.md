@@ -42,3 +42,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 034 | [A pause control for the landing field (WCAG 2.2.2)](034-landing-field-pause.md) |
 | 035 | [Media skips the session; profile and author pages read in one batch](035-media-fast-path-and-batched-reads.md) |
 | 036 | [CI publishes content/courses/ to production, unchanged courses skipped](036-ci-content-publish.md) |
+| 039 | [A daily mail cap, one housekeeping batch, and error logs worth alerting on](039-mail-cap-housekeeping-monitoring.md) |

@@ -222,6 +222,18 @@ the new page into the old DOM. Write for that:
   (`app/middleware/rate-limit.tsx`). Tiers are bindings in
   `wrangler.jsonc`; after adding one, run `pnpm cf-typegen`.
 - Log with `log(level, message, fields)` from `app/log.ts` (JSON lines).
+  Decision 039 rules:
+  - `error` opens a Workers Issue, so keep it for things the owner should
+    look at.
+  - Log a request with `requestFields(request)` (method, path, `cf-ray`),
+    never its URL: query strings carry tokens and email addresses.
+    `errorFields()` redacts addresses.
+  - `logServerErrors()` in `router.ts` already logs every 5xx once, so
+    don't log the same failure again at the request level.
+- Housekeeping (decision 039): when you add a table with rows that expire,
+  add its delete to `deleteExpiredRows`
+  (`packages/db/src/queries/housekeeping.ts`), the one batch the daily cron
+  runs, and to its test.
 - Web Analytics (decision 033): the nonced beacon renders only when the
   `WEB_ANALYTICS_TOKEN` var is set and the request has no `Sec-GPC: 1`.
   Keep the dashboard's automatic injection off; its copy has no nonce.
@@ -398,6 +410,11 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   POSTs just work. Do not add token fields.
 - Mail: `sendMail` from `app/auth/mailer.ts`. Outside production it lands
   in `outbox` (dev also logs `[mail]` with the code).
+- Mail cap (decision 039): any email someone can ask for first takes a
+  slot with `reserveMail(db, purpose)` (`app/auth/mail-quota.ts`), after
+  the per-address and per-IP checks pass. It's one atomic upsert on
+  `mail_quota`, capped by `SIGNIN_MAIL_DAILY_CAP`. If it's refused, answer
+  `rate-global` (a 429 that offers passkeys, GitHub and Google).
 - Tests: sign in with `signIn(email, { role })` and request with
   `fetchAs(cookie, path)`. `remix test` runs `after` around every
   `describe`, so a file that touches D1 keeps **one flat describe** with
