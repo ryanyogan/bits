@@ -1,6 +1,8 @@
 import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
+import { FORCED_COLORS, forcedFill, forcedTrack } from './lib/states.ts'
+
 export interface OddsRow {
   token: string
   /** Probability 0–1. */
@@ -77,7 +79,7 @@ const tokenStyle = css({
   textOverflow: 'ellipsis',
   color: 'var(--text)',
 })
-const trackStyle = css({ display: 'block', height: '22px', borderRadius: 'var(--radius-xs)', background: 'var(--fill-seg)', overflow: 'hidden' })
+const trackStyle = css({ display: 'block', height: '22px', borderRadius: 'var(--radius-xs)', background: 'var(--fill-seg)', overflow: 'hidden', [FORCED_COLORS]: forcedTrack })
 const fillStyle = css({
   display: 'block',
   height: '100%',
@@ -85,9 +87,10 @@ const fillStyle = css({
   transition: 'width var(--duration-sigil) var(--ease-out), background-color var(--duration-fast)',
   '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
 })
-const topFill = css({ background: 'var(--ion)' })
-const otherFill = css({ background: 'var(--ion-a45)' })
-const pickedFill = css({ background: 'var(--volt)' })
+// Forced colours: every bar in the text colour, the picked one in Highlight.
+const topFill = css({ background: 'var(--ion)', [FORCED_COLORS]: forcedFill })
+const otherFill = css({ background: 'var(--ion-a45)', [FORCED_COLORS]: forcedFill })
+const pickedFill = css({ background: 'var(--volt)', [FORCED_COLORS]: { ...forcedFill, background: 'Highlight' } })
 const pctStyle = css({
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-13)',

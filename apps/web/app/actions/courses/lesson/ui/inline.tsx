@@ -34,4 +34,7 @@ const markStyle = css({
   background: 'var(--volt-a14)',
   padding: '0 var(--space-1)',
   borderRadius: 'var(--radius-4)',
+  // Forced colours keep the tint's alpha on the Mark colour, which leaves
+  // MarkText unreadable: paint the system pair solid (decision 025).
+  '@media (forced-colors: active)': { forcedColorAdjust: 'none', background: 'Mark', color: 'MarkText' },
 })

@@ -1,6 +1,8 @@
 import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
+import { FORCED_COLORS, forcedInlineFill, forcedTrack } from './lib/states.ts'
+
 export type ProgressBarVariant = 'card' | 'banner' | 'art' | 'row' | 'level'
 
 export interface ProgressBarProps {
@@ -38,7 +40,7 @@ export function ProgressBar(handle: Handle<ProgressBarProps>) {
   }
 }
 
-const trackStyle = css({ display: 'block', background: 'var(--fill-btn)', overflow: 'hidden', minWidth: 0 })
+const trackStyle = css({ display: 'block', background: 'var(--fill-btn)', overflow: 'hidden', minWidth: 0, [FORCED_COLORS]: forcedTrack })
 const trackVariants: Record<ProgressBarVariant, ReturnType<typeof css>> = {
   card: css({ flex: 1, height: '4px', borderRadius: 'var(--radius-2)' }),
   banner: css({ flex: 1, minWidth: '160px', height: '6px', borderRadius: 'var(--radius-3)' }),
@@ -46,7 +48,7 @@ const trackVariants: Record<ProgressBarVariant, ReturnType<typeof css>> = {
   row: css({ flex: 1, height: '5px', borderRadius: 'var(--radius-3)' }),
   level: css({ width: '100%', maxWidth: '420px', height: '8px', borderRadius: 'var(--radius-4)' }),
 }
-const fillStyle = css({ display: 'block', height: '100%' })
+const fillStyle = css({ display: 'block', height: '100%', [FORCED_COLORS]: forcedInlineFill })
 const fillVariants: Record<ProgressBarVariant, ReturnType<typeof css>> = {
   card: css({}),
   banner: css({ borderRadius: 'var(--radius-3)' }),
@@ -86,4 +88,13 @@ const segmentStyle = css({
   background: 'var(--fill-seg-off)',
   '&[data-state="done"], &[data-state="passed"]': { background: 'var(--volt)' },
   '&[data-state="current"]': { background: 'linear-gradient(90deg, var(--ion) 50%, var(--fill-seg-off) 50%)' },
+  // Forced colours: framed segments, done ones filled, the current one half filled.
+  [FORCED_COLORS]: {
+    forcedColorAdjust: 'none',
+    background: 'Canvas',
+    outline: '1px solid CanvasText',
+    outlineOffset: '-1px',
+    '&[data-state="done"], &[data-state="passed"]': { background: 'CanvasText' },
+    '&[data-state="current"]': { background: 'linear-gradient(90deg, CanvasText 50%, Canvas 50%)' },
+  },
 })

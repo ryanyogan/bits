@@ -147,6 +147,8 @@ const itemStyle = css({
   '&[data-state="done"]': { color: 'var(--muted)' },
   '&:hover': { background: 'var(--fill-hover)', color: 'var(--text)' },
   '&[aria-current="page"], &[aria-current="page"]:hover': { background: 'var(--ion-a08)', color: 'var(--text)' },
+  // Forced colours drop the tint, so the lesson you're on needs a frame (decision 025).
+  '@media (forced-colors: active)': { '&[aria-current="page"]': { outline: '2px solid Highlight', outlineOffset: '-2px' } },
 })
 const titleStyle = css({ minWidth: 0 })
 const pendingOnly = css({ display: 'contents', [PASSED]: { display: 'none' } })

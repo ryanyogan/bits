@@ -1,6 +1,8 @@
 import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
+import { FORCED_COLORS } from './lib/states.ts'
+
 export type ActivityLevel = 0 | 1 | 2 | 3
 
 export interface ActivityGridProps {
@@ -117,5 +119,15 @@ const cellStyle = css({
   '&[data-level="2"]': { background: 'var(--volt-a55)' },
   '&[data-level="3"]': { background: 'var(--volt)' },
   '&:hover': { outline: '1px solid var(--text)' },
+  // Forced colours drop the tints: framed cells, filled in steps of the text colour.
+  [FORCED_COLORS]: {
+    forcedColorAdjust: 'none',
+    background: 'Canvas',
+    outline: '1px solid GrayText',
+    outlineOffset: '-1px',
+    '&[data-level="1"]': { background: 'color-mix(in srgb, CanvasText 35%, Canvas)' },
+    '&[data-level="2"]': { background: 'color-mix(in srgb, CanvasText 65%, Canvas)' },
+    '&[data-level="3"]': { background: 'CanvasText' },
+  },
 })
 const swatchStyle = css({ width: '12px', height: '12px', '&:hover': { outline: 'none' } })

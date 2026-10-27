@@ -5,6 +5,7 @@ import { Keycap } from './keycap.tsx'
 import { TEMPERATURE_EVENT } from './odds-bars.tsx'
 import { runNote, streamRun, type RunEndpoint } from './lib/run-stream.ts'
 import { createFollower, Ghost, scrollWindowStyle, stackStyle } from './lib/stable.tsx'
+import { FORCED_COLORS, forcedMark, forcedSelected } from './lib/states.ts'
 import {
   cannedOutput,
   checkPasses,
@@ -216,7 +217,7 @@ export const TerminalLog = clientEntry(
         <section aria-label="Lesson" mix={termStyle}>
           <div mix={titleRow}>
             <span mix={tones.volt}>bits</span>
-            <span>{path}</span>
+            <span mix={pathStyle}>{path}</span>
             {progress ? <span mix={pushRight}>{progress}</span> : null}
           </div>
           <div role="log" aria-live="polite" aria-label="Session" tabIndex={0} mix={[logStyle, scrollWindowStyle, follower.mixin]}>
@@ -563,17 +564,20 @@ const termStyle = css({
   transition: 'border-color var(--duration-focus)',
   '&:focus-within': { borderColor: 'var(--volt-a55)' },
 })
+// One line at every width (the path truncates): a wrapped title row took a
+// second line from the log on phones (decision 025).
 const titleRow = css({
   display: 'flex',
   alignItems: 'center',
   gap: 'var(--space-3)',
-  flexWrap: 'wrap',
+  whiteSpace: 'nowrap',
   padding: 'var(--space-3) var(--space-4)',
   borderBottom: '1px solid var(--line-bar)',
   fontSize: 'var(--fs-12)',
   color: 'var(--muted)',
 })
-const pushRight = css({ marginLeft: 'auto' })
+const pathStyle = css({ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' })
+const pushRight = css({ marginLeft: 'auto', flexShrink: 0 })
 const logStyle = css({
   flex: 1,
   minHeight: 0,
@@ -592,7 +596,14 @@ const tutorBody = css({
   whiteSpace: 'pre-wrap',
   color: 'var(--text-body)',
   '& code': { color: 'var(--ion)', fontFamily: 'inherit' },
-  '& mark': { color: 'var(--text)', background: 'var(--volt-a14)', padding: '0 var(--space-1)', borderRadius: 'var(--radius-4)' },
+  '& mark': {
+    color: 'var(--text)',
+    background: 'var(--volt-a14)',
+    padding: '0 var(--space-1)',
+    borderRadius: 'var(--radius-4)',
+    // Forced colours keep the tint's alpha on the Mark colour: unreadable. Paint it solid.
+    [FORCED_COLORS]: forcedMark,
+  },
 })
 const pointerStyle = css({ paddingLeft: 'var(--space-4_5)', color: 'var(--muted)', '& strong': { color: 'var(--text)', fontWeight: 400 } })
 const riseStyle = css({
@@ -649,7 +660,18 @@ const promptTools = css({
   fontSize: 'var(--fs-13)',
   '@media (max-width: 480px)': { padding: 'var(--space-3) var(--space-3_5) 0' },
 })
-const checkLines = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', columnGap: 'var(--space-5)', rowGap: 'var(--space-1)' })
+// Phones: smaller and tighter, so short checks share a line and the log
+// keeps the room (decision 025).
+const checkLines = css({
+  listStyle: 'none',
+  margin: 0,
+  padding: 0,
+  display: 'flex',
+  flexWrap: 'wrap',
+  columnGap: 'var(--space-5)',
+  rowGap: 'var(--space-1)',
+  '@media (max-width: 480px)': { fontSize: 'var(--fs-12)', columnGap: 'var(--space-4)', rowGap: 0 },
+})
 const checkLine = css({
   color: 'var(--muted)',
   transition: 'color var(--duration-focus)',
@@ -673,6 +695,7 @@ const tempChip = css({
   '&:hover': { borderColor: 'var(--line-node-next)' },
   '&:has(:checked)': { background: 'var(--ion)', borderColor: 'var(--ion)', color: 'var(--ink)' },
   '&:has(:focus-visible)': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  [FORCED_COLORS]: { '&:has(:checked)': forcedSelected },
 })
 const noJsStyle = css({ margin: '0 var(--space-4) var(--space-3)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
 
