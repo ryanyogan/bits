@@ -6,6 +6,14 @@
   // Bundled by scripts/build.ts (`pnpm build`), not by wrangler: the build has
   // to rewrite each module's import.meta.url so clientEntry IDs stay unique.
   "main": "build/worker/index.js",
+  // Upload the build as is (decision 026). Re-bundling would un-minify it
+  // (~1.8 MiB) and inline the lazy chunks back into the entry. With
+  // no_bundle, wrangler finds the chunks under build/worker by these rules
+  // and uploads each as its own module; the runtime loads a chunk only when
+  // the code first imports it (the Anthropic SDK, the content compiler, the
+  // styleguide).
+  "no_bundle": true,
+  "rules": [{ "type": "ESModule", "globs": ["**/*.js"] }],
   // The newest date the installed workerd supports, so `wrangler dev` and
   // production run the same runtime semantics. Bump with wrangler upgrades.
   "compatibility_date": "2026-10-19",
