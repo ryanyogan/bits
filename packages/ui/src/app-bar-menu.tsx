@@ -2,6 +2,7 @@ import type { Handle } from 'remix/component'
 import { clientEntry, css, on } from 'remix/component'
 
 import { Icon } from './icon.tsx'
+import { prefetchFor } from './lib/prefetch.ts'
 
 export interface AppBarLink {
   href: string
@@ -57,6 +58,7 @@ export const AppBarMenu = clientEntry(
                 <a
                   key={link.href}
                   href={link.href}
+                  data-rmx-prefetch={prefetchFor(link.href)}
                   aria-current={link.href === currentPath ? 'page' : undefined}
                   mix={linkStyle}
                 >

@@ -1,6 +1,7 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
+import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
 import { ACTIVE, DISABLED, FOCUS, FORCED_COLORS, HOVER, type ForcedState } from './lib/states.ts'
 
 export type KeycapVariant = 'primary' | 'dark' | 'ghost' | 'ghost-mono' | 'inverse' | 'ion' | 'danger'
@@ -33,6 +34,8 @@ export interface KeycapProps {
   document?: boolean
   /** Links only: a file download (`download`, optionally the file name). */
   download?: boolean | string
+  /** Links only: prefetch on `intent` (default) or `viewport`; never with `document` or `download`. Decision 042. */
+  prefetch?: PrefetchProp
   type?: 'button' | 'submit' | 'reset'
   name?: string
   value?: string
@@ -71,6 +74,7 @@ export function Keycap(handle: Handle<KeycapProps>) {
       href,
       document,
       download,
+      prefetch,
       type = 'button',
       name,
       value,
@@ -103,6 +107,7 @@ export function Keycap(handle: Handle<KeycapProps>) {
           {...common}
           href={disabled ? undefined : href}
           data-rmx-document={document ? '' : undefined}
+          data-rmx-prefetch={disabled ? undefined : prefetchFor(href, prefetch, { document, download })}
           download={download === true ? '' : download || undefined}
           aria-disabled={disabled ? 'true' : undefined}
           role={disabled ? 'link' : undefined}

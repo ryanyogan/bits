@@ -2,6 +2,7 @@ import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
 import { CourseCover, type CoverPattern } from './course-cover.tsx'
+import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
 import { type ForcedState } from './lib/states.ts'
 import { toneVars, type Tone } from './lib/tone.ts'
 import { ProgressBar } from './progress-bar.tsx'
@@ -26,6 +27,8 @@ export interface CourseCardProps {
   pct?: number
   /** Heading level of the title inside the card. */
   headingLevel?: 2 | 3
+  /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
+  prefetch?: PrefetchProp
   forceState?: ForcedState
   mix?: MixInput<HTMLElement>
 }
@@ -37,13 +40,13 @@ export interface CourseCardProps {
  */
 export function CourseCard(handle: Handle<CourseCardProps>) {
   return () => {
-    let { href, title, desc, track, level, lessons, mins, sigil, tone, pattern, formats, pct = 0, headingLevel = 3, forceState, mix } =
+    let { href, title, desc, track, level, lessons, mins, sigil, tone, pattern, formats, pct = 0, headingLevel = 3, prefetch, forceState, mix } =
       handle.props
     let done = pct >= 100
     let started = pct > 0 && !done
     let heading = headingLevel === 2 ? <h2 mix={titleStyle}>{title}</h2> : <h3 mix={titleStyle}>{title}</h3>
     return (
-      <a href={href} data-force={forceState} mix={[cardStyle, toneVars[tone], mix]}>
+      <a href={href} data-rmx-prefetch={prefetchFor(href, prefetch)} data-force={forceState} mix={[cardStyle, toneVars[tone], mix]}>
         <CourseCover pattern={pattern} tone={tone} sigil={sigil}>
           <Tag variant="cover" color="var(--tone)" mix={coverTagPos}>
             {track}
@@ -159,13 +162,15 @@ export const courseGridStyle = css({
 
 export interface WriteCourseCardProps {
   href: string
+  /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
+  prefetch?: PrefetchProp
   forceState?: ForcedState
 }
 
 /** The dashed "+ .md Write a course" last grid item (components §9.3). Static. */
 export function WriteCourseCard(handle: Handle<WriteCourseCardProps>) {
   return () => (
-    <a href={handle.props.href} data-force={handle.props.forceState} mix={writeStyle}>
+    <a href={handle.props.href} data-rmx-prefetch={prefetchFor(handle.props.href, handle.props.prefetch)} data-force={handle.props.forceState} mix={writeStyle}>
       <span aria-hidden="true" mix={writeMark}>
         + .md
       </span>

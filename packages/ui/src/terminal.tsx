@@ -4,6 +4,7 @@ import { clientEntry, css, on, ref } from 'remix/component'
 import { Keycap } from './keycap.tsx'
 import { TEMPERATURE_EVENT } from './odds-bars.tsx'
 import { readDraft, writeDraft, type DraftPersist } from './lib/drafts.ts'
+import { prefetchFor } from './lib/prefetch.ts'
 import { runNote, streamRun, type RunEndpoint } from './lib/run-stream.ts'
 import { createFollower, Ghost, scrollWindowStyle, stackStyle } from './lib/stable.tsx'
 import { FORCED_COLORS, forcedMark, forcedSelected } from './lib/states.ts'
@@ -388,7 +389,7 @@ function TerminalEntryView(
           <div mix={tutorBody}>{entry.message}</div>
           {entry.next ? (
             <div mix={pointerStyle}>
-              <a href={entry.next.href} mix={nextLink}>
+              <a href={entry.next.href} data-rmx-prefetch={prefetchFor(entry.next.href)} mix={nextLink}>
                 {entry.next.label}
               </a>
             </div>

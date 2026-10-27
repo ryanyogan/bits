@@ -1,7 +1,8 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
-import { ACTIVE, DISABLED, FOCUS, FORCED_COLORS, HOVER, type ForcedState } from './lib/states.ts'
+import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
+import { FOCUS, FORCED_COLORS, HOVER, type ForcedState } from './lib/states.ts'
 
 export type NavLinkVariant = 'app' | 'marketing' | 'footer'
 
@@ -11,6 +12,8 @@ export interface NavLinkProps {
   variant?: NavLinkVariant
   /** Marks the current page: text colour + 2px volt underline (`aria-current="page"`). */
   current?: boolean
+  /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
+  prefetch?: PrefetchProp
   forceState?: ForcedState
   mix?: MixInput<HTMLElement>
   children?: RemixNode
@@ -19,10 +22,11 @@ export interface NavLinkProps {
 /** A navigation text link with a 44px hit height (components §3.2). Static. */
 export function NavLink(handle: Handle<NavLinkProps>) {
   return () => {
-    let { href, variant = 'app', current, forceState, mix, children } = handle.props
+    let { href, variant = 'app', current, prefetch, forceState, mix, children } = handle.props
     return (
       <a
         href={href}
+        data-rmx-prefetch={prefetchFor(href, prefetch)}
         aria-current={current ? 'page' : undefined}
         data-force={forceState}
         mix={[navLinkStyle, navLinkVariants[variant], mix]}

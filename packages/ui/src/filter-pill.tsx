@@ -1,6 +1,7 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
+import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
 import { FOCUS, FORCED_COLORS, forcedSelected, type ForcedState } from './lib/states.ts'
 
 export interface FilterPillProps {
@@ -11,6 +12,8 @@ export interface FilterPillProps {
   /** Result count shown after the label. */
   count?: number
   selected?: boolean
+  /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
+  prefetch?: PrefetchProp
   forceState?: ForcedState
   mix?: MixInput<HTMLElement>
   children?: RemixNode
@@ -22,10 +25,11 @@ export interface FilterPillProps {
  */
 export function FilterPill(handle: Handle<FilterPillProps>) {
   return () => {
-    let { href, dot, count, selected, forceState, mix, children } = handle.props
+    let { href, dot, count, selected, prefetch, forceState, mix, children } = handle.props
     return (
       <a
         href={href}
+        data-rmx-prefetch={prefetchFor(href, prefetch)}
         aria-current={selected ? 'true' : undefined}
         data-force={forceState}
         mix={[pillStyle, mix]}

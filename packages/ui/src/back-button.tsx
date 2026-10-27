@@ -2,12 +2,15 @@ import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
 import { Icon } from './icon.tsx'
+import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
 import { FOCUS, HOVER, type ForcedState } from './lib/states.ts'
 
 export interface BackButtonProps {
   href: string
   /** Accessible name, e.g. "Back to course". */
   label: string
+  /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
+  prefetch?: PrefetchProp
   forceState?: ForcedState
   mix?: MixInput<HTMLElement>
 }
@@ -15,9 +18,9 @@ export interface BackButtonProps {
 /** 44px chevron link in the lesson bars (components §3.4). Static. */
 export function BackButton(handle: Handle<BackButtonProps>) {
   return () => {
-    let { href, label, forceState, mix } = handle.props
+    let { href, label, prefetch, forceState, mix } = handle.props
     return (
-      <a href={href} aria-label={label} data-force={forceState} mix={[buttonStyle, mix]}>
+      <a href={href} data-rmx-prefetch={prefetchFor(href, prefetch)} aria-label={label} data-force={forceState} mix={[buttonStyle, mix]}>
         <Icon name="chevron-left" />
       </a>
     )

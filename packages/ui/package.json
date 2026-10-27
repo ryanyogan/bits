@@ -8,6 +8,7 @@
     "./styles/*.css": "./src/styles/*.css",
     "./fonts/*": "./src/fonts/*",
     "./lib/drafts": "./src/lib/drafts.ts",
+    "./lib/prefetch": "./src/lib/prefetch.ts",
     "./*": "./src/*.tsx"
   },
   "scripts": {

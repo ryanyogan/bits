@@ -1,6 +1,7 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
+import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
 import { FOCUS, FORCED_COLORS, forcedSelected, HOVER, type ForcedState } from './lib/states.ts'
 
 export interface ChoiceChipProps {
@@ -61,6 +62,8 @@ export function Chip(handle: Handle<ChipProps>) {
 
 export interface SuggestionChipProps {
   href: string
+  /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
+  prefetch?: PrefetchProp
   forceState?: ForcedState
   mix?: MixInput<HTMLElement>
   children?: RemixNode
@@ -69,9 +72,9 @@ export interface SuggestionChipProps {
 /** Link chip over the landing field (components §6.2b, `.chip-link`). Static. */
 export function SuggestionChip(handle: Handle<SuggestionChipProps>) {
   return () => {
-    let { href, forceState, mix, children } = handle.props
+    let { href, prefetch, forceState, mix, children } = handle.props
     return (
-      <a href={href} data-force={forceState} mix={[chipBase, suggestionStyle, mix]}>
+      <a href={href} data-rmx-prefetch={prefetchFor(href, prefetch)} data-force={forceState} mix={[chipBase, suggestionStyle, mix]}>
         {children}
       </a>
     )

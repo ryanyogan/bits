@@ -1,6 +1,7 @@
 import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
+import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
 import { ACTIVE, DISABLED, FOCUS, HOVER, type ForcedState } from './lib/states.ts'
 
 export interface AvatarButtonProps {
@@ -10,6 +11,8 @@ export interface AvatarButtonProps {
   /** Marks the profile page itself (`aria-current="page"`, volt face). */
   current?: boolean
   label?: string
+  /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
+  prefetch?: PrefetchProp
   forceState?: ForcedState
   mix?: MixInput<HTMLElement>
 }
@@ -20,10 +23,11 @@ export interface AvatarButtonProps {
  */
 export function AvatarButton(handle: Handle<AvatarButtonProps>) {
   return () => {
-    let { initials, href, current, label = 'Your profile', forceState, mix } = handle.props
+    let { initials, href, current, label = 'Your profile', prefetch, forceState, mix } = handle.props
     return (
       <a
         href={href}
+        data-rmx-prefetch={prefetchFor(href, prefetch)}
         // The name ends with the initials the link shows, so voice control can
         // target what it sees (WCAG 2.5.3; decision 031).
         aria-label={`${label}, ${initials}`}

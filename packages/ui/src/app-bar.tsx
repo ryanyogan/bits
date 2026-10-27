@@ -3,6 +3,7 @@ import { css } from 'remix/component'
 
 import { AppBarMenu, type AppBarLink } from './app-bar-menu.tsx'
 import { Logo } from './logo.tsx'
+import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
 import { navLinkStyle, navLinkVariants } from './nav-link.tsx'
 
 export type { AppBarLink }
@@ -81,6 +82,7 @@ export function AppBar(handle: Handle<AppBarProps>) {
               <a
                 key={link.href}
                 href={link.href}
+                data-rmx-prefetch={prefetchFor(link.href)}
                 aria-current={link.href === currentPath ? 'page' : undefined}
                 mix={[navLinkStyle, navLinkVariants[marketing ? 'marketing' : 'app']]}
               >
