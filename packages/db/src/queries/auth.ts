@@ -4,7 +4,9 @@
 // and conditional semantics are visible in one statement each. Callers hash
 // every secret before it reaches these functions (see decision 015).
 import type { D1DataTableDatabase } from '../d1/database.ts'
+import type { D1PreparedStatement } from '../d1/types.ts'
 import type { EmailTokenPurpose, OAuthProvider, User } from '../tables.ts'
+import { draftsFromRows, type DraftRow, type SavedDraft } from './drafts.ts'
 import type { CompletedLesson } from './progress.ts'
 import { userFromRawRow } from './users.ts'
 
@@ -24,6 +26,8 @@ export interface SessionRead {
   user: User | null
   /** The user's completed lessons, newest first, when asked for and signed in. */
   completed?: CompletedLesson[]
+  /** The user's drafts in one lesson, when asked for and signed in. */
+  drafts?: Record<string, SavedDraft>
 }
 
 /**
@@ -36,7 +40,7 @@ export async function readSessionWithUser(
   db: D1DataTableDatabase,
   idHash: string,
   now: number,
-  options: { completed?: boolean } = {},
+  options: { completed?: boolean; drafts?: { courseId: string; lessonSlug: string } } = {},
 ): Promise<SessionRead | null> {
   // users has no data/user_id/last_seen_at columns, so `u.*` can't shadow them.
   let sessionStatement = db.d1
@@ -48,19 +52,38 @@ export async function readSessionWithUser(
     .bind(idHash, now)
   let row: Record<string, unknown> | null | undefined
   let completed: CompletedLesson[] | undefined
+  let drafts: Record<string, SavedDraft> | undefined
+  // The session's user, for the statements batched with the session read.
+  const sessionUser = '(select user_id from sessions where id = ?1 and expires_at > ?2)'
+  let extras: D1PreparedStatement[] = []
   if (options.completed) {
     // Same columns and order as listCompletedLessons.
-    let completedStatement = db.d1
-      .prepare(
-        `select course_id, lesson_slug, completed_at from lesson_progress
-         where user_id = (select user_id from sessions where id = ? and expires_at > ?)
-           and completed_at is not null
-         order by completed_at desc`,
-      )
-      .bind(idHash, now)
-    let [sessions, lessons] = await db.batch<Record<string, unknown> & CompletedLesson>([sessionStatement, completedStatement])
+    extras.push(
+      db.d1
+        .prepare(
+          `select course_id, lesson_slug, completed_at from lesson_progress
+           where user_id = ${sessionUser} and completed_at is not null
+           order by completed_at desc`,
+        )
+        .bind(idHash, now),
+    )
+  }
+  if (options.drafts) {
+    // Same columns as loadLessonDrafts.
+    extras.push(
+      db.d1
+        .prepare(
+          `select key, value, updated_at from lesson_drafts
+           where user_id = ${sessionUser} and course_id = ?3 and lesson_slug = ?4`,
+        )
+        .bind(idHash, now, options.drafts.courseId, options.drafts.lessonSlug),
+    )
+  }
+  if (extras.length) {
+    let [sessions, ...rest] = await db.batch<Record<string, unknown>>([sessionStatement, ...extras])
     row = sessions?.results[0]
-    completed = lessons?.results
+    if (options.completed) completed = rest.shift()?.results as unknown as CompletedLesson[] | undefined
+    if (options.drafts) drafts = draftsFromRows((rest.shift()?.results ?? []) as unknown as DraftRow[])
   } else {
     row = await sessionStatement.first<Record<string, unknown>>()
   }
@@ -68,7 +91,8 @@ export async function readSessionWithUser(
   let { data, user_id, last_seen_at, ...userColumns } = row
   let session = { data, user_id, last_seen_at } as StoredSession
   let user = userColumns.id != null && userColumns.id === user_id ? userFromRawRow(userColumns) : null
-  return user && completed ? { session, user, completed } : { session, user }
+  if (!user) return { session, user }
+  return { session, user, ...(completed && { completed }), ...(drafts && { drafts }) }
 }
 
 export interface SaveSessionInput {

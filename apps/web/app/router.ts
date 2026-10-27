@@ -52,7 +52,15 @@ export const router = createRouter({
     loadDatabase(platform.env.DB),
     // Course pages show progress: a GET there reads the viewer's completed
     // lessons with the session, in one D1 round trip (decision 026).
-    loadSession({ withCompleted: (context) => context.method === 'GET' && /^\/courses(?:\/|$)/.test(context.url.pathname) }),
+    // A lesson page also brings the viewer's drafts in that lesson (decision 029).
+    loadSession({
+      withCompleted: (context) => context.method === 'GET' && /^\/courses(?:\/|$)/.test(context.url.pathname),
+      withDrafts: (context) => {
+        if (context.method !== 'GET') return undefined
+        let match = /^\/courses\/([^/]+)\/([^/]+)\/?$/.exec(context.url.pathname)
+        return match ? { courseId: decodeURIComponent(match[1]!), lessonSlug: decodeURIComponent(match[2]!) } : undefined
+      },
+    }),
     // A course folder upload is many small text files (POST /api/author/upload;
     // the DropZone sends media as names only, so videos never come through here).
     formData({ maxFiles: 300, maxFileSize: 1024 * 1024, maxTotalSize: 8 * 1024 * 1024 }),

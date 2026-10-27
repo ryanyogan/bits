@@ -11,6 +11,7 @@ import {
   updateSession,
   type CompletedLesson,
   type D1DataTableDatabase,
+  type SavedDraft,
   type User,
 } from '@bits/db'
 import { createCookie } from 'remix/cookie'
@@ -67,6 +68,7 @@ export const sessionCookie = createCookie('__Host-session', {
 // progress.ts. Both are as fresh as the session itself.
 const loadedUsers = new WeakMap<Session, User>()
 const loadedCompleted = new WeakMap<Session, { userId: string; rows: CompletedLesson[] }>()
+const loadedDrafts = new WeakMap<Session, { userId: string; lesson: string; drafts: Record<string, SavedDraft> }>()
 
 /**
  * The user read together with this session, if it is `userId`. Undefined
@@ -83,9 +85,22 @@ export function completedLoadedWith(session: Session | undefined, userId: string
   return loaded?.userId === userId ? loaded.rows : undefined
 }
 
+/** The drafts in `courseId/lessonSlug` read together with this session, if it is `userId`'s. */
+export function draftsLoadedWith(
+  session: Session | undefined,
+  userId: string,
+  courseId: string,
+  lessonSlug: string,
+): Record<string, SavedDraft> | undefined {
+  let loaded = session && loadedDrafts.get(session)
+  return loaded?.userId === userId && loaded.lesson === `${courseId}/${lessonSlug}` ? loaded.drafts : undefined
+}
+
 export interface SessionStorageOptions {
   /** Also read the signed-in user's completed lessons, in the same round trip. */
   withCompleted?: boolean
+  /** Also read the signed-in user's drafts in this lesson, in the same round trip. */
+  withDrafts?: { courseId: string; lessonSlug: string }
 }
 
 /** remix/session storage backed by the D1 `sessions` table. */
@@ -99,6 +114,7 @@ export function createD1SessionStorage(db: D1DataTableDatabase, options: Session
       if (cookie) {
         let row = await readSessionWithUser(db, await sha256Hex(cookie), Date.now(), {
           completed: options.withCompleted,
+          drafts: options.withDrafts,
         })
         if (row) {
           try {
@@ -106,6 +122,10 @@ export function createD1SessionStorage(db: D1DataTableDatabase, options: Session
             loadedIds.set(session, cookie)
             if (row.user) loadedUsers.set(session, row.user)
             if (row.user && row.completed) loadedCompleted.set(session, { userId: row.user.id, rows: row.completed })
+            if (row.user && row.drafts && options.withDrafts) {
+              let { courseId, lessonSlug } = options.withDrafts
+              loadedDrafts.set(session, { userId: row.user.id, lesson: `${courseId}/${lessonSlug}`, drafts: row.drafts })
+            }
             return session
           } catch {
             // Corrupt row: fall through to a fresh session.
@@ -150,13 +170,20 @@ export function createD1SessionStorage(db: D1DataTableDatabase, options: Session
  * after. The storage is built per request over `context.db`, so its queries
  * count toward the request's D1 meter (decision 026). `withCompleted` picks
  * the requests (pages that show progress, and never writes) whose session
- * read also brings the user's completed lessons.
+ * read also brings the user's completed lessons; `withDrafts` names the lesson
+ * whose drafts come along too (decision 029).
  */
 export function loadSession(
-  options: { withCompleted?: (context: RequestContext<any, any>) => boolean } = {},
+  options: {
+    withCompleted?: (context: RequestContext<any, any>) => boolean
+    withDrafts?: (context: RequestContext<any, any>) => { courseId: string; lessonSlug: string } | undefined
+  } = {},
 ): Middleware<{ key: typeof Session; value: Session; property: 'session' }> {
   return (context, next) => {
-    let storage = createD1SessionStorage(getDatabase(context), { withCompleted: options.withCompleted?.(context) })
+    let storage = createD1SessionStorage(getDatabase(context), {
+      withCompleted: options.withCompleted?.(context),
+      withDrafts: options.withDrafts?.(context),
+    })
     return sessionMiddleware(sessionCookie, storage)(context, next)
   }
 }

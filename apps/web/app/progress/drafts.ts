@@ -4,8 +4,10 @@
 // localStorage first and sends the newer copy here, debounced.
 import { loadLessonDrafts, saveLessonDrafts, type SavedDraft } from '@bits/db'
 import type { RequestContext } from 'remix/router'
+import { Session } from 'remix/session'
 
 import { currentUser } from '../auth/identity.ts'
+import { draftsLoadedWith } from '../auth/session.ts'
 import { getDatabase } from '../middleware/database.ts'
 
 export type { SavedDraft }
@@ -24,7 +26,11 @@ export async function loadDrafts(
 ): Promise<Record<string, SavedDraft> | undefined> {
   let user = currentUser(context)
   if (!user) return undefined
-  return loadLessonDrafts(getDatabase(context), user.id, courseId, lessonSlug)
+  // Usually read with the session (session.ts, decision 026).
+  return (
+    draftsLoadedWith(context.get(Session), user.id, courseId, lessonSlug) ??
+    loadLessonDrafts(getDatabase(context), user.id, courseId, lessonSlug)
+  )
 }
 
 export async function saveDrafts(

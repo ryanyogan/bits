@@ -21,8 +21,15 @@ export async function loadLessonDrafts(
     .prepare('select key, value, updated_at from lesson_drafts where user_id = ?1 and course_id = ?2 and lesson_slug = ?3')
     .bind(userId, courseId, lessonSlug)
     .all<{ key: string; value: string; updated_at: number }>()
+  return draftsFromRows(results)
+}
+
+export type DraftRow = { key: string; value: string; updated_at: number }
+
+/** Draft rows (key, value, updated_at) keyed for the lesson page. */
+export function draftsFromRows(rows: DraftRow[]): Record<string, SavedDraft> {
   let drafts: Record<string, SavedDraft> = {}
-  for (let row of results) drafts[row.key] = { value: row.value, at: row.updated_at }
+  for (let row of rows) drafts[row.key] = { value: row.value, at: row.updated_at }
   return drafts
 }
 

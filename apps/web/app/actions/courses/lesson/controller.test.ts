@@ -135,9 +135,9 @@ describe('lesson page and author preview', () => {
     await page(lessonHref(temperature))
     let signedOut = await page(lessonHref(temperature))
     assert.equal(signedOut.headers.get('Server-Timing'), null)
-    // Session, user and completed lessons come back in one batch.
+    // Session, user, completed lessons and the lesson's drafts come back in one batch.
     let signedIn = await page(lessonHref(temperature), user.cookie)
     assert.equal(signedIn.status, 200)
-    assert.match(signedIn.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="2 queries, 1 round trips"$/)
+    assert.match(signedIn.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="3 queries, 1 round trips"$/)
   })
 })
