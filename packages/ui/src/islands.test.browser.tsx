@@ -348,7 +348,7 @@ describe('AttentionMap', () => {
 
     await act(() => chips()[3]!.click())
     assert.equal(chips()[2]?.getAttribute('data-state'), 'to')
-    assert.match(chips()[1]?.getAttribute('aria-label') ?? '', /attention 40%/)
+    assert.match(chips()[1]?.getAttribute('aria-label') ?? '', /40% attention/)
 
     chips()[3]!.focus()
     await act(() => chips()[3]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })))

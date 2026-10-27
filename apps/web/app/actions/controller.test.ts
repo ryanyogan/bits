@@ -105,7 +105,7 @@ describe('router smoke test', () => {
     let html = await (await fetchAs(cookie, routes.styleguide.index.href())).text()
     // The page's own bar, before <main> (the specimens below show both states).
     let bar = html.slice(0, html.indexOf('<main'))
-    assert.match(bar, /aria-label="Your profile"/)
+    assert.match(bar, /aria-label="Your profile, [^"]+"/)
     assert.doesNotMatch(bar, />Start free</)
     // Specimen bars get their own menu sheet ids, and only the page's own
     // header is a direct child of <body> (it alone sets --shell-h).

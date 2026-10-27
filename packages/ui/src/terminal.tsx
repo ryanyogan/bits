@@ -413,7 +413,8 @@ function TerminalEntryView(
 /** The bordered command-output box inside the log. Static. */
 export function TerminalOutput(handle: Handle<{ lines: TerminalPart[][]; summary?: string }>) {
   return () => (
-    <div mix={outputBox}>
+    // Wide output scrolls sideways, so the box takes focus for keyboard scrolling (decision 031).
+    <div role="region" aria-label="Command output" tabIndex={0} mix={outputBox}>
       {handle.props.lines.map((line, index) => (
         <div key={index} mix={preLine}>
           {line.map(([tone, text], i) => (
@@ -614,6 +615,7 @@ const outputBox = css({
   gap: 'var(--space-0_5)',
   fontSize: 'var(--fs-13)',
   overflowX: 'auto',
+  '&:focus-visible': { outlineOffset: '-2px' },
   '@media (max-width: 480px)': { marginLeft: 0 },
 })
 const preLine = css({ whiteSpace: 'pre' })

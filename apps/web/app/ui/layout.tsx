@@ -150,7 +150,8 @@ export function Layout(handle: Handle<LayoutProps>) {
         {bare ? (
           children
         ) : (
-          <main id="main" mix={bleed ? undefined : mainStyle}>
+          // tabIndex -1: the skip link moves focus (and a screen reader's cursor) into it (decision 031).
+          <main id="main" tabIndex={-1} mix={[skipTargetStyle, bleed ? undefined : mainStyle]}>
             {children}
           </main>
         )}
@@ -184,6 +185,7 @@ const signInStyle = css({
   '@media (max-width: 420px)': { display: 'none' },
 })
 
+const skipTargetStyle = css({ '&:focus': { outline: 'none' } })
 const mainStyle = css({
   display: 'block',
   maxWidth: 'var(--page-max)',

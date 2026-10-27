@@ -139,15 +139,23 @@ export interface RewardRegionProps {
 /**
  * A polite live region that shows a RewardToast whenever an island fires
  * `bits:reward` (components §10.13: the `role="status"` container is in the
- * page before anything is inserted, so it is announced). It floats over the
- * page's bottom edge rather than taking space in the flow. Client entry.
+ * page, empty, before anything is inserted, so it is announced). It floats
+ * over the page's bottom edge rather than taking space in the flow. Client
+ * entry.
+ *
+ * An `initial` reward is in the server HTML, outside the live region (text
+ * that is already there when a page loads is never announced). Once
+ * hydrated, the region takes it over: the same toast moves into the empty
+ * live region without animating again, so screen readers hear it and the
+ * page doesn't visibly change (decision 031).
  */
 export const RewardRegion = clientEntry(
   import.meta.url,
   function RewardRegion(handle: Handle<RewardRegionProps>) {
     let count = 0
-    let initial = handle.props.initial
-    let current: (RewardEventDetail & { id: number }) | undefined = initial ? { ...initial, id: ++count } : undefined
+    // Shown outside the live region until hydration hands it over.
+    let pending: RewardEventDetail | undefined = handle.props.initial
+    let current: (RewardEventDetail & { id: number; moved?: boolean }) | undefined
 
     function dismissLater() {
       let after = handle.props.dismissAfter ?? 0
@@ -160,48 +168,73 @@ export const RewardRegion = clientEntry(
       }, after)
     }
 
-    handle.queueTask(() => {
+    function show(detail: RewardEventDetail, moved = false) {
+      pending = undefined
+      current = { ...detail, id: ++count, moved }
+      handle.update()
       dismissLater()
-      window.addEventListener(
-        REWARD_EVENT,
-        (event) => {
-          let detail = (event as CustomEvent<RewardEventDetail>).detail
-          current = { ...detail, id: ++count }
-          handle.update()
-          dismissLater()
-        },
-        { signal: handle.signal },
-      )
+    }
+
+    handle.queueTask(() => {
+      let detail = pending
+      if (detail) {
+        // A beat after load, so the announcement doesn't land while the
+        // screen reader is still reading the new page.
+        setTimeout(() => {
+          if (!handle.signal.aborted && pending === detail) show(detail, true)
+        }, HANDOVER_MS)
+      }
+      window.addEventListener(REWARD_EVENT, (event) => show((event as CustomEvent<RewardEventDetail>).detail), {
+        signal: handle.signal,
+      })
     })
 
     return () => (
-      <div role="status" mix={regionStyle}>
-        {current ? (
+      <div mix={regionStyle}>
+        {pending ? (
           <RewardToast
-            key={current.id}
-            xp={current.xp}
-            message={current.message}
-            title={current.title}
-            badge={current.badge}
-            next={current.next}
+            xp={pending.xp}
+            message={pending.message}
+            title={pending.title}
+            badge={pending.badge}
+            next={pending.next}
             animate
           />
         ) : null}
+        <div role="status">
+          {current ? (
+            <RewardToast
+              key={current.id}
+              xp={current.xp}
+              message={current.message}
+              title={current.title}
+              badge={current.badge}
+              next={current.next}
+              animate={!current.moved}
+            />
+          ) : null}
+        </div>
       </div>
     )
   },
 )
 
+/** How long an `initial` toast waits before moving into the live region. */
+const HANDOVER_MS = 400
+
 // An overlay, not a block in the flow: a reward arriving (or leaving)
-// never moves the lesson under the reader (decision 023).
+// never moves the lesson under the reader (decision 023). The live region
+// stays rendered while empty: a `display: none` region isn't in the
+// accessibility tree, so filling it may go unannounced (decision 031).
 const regionStyle = css({
   position: 'fixed',
   insetInline: 'var(--page-gutter)',
   bottom: 'var(--space-6)',
   zIndex: 'var(--z-toast)',
   display: 'flex',
-  justifyContent: 'flex-end',
+  flexDirection: 'column',
+  alignItems: 'flex-end',
   pointerEvents: 'none',
-  '& > *': { pointerEvents: 'auto', width: '100%', maxWidth: 'var(--toast-width)' },
-  '&:empty': { display: 'none' },
+  '& > *': { width: '100%', maxWidth: 'var(--toast-width)' },
+  '& > * > *, & > :not([role="status"])': { pointerEvents: 'auto' },
 })

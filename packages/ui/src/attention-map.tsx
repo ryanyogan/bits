@@ -105,7 +105,9 @@ export const AttentionMap = clientEntry(
                   type="button"
                   tabIndex={isSelected ? 0 : -1}
                   aria-pressed={isSelected ? 'true' : 'false'}
-                  aria-label={`${token.trim() || 'space'}${weight === undefined ? '' : `, attention ${formatOdds(weight)}`}`}
+                  // The name starts with the visible text (token, then weight or "from"), so
+                  // voice control can say what it sees (WCAG 2.5.3; decision 031).
+                  aria-label={`${token.trim() || 'space'}${weight === undefined ? (isSelected ? ' from' : '') : ` ${formatOdds(weight)} attention`}`}
                   data-state={isSelected ? 'from' : weight === undefined ? undefined : 'to'}
                   mix={[
                     chipStyle,
@@ -122,6 +124,8 @@ export const AttentionMap = clientEntry(
                     <span aria-hidden="true" mix={heatStyle} style={{ opacity: String(0.15 + 0.85 * weight) }} />
                   )}
                   <span mix={chipText}>{token}</span>
+                  {/* A word break between token and weight for text extraction; flex drops it from layout. */}
+                  {' '}
                   <span aria-hidden="true" mix={weightStyle}>
                     {weight === undefined ? (isSelected ? 'from' : '') : formatOdds(weight)}
                   </span>

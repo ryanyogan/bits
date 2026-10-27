@@ -353,7 +353,7 @@ describe('lesson toys (server render = the interactive first state, plus <noscri
     // Interactive first state: chips, "it" picked, "cat" tinted.
     assert.match(html, /role="toolbar"/)
     assert.match(html, /<button[^>]*aria-pressed="true"[^>]*data-state="from"/)
-    assert.match(html, /aria-label="cat, attention 70%"[^>]*data-state="to"/)
+    assert.match(html, /aria-label="cat 70% attention"[^>]*data-state="to"/)
     assert.match(html, /“it” looks most at “cat” \(70%\)/)
     let fallback = noscript(html)
     assert.match(fallback, /<table/)

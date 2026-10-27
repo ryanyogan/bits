@@ -401,7 +401,10 @@ export function createField(T: Three, options: FieldOptions): Field {
     signals.visible = netAlpha > 0.01
 
     // Cursor parallax plus a slow drift; the galaxy spins once it forms.
-    let k = ease(PARALLAX_EASE, dt)
+    // Reduced motion keeps the spec's ¼-speed drift but drops cursor
+    // parallax: motion that follows the pointer is the vestibular trigger
+    // the setting exists for (decision 031).
+    let k = reducedMotion ? 0 : ease(PARALLAX_EASE, dt)
     mouse.x += (input.pointer.x - mouse.x) * k
     mouse.y += (input.pointer.y - mouse.y) * k
     group.rotation.y =

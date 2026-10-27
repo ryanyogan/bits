@@ -248,7 +248,7 @@ const runArt = css({
   fontSize: 'var(--fs-12)',
   lineHeight: 1.75,
 })
-const gutter = css({ color: 'var(--code-gutter-faint)', textAlign: 'right', paddingRight: 'var(--space-3)', whiteSpace: 'pre' })
+const gutter = css({ color: 'var(--dim)', textAlign: 'right', paddingRight: 'var(--space-3)', whiteSpace: 'pre' })
 const codeStyle = css({ whiteSpace: 'pre', color: 'var(--text-body)', overflow: 'hidden' })
 const kw = css({ color: 'var(--synapse)' })
 const ion = css({ color: 'var(--ion)' })

@@ -33,7 +33,7 @@ describe('lesson page and author preview', () => {
     assert.match(html, /<title>Temperature &amp; randomness · Tokens &amp; temperature · Bits<\/title>/)
     assert.equal(count(html, /<h1[\s>]/), 1)
     // Keyed per lesson, so client navigation to another lesson replaces its islands (F1).
-    assert.match(html, /<main id="main" data-rmx-key="tokens-and-temperature\/temperature"/)
+    assert.match(html, /<main id="main" tabindex="-1" data-rmx-key="tokens-and-temperature\/temperature"/)
     assert.match(html, /aria-label="Lessons"/)
     // Tutor text is server-rendered, readable without JS.
     assert.match(html, /<strong[^>]*>every possible token a probability<\/strong>/)
@@ -110,7 +110,7 @@ describe('lesson page and author preview', () => {
     let { cookie } = await signIn('lesson-404@example.com')
     let missing = await page(lessonHref({ course: 'tokens-and-temperature', lesson: 'nope' }), cookie)
     assert.equal(missing.status, 404)
-    assert.match(missing.html, /aria-label="Your profile"/)
+    assert.match(missing.html, /aria-label="Your profile, [^"]+"/)
     assert.doesNotMatch(missing.html, />Start free</)
   })
 
