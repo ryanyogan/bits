@@ -72,6 +72,7 @@ pnpm db:migrate:remote
 pnpm db:seed:local        # demo user demo@bits.local / @demo, then upload + publish content/courses/*
 pnpm content validate <dir…>            # build course folders, print path:line problems
 pnpm content upload <dir…> [--publish]  # save as the next version (local; --remote for deployed)
+pnpm og                   # screenshot /cards/* into apps/web/public/og/*.png + app/ui/og-cards.generated.ts (commit both)
 pnpm cf-typegen           # regenerate apps/web/worker-configuration.d.ts after wrangler.jsonc changes
 pnpm remix:doctor         # `pnpm doctor` is pnpm's own builtin
 ```
@@ -203,7 +204,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 
 | Component | File | Key props | Kind |
 |---|---|---|---|
-| Document | document.tsx | assets, title, description, url (canonical + og:url), siteName, head | static |
+| Document | document.tsx | assets, title, description, url (canonical + og:url), siteName, image (og:image; `summary_large_image`), head | static |
 | AppBar | app-bar.tsx | brand, homeHref, links, currentPath, actions, variant, position, sub (second header row; `--appbar-h` tall, decision 022) | static |
 | AppBarMenu | app-bar-menu.tsx | links, currentPath, label (mobile sheet <760px from `--appbar-h`, native popover) | island |
 | Logo / BrandMark | logo.tsx / brand-mark.tsx | brand, href, variant / size | static |
@@ -247,8 +248,8 @@ Rationale: `docs/decisions/010-component-library.md`.
 | TokenPill / TokenizerPanel | token-pill.tsx | text, id, index / tokens, illustrative | static |
 | HexBadge / BadgeTile / BadgeChip | hex-badge.tsx | name, glyph, color, variant earned/locked/preview/chip | static |
 | ActivityGrid | activity-grid.tsx | levels (`sampleActivity()` for demos), label | static |
-| RewardToast | reward-toast.tsx | xp, message, next, variant lesson/system | static |
-| RewardRegion | reward-toast.tsx | dismissAfter; shows toasts from `announceReward()` (`bits:reward`) as a fixed overlay at the viewport's bottom (`--z-toast`, `--toast-width`), never in the flow | island |
+| RewardToast | reward-toast.tsx | xp, message, title, badge {name, glyph, color}, next, variant lesson/system | static |
+| RewardRegion | reward-toast.tsx | dismissAfter, initial (server-decided reward, in the HTML); shows toasts from `announceReward()` (`bits:reward`) as a fixed overlay at the viewport's bottom (`--z-toast`, `--toast-width`), never in the flow | island |
 | OddsBars | odds-bars.tsx | context, candidates, defaultValue (follows `bits:temperature`) | island |
 | OddsList | odds-list.tsx | rows {token, p, picked}, label, top (`formatOdds`, `showToken`) | static |
 | ToyPanel / IllustrativeTag | toy-panel.tsx | context, label, illustrative, name | static |
@@ -322,6 +323,21 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   `startUserSession` merges it at sign-in.
 - Tests: `completeLesson(cookie, course, lesson, fields)` in
   `app/test/auth.ts`.
+
+## Policies, previews, badges, certificates (decision 028)
+
+- `/terms` and `/privacy` (`app/actions/legal/`) describe what the code
+  does. Change them (and their `*_UPDATED` date) with any change to what's
+  stored, who receives it, retention, export or delete.
+- Link previews: pass `image={ogImage('course-<slug>', alt)}` to `Layout`
+  (`app/ui/og.ts`); without it a page gets the landing card. After adding a
+  course or changing its title, cover or badge, run `pnpm og` and commit.
+- Badge toast: the complete action flashes new badges
+  (`flashReward`); a page a completion can land on passes
+  `reward={takeReward(context)}` to `Layout`. Never raise one from the client.
+- Certificates (`/u/:handle/certificates/:course`) are derived from
+  `lesson_progress` and follow profile visibility; never add the email or
+  journal to them.
 
 ## Content (decision 018)
 

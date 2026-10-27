@@ -2,7 +2,10 @@ import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 
 import type { Viewer } from '../../../auth/identity.ts'
+import { APP_TITLE } from '../../../config.ts'
+import type { RewardNotice } from '../../../progress/reward.ts'
 import { routes } from '../../../routes.ts'
+import { ogImage } from '../../../ui/og.ts'
 import { Layout } from '../../../ui/layout.tsx'
 import type { CourseView } from './course-data.ts'
 import { CourseAside } from './ui/course-aside.tsx'
@@ -13,6 +16,8 @@ import { toneStyles } from './ui/tone.ts'
 export interface CoursePageProps {
   view: CourseView
   viewer: Viewer | null
+  /** A badge the last lesson completion earned (decision 028). */
+  reward?: RewardNotice
   coursesHref: string
   trackHref: string
 }
@@ -20,13 +25,15 @@ export interface CoursePageProps {
 /** `/courses/:course` (docs/design/spec/pages/Course.md). */
 export function CoursePage(handle: Handle<CoursePageProps>) {
   return () => {
-    let { view, viewer, coursesHref, trackHref } = handle.props
+    let { view, viewer, reward, coursesHref, trackHref } = handle.props
     let { course } = view
     return (
       <Layout
         title={course.title}
         description={course.desc}
         viewer={viewer}
+        reward={reward}
+        image={ogImage(`course-${course.slug}`, `${course.title}: a free ${APP_TITLE} course`)}
         currentPath={routes.courses.index.href()}
         canonicalPath={routes.courses.course.index.href({ course: course.slug })}
         bleed

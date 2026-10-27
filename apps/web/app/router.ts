@@ -25,6 +25,9 @@ import profileController from './actions/profile/controller.tsx'
 import settingsController from './actions/settings/controller.tsx'
 import styleguideController from './actions/styleguide/controller.tsx'
 import webhooksController from './actions/webhooks/controller.tsx'
+import legalController from './actions/legal/controller.tsx'
+import certificatesController from './actions/certificates/controller.tsx'
+import cardsController from './actions/cards/controller.tsx'
 import { loadAuth } from './auth/identity.ts'
 import { loadSession } from './auth/session.ts'
 import { errorFields, log } from './log.ts'
@@ -83,3 +86,6 @@ router.map(routes.author, authorController)
 router.map(routes.author.course, authorCourseController)
 router.map(routes.api, apiController)
 router.map(routes.webhooks, webhooksController)
+router.map(routes.legal, legalController)
+router.map(routes.certificates, certificatesController)
+router.map(routes.cards, cardsController)

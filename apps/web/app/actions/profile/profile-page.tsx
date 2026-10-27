@@ -124,7 +124,7 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
                     <ul mix={listStyle}>
                       {profile.courses.map((course) => (
                         <li key={course.slug}>
-                          <CourseRow course={course} own={own} />
+                          <CourseRow course={course} own={own} handle={profile.handle} />
                         </li>
                       ))}
                     </ul>

@@ -19,6 +19,7 @@
     "db:migrate:remote": "pnpm --filter @bits/web run db:migrate:remote",
     "db:seed:local": "pnpm --filter @bits/web run db:seed:local",
     "content": "pnpm --filter @bits/web run content",
+    "og": "pnpm --filter @bits/web run og",
     "remix:doctor": "pnpm --filter @bits/web run doctor",
     "cf-typegen": "pnpm --filter @bits/web run cf-typegen"
   },

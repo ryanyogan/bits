@@ -1,6 +1,7 @@
 import type { Handle, MixInput } from 'remix/component'
 import { clientEntry, css } from 'remix/component'
 
+import { HexBadge } from './hex-badge.tsx'
 import { Icon } from './icon.tsx'
 import { Keycap } from './keycap.tsx'
 
@@ -9,10 +10,21 @@ export interface RewardNext {
   label: string
 }
 
+/** A badge reward: its hex replaces the check icon (decision 028). */
+export interface RewardBadge {
+  name: string
+  glyph: string
+  /** Fill token, e.g. `var(--ion)`. */
+  color: string
+}
+
 export interface RewardToastProps {
   /** Neurons earned. */
   xp: number
   message: string
+  /** Replaces the "+40 neurons" title, e.g. "Badge earned: Few-shot". */
+  title?: string
+  badge?: RewardBadge
   next?: RewardNext
   /** `lesson` (inline after runs, 20px title, action) or `system` (compact sample). */
   variant?: 'lesson' | 'system'
@@ -24,13 +36,19 @@ export interface RewardToastProps {
 /** The volt "+40 neurons" reward (components §10.13). Static markup; islands insert it. */
 export function RewardToast(handle: Handle<RewardToastProps>) {
   return () => {
-    let { xp, message, next, variant = 'lesson', animate, mix } = handle.props
+    let { xp, message, title, badge, next, variant = 'lesson', animate, mix } = handle.props
     let system = variant === 'system'
     return (
       <div mix={[toastStyle, system ? systemStyle : lessonStyle, animate ? popStyle : undefined, mix]}>
-        <Icon name="hex-check" size={system ? 36 : 40} />
+        {badge ? (
+          <span mix={badgeStyle}>
+            <HexBadge name={badge.name} glyph={badge.glyph} color={badge.color} />
+          </span>
+        ) : (
+          <Icon name="hex-check" size={system ? 36 : 40} />
+        )}
         <div mix={textStyle}>
-          <span mix={[titleStyle, system ? systemTitle : lessonTitle]}>{`+${xp} neurons`}</span>
+          <span mix={[titleStyle, system ? systemTitle : lessonTitle]}>{title ?? `+${xp} neurons`}</span>
           <span mix={system ? systemBody : lessonBody}>{message}</span>
         </div>
         {next ? (
@@ -66,6 +84,15 @@ const popStyle = css({
   animation: 'bits-pop var(--duration-pop) var(--ease-spring) both',
   '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
 })
+// Badge fills include volt, so the hex sits on an ink tile, not on the toast.
+const badgeStyle = css({
+  flex: 'none',
+  display: 'grid',
+  placeItems: 'center',
+  padding: 'var(--space-1)',
+  borderRadius: 'var(--radius-lg)',
+  background: 'var(--ink)',
+})
 const textStyle = css({ flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', gap: 'var(--space-0_5)' })
 // "Next: <long lesson title> →" wraps instead of widening the toast past a
 // 360px column (it sits in the composer's run window).
@@ -86,6 +113,8 @@ const systemBody = css({ fontSize: 'var(--fs-14)' })
 export interface RewardEventDetail {
   xp: number
   message: string
+  title?: string
+  badge?: RewardBadge
   next?: RewardNext
 }
 
@@ -99,6 +128,12 @@ export function announceReward(detail: RewardEventDetail) {
 export interface RewardRegionProps {
   /** Hide the toast after this many ms (0 keeps it). */
   dismissAfter?: number
+  /**
+   * A reward the server decided before the page rendered (a badge from the
+   * last lesson completion). It is in the server HTML, so it shows without
+   * JS; once hydrated it dismisses like any other.
+   */
+  initial?: RewardEventDetail
 }
 
 /**
@@ -110,25 +145,30 @@ export interface RewardRegionProps {
 export const RewardRegion = clientEntry(
   import.meta.url,
   function RewardRegion(handle: Handle<RewardRegionProps>) {
-    let current: (RewardEventDetail & { id: number }) | undefined
     let count = 0
+    let initial = handle.props.initial
+    let current: (RewardEventDetail & { id: number }) | undefined = initial ? { ...initial, id: ++count } : undefined
+
+    function dismissLater() {
+      let after = handle.props.dismissAfter ?? 0
+      if (after <= 0 || !current) return
+      let id = current.id
+      setTimeout(() => {
+        if (current?.id !== id || handle.signal.aborted) return
+        current = undefined
+        handle.update()
+      }, after)
+    }
 
     handle.queueTask(() => {
+      dismissLater()
       window.addEventListener(
         REWARD_EVENT,
         (event) => {
           let detail = (event as CustomEvent<RewardEventDetail>).detail
           current = { ...detail, id: ++count }
           handle.update()
-          let after = handle.props.dismissAfter ?? 0
-          if (after > 0) {
-            let id = current.id
-            setTimeout(() => {
-              if (current?.id !== id || handle.signal.aborted) return
-              current = undefined
-              handle.update()
-            }, after)
-          }
+          dismissLater()
         },
         { signal: handle.signal },
       )
@@ -137,7 +177,15 @@ export const RewardRegion = clientEntry(
     return () => (
       <div role="status" mix={regionStyle}>
         {current ? (
-          <RewardToast key={current.id} xp={current.xp} message={current.message} next={current.next} animate />
+          <RewardToast
+            key={current.id}
+            xp={current.xp}
+            message={current.message}
+            title={current.title}
+            badge={current.badge}
+            next={current.next}
+            animate
+          />
         ) : null}
       </div>
     )

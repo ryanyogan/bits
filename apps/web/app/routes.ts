@@ -93,6 +93,24 @@ export const routes = route({
     video: post('/video'),
   }),
 
+  // Plain-language policies: actions/legal/controller.tsx (decision 028).
+  legal: {
+    terms: get('/terms'),
+    privacy: get('/privacy'),
+  },
+
+  // A shareable page per finished course (decision 028):
+  // actions/certificates/controller.tsx. Only exists once every lesson is done.
+  certificates: route('/u/:handle/certificates', {
+    show: get('/:course'),
+  }),
+
+  // Link-preview card pages, 1200×630, that `pnpm og` screenshots into
+  // public/og/*.png (decision 028): actions/cards/controller.tsx.
+  cards: route('/cards', {
+    show: get('/:card'),
+  }),
+
   // Catch-all GET for unknown pages: the least specific pattern, so every
   // route above wins. Renders the app-styled 404 (root controller).
   notFound: get('/*path'),
