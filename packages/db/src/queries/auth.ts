@@ -4,7 +4,9 @@
 // and conditional semantics are visible in one statement each. Callers hash
 // every secret before it reaches these functions (see decision 015).
 import type { D1DataTableDatabase } from '../d1/database.ts'
-import type { OAuthProvider } from '../tables.ts'
+import type { OAuthProvider, User } from '../tables.ts'
+import type { CompletedLesson } from './progress.ts'
+import { userFromRawRow } from './users.ts'
 
 // ---------------------------------------------------------------------------
 // Sessions (the D1 store behind remix/session)
@@ -16,16 +18,57 @@ export interface StoredSession {
   last_seen_at: number
 }
 
-/** Reads an unexpired session row by the hash of its id. */
-export async function readSession(
+export interface SessionRead {
+  session: StoredSession
+  /** The signed-in user; null when the session is signed out. */
+  user: User | null
+  /** The user's completed lessons, newest first, when asked for and signed in. */
+  completed?: CompletedLesson[]
+}
+
+/**
+ * Reads an unexpired session row by the hash of its id, with its signed-in
+ * user in the same statement. With `completed`, the user's completed lessons
+ * come in the same batch. Either way it is one D1 round trip where the
+ * session, then the user, then progress used to be three (decision 026).
+ */
+export async function readSessionWithUser(
   db: D1DataTableDatabase,
   idHash: string,
   now: number,
-): Promise<StoredSession | null> {
-  return db.d1
-    .prepare('select data, user_id, last_seen_at from sessions where id = ? and expires_at > ?')
+  options: { completed?: boolean } = {},
+): Promise<SessionRead | null> {
+  // users has no data/user_id/last_seen_at columns, so `u.*` can't shadow them.
+  let sessionStatement = db.d1
+    .prepare(
+      `select s.data, s.user_id, s.last_seen_at, u.*
+       from sessions s left join users u on u.id = s.user_id
+       where s.id = ? and s.expires_at > ?`,
+    )
     .bind(idHash, now)
-    .first<StoredSession>()
+  let row: Record<string, unknown> | null | undefined
+  let completed: CompletedLesson[] | undefined
+  if (options.completed) {
+    // Same columns and order as listCompletedLessons.
+    let completedStatement = db.d1
+      .prepare(
+        `select course_id, lesson_slug, completed_at from lesson_progress
+         where user_id = (select user_id from sessions where id = ? and expires_at > ?)
+           and completed_at is not null
+         order by completed_at desc`,
+      )
+      .bind(idHash, now)
+    let [sessions, lessons] = await db.batch<Record<string, unknown> & CompletedLesson>([sessionStatement, completedStatement])
+    row = sessions?.results[0]
+    completed = lessons?.results
+  } else {
+    row = await sessionStatement.first<Record<string, unknown>>()
+  }
+  if (!row) return null
+  let { data, user_id, last_seen_at, ...userColumns } = row
+  let session = { data, user_id, last_seen_at } as StoredSession
+  let user = userColumns.id != null && userColumns.id === user_id ? userFromRawRow(userColumns) : null
+  return user && completed ? { session, user, completed } : { session, user }
 }
 
 export interface SaveSessionInput {

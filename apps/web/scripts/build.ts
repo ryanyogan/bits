@@ -9,6 +9,10 @@
 //    render pages, keyed by repo-relative module path.
 // 3. Worker: esbuild bundles worker.ts with the `workerd` condition (so
 //    `#platform` resolves to platform.worker.ts) and the manifest inlined.
+//    Code splitting puts dynamic imports (the Anthropic SDK, the content
+//    compiler, the styleguide) in build/worker/chunks/; wrangler uploads them
+//    as separate modules (`no_bundle` + `rules` in wrangler.jsonc), which the
+//    runtime loads only when first imported (decision 026).
 //
 // See docs/decisions/002-workers-asset-strategy.md.
 import * as fs from 'node:fs/promises'
@@ -26,6 +30,7 @@ import {
   repoRoot,
   stylesheets,
 } from '../app/platform/asset-plan.ts'
+import { packManifest } from '../app/platform/packed-manifest.ts'
 import type { AssetManifest } from '../app/platform/types.ts'
 
 const buildDir = path.join(appDir, 'build')
@@ -293,8 +298,10 @@ const anthropicNodeShims: esbuild.Plugin = {
 
 async function buildWorker(manifest: AssetManifest) {
   let result = await esbuild.build({
-    entryPoints: [path.join(appDir, 'worker.ts')],
-    outfile: path.join(workerDir, 'index.js'),
+    entryPoints: { index: path.join(appDir, 'worker.ts') },
+    outdir: workerDir,
+    splitting: true,
+    chunkNames: 'chunks/[name]-[hash]',
     bundle: true,
     format: 'esm',
     platform: 'neutral',
@@ -312,7 +319,7 @@ async function buildWorker(manifest: AssetManifest) {
     metafile: true,
     legalComments: 'none',
     define: {
-      __BITS_ASSET_MANIFEST__: JSON.stringify(manifest),
+      __BITS_ASSET_MANIFEST__: JSON.stringify(packManifest(manifest)),
       'process.env.NODE_ENV': '"production"',
     },
     plugins: [stableImportMetaUrl, anthropicNodeShims, browserOnly],
@@ -331,8 +338,21 @@ async function buildWorker(manifest: AssetManifest) {
     BROWSER_ONLY.some((name) => input.includes(`/node_modules/${name}/`)),
   )
   if (leaked.length) throw new Error(`Browser-only packages leaked into the Worker: ${leaked.slice(0, 3).join(', ')}`)
-  let size = (await fs.stat(path.join(workerDir, 'index.js'))).size
-  console.log(`worker: ${(size / 1024).toFixed(0)} KiB`)
+  let kib = (bytes: number) => `${(bytes / 1024).toFixed(0)} KiB`
+  let scripts = Object.entries(result.metafile.outputs).filter(([file]) => file.endsWith('.js'))
+  // Startup = the entry plus every chunk it imports statically.
+  let startup = new Set<string>()
+  let pending = scripts.filter(([file]) => path.basename(file) === 'index.js' && !file.includes('chunks')).map(([file]) => file)
+  for (let file of pending) {
+    if (startup.has(file)) continue
+    startup.add(file)
+    for (let imported of result.metafile.outputs[file]!.imports) {
+      if (imported.kind === 'import-statement' && !imported.external) pending.push(imported.path)
+    }
+  }
+  let bytes = (files: string[]) => files.reduce((sum, file) => sum + result.metafile.outputs[file]!.bytes, 0)
+  let all = scripts.map(([file]) => file)
+  console.log(`worker: ${kib(bytes([...startup]))} loaded at startup, ${kib(bytes(all))} in ${all.length} modules`)
   if (nodeImports.size) console.log(`worker node: imports: ${[...nodeImports].join(', ')}`)
 }
 

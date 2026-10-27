@@ -14,7 +14,7 @@ export type OAuthProvider = (typeof oauthProviders)[number]
 
 // D1 stores booleans as 0/1 and JSON as text. The driver encodes on write;
 // these afterRead hooks decode on read so rows come back as their TS types.
-function decodeJsonArray(value: unknown): unknown {
+export function decodeJsonArray(value: unknown): unknown {
   if (typeof value !== 'string') return value
   try {
     let parsed: unknown = JSON.parse(value)
@@ -24,7 +24,7 @@ function decodeJsonArray(value: unknown): unknown {
   }
 }
 
-function decodeBoolean(value: unknown): unknown {
+export function decodeBoolean(value: unknown): unknown {
   return typeof value === 'number' ? value !== 0 : value
 }
 

@@ -4,10 +4,21 @@
 // SESSION_SECRET. D1 keys the row by the SHA-256 of that id, so a database
 // leak cannot replay a session. Rows are written only when the session
 // changes: an anonymous visitor who never signs in costs no writes.
-import { deleteSession, insertSession, readSession, updateSession, type D1DataTableDatabase } from '@bits/db'
+import {
+  deleteSession,
+  insertSession,
+  readSessionWithUser,
+  updateSession,
+  type CompletedLesson,
+  type D1DataTableDatabase,
+  type User,
+} from '@bits/db'
 import { createCookie } from 'remix/cookie'
 import { session as sessionMiddleware } from 'remix/middleware/session'
-import { createSession, type Session, type SessionStorage } from 'remix/session'
+import type { Middleware, RequestContext } from 'remix/router'
+import { createSession, Session, type SessionStorage } from 'remix/session'
+
+import { getDatabase } from '../middleware/database.ts'
 
 import { SESSION_MAX_AGE_SECONDS, sessionSecrets } from './config.ts'
 import { sha256Hex } from './crypto.ts'
@@ -50,8 +61,35 @@ export const sessionCookie = createCookie('__Host-session', {
   maxAge: SESSION_MAX_AGE_SECONDS,
 })
 
+// What was read with each session in its one round trip (decision 026): the
+// user row, for identity.ts to verify against instead of querying users
+// again, and on pages that show progress, the completed lessons for
+// progress.ts. Both are as fresh as the session itself.
+const loadedUsers = new WeakMap<Session, User>()
+const loadedCompleted = new WeakMap<Session, { userId: string; rows: CompletedLesson[] }>()
+
+/**
+ * The user read together with this session, if it is `userId`. Undefined
+ * when the session wasn't read from D1 this request or holds someone else.
+ */
+export function userLoadedWith(session: Session | undefined, userId: string): User | undefined {
+  let user = session && loadedUsers.get(session)
+  return user?.id === userId ? user : undefined
+}
+
+/** The completed lessons read together with this session, if it is `userId`'s. */
+export function completedLoadedWith(session: Session | undefined, userId: string): CompletedLesson[] | undefined {
+  let loaded = session && loadedCompleted.get(session)
+  return loaded?.userId === userId ? loaded.rows : undefined
+}
+
+export interface SessionStorageOptions {
+  /** Also read the signed-in user's completed lessons, in the same round trip. */
+  withCompleted?: boolean
+}
+
 /** remix/session storage backed by the D1 `sessions` table. */
-export function createD1SessionStorage(db: D1DataTableDatabase): SessionStorage {
+export function createD1SessionStorage(db: D1DataTableDatabase, options: SessionStorageOptions = {}): SessionStorage {
   // The id each session was read from D1 under. Saving a session with that id
   // updates its row; any other id (fresh, or rotated at sign-in) is inserted.
   let loadedIds = new WeakMap<Session, string>()
@@ -59,11 +97,15 @@ export function createD1SessionStorage(db: D1DataTableDatabase): SessionStorage 
   return {
     async read(cookie) {
       if (cookie) {
-        let row = await readSession(db, await sha256Hex(cookie), Date.now())
+        let row = await readSessionWithUser(db, await sha256Hex(cookie), Date.now(), {
+          completed: options.withCompleted,
+        })
         if (row) {
           try {
-            let session = createSession(cookie, JSON.parse(row.data))
+            let session = createSession(cookie, JSON.parse(row.session.data))
             loadedIds.set(session, cookie)
+            if (row.user) loadedUsers.set(session, row.user)
+            if (row.user && row.completed) loadedCompleted.set(session, { userId: row.user.id, rows: row.completed })
             return session
           } catch {
             // Corrupt row: fall through to a fresh session.
@@ -103,7 +145,18 @@ export function createD1SessionStorage(db: D1DataTableDatabase): SessionStorage 
   }
 }
 
-/** Router middleware: loads the session onto `context.session`, saves it after. */
-export function loadSession(db: D1DataTableDatabase) {
-  return sessionMiddleware(sessionCookie, createD1SessionStorage(db))
+/**
+ * Router middleware: loads the session onto `context.session`, saves it
+ * after. The storage is built per request over `context.db`, so its queries
+ * count toward the request's D1 meter (decision 026). `withCompleted` picks
+ * the requests (pages that show progress, and never writes) whose session
+ * read also brings the user's completed lessons.
+ */
+export function loadSession(
+  options: { withCompleted?: (context: RequestContext<any, any>) => boolean } = {},
+): Middleware<{ key: typeof Session; value: Session; property: 'session' }> {
+  return (context, next) => {
+    let storage = createD1SessionStorage(getDatabase(context), { withCompleted: options.withCompleted?.(context) })
+    return sessionMiddleware(sessionCookie, storage)(context, next)
+  }
 }

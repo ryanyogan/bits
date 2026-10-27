@@ -5,7 +5,13 @@
 //
 // Today: Claude Haiku 5.5 through Cloudflare AI Gateway's Anthropic
 // endpoint, with the official SDK pointed at the gateway.
-import Anthropic from '@anthropic-ai/sdk'
+//
+// The SDK is imported lazily, on the first live run: it is about a quarter
+// of the Worker bundle, and an isolate that never runs a prompt shouldn't
+// pay to load it (decision 026).
+import type Anthropic from '@anthropic-ai/sdk'
+
+type AnthropicSdk = typeof Anthropic
 
 /** What the model module needs from the Worker env (vars + secrets). */
 export interface ModelEnv {
@@ -87,10 +93,18 @@ export function modelConfigured(env: ModelEnv): boolean {
  * credentials of its own (the SDK's default chain reads ANTHROPIC_* env vars
  * and local config files, and would add a Bearer token).
  */
-class GatewayAnthropic extends Anthropic {
-  protected override _shouldResolveDefaultCredentials(): boolean {
-    return false
+let sdk: { Sdk: AnthropicSdk; GatewayAnthropic: AnthropicSdk } | undefined
+
+async function gatewayClientClass(): Promise<{ Sdk: AnthropicSdk; GatewayAnthropic: AnthropicSdk }> {
+  if (sdk) return sdk
+  let { default: Sdk } = await import('@anthropic-ai/sdk')
+  class GatewayAnthropic extends Sdk {
+    protected override _shouldResolveDefaultCredentials(): boolean {
+      return false
+    }
   }
+  sdk = { Sdk, GatewayAnthropic }
+  return sdk
 }
 
 /**
@@ -121,6 +135,7 @@ export async function runModel({ prompt, temperature, signal, env }: RunModelInp
   if (!runsLive(temperature)) throw new Error(`T=${temperature / 100} does not run live`)
   if (!modelConfigured(env)) throw new ModelError('unconfigured')
 
+  let { Sdk, GatewayAnthropic } = await gatewayClientClass()
   let client = new GatewayAnthropic({
     // null: never read ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN from the environment.
     apiKey: env.ANTHROPIC_API_KEY || null,
@@ -149,7 +164,7 @@ export async function runModel({ prompt, temperature, signal, env }: RunModelInp
   try {
     await message.withResponse()
   } catch (error) {
-    throw toModelError(error)
+    throw toModelError(Sdk, error)
   }
 
   // A cut-off reply has no final message; count what the stream reported.
@@ -179,7 +194,7 @@ export async function runModel({ prompt, temperature, signal, env }: RunModelInp
   return { stream, model: LIVE_MODEL, usage }
 }
 
-function toModelError(error: unknown): ModelError {
+function toModelError(Anthropic: AnthropicSdk, error: unknown): ModelError {
   if (error instanceof Anthropic.RateLimitError) return new ModelError('rate-limited', { cause: error })
   if (error instanceof Anthropic.AuthenticationError || error instanceof Anthropic.PermissionDeniedError) {
     // A bad key or gateway token is a config bug, not an outage: say so in the logs.

@@ -12,7 +12,8 @@ import {
   type ReportItem,
 } from '@bits/db'
 
-import { formatItem } from '../../content/compile/index.ts'
+// report.ts, not the compile index: the Worker loads the compiler lazily.
+import { formatItem } from '../../content/compile/report.ts'
 import { loadManifest } from '../../content/store.ts'
 import { tracks, type CourseInfo, type CourseManifest } from '../../content/types.ts'
 

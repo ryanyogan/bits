@@ -162,6 +162,12 @@ the new page into the old DOM. Write for that:
 - Log with `log(level, message, fields)` from `app/log.ts` (JSON lines).
 - Browser-only packages go in `BROWSER_ONLY` in `scripts/build.ts`, so
   they never reach the Worker bundle.
+- The Worker is code-split (decision 026): wrangler uploads `build/worker`
+  as built (`no_bundle`), one module per chunk. Code that only a rare route
+  or action needs (the content compiler, the Anthropic SDK, the
+  styleguide) is loaded with `await import()` where it's used, so it
+  stays out of startup. `pnpm build` prints the startup size; check it
+  when you add a heavy dependency.
 
 ## Building components (packages/ui)
 
@@ -294,6 +300,12 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   `docs/decisions/003-data-table-on-d1.md`).
 - Typed query helpers go in `src/queries/<area>.ts` and take the `Database`
   as their first argument.
+- Round trips (decision 026): every response that touched D1 carries
+  `Server-Timing: db;dur=…;desc="N queries, M round trips"` (dev and
+  production; `curl -I` shows it). Run independent reads in parallel or in
+  one `db.batch`, never as sequential awaits. The session read already
+  brings the user (`readSessionWithUser`) and, on `GET /courses…`, the
+  completed lessons, so a signed-in lesson page is one round trip.
 
 ## Auth (decision 015)
 
@@ -359,7 +371,9 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   the interactive view on the client. Valid and broken examples:
   `content/fixtures/toys/` and `content/fixtures/broken-toys/`.
 - Read published content with `const catalog = await getCatalog(context)`
-  (`app/content/request.ts`, one D1 query per request), then
+  (`app/content/request.ts`; an isolate memo, stale-while-revalidate, 5 s
+  fresh and 60 s at most, so usually no D1 query; change the live pointer
+  only through `publishVersion`, which drops the memo; decision 026), then
   `catalog.getCourse/listCourses/getLesson/getContinue` and
   `await catalog.lessonContent(course, lesson)`. Never read R2 directly in
   a page; `store.ts` memoises immutable versions per isolate.

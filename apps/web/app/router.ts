@@ -1,4 +1,3 @@
-import { createD1Database } from '@bits/db'
 import { cop } from 'remix/middleware/cop'
 import { formData } from 'remix/middleware/form-data'
 import { render } from 'remix/middleware/render'
@@ -35,9 +34,6 @@ import { loadDatabase } from './middleware/database.ts'
 import { responseHeaders } from './middleware/headers.ts'
 import { routes } from './routes.ts'
 
-// One data-table wrapper per isolate; it holds no per-request state.
-const db = createD1Database(platform.env.DB)
-
 export const router = createRouter({
   middleware: [
     // Outermost, so every response gets the security and cache headers.
@@ -46,12 +42,14 @@ export const router = createRouter({
     // Rejects cross-origin POSTs (Sec-Fetch-Site, then Origin). Webhooks are
     // server-to-server and verify their own signatures. See decision 015.
     cop({ insecureBypassPatterns: ['POST /webhooks/{provider}'] }),
-    loadDatabase(db),
-    loadSession(db),
+    loadDatabase(platform.env.DB),
+    // Course pages show progress: a GET there reads the viewer's completed
+    // lessons with the session, in one D1 round trip (decision 026).
+    loadSession({ withCompleted: (context) => context.method === 'GET' && /^\/courses(?:\/|$)/.test(context.url.pathname) }),
     // A course folder upload is many small text files (POST /api/author/upload;
     // the DropZone sends media as names only, so videos never come through here).
     formData({ maxFiles: 300, maxFileSize: 1024 * 1024, maxTotalSize: 8 * 1024 * 1024 }),
-    loadAuth(db),
+    loadAuth(),
     // Streaming render failures happen after the first byte, past worker.ts's
     // catch, so they are reported here (guide 12).
     render({

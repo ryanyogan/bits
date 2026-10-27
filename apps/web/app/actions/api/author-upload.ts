@@ -12,7 +12,7 @@ import { redirect } from 'remix/response/redirect'
 import type { RequestContext } from 'remix/router'
 
 import { canAuthor, currentUser } from '../../auth/identity.ts'
-import { buildCourse, type SourceFile } from '../../content/compile/index.ts'
+import type { SourceFile } from '../../content/compile/index.ts'
 import { contentBucket } from '../../content/request.ts'
 import { saveBuild } from '../../content/store.ts'
 import { getDatabase } from '../../middleware/database.ts'
@@ -59,6 +59,9 @@ export async function authorUpload(context: RequestContext<any, any>): Promise<R
   if (roots.length > MAX_COURSES) return json({ error: 'too_many_courses', message: `Upload at most ${MAX_COURSES} courses at once.` }, 422)
 
   let db = getDatabase(context)
+  // The compiler (markdown, YAML) loads on the first upload, not with every
+  // isolate (decision 026).
+  let { buildCourse } = await import('../../content/compile/index.ts')
   let builds = roots.map((root) => {
     let prefix = root ? `${root}/` : ''
     // A file belongs to the deepest course folder that holds it.

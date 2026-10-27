@@ -2,7 +2,7 @@
 // where it comes from (request context in the app, a fixture in tests).
 import type { Database } from 'remix/data-table'
 
-import { users, type User, type UserRole, type UserRow } from '../tables.ts'
+import { decodeBoolean, decodeJsonArray, users, type User, type UserRole, type UserRow } from '../tables.ts'
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase()
@@ -22,6 +22,11 @@ export function normalizeHandle(input: string): string {
 
 function toUser(row: UserRow): User {
   return { ...row, goals: Array.isArray(row.goals) ? (row.goals as string[]) : [] }
+}
+
+/** A raw `select * from users` row (D1 types: 0/1, JSON text) as a User, like data-table's afterRead. */
+export function userFromRawRow(row: Record<string, unknown>): User {
+  return toUser({ ...row, goals: decodeJsonArray(row.goals), is_public: decodeBoolean(row.is_public) } as UserRow)
 }
 
 export async function findUserById(db: Database, id: string): Promise<User | null> {

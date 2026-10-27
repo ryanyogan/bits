@@ -3,12 +3,13 @@
 import { env, waitUntil } from 'cloudflare:workers'
 import type { Middleware } from 'remix/router'
 
-import type { AppAssets, AssetManifest, Platform } from './types.ts'
+import { unpackManifest, type PackedManifest } from './packed-manifest.ts'
+import type { AppAssets, Platform } from './types.ts'
 
-/** Injected by scripts/build.ts (esbuild `define`) from the asset build. */
-declare const __BITS_ASSET_MANIFEST__: AssetManifest
+/** Injected by scripts/build.ts (esbuild `define`) from the asset build, packed. */
+declare const __BITS_ASSET_MANIFEST__: PackedManifest
 
-const manifest = __BITS_ASSET_MANIFEST__
+const manifest = unpackManifest(__BITS_ASSET_MANIFEST__)
 
 const assets: AppAssets = {
   entry: manifest.entry,

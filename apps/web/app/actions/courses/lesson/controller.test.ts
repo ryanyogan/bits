@@ -129,4 +129,15 @@ describe('lesson page and author preview', () => {
     assert.equal(response.status, 303)
     assert.match(response.headers.get('Location') ?? '', /\/login/)
   })
+  it('costs a signed-in lesson one D1 round trip, and a signed-out one none (decision 026)', async () => {
+    let user = await signIn('roundtrips@example.com')
+    // Warm the isolate's live catalog; after that, a page doesn't read it from D1.
+    await page(lessonHref(temperature))
+    let signedOut = await page(lessonHref(temperature))
+    assert.equal(signedOut.headers.get('Server-Timing'), null)
+    // Session, user and completed lessons come back in one batch.
+    let signedIn = await page(lessonHref(temperature), user.cookie)
+    assert.equal(signedIn.status, 200)
+    assert.match(signedIn.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="2 queries, 1 round trips"$/)
+  })
 })

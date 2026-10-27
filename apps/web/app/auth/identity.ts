@@ -1,7 +1,7 @@
 // Request identity: resolves the session's user record into `context.auth`
 // (remix/middleware/auth), protects routes, and maps the user to the
 // `Viewer` the pages render.
-import { findUserById, type D1DataTableDatabase, type User } from '@bits/db'
+import { findUserById, type User } from '@bits/db'
 import { auth, Auth, createSessionAuthScheme, requireAuth, type AuthState } from 'remix/middleware/auth'
 import { redirect } from 'remix/response/redirect'
 import type { RequestContext } from 'remix/router'
@@ -9,7 +9,8 @@ import { Session } from 'remix/session'
 
 import { currentStreak } from '../progress/days.ts'
 import { routes } from '../routes.ts'
-import { readUserRecord, USER_KEY, type UserRecord } from './session.ts'
+import { getDatabase } from '../middleware/database.ts'
+import { readUserRecord, USER_KEY, userLoadedWith, type UserRecord } from './session.ts'
 
 /** The signed-in user as page chrome shows them. */
 export interface Viewer {
@@ -30,20 +31,23 @@ export interface Viewer {
 const RENEW_AFTER_MS = 24 * 60 * 60 * 1000
 
 /** Router middleware: `context.auth` is `{ ok: true, identity: User }` when signed in. */
-export function loadAuth(db: D1DataTableDatabase) {
+export function loadAuth() {
   return auth({
     schemes: [
       createSessionAuthScheme<User, UserRecord>({
         name: 'session',
         read: (session) => readUserRecord(session),
         async verify(record, context) {
-          let user = await findUserById(db, record.userId)
+          // Usually read with the session row (session.ts); the lookup is
+          // the fallback for a session that didn't come from D1 this request.
+          let session = context.get(Session)
+          let user = userLoadedWith(session, record.userId) ?? (await findUserById(getDatabase(context), record.userId))
           if (!user) return null
           let now = Date.now()
           if (now - record.seenAt > RENEW_AFTER_MS) {
             // Dirtying the session makes the store extend the row and the
             // middleware re-send the cookie with a fresh 30-day Max-Age.
-            context.get(Session)?.set(USER_KEY, { ...record, seenAt: now })
+            session?.set(USER_KEY, { ...record, seenAt: now })
           }
           return user
         },
