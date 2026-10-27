@@ -25,7 +25,7 @@ import { Icon, iconNames } from '@bits/ui/icon'
 import { Kbd } from '@bits/ui/kbd'
 import { KeyValueList } from '@bits/ui/key-value-list'
 import { Keycap, type KeycapVariant } from '@bits/ui/keycap'
-import { LessonBar } from '@bits/ui/lesson-bar'
+import { LessonBar, LessonModes } from '@bits/ui/lesson-bar'
 import { LessonNode, LessonNodeRow, lessonListStyle } from '@bits/ui/lesson-node'
 import { LiveDot } from '@bits/ui/live-dot'
 import { Logo } from '@bits/ui/logo'
@@ -167,6 +167,50 @@ export function Catalogue(handle: Handle) {
                   <Keycap href="#sg-nav">Start free</Keycap>
                 </>
               }
+            />
+          </div>
+        </Specimen>
+        <Specimen caption="App shell (decision 022) — on lesson pages the LessonBar is the AppBar's sub-bar (position shell): one sticky header, same bar as every page. Under 760px the sub-bar keeps back + title and LessonModes carries the tabs + progress.">
+          <div mix={barFrame}>
+            <AppBar
+              brand={APP_NAME}
+              homeHref="#sg-nav"
+              links={navLinks}
+              currentPath="#sg-nav"
+              position="static"
+              navLabel="App (shell sample)"
+              actions={
+                <>
+                  <XpPill neurons={1240} />
+                  <StreakPill days={12} />
+                  <AvatarButton initials="JR" href="#sg-nav" />
+                </>
+              }
+              sub={
+                <LessonBar
+                  position="shell"
+                  backHref="#sg-nav"
+                  context="Tokens & temperature · Lesson 6 of 8"
+                  title="Temperature & randomness"
+                  segments={['done', 'done', 'done', 'done', 'done', 'current', 'upcoming', 'upcoming']}
+                  progressLabel="Lesson 6 of 8, 5 complete (shell sample)"
+                  modes={[
+                    { label: 'Read', href: '#sg-nav', current: true },
+                    { label: 'Watch', href: '#sg-nav-w' },
+                    { label: 'Terminal', href: '#sg-nav-t' },
+                  ]}
+                />
+              }
+            />
+            <LessonModes
+              segments={['done', 'done', 'done', 'done', 'done', 'current', 'upcoming', 'upcoming']}
+              progressLabel="Lesson 6 of 8, 5 complete (modes sample)"
+              modes={[
+                { label: 'Read', href: '#sg-nav', current: true },
+                { label: 'Watch', href: '#sg-nav-w' },
+                { label: 'Terminal', href: '#sg-nav-t' },
+              ]}
+              mix={modesSample}
             />
           </div>
         </Specimen>
@@ -1001,6 +1045,7 @@ const iconBox = css({
   '&[data-on="volt"]': { background: 'var(--volt)' },
 })
 const iconName = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-11)', color: 'var(--muted)' })
+const modesSample = css({ padding: 'var(--space-3) var(--page-gutter)' })
 const barFrame = css({ borderRadius: 'var(--radius-12)', overflow: 'hidden', border: '1px solid var(--line)', background: 'var(--ink)' })
 const stateGrid = css({ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-4) var(--space-5)', alignItems: 'flex-start' })
 const matrix = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', overflowX: 'auto', paddingBottom: 'var(--space-2)' })

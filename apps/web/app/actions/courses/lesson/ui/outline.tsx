@@ -4,6 +4,7 @@ import { LessonNode } from '@bits/ui/lesson-node'
 
 import type { LessonView } from '../lesson-view.ts'
 import { PASSED_ROOT } from '../public/lesson-state.ts'
+import { OutlineScroll } from '../public/outline-scroll.tsx'
 
 const stateText = { done: 'completed', current: 'in progress', next: 'not started' } as const
 
@@ -60,14 +61,24 @@ function OutlineList(handle: Handle<{ view: LessonView }>) {
   }
 }
 
-/** Desktop sidebar (≥760px). */
+/**
+ * Desktop sidebar (≥760px). Sticky under the header stack (`--shell-h`) at
+ * the screen's height, so it stays put while the lesson scrolls; a long
+ * outline scrolls inside it (decision 022).
+ */
 export function OutlineNav(handle: Handle<{ view: LessonView }>) {
-  return () => (
-    <nav aria-label="Lessons" mix={navStyle}>
-      <h2 mix={headingStyle}>In this course</h2>
-      <OutlineList view={handle.props.view} />
-    </nav>
-  )
+  return () => {
+    let { view } = handle.props
+    return (
+      <nav aria-label="Lessons" mix={navStyle}>
+        <h2 mix={headingStyle}>In this course</h2>
+        <OutlineList view={view} />
+        <span data-rmx-key={view.key} hidden>
+          <OutlineScroll />
+        </span>
+      </nav>
+    )
+  }
 }
 
 /** Mobile (<760px, resolutions §8): a closed-by-default disclosure above the content. No JS. */
@@ -95,12 +106,19 @@ const MOBILE = '@media (max-width: 759px)'
 const navStyle = css({
   flex: '1 1 260px',
   maxWidth: '320px',
+  position: 'sticky',
+  top: 'var(--shell-h)',
+  height: 'calc(100dvh - var(--shell-h))',
+  overflowY: 'auto',
+  overscrollBehavior: 'contain',
+  scrollbarWidth: 'thin',
+  // Keyboard focus moving through a long outline stays clear of its edges.
+  scrollPaddingBlock: 'var(--space-4)',
   padding: 'var(--space-7) var(--space-4)',
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--space-1)',
   borderRight: '1px solid var(--line-hair)',
-  alignSelf: 'stretch',
   [MOBILE]: { display: 'none' },
 })
 const headingStyle = css({

@@ -1,14 +1,11 @@
 import type { Handle } from 'remix/component'
 import { css, unsafeHTML } from 'remix/component'
-import { Document } from '@bits/ui/document'
 import { Keycap } from '@bits/ui/keycap'
-import { LessonBar } from '@bits/ui/lesson-bar'
+import { LessonBar, LessonModes } from '@bits/ui/lesson-bar'
 import type { SegmentState } from '@bits/ui/progress-bar'
 
-import { platform } from '#platform'
-
-import { APP_NAME, pageTitle } from '../../../config.ts'
-import { canonicalUrl } from '../../../ui/layout.tsx'
+import { routes } from '../../../routes.ts'
+import { Layout } from '../../../ui/layout.tsx'
 import { exercisesOf, hasCode } from './content.ts'
 import { lessonAward, type LessonMode, type LessonView } from './lesson-view.ts'
 import { LessonComplete } from './public/lesson-complete.tsx'
@@ -26,6 +23,9 @@ const modeLabels: Record<LessonMode, string> = { read: 'Read', watch: 'Watch', t
  * A lesson in Read, Watch or Terminal mode (Lesson + CodeLesson artboards).
  * The author preview renders this same page with a Draft banner. Lesson text
  * is server-rendered; only the islands the lesson's blocks need hydrate.
+ *
+ * The shell is the app's (decision 022): the sticky AppBar with the lesson
+ * sub-bar as its second row, and the reward XP island in the bar's XP slot.
  */
 export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[] }>) {
   return () => {
@@ -38,37 +38,39 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[] 
     let done = view.lessons.filter((l) => l.state === 'done').length
     let award = lesson.state === 'done' ? 0 : lessonAward(view)
     let gated = exercisesOf(content).length > 0
-    let title = pageTitle(`${content.title} · ${course.title}${view.draft ? ' (draft)' : ''}`)
+    let modeItems = modes.map((m) => ({ label: modeLabels[m], href: view.href.mode(m), current: m === mode }))
+    let progressLabel = `Lesson ${view.index + 1} of ${view.total}, ${done} complete`
 
     return (
-      <Document
-        assets={platform.assets}
-        title={title}
+      <Layout
+        title={`${content.title} · ${course.title}${view.draft ? ' (draft)' : ''}`}
         description={`Lesson ${view.index + 1} of ${view.total} in ${course.title}.`}
-        url={view.draft ? undefined : canonicalUrl(view.href.lesson(lesson.slug))}
-        siteName={APP_NAME}
+        canonicalPath={view.draft ? undefined : view.href.lesson(lesson.slug)}
+        currentPath={view.draft ? routes.author.index.href() : routes.courses.index.href()}
         head={<style innerHTML={unsafeHTML(pageStyles)} />}
+        viewer={viewer}
+        xp={
+          viewer ? (
+            <span data-rmx-key={view.key} mix={contentsStyle}>
+              <LessonXp neurons={viewer.xp} award={award} />
+            </span>
+          ) : undefined
+        }
+        sub={
+          <LessonBar
+            position="shell"
+            backHref={view.href.back}
+            backLabel={view.draft ? 'Back to the build' : 'Back to course'}
+            context={`${course.title} · Lesson ${view.index + 1} of ${view.total}`}
+            title={content.title}
+            titleAs="h1"
+            segments={segments}
+            progressLabel={progressLabel}
+            modes={modeItems}
+          />
+        }
+        bare
       >
-        <a href="#main" mix={skipLinkStyle}>
-          Skip to content
-        </a>
-        <LessonBar
-          backHref={view.href.back}
-          backLabel={view.draft ? 'Back to the build' : 'Back to course'}
-          context={`${course.title} · Lesson ${view.index + 1} of ${view.total}`}
-          title={content.title}
-          titleAs="h1"
-          segments={segments}
-          progressLabel={`Lesson ${view.index + 1} of ${view.total}, ${done} complete`}
-          modes={modes.map((m) => ({ label: modeLabels[m], href: view.href.mode(m), current: m === mode }))}
-          xp={
-            viewer ? (
-              <span data-rmx-key={view.key} mix={contentsStyle}>
-                <LessonXp neurons={viewer.xp} award={award} />
-              </span>
-            ) : undefined
-          }
-        />
         {view.draft ? (
           <p mix={draftStyle}>
             <span>{`DRAFT · ${view.draft.version} preview — not visible to learners`}</span>
@@ -79,6 +81,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[] 
         ) : null}
         {mode === 'terminal' ? (
           <main id="main" data-rmx-key={view.key} mix={workspaceMain}>
+            <LessonModes segments={segments} progressLabel={progressLabel} modes={modeItems} />
             <TerminalMode view={view} />
             <div mix={hasCode(content) ? undefined : soloFooter}>
               <LessonFooter view={view} gated={gated} issues={issues} />
@@ -88,6 +91,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[] 
           <div mix={bodyStyle}>
             <OutlineNav view={view} />
             <main id="main" data-rmx-key={view.key} mix={mainStyle}>
+              <LessonModes segments={segments} progressLabel={progressLabel} modes={modeItems} />
               <OutlineDisclosure view={view} />
               {mode === 'watch' ? <WatchMode view={view} /> : <ReadMode view={view} />}
               <div mix={mode === 'watch' ? watchFooter : readFooter}>
@@ -96,7 +100,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[] 
             </main>
           </div>
         )}
-      </Document>
+      </Layout>
     )
   }
 }
@@ -143,23 +147,12 @@ const MOBILE = '@media (max-width: 759px)'
 // The same lesson (a quiz GET, a 422 re-render) keeps its state.
 const contentsStyle = css({ display: 'contents' })
 
-const skipLinkStyle = css({
-  position: 'absolute',
-  left: 'var(--space-4)',
-  top: '-100px',
-  zIndex: 10,
-  padding: 'var(--space-3) var(--space-4)',
-  borderRadius: 'var(--radius-sm)',
-  background: 'var(--volt)',
-  color: 'var(--on-volt)',
-  '&:focus': { top: 'var(--space-4)' },
-})
 // Page-level overrides in the `app` layer (decision 007). Each css() mixin
 // gets its own `rmx` sublayer, so overrides that reach into another
 // component's markup can't win from a mixin. Static, trusted CSS.
 const pageStyles = `@layer app {
   /* The open lesson's progress segment fills volt once its checks pass. */
-  ${PASSED_ROOT} header [role="img"] > [data-state="current"] { background: var(--volt); }
+  ${PASSED_ROOT} [data-lesson-progress] [data-state="current"] { background: var(--volt); }
   /* Watch: the VideoPlayer island's player + transcript join the watch row,
      so the transcript sits under the video beside the side card (as drawn). */
   [data-watch] > div:first-child { display: contents; }
@@ -189,10 +182,13 @@ const draftLink = css({
   color: 'var(--warn)',
   '&:hover': { color: 'var(--text)' },
 })
+// The outline + lesson share the AppBar's column (decision 022).
 const bodyStyle = css({
-  flex: 1,
   display: 'flex',
   alignItems: 'flex-start',
+  width: '100%',
+  maxWidth: 'var(--page-max)',
+  margin: '0 auto',
   [MOBILE]: { display: 'block' },
 })
 const mainStyle = css({

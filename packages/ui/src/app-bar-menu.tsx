@@ -92,9 +92,14 @@ const buttonStyle = css({
 })
 
 const sheetStyle = css({
-  // A full-width sheet that drops from under the bar.
+  // A full-width sheet that drops from under the bar's top row (the bar is
+  // pinned at the top, `--appbar-h` tall; decision 022). It covers a lesson
+  // sub-bar, and scrolls itself on a short screen.
   position: 'fixed',
-  inset: 'var(--appbar-h, 73px) 0 auto 0',
+  inset: 'var(--appbar-h) 0 auto 0',
+  maxHeight: 'calc(100dvh - var(--appbar-h))',
+  overflowY: 'auto',
+  overscrollBehavior: 'contain',
   width: '100%',
   maxWidth: 'none',
   margin: 0,
