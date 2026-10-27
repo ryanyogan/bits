@@ -222,6 +222,18 @@ the new page into the old DOM. Write for that:
   (`app/middleware/rate-limit.tsx`). Tiers are bindings in
   `wrangler.jsonc`; after adding one, run `pnpm cf-typegen`.
 - Log with `log(level, message, fields)` from `app/log.ts` (JSON lines).
+  Decision 039 rules:
+  - `error` opens a Workers Issue, so keep it for things the owner should
+    look at.
+  - Log a request with `requestFields(request)` (method, path, `cf-ray`),
+    never its URL: query strings carry tokens and email addresses.
+    `errorFields()` redacts addresses.
+  - `logServerErrors()` in `router.ts` already logs every 5xx once, so
+    don't log the same failure again at the request level.
+- Housekeeping (decision 039): when you add a table with rows that expire,
+  add its delete to `deleteExpiredRows`
+  (`packages/db/src/queries/housekeeping.ts`), the one batch the daily cron
+  runs, and to its test.
 - Web Analytics (decision 033): the nonced beacon renders only when the
   `WEB_ANALYTICS_TOKEN` var is set and the request has no `Sec-GPC: 1`.
   Keep the dashboard's automatic injection off; its copy has no nonce.
@@ -259,6 +271,12 @@ the new page into the old DOM. Write for that:
   islands by scanning for it), and the function must be named. Keep islands
   small: the server-rendered parent passes them props, as in
   `app-bar-menu.tsx`.
+- Links take `prefetch` and render `data-rmx-prefetch={prefetchFor(...)}`
+  (`lib/prefetch.ts`, also `@bits/ui/lib/prefetch` for app code) after
+  `aria-current`. Same-origin page links prefetch on intent; document,
+  download, external, OAuth and side-effect links never do (decision 042).
+  Borders use `--border-w`, focus uses `focusOutline`, control heights use
+  `--control-*`; busy buttons use `busyStyle` from `lib/states.ts`.
 - Server-only components (no browser JS) are the default. `Document`,
   `AppBar` and `Keycap` are examples.
 - Do not import Node APIs or app code from `packages/ui`. The app passes
@@ -279,18 +297,18 @@ Rationale: `docs/decisions/010-component-library.md`.
 | CspNonce / cspNonce | csp-nonce.tsx | nonce (provider; the app's renderer wraps every page) / `cspNonce(handle)` reads it | static |
 | AppBar | app-bar.tsx | brand, homeHref, links, currentPath, actions, variant, position, sub (second header row; `--appbar-h` tall, decision 022) | static |
 | AppBarMenu | app-bar-menu.tsx | links, currentPath, label (mobile sheet <760px from `--appbar-h`, native popover) | island |
-| Logo / BrandMark | logo.tsx / brand-mark.tsx | brand, href, variant / size | static |
-| NavLink | nav-link.tsx | href, variant, current | static |
+| Logo / BrandMark | logo.tsx / brand-mark.tsx | brand, href, variant, prefetch / size | static |
+| NavLink | nav-link.tsx | href, variant, current, prefetch | static |
 | Icon | icon.tsx | name (`iconNames`), size, color, label | static |
-| Keycap | keycap.tsx | variant primary/dark/ghost/ghost-mono/inverse/ion, size sm/md/lg, href, document, download, type, loading, glow, block, disabled | static |
+| Keycap | keycap.tsx | variant primary/dark/ghost/ghost-mono/inverse/ion, size sm/md/lg, href, document, download, type, loading, glow, block, disabled, prefetch (links; dropped with document/download/disabled) | static |
 | PendingSubmit | pending-submit.tsx | label, pendingLabel, variant, size, block, grow, name, value | island |
-| ToolButton | tool-button.tsx | variant outline/quiz/video, square, label, pressed | static |
-| ProviderButton | provider-button.tsx | icon, href (always data-rmx-document) or type/name/value, busy | static |
-| BackButton | back-button.tsx | href, label | static |
+| ToolButton | tool-button.tsx | variant outline/quiz/video, square, label, pressed (busy caret on aria-busy) | static |
+| ProviderButton | provider-button.tsx | icon, href (always data-rmx-document, never prefetched) or type/name/value, busy (caret via busyStyle) | static |
+| BackButton | back-button.tsx | href, label, prefetch | static |
 | SegmentedTabs / StaticTabs | segmented-tabs.tsx | label, items, flavour mode/account / items, selected, size | static (URL tabs) |
 | TabPanels | tab-panels.tsx | label, items {name, label, panel}, defaultTab, flavour | island (@remix-run/ui tabs) |
-| ChoiceChip / Chip / SuggestionChip | chip.tsx | name, value, type, defaultChecked / selected / href | static |
-| FilterPill | filter-pill.tsx | href, dot, count, selected | static |
+| ChoiceChip / Chip / SuggestionChip | chip.tsx | name, value, type, defaultChecked / selected / href, prefetch | static |
+| FilterPill | filter-pill.tsx | href, dot, count, selected, prefetch | static |
 | Tag | tag.tsx | variant, color | static |
 | TextField | text-field.tsx | name, label, type, value, error, hint, mono, compact, enterKeyHint, autoCapitalize, spellCheck | static |
 | SearchField | search-field.tsx | action, name, value, label, shortcut | static |
@@ -307,10 +325,10 @@ Rationale: `docs/decisions/010-component-library.md`.
 | EmptyState | empty-state.tsx | title, hint, action | static |
 | LiveDot | live-dot.tsx | tone, pulse | static |
 | Footer | footer.tsx | brand, homeHref, links, copyright | static |
-| XpPill / StreakPill / AvatarButton | xp-pill.tsx / streak-pill.tsx / avatar-button.tsx | neurons / days / initials, href, current | static |
+| XpPill / StreakPill / AvatarButton | xp-pill.tsx / streak-pill.tsx / avatar-button.tsx | neurons / days / initials, href, current, prefetch | static |
 | CourseCover / Sigil | course-cover.tsx | pattern (8 `coverPatterns`), tone volt/ion/synapse, sigil, variant card/banner/art/thumb | static |
-| CourseCard / WriteCourseCard | course-card.tsx | href, title, desc, level, lessons, mins, sigil, tone, pattern, formats, pct | static |
-| ContinueBanner | continue-banner.tsx | href, courseTitle, nextLesson, mins, pct, sigil, tone, pattern | static |
+| CourseCard / WriteCourseCard | course-card.tsx | href, title, desc, level, lessons, mins, sigil, tone, pattern, formats, pct, prefetch | static |
+| ContinueBanner | continue-banner.tsx | href, courseTitle, nextLesson, mins, pct, sigil, tone, pattern, prefetch | static |
 | ProgressBar / SegmentedProgress | progress-bar.tsx | pct, variant card/banner/art/row/level, color, label / segments | static |
 | ProgressRing | progress-ring.tsx | pct, size 96/132, color, caption, label | static |
 | LessonNode / LessonNodeRow | lesson-node.tsx | state done/current/next, size, n, passed / state, badge | static |
@@ -398,6 +416,11 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   POSTs just work. Do not add token fields.
 - Mail: `sendMail` from `app/auth/mailer.ts`. Outside production it lands
   in `outbox` (dev also logs `[mail]` with the code).
+- Mail cap (decision 039): any email someone can ask for first takes a
+  slot with `reserveMail(db, purpose)` (`app/auth/mail-quota.ts`), after
+  the per-address and per-IP checks pass. It's one atomic upsert on
+  `mail_quota`, capped by `SIGNIN_MAIL_DAILY_CAP`. If it's refused, answer
+  `rate-global` (a 429 that offers passkeys, GitHub and Google).
 - Tests: sign in with `signIn(email, { role })` and request with
   `fetchAs(cookie, path)`. `remix test` runs `after` around every
   `describe`, so a file that touches D1 keeps **one flat describe** with

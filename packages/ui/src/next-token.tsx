@@ -249,7 +249,7 @@ const sentenceStyle = css({
   padding: 'var(--space-3_5) var(--space-4)',
   borderRadius: 'var(--radius-lg)',
   background: 'var(--well)',
-  border: '1px solid var(--line-panel)',
+  border: 'var(--border-w) solid var(--line-panel)',
   fontSize: 'var(--fs-18)',
   lineHeight: 1.5,
   color: 'var(--text)',
@@ -280,7 +280,7 @@ const controlsStyle = css({
   gap: 'var(--space-2)',
   flexWrap: 'wrap',
   paddingTop: 'var(--space-3)',
-  borderTop: '1px solid var(--line-hair)',
+  borderTop: 'var(--border-w) solid var(--line-hair)',
   '& > button': { width: 'var(--touch-target)', minHeight: 'var(--touch-target)', fontSize: 'var(--fs-18)' },
 })
 // Under reduced motion there is no Play: only the step buttons.

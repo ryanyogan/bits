@@ -146,7 +146,7 @@ const coverStyle = css({
 })
 
 const coverVariants = {
-  card: css({ height: '170px', borderBottom: '1px solid var(--line-hair)' }),
+  card: css({ height: '170px', borderBottom: 'var(--border-w) solid var(--line-hair)' }),
   banner: css({ minHeight: '200px' }),
   art: css({
     containerType: 'inline-size',
@@ -154,7 +154,7 @@ const coverVariants = {
     maxWidth: '100%',
     aspectRatio: '1',
     borderRadius: 'var(--radius-28)',
-    border: `1px solid ${toneAlpha(30)}`,
+    border: `var(--border-w) solid ${toneAlpha(30)}`,
     boxShadow: `0 40px 120px ${toneAlpha(12)}`,
   }),
   thumb: css({ flex: 'none', width: '64px', height: '64px', borderRadius: 'var(--radius-lg)' }),

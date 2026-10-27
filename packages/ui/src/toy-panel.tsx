@@ -65,7 +65,7 @@ export const toyPanelStyle = css({
   padding: 'var(--space-5_5)',
   borderRadius: 'var(--radius-xl)',
   background: 'var(--surface)',
-  border: '1px solid var(--ion-a28)',
+  border: 'var(--border-w) solid var(--ion-a28)',
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--space-4_5)',
@@ -85,7 +85,7 @@ const labelRow = css({ display: 'inline-flex', alignItems: 'baseline', gap: 'var
 const illustrativeStyle = css({
   padding: 'var(--space-0_5) var(--space-1_5)',
   borderRadius: 'var(--radius-xs)',
-  border: '1px solid var(--line-strong)',
+  border: 'var(--border-w) solid var(--line-strong)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-11)',
   color: 'var(--muted)',
@@ -106,8 +106,8 @@ export const toyTableStyle = css({
     fontSize: 'var(--fs-12)',
     color: 'var(--muted)',
     padding: 'var(--space-1_5) var(--space-2)',
-    borderBottom: '1px solid var(--line)',
+    borderBottom: 'var(--border-w) solid var(--line)',
   },
-  '& td': { padding: 'var(--space-1_5) var(--space-2)', borderBottom: '1px solid var(--line-hair)', color: 'var(--text-body)', verticalAlign: 'top' },
+  '& td': { padding: 'var(--space-1_5) var(--space-2)', borderBottom: 'var(--border-w) solid var(--line-hair)', color: 'var(--text-body)', verticalAlign: 'top' },
   '& td[data-mono]': { fontFamily: 'var(--font-mono)', whiteSpace: 'pre-wrap' },
 })

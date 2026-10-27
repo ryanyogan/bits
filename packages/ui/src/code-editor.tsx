@@ -275,7 +275,7 @@ const editorStyle = css({
   minWidth: 0,
   borderRadius: 'var(--radius-xl)',
   background: 'var(--well)',
-  border: '1px solid var(--line-glass)',
+  border: 'var(--border-w) solid var(--line-glass)',
   overflow: 'hidden',
   boxShadow: 'var(--shadow-editor)',
 })
@@ -284,7 +284,7 @@ const toolbarStyle = css({
   display: 'flex',
   alignItems: 'stretch',
   flexWrap: 'wrap',
-  borderBottom: '1px solid var(--line-bar)',
+  borderBottom: 'var(--border-w) solid var(--line-bar)',
   background: 'var(--ink)',
 })
 const fileTabsStyle = css({ display: 'flex', fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', overflowX: 'auto' })
@@ -293,9 +293,9 @@ const fileTabStyle = css({
   alignItems: 'center',
   gap: 'var(--space-2)',
   padding: '0 var(--space-4)',
-  minHeight: '46px',
+  minHeight: 'var(--control-md)',
   border: 0,
-  borderRight: '1px solid var(--line-bar)',
+  borderRight: 'var(--border-w) solid var(--line-bar)',
   background: 'transparent',
   color: 'var(--muted)',
   font: 'inherit',
@@ -304,7 +304,7 @@ const fileTabStyle = css({
   '&:last-child': { borderRight: 0 },
   '&:hover': { color: 'var(--text)' },
   '&[aria-selected="true"]': { background: 'var(--well)', color: 'var(--text)', boxShadow: 'var(--tab-active-top)' },
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '-2px' },
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
 })
 const badgeIon = css({ color: 'var(--ion)' })
 const badgeMuted = css({ color: 'var(--muted)' })
@@ -322,7 +322,7 @@ const bannerStyle = css({
   flexWrap: 'wrap',
   padding: 'var(--space-2_5) var(--space-4)',
   background: 'var(--volt-a08)',
-  borderBottom: '1px solid var(--volt-a25)',
+  borderBottom: 'var(--border-w) solid var(--volt-a25)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',
   color: 'var(--volt-soft)',
@@ -336,7 +336,7 @@ const panelStyle = css({ minWidth: 0, '&[hidden]': { display: 'block', visibilit
 const codeAreaStyle = css({
   overflowX: 'auto',
   padding: 'var(--space-3_5) 0 var(--space-4_5)',
-  '&:focus-visible': { outlineOffset: '-2px' },
+  '&:focus-visible': { outlineOffset: 'var(--focus-offset-inset)' },
 })
 const codeInner = css({
   minWidth: '560px',
@@ -407,7 +407,7 @@ const statusStyle = css({
   gap: 'var(--space-4)',
   flexWrap: 'wrap',
   padding: 'var(--space-2) var(--space-4)',
-  borderTop: '1px solid var(--line-bar)',
+  borderTop: 'var(--border-w) solid var(--line-bar)',
   background: 'var(--ink)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',

@@ -2,7 +2,8 @@ import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
 import { CourseCover, type CoverPattern } from './course-cover.tsx'
-import { type ForcedState } from './lib/states.ts'
+import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
+import { focusOutline, type ForcedState } from './lib/states.ts'
 import { toneVars, type Tone } from './lib/tone.ts'
 import { ProgressBar } from './progress-bar.tsx'
 import { Tag } from './tag.tsx'
@@ -26,6 +27,8 @@ export interface CourseCardProps {
   pct?: number
   /** Heading level of the title inside the card. */
   headingLevel?: 2 | 3
+  /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
+  prefetch?: PrefetchProp
   forceState?: ForcedState
   mix?: MixInput<HTMLElement>
 }
@@ -37,13 +40,13 @@ export interface CourseCardProps {
  */
 export function CourseCard(handle: Handle<CourseCardProps>) {
   return () => {
-    let { href, title, desc, track, level, lessons, mins, sigil, tone, pattern, formats, pct = 0, headingLevel = 3, forceState, mix } =
+    let { href, title, desc, track, level, lessons, mins, sigil, tone, pattern, formats, pct = 0, headingLevel = 3, prefetch, forceState, mix } =
       handle.props
     let done = pct >= 100
     let started = pct > 0 && !done
     let heading = headingLevel === 2 ? <h2 mix={titleStyle}>{title}</h2> : <h3 mix={titleStyle}>{title}</h3>
     return (
-      <a href={href} data-force={forceState} mix={[cardStyle, toneVars[tone], mix]}>
+      <a href={href} data-rmx-prefetch={prefetchFor(href, prefetch)} data-force={forceState} mix={[cardStyle, toneVars[tone], mix]}>
         <CourseCover pattern={pattern} tone={tone} sigil={sigil}>
           <Tag variant="cover" color="var(--tone)" mix={coverTagPos}>
             {track}
@@ -97,7 +100,7 @@ const cardStyle = css({
   borderRadius: 'var(--radius-20)',
   overflow: 'hidden',
   background: 'var(--surface)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   transition:
     'transform var(--duration-card) var(--ease), border-color var(--duration-card) var(--ease), box-shadow var(--duration-card) var(--ease)',
   [LIFT]: {
@@ -108,8 +111,8 @@ const cardStyle = css({
   },
   '&:hover .sigil, &:focus-visible .sigil, &[data-force] .sigil': { transform: 'scale(1.08) translateY(-4px)' },
   '&:focus-visible, &[data-force="focus"]': {
-    outline: '2px solid var(--focus-ring-color)',
-    outlineOffset: '2px',
+    outline: 'var(--focus-outline)',
+    outlineOffset: 'var(--focus-offset)',
     boxShadow: 'var(--shadow-card-hover), var(--focus-ring)',
   },
   '@media (prefers-reduced-motion: reduce)': {
@@ -159,13 +162,15 @@ export const courseGridStyle = css({
 
 export interface WriteCourseCardProps {
   href: string
+  /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
+  prefetch?: PrefetchProp
   forceState?: ForcedState
 }
 
 /** The dashed "+ .md Write a course" last grid item (components §9.3). Static. */
 export function WriteCourseCard(handle: Handle<WriteCourseCardProps>) {
   return () => (
-    <a href={handle.props.href} data-force={handle.props.forceState} mix={writeStyle}>
+    <a href={handle.props.href} data-rmx-prefetch={prefetchFor(handle.props.href, handle.props.prefetch)} data-force={handle.props.forceState} mix={writeStyle}>
       <span aria-hidden="true" mix={writeMark}>
         + .md
       </span>
@@ -185,10 +190,10 @@ const writeStyle = css({
   textDecoration: 'none',
   color: 'var(--text)',
   borderRadius: 'var(--radius-20)',
-  border: '1px dashed var(--line-dashed-strong)',
+  border: 'var(--border-w) dashed var(--line-dashed-strong)',
   transition: 'border-color var(--duration-card) var(--ease)',
   '&:hover, &[data-force="hover"]': { color: 'var(--text)', borderColor: 'var(--volt-a40)' },
-  '&:focus-visible, &[data-force="focus"]': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:focus-visible, &[data-force="focus"]': focusOutline,
   '@media (max-width: 480px)': { minHeight: 'auto' },
 })
 const writeMark = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-28)', color: 'var(--volt)' })

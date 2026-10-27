@@ -47,7 +47,7 @@ const pillStyle = css({
   lineHeight: 'normal',
   whiteSpace: 'pre',
   color: 'var(--text)',
-  border: '1px solid transparent',
+  border: 'var(--border-w) solid transparent',
   '&[data-tint="0"]': { background: 'var(--volt-tint-on)', borderColor: 'var(--volt-a35)' },
   '&[data-tint="1"]': { background: 'var(--ion-a12)', borderColor: 'var(--ion-a35)' },
   '&[data-tint="2"]': { background: 'var(--syn-a14)', borderColor: 'var(--syn-a40)' },

@@ -57,8 +57,8 @@ const nodeStyle = css({
   placeItems: 'center',
   borderRadius: 'var(--radius-pill)',
   '&[data-state="done"]': { background: 'var(--volt)', color: 'var(--on-volt)' },
-  '&[data-state="current"]': { border: '2px solid var(--ion)' },
-  '&[data-state="next"]': { border: '1px dashed var(--line-node-next)' },
+  '&[data-state="current"]': { border: 'var(--border-w-strong) solid var(--ion)' },
+  '&[data-state="next"]': { border: 'var(--border-w) dashed var(--line-node-next)' },
   // Forced colours: done is a filled disc (it was only a background), current a ring, next a dashed ring.
   [FORCED_COLORS]: { '&[data-state="done"]': { forcedColorAdjust: 'none', background: 'CanvasText', color: 'Canvas' } },
 })

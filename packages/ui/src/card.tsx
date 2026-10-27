@@ -54,7 +54,7 @@ const baseStyle = css({
   padding: 'var(--space-6)',
   borderRadius: 'var(--radius-xl)',
   background: 'var(--surface)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   gap: 'var(--space-5)',
   '@media (max-width: 480px)': { padding: 'var(--space-4_5)' },
 })
@@ -67,13 +67,13 @@ const variantStyles: Record<CardVariant, ReturnType<typeof css>> = {
     borderRadius: 'var(--radius-20)',
     gap: 'var(--space-2_5)',
     background: 'none',
-    border: '1px dashed var(--line-dashed)',
+    border: 'var(--border-w) dashed var(--line-dashed)',
   }),
   glass: css({
     borderRadius: 'var(--radius-20)',
     background: 'var(--glass)',
     WebkitBackdropFilter: 'blur(var(--blur-glass))',
     backdropFilter: 'blur(var(--blur-glass))',
-    border: '1px solid var(--line-glass)',
+    border: 'var(--border-w) solid var(--line-glass)',
   }),
 }

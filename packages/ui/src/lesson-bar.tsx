@@ -126,7 +126,7 @@ const barStyle = css({
   flexWrap: 'wrap',
   padding: 'var(--space-3) var(--space-6)',
   background: 'var(--lessonbar-bg)',
-  borderBottom: '1px solid var(--line-bar)',
+  borderBottom: 'var(--border-w) solid var(--line-bar)',
   [NARROW]: { gap: 'var(--space-2) var(--space-3)', padding: 'var(--space-1_5) var(--page-gutter)' },
 })
 const stickyStyle = css({
@@ -137,10 +137,10 @@ const stickyStyle = css({
   backdropFilter: 'blur(var(--blur-glass))',
 })
 // The AppBar's glass shows through; a hairline separates the two rows.
-const shellStyle = css({ borderTop: '1px solid var(--line-hair)' })
+const shellStyle = css({ borderTop: 'var(--border-w) solid var(--line-hair)' })
 const shellInner = css({
   // Fixed height (tokens: --lessonbar-h) so the outline's sticky offset agrees.
-  height: 'calc(var(--lessonbar-h) - 1px)',
+  height: 'calc(var(--lessonbar-h) - var(--border-w))',
   maxWidth: 'var(--page-max)',
   margin: '0 auto',
   padding: '0 var(--page-gutter)',

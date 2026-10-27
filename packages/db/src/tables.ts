@@ -361,6 +361,21 @@ export const lessonDrafts = table({
 
 export type LessonDraft = TableRow<typeof lessonDrafts>
 
+/** Mail sent per UTC day, for the global daily cap (migration 0009, decision 039). */
+export const mailQuota = table({
+  name: 'mail_quota',
+  primaryKey: 'day',
+  columns: {
+    /** UTC day, YYYY-MM-DD. */
+    day: c.text(),
+    sent: c.integer(),
+    /** The day's first refused send (epoch ms); null while under the cap. */
+    capped_at: c.integer().nullable(),
+  },
+})
+
+export type MailQuota = TableRow<typeof mailQuota>
+
 export const videoStatuses = ['uploading', 'ready', 'failed'] as const
 export type VideoStatus = (typeof videoStatuses)[number]
 

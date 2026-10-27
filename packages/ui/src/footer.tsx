@@ -35,7 +35,7 @@ export function Footer(handle: Handle<FooterProps>) {
   }
 }
 
-const footerStyle = css({ borderTop: '1px solid var(--line)', background: 'var(--ink)' })
+const footerStyle = css({ borderTop: 'var(--border-w) solid var(--line)', background: 'var(--ink)' })
 const innerStyle = css({
   maxWidth: 'var(--page-max)',
   margin: '0 auto',

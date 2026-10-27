@@ -1,7 +1,7 @@
 import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
-import { FORCED_COLORS } from './lib/states.ts'
+import { focusOutline, FORCED_COLORS } from './lib/states.ts'
 
 export type ActivityLevel = 0 | 1 | 2 | 3
 
@@ -72,7 +72,7 @@ const cardStyle = css({
   padding: 'var(--space-5_5)',
   borderRadius: 'var(--radius-xl)',
   background: 'var(--surface)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   minWidth: 0,
 })
 const headerStyle = css({ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-3)', flexWrap: 'wrap' })
@@ -102,7 +102,7 @@ const scrollStyle = css({
   flexDirection: 'row-reverse',
   justifyContent: 'safe flex-end',
   overflowX: 'auto',
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:focus-visible': focusOutline,
 })
 const gridStyle = css({
   display: 'grid',
@@ -118,12 +118,12 @@ const cellStyle = css({
   '&[data-level="1"]': { background: 'var(--volt-a25)' },
   '&[data-level="2"]': { background: 'var(--volt-a55)' },
   '&[data-level="3"]': { background: 'var(--volt)' },
-  '&:hover': { outline: '1px solid var(--text)' },
+  '&:hover': { outline: 'var(--border-w) solid var(--text)' },
   // Forced colours drop the tints: framed cells, filled in steps of the text colour.
   [FORCED_COLORS]: {
     forcedColorAdjust: 'none',
     background: 'Canvas',
-    outline: '1px solid GrayText',
+    outline: 'var(--border-w) solid GrayText',
     outlineOffset: '-1px',
     '&[data-level="1"]': { background: 'color-mix(in srgb, CanvasText 35%, Canvas)' },
     '&[data-level="2"]': { background: 'color-mix(in srgb, CanvasText 65%, Canvas)' },

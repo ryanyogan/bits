@@ -1,6 +1,7 @@
 import type { Handle } from 'remix/component'
 import { clientEntry, css, on, ref } from 'remix/component'
 
+import { focusOutline } from './lib/states.ts'
 import { Eyebrow } from './eyebrow.tsx'
 import { Icon } from './icon.tsx'
 import { readDraft, writeDraft, type DraftPersist } from './lib/drafts.ts'
@@ -355,7 +356,7 @@ const playerStyle = css({
   borderRadius: 'var(--radius-20)',
   overflow: 'hidden',
   background: 'var(--well)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   '@media (max-width: 480px)': { aspectRatio: 'auto', minHeight: '320px' },
 })
 const posterStyle = css({
@@ -422,7 +423,7 @@ const bigPlay = css({
   cursor: 'pointer',
   transition: 'transform var(--duration-fast) var(--ease)',
   '&:hover': { transform: 'translate(-50%, -50%) scale(1.04)' },
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '3px' },
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-wide)' },
   // Over the middle of the picture, which sits at the top on narrow screens.
   '@media (max-width: 480px)': { top: '28%' },
 })
@@ -477,7 +478,7 @@ const transcriptStyle = css({
   padding: 'var(--space-5_5)',
   borderRadius: 'var(--radius-xl)',
   background: 'var(--surface)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
 })
 const cueList = css({
   listStyle: 'none',
@@ -506,5 +507,5 @@ const cueStyle = css({
   '&[data-past]': { color: 'var(--dim)' },
   '&[aria-current="true"]': { background: 'var(--ion-a08)', color: 'var(--text)' },
   '&:hover': { color: 'var(--text)' },
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:focus-visible': focusOutline,
 })

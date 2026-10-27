@@ -35,7 +35,7 @@ const chipStyle = css({
   padding: 'var(--space-1_5) var(--space-2_5)',
   borderRadius: 'var(--radius-sm)',
   fontSize: 'var(--fs-13)',
-  border: '1px solid var(--line-strong)',
+  border: 'var(--border-w) solid var(--line-strong)',
   color: 'var(--muted)',
   transition: 'background-color var(--duration-focus), border-color var(--duration-focus), color var(--duration-focus)',
   '&[data-passed="true"]': { background: 'var(--volt-tint-on)', borderColor: 'var(--volt-a45)', color: 'var(--volt-soft)' },

@@ -1,7 +1,8 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
-import { FOCUS, FORCED_COLORS, forcedSelected, type ForcedState } from './lib/states.ts'
+import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
+import { FOCUS, focusOutline, FORCED_COLORS, forcedSelected, type ForcedState } from './lib/states.ts'
 
 export interface FilterPillProps {
   /** URL with the filter applied, e.g. `?track=agents` (filters are URL state, resolutions §11). */
@@ -11,6 +12,8 @@ export interface FilterPillProps {
   /** Result count shown after the label. */
   count?: number
   selected?: boolean
+  /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
+  prefetch?: PrefetchProp
   forceState?: ForcedState
   mix?: MixInput<HTMLElement>
   children?: RemixNode
@@ -22,11 +25,12 @@ export interface FilterPillProps {
  */
 export function FilterPill(handle: Handle<FilterPillProps>) {
   return () => {
-    let { href, dot, count, selected, forceState, mix, children } = handle.props
+    let { href, dot, count, selected, prefetch, forceState, mix, children } = handle.props
     return (
       <a
         href={href}
         aria-current={selected ? 'true' : undefined}
+        data-rmx-prefetch={prefetchFor(href, prefetch)}
         data-force={forceState}
         mix={[pillStyle, mix]}
       >
@@ -56,7 +60,7 @@ const pillStyle = css({
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-4)',
   borderRadius: 'var(--radius-pill)',
-  border: '1px solid var(--line-control)',
+  border: 'var(--border-w) solid var(--line-control)',
   background: 'transparent',
   color: 'var(--text-quiet)',
   fontFamily: 'var(--font-sans)',
@@ -75,7 +79,7 @@ const pillStyle = css({
     background: 'var(--text)',
     color: 'var(--ink)',
   },
-  [FOCUS]: { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  [FOCUS]: focusOutline,
   [FORCED_COLORS]: { '&[aria-current="true"]': forcedSelected },
 })
 
