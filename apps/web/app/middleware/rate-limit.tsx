@@ -21,6 +21,8 @@ export type RateLimitTier =
   | 'RL_RUNS'
   /** CSP violation reports (/csp-report): 30 a minute (decision 027). */
   | 'RL_REPORTS'
+  /** Background draft and watch-position saves (/api/drafts): 60 a minute. */
+  | 'RL_DRAFTS'
 
 /**
  * Keyed by the signed-in user, else by the client IP. The binding is

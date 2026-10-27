@@ -343,3 +343,54 @@ export const courseAuthors = table({
 })
 
 export type CourseAuthor = TableRow<typeof courseAuthors>
+
+/** A signed-in learner's draft in a lesson: prompt text, retyped code, the watch position (migration 0006). */
+export const lessonDrafts = table({
+  name: 'lesson_drafts',
+  primaryKey: ['user_id', 'course_id', 'lesson_slug', 'key'],
+  columns: {
+    user_id: c.text(),
+    course_id: c.text(),
+    lesson_slug: c.text(),
+    /** `prompt:<exercise>`, `code:<file>` or `video`. */
+    key: c.text(),
+    value: c.text(),
+    updated_at: c.integer(),
+  },
+})
+
+export type LessonDraft = TableRow<typeof lessonDrafts>
+
+export const videoStatuses = ['uploading', 'ready', 'failed'] as const
+export type VideoStatus = (typeof videoStatuses)[number]
+
+/** A lesson MP4 in R2, uploaded in parts through the Worker (migration 0006, decision 029). */
+export const videos = table({
+  name: 'videos',
+  columns: {
+    id: c.text(),
+    course_id: c.text(),
+    path: c.text(),
+    status: c.enum(videoStatuses),
+    r2_key: c.text(),
+    upload_id: c.text().nullable(),
+    size: c.integer(),
+    part_size: c.integer(),
+    parts: c.json(),
+    duration_s: c.integer().nullable(),
+    uploaded_by: c.text().nullable(),
+    created_at: c.integer(),
+    updated_at: c.integer(),
+  },
+  afterRead({ value }) {
+    if (!('parts' in value)) return { value }
+    return { value: { ...value, parts: decodeJsonArray(value.parts) } }
+  },
+})
+
+export interface UploadedPart {
+  partNumber: number
+  etag: string
+}
+
+export type Video = Omit<TableRow<typeof videos>, 'parts'> & { parts: UploadedPart[] }

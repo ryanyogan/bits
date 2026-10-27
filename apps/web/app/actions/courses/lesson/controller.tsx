@@ -5,6 +5,7 @@ import { currentUser, getViewer } from '../../../auth/identity.ts'
 import { getCatalog } from '../../../content/request.ts'
 import { rateLimit } from '../../../middleware/rate-limit.tsx'
 import { readSubmission } from '../../../progress/check.ts'
+import { loadDrafts } from '../../../progress/drafts.ts'
 import { completeLesson, loadCompleted } from '../../../progress/progress.ts'
 import { flashReward, rewardNotice, takeReward } from '../../../progress/reward.ts'
 import { routes } from '../../../routes.ts'
@@ -15,12 +16,14 @@ import { LessonNotFoundPage } from './ui/not-found.tsx'
 export default createController(routes.courses.lesson, {
   actions: {
     async index(context) {
-      let [catalog, completed] = await Promise.all([getCatalog(context), loadCompleted(context)])
+      let { course, lesson } = context.params
+      let [catalog, completed, drafts] = await Promise.all([
+        getCatalog(context),
+        loadCompleted(context),
+        loadDrafts(context, course, lesson),
+      ])
       let viewer = getViewer(context)
-      let view = await buildLessonView(catalog, context.params.course, context.params.lesson, context.url, {
-        viewer,
-        completed,
-      })
+      let view = await buildLessonView(catalog, course, lesson, context.url, { viewer, completed, drafts })
       if (!view) {
         return context.render(
           <LessonNotFoundPage course={context.params.course} currentPath={context.url.pathname} viewer={viewer} />,
@@ -54,6 +57,7 @@ export default createController(routes.courses.lesson, {
           let view = (await buildLessonView(catalog, course, lesson, url, {
             viewer: getViewer(context),
             completed: await loadCompleted(context),
+            drafts: await loadDrafts(context, course, lesson),
           }))!
           let issues = result.checked.exercises
             .filter((exercise) => !exercise.passed)

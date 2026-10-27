@@ -1,6 +1,6 @@
 # 014. Lesson pages: Read, Watch, Terminal and the author preview (UI build)
 
-Status: Accepted (2026-10-26). Superseded in part by 016 (where passes are kept) and 020 (islands keyed per lesson).
+Status: Accepted (2026-10-26). Superseded in part by 016 (where passes are kept), 020 (islands keyed per lesson) and 029 (real video playback, drafts on the server).
 
 ## Decision
 

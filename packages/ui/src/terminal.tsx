@@ -3,6 +3,7 @@ import { clientEntry, css, on, ref } from 'remix/component'
 
 import { Keycap } from './keycap.tsx'
 import { TEMPERATURE_EVENT } from './odds-bars.tsx'
+import { readDraft, writeDraft, type DraftPersist } from './lib/drafts.ts'
 import { runNote, streamRun, type RunEndpoint } from './lib/run-stream.ts'
 import { createFollower, Ghost, scrollWindowStyle, stackStyle } from './lib/stable.tsx'
 import { FORCED_COLORS, forcedMark, forcedSelected } from './lib/states.ts'
@@ -68,6 +69,8 @@ export interface TerminalPrompt {
   submit?: SubmitFields
   /** Run through the server (/api/run), as the PromptComposer does; else canned `examples`. */
   run?: RunEndpoint
+  /** Where the draft is kept (shared with the PromptComposer); defaults to localStorage under `id`. */
+  persist?: DraftPersist
 }
 
 export interface TerminalLogProps {
@@ -128,7 +131,7 @@ export const TerminalLog = clientEntry(
   function TerminalLog(handle: Handle<TerminalLogProps>) {
     let appended: AppendedEntry[] = []
     let count = 0
-    let value = handle.props.prompt?.defaultDraft ?? ''
+    let value = handle.props.prompt?.persist?.saved?.value ?? handle.props.prompt?.defaultDraft ?? ''
     let hydrated = false
     let temperature = (handle.props.prompt?.temperatures ?? DEFAULT_TEMPS)[0]!
     let ranAt = new Set<number>()
@@ -137,17 +140,11 @@ export const TerminalLog = clientEntry(
     // Opens at the start of the lesson; the learner's first action pins it.
     let follower = createFollower({ startPinned: false })
 
-    let storageKey = () => `bits:draft:${handle.props.prompt?.id ?? ''}`
+    let persist = (prompt: TerminalPrompt): DraftPersist => prompt.persist ?? { id: prompt.id, key: 'prompt' }
 
     handle.queueTask(() => {
       let prompt = handle.props.prompt
-      if (prompt) {
-        try {
-          value = window.localStorage.getItem(storageKey()) ?? prompt.defaultDraft ?? ''
-        } catch {
-          // Storage unavailable: keep the default draft.
-        }
-      }
+      if (prompt) value = readDraft(persist(prompt)) ?? prompt.defaultDraft ?? ''
       hydrated = true
       handle.update()
     })
@@ -308,11 +305,7 @@ export const TerminalLog = clientEntry(
                 on('input', (event) => {
                   value = event.currentTarget.value
                   if (!prompt) return
-                  try {
-                    window.localStorage.setItem(storageKey(), value)
-                  } catch {
-                    // Storage unavailable (private mode): the draft just isn't kept.
-                  }
+                  writeDraft(persist(prompt), value)
                   handle.update()
                 }),
               ]}

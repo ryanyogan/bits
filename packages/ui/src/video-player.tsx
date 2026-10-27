@@ -3,6 +3,7 @@ import { clientEntry, css, on, ref } from 'remix/component'
 
 import { Eyebrow } from './eyebrow.tsx'
 import { Icon } from './icon.tsx'
+import { readDraft, writeDraft, type DraftPersist } from './lib/drafts.ts'
 import { ToolButton } from './tool-button.tsx'
 
 export interface VideoChapter {
@@ -17,6 +18,13 @@ export interface TranscriptCue {
   text: string
 }
 
+/** Real media. Without it the player runs a simulated clock (style guide). */
+export interface VideoSource {
+  /** An MP4 URL (served with Range support, decision 029). */
+  src: string
+  poster?: string
+}
+
 export interface VideoPlayerProps {
   /** Accessible name of the player region, e.g. the lesson title. */
   title: string
@@ -28,6 +36,9 @@ export interface VideoPlayerProps {
   initialTime?: number
   /** Show the transcript panel beside the player initially. */
   transcriptOpen?: boolean
+  source?: VideoSource
+  /** Keep the watch position (localStorage, plus the server when signed in). */
+  persist?: DraftPersist
 }
 
 const SPEEDS = [1, 1.25, 1.5, 2, 0.75]
@@ -37,13 +48,16 @@ export function formatTime(seconds: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
 
+/** Seconds between position saves while playing. */
+const SAVE_EVERY = 5
+
 /**
- * The Watch-mode player shell (components §10.17–10.18). There is no real
- * media yet: playback is simulated with a clock so the chapter scrubber,
- * play/pause, speed cycle, captions toggle, keyboard shortcuts and the
- * synced transcript all behave as specified. Swap the clock for a `<video>`
- * (hls.js) later. Client entry; with JS off the poster and the full
- * transcript render.
+ * The Watch-mode player (components §10.17–10.18): our own controls over a
+ * plain `<video>` playing one MP4 (decision 029). Chapter scrubber, play/pause, speed,
+ * captions (drawn from the transcript cues), keyboard shortcuts and the
+ * synced transcript. The position is kept (`persist`) and resumed. Without a
+ * `source` a simulated clock stands in (style guide). Client entry; with JS
+ * off the poster and the full transcript render.
  */
 export const VideoPlayer = clientEntry(
   import.meta.url,
@@ -54,10 +68,81 @@ export const VideoPlayer = clientEntry(
     let captions = false
     let transcript = handle.props.transcriptOpen ?? true
     let timer: ReturnType<typeof setInterval> | undefined
+    let hydrated = false
+    let media: HTMLVideoElement | undefined
+    let failed = false
+    let lastSaved = time
 
-    handle.signal.addEventListener('abort', () => clearInterval(timer))
+    handle.signal.addEventListener('abort', () => {
+      clearInterval(timer)
+      savePosition()
+    })
+
+    handle.queueTask(() => {
+      let persist = handle.props.persist
+      let saved = persist ? Number(readDraft(persist)) : NaN
+      if (Number.isFinite(saved) && saved > 0) time = lastSaved = Math.min(saved, lengthNow())
+      hydrated = true
+      handle.update()
+    })
+
+    function lengthNow() {
+      let fromMedia = media?.duration
+      return fromMedia && Number.isFinite(fromMedia) ? fromMedia : handle.props.duration
+    }
+
+    function savePosition(force = false) {
+      let persist = handle.props.persist
+      if (!persist || !hydrated) return
+      let at = Math.floor(time)
+      if (!force && Math.abs(at - lastSaved) < SAVE_EVERY) return
+      lastSaved = at
+      // The end of a video resumes from the start.
+      writeDraft(persist, String(at >= lengthNow() - 2 ? 0 : at), { delay: 5000 })
+    }
+
+    /** Wires the `<video>`'s media events to the controls' state. */
+    function attach(video: HTMLVideoElement, signal: AbortSignal) {
+      media = video
+      let listen = (type: string, fn: () => void) => video.addEventListener(type, fn, { signal })
+      listen('loadedmetadata', () => {
+        if (time > 0 && time < video.duration) video.currentTime = time
+        handle.update()
+      })
+      listen('timeupdate', () => {
+        time = video.currentTime
+        savePosition()
+        handle.update()
+      })
+      listen('play', () => {
+        playing = true
+        handle.update()
+      })
+      listen('pause', () => {
+        playing = false
+        savePosition(true)
+        handle.update()
+      })
+      listen('ended', () => {
+        playing = false
+        handle.update()
+      })
+      listen('error', () => {
+        failed = true
+        handle.update()
+      })
+      signal.addEventListener('abort', () => {
+        if (media === video) media = undefined
+      })
+      video.src = handle.props.source!.src
+    }
 
     function setPlaying(next: boolean) {
+      if (media) {
+        if (next) void media.play().catch(() => {})
+        else media.pause()
+        return
+      }
       playing = next
       clearInterval(timer)
       if (playing) {
@@ -65,15 +150,25 @@ export const VideoPlayer = clientEntry(
         timer = setInterval(() => {
           time = Math.min(handle.props.duration, time + 0.25 * SPEEDS[speedIndex]!)
           if (time >= handle.props.duration) setPlaying(false)
+          savePosition()
           handle.update()
         }, 250)
+      } else {
+        savePosition(true)
       }
       handle.update()
     }
 
     function seek(to: number) {
-      time = Math.max(0, Math.min(handle.props.duration, to))
+      time = Math.max(0, Math.min(lengthNow(), to))
+      if (media) media.currentTime = time
+      savePosition(true)
       handle.update()
+    }
+
+    function setSpeed(index: number) {
+      speedIndex = index
+      if (media) media.playbackRate = SPEEDS[speedIndex]!
     }
 
     function chapterIndexAt(t: number) {
@@ -105,7 +200,8 @@ export const VideoPlayer = clientEntry(
     }
 
     return () => {
-      let { title, duration, chapters, cues = [] } = handle.props
+      let { title, chapters, cues = [], source } = handle.props
+      let duration = Math.max(1, Math.round(hydrated ? lengthNow() : handle.props.duration))
       let current = chapterIndexAt(time)
       let chapter = chapters[current]
       let activeCue = -1
@@ -116,11 +212,26 @@ export const VideoPlayer = clientEntry(
       return (
         <div mix={watchStyle}>
           <section aria-label={`Video: ${title}`} mix={[playerStyle, ref((node, signal) => node.addEventListener('keydown', onKey, { signal }))]}>
-            <div aria-hidden="true" mix={posterStyle}>
-              {[78, 44, 26, 12].map((width, i) => (
-                <span key={width} mix={posterBar} style={{ width: `${width}%`, opacity: [0.85, 0.6, 0.45, 0.3][i] }} />
-              ))}
-            </div>
+            {source && hydrated ? (
+              <video
+                playsinline
+                preload="metadata"
+                poster={source.poster}
+                aria-label={title}
+                mix={[mediaStyle, ref(attach), on('click', () => setPlaying(!playing))]}
+              />
+            ) : (
+              <div aria-hidden="true" mix={posterStyle}>
+                {[78, 44, 26, 12].map((width, i) => (
+                  <span key={width} mix={posterBar} style={{ width: `${width}%`, opacity: [0.85, 0.6, 0.45, 0.3][i] }} />
+                ))}
+              </div>
+            )}
+            {failed ? (
+              <p role="status" mix={failedStyle}>
+                The video couldn’t load. The transcript and the text lesson have everything in it.
+              </p>
+            ) : null}
             {captions && activeCue >= 0 ? <p mix={captionStyle}>{cues[activeCue]!.text}</p> : null}
             {playing ? null : (
               <button type="button" aria-label="Play video" mix={[bigPlay, on('click', () => setPlaying(true))]}>
@@ -174,7 +285,7 @@ export const VideoPlayer = clientEntry(
                   variant="video"
                   label={`Playback speed ${SPEEDS[speedIndex]}×`}
                   mix={on('click', () => {
-                    speedIndex = (speedIndex + 1) % SPEEDS.length
+                    setSpeed((speedIndex + 1) % SPEEDS.length)
                     handle.update()
                   })}
                 >
@@ -257,6 +368,29 @@ const posterStyle = css({
   padding: '12% 12% 0',
   paddingTop: 'calc(22% * 9 / 16)',
 })
+const mediaStyle = css({
+  position: 'absolute',
+  inset: 0,
+  width: '100%',
+  height: '100%',
+  objectFit: 'contain',
+  background: 'var(--well)',
+  // Narrow screens: the player is taller than 16:9 so the controls fit; keep
+  // the picture above them.
+  '@media (max-width: 480px)': { objectPosition: 'center top' },
+})
+const failedStyle = css({
+  position: 'absolute',
+  top: 'var(--space-4)',
+  left: 'var(--space-4)',
+  right: 'var(--space-4)',
+  margin: 0,
+  padding: 'var(--space-2_5) var(--space-3)',
+  borderRadius: 'var(--radius-sm)',
+  background: 'var(--ink-a86)',
+  color: 'var(--text)',
+  fontSize: 'var(--fs-14)',
+})
 const posterBar = css({ display: 'block', height: '26px', borderRadius: 'var(--radius-xs)', background: 'var(--ion)' })
 const captionStyle = css({
   position: 'absolute',
@@ -289,6 +423,8 @@ const bigPlay = css({
   transition: 'transform var(--duration-fast) var(--ease)',
   '&:hover': { transform: 'translate(-50%, -50%) scale(1.04)' },
   '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '3px' },
+  // Over the middle of the picture, which sits at the top on narrow screens.
+  '@media (max-width: 480px)': { top: '28%' },
 })
 const controlsStyle = css({
   position: 'absolute',

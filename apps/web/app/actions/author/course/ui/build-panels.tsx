@@ -3,9 +3,9 @@ import { css } from 'remix/component'
 import { keycapFace, Keycap } from '@bits/ui/keycap'
 import { LiveDot } from '@bits/ui/live-dot'
 import { MonoHeading } from '@bits/ui/eyebrow'
-import { ProgressBar } from '@bits/ui/progress-bar'
 
 import { routes } from '../../../../routes.ts'
+import { VideoUpload as VideoUploadIsland } from '../../public/video-upload.tsx'
 import { counts, plural, type AuthorCourse, type CourseVersion, type ValidationItem, type VideoUpload } from '../../data.ts'
 import { StatusTag } from '../../ui/status-tag.tsx'
 
@@ -174,14 +174,7 @@ function VersionRow(handle: Handle<{ item: AuthorCourse; version: CourseVersion 
   }
 }
 
-const VIDEO_STATUS: Record<VideoUpload['status'], string> = {
-  ready: 'ready',
-  uploading: 'uploading',
-  processing: 'processing',
-  missing: 'not found',
-}
-
-/** Video upload status (handoff "Video storage": uploading → ready via webhook). */
+/** Lesson videos (decision 029): uploaded to R2 here, linked by the next build. */
 export function VideoList(handle: Handle<{ item: AuthorCourse }>) {
   return () => {
     let { item } = handle.props
@@ -203,6 +196,12 @@ export function VideoList(handle: Handle<{ item: AuthorCourse }>) {
         ) : (
           <p mix={emptyText}>No lessons in this course have a video: they all publish text-only.</p>
         )}
+        {item.videos.some((video) => video.status !== 'ready') ? (
+          <p mix={emptyText}>
+            Lessons without a ready video publish text-only. Upload the MP4 here, then upload the course folder again to link
+            it.
+          </p>
+        ) : null}
       </section>
     )
   }
@@ -210,8 +209,7 @@ export function VideoList(handle: Handle<{ item: AuthorCourse }>) {
 
 function VideoRow(handle: Handle<{ slug: string; video: VideoUpload }>) {
   return () => {
-    let { video } = handle.props
-    let id = `video-${video.file.replace(/\W+/g, '-')}`
+    let { slug, video } = handle.props
     return (
       <li mix={rowStyle} data-status={video.status}>
         <span mix={rowBody}>
@@ -220,35 +218,11 @@ function VideoRow(handle: Handle<{ slug: string; video: VideoUpload }>) {
         </span>
         <span mix={videoStatus}>
           {video.status === 'ready' ? <LiveDot>{`ready · ${video.duration}`}</LiveDot> : null}
-          {video.status === 'processing' ? (
-            <LiveDot tone="ion" pulse>
-              processing
-            </LiveDot>
+          {video.status === 'uploaded' ? (
+            <LiveDot tone="ion">{`uploaded · ${video.duration} · rebuild to link`}</LiveDot>
           ) : null}
-          {video.status === 'uploading' ? (
-            <>
-              <ProgressBar pct={video.pct ?? 0} variant="row" color="var(--ion)" label={`${video.file} upload`} mix={uploadBar} />
-              <span mix={uploadPct}>{video.pct}%</span>
-            </>
-          ) : null}
-          {video.status === 'missing' ? (
-            <form
-              method="post"
-              action={routes.api.authorVideoUploadUrl.href()}
-              enctype="multipart/form-data"
-              data-rmx-document=""
-              mix={missingForm}
-            >
-              <span mix={warnText}>! {VIDEO_STATUS.missing}</span>
-              <label for={id} class="sr-only">
-                Choose {video.file}
-              </label>
-              <input id={id} type="file" name="video" accept="video/*" required mix={fileInput} />
-              <input type="hidden" name="file" value={video.file} />
-              <Keycap variant="dark" size="sm" type="submit">
-                Upload
-              </Keycap>
-            </form>
+          {video.status === 'uploading' || video.status === 'missing' ? (
+            <VideoUploadIsland course={slug} path={video.file} resumePct={video.pct} />
           ) : null}
         </span>
       </li>
@@ -406,27 +380,4 @@ const rowMeta = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', 
 const smallKey = css({ fontSize: 'var(--fs-13)' })
 const fileName = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--text)', overflowWrap: 'anywhere' })
 const videoStatus = css({ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 'var(--space-2_5)', flexWrap: 'wrap' })
-const uploadBar = css({ width: '120px', flex: 'none' })
-const uploadPct = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--ion)' })
-const missingForm = css({ margin: 0, display: 'flex', alignItems: 'center', gap: 'var(--space-2_5)', flexWrap: 'wrap' })
-const warnText = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--warn)' })
-const fileInput = css({
-  maxWidth: '220px',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-12)',
-  color: 'var(--muted)',
-  '&::file-selector-button': {
-    minHeight: 'var(--touch-target)',
-    marginRight: 'var(--space-2)',
-    padding: '0 var(--space-3)',
-    borderRadius: 'var(--radius-10)',
-    border: '1px solid var(--line-control)',
-    background: 'transparent',
-    color: 'var(--text)',
-    fontFamily: 'var(--font-mono)',
-    fontSize: 'var(--fs-12)',
-    cursor: 'pointer',
-  },
-  '&::file-selector-button:hover': { background: 'var(--fill-ghost-hover)' },
-})
 const emptyText = css({ margin: 0, fontSize: 'var(--fs-14)', lineHeight: 1.55, color: 'var(--muted)' })

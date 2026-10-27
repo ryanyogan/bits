@@ -52,7 +52,7 @@ export function TerminalMode(handle: Handle<{ view: LessonView }>) {
       />
     )
     if (!code) return <div mix={soloStyle}>{log}</div>
-    let editor = codeEditorProps(code)
+    let editor = codeEditorProps(view, code)
     return (
       <div mix={workspaceStyle}>
         {log}
@@ -80,6 +80,7 @@ function terminalPrompt(view: LessonView, block: PromptBlock): TerminalPrompt {
     reward: props.reward,
     submit: props.submit,
     run: props.run,
+    persist: props.persist,
   }
 }
 

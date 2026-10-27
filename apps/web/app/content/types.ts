@@ -102,9 +102,9 @@ export interface CourseVideo {
   lesson: string
   /** Asset path in the course folder. */
   file: string
-  /** The file was in the folder. */
+  /** A ready upload was linked by this build (decision 029); else the lesson is text-only. */
   found: boolean
-  /** Seconds (frontmatter `duration`). */
+  /** Seconds (the upload's, else frontmatter `duration`; 0 when neither is known). */
   duration: number
 }
 

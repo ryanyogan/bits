@@ -8,6 +8,7 @@ interface __BaseEnv_Env {
 	RL_SIGNIN: RateLimit;
 	RL_RUNS: RateLimit;
 	RL_REPORTS: RateLimit;
+	RL_DRAFTS: RateLimit;
 	ASSETS: Fetcher;
 	EMAIL_FROM: string;
 	CANONICAL_ORIGIN: string;
@@ -20,9 +21,6 @@ interface __BaseEnv_Env {
 	CF_AIG_TOKEN: string;
 }
 declare namespace Cloudflare {
-	interface GlobalProps {
-		mainModule: typeof import("./build/worker/index");
-	}
 	interface Env extends __BaseEnv_Env {}
 }
 interface Env extends __BaseEnv_Env {}

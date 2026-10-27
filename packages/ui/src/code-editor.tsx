@@ -3,6 +3,7 @@ import { clientEntry, css, on, ref } from 'remix/component'
 import * as tabs from '@remix-run/ui/tabs'
 
 import { Keycap } from './keycap.tsx'
+import { readDraft, writeDraft, type DraftPersist } from './lib/drafts.ts'
 import { stackStyle } from './lib/stable.tsx'
 import { ToolButton } from './tool-button.tsx'
 
@@ -33,6 +34,8 @@ export interface CodeEditorProps {
   initialTyped?: string
   /** Style-guide only: show the copy key in its "Copied ✓" state. */
   initialCopied?: boolean
+  /** Keep what was typed in type mode (localStorage, plus the server when signed in). */
+  persist?: DraftPersist
 }
 
 function fileText(file: CodeFile): string {
@@ -45,7 +48,7 @@ function fileText(file: CodeFile): string {
  * Copy keycap (Copy → Copied ✓ for 1.6s → Copy off in type mode) and Type
  * mode (retype the first file from memory; accuracy and characters update
  * live). The first file renders statically with JS off; Copy stays disabled
- * until hydrated. Client entry.
+ * until hydrated. What was typed is kept as a draft (`persist`). Client entry.
  */
 export const CodeEditor = clientEntry(
   import.meta.url,
@@ -59,10 +62,19 @@ export const CodeEditor = clientEntry(
     let copyTimer: ReturnType<typeof setTimeout> | undefined
 
     handle.queueTask(() => {
+      let persist = handle.props.persist
+      if (persist && handle.props.initialTyped === undefined) typed = readDraft(persist) ?? ''
       hydrated = true
       handle.update()
     })
     handle.signal.addEventListener('abort', () => clearTimeout(copyTimer))
+
+    function setTyped(next: string) {
+      typed = next
+      let persist = handle.props.persist
+      if (persist) writeDraft(persist, typed)
+      handle.update()
+    }
 
     async function copy() {
       let file = handle.props.files.find((f) => f.name === activeTab) ?? handle.props.files[0]
@@ -198,14 +210,12 @@ export const CodeEditor = clientEntry(
                     typeInputStyle,
                     ref((node) => (input = node)),
                     on('input', (event) => {
-                      typed = event.currentTarget.value.slice(0, source.length)
-                      handle.update()
+                      setTyped(event.currentTarget.value.slice(0, source.length))
                     }),
                     on('keydown', (event) => {
                       if (event.key === 'Tab') {
                         event.preventDefault()
-                        typed = (typed + '  ').slice(0, source.length)
-                        handle.update()
+                        setTyped((typed + '  ').slice(0, source.length))
                       }
                     }),
                   ]}

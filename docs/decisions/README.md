@@ -34,4 +34,5 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 026 | [Server performance: one D1 round trip per page, split Worker bundle](026-server-performance.md) |
 | 027 | [A strict, nonce-based Content-Security-Policy](027-strict-csp.md) |
 | 028 | [Terms and Privacy, link-preview cards, badge toast, certificates](028-small-platform-features.md) |
+| 029 | [Lesson video in R2, drafts and the watch position](029-video-and-drafts.md) |
 | 030 | [Passkeys and email change: step-up, owner-only links, revert window](030-passkeys-and-email-change.md) |

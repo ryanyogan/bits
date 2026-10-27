@@ -3,11 +3,14 @@ import { css } from 'remix/component'
 import { Keycap } from '@bits/ui/keycap'
 import { VideoPlayer } from '@bits/ui/video-player'
 
+import { draftKey } from '../../../../progress/draft-keys.ts'
 import type { LessonView } from '../lesson-view.ts'
+import { draftPersist } from './exercise.ts'
 
 /**
- * Watch mode (Lesson artboard): the VideoPlayer shell with chapters and the
- * synced transcript, then a card pointing back to the exercise. The player
+ * Watch mode (Lesson artboard): the VideoPlayer playing the lesson's MP4
+ * (decision 029) with chapters and the synced transcript, resuming where the
+ * learner stopped, then a card pointing back to the exercise. The player
  * island renders the player and transcript as siblings; the page's app-layer
  * styles let them join this flex row (`display: contents`) so the transcript
  * sits under the video beside the card, as drawn.
@@ -24,7 +27,9 @@ export function WatchMode(handle: Handle<{ view: LessonView }>) {
           duration={video.duration}
           chapters={video.chapters.map((chapter) => ({ title: chapter.title, start: chapter.at }))}
           cues={video.cues}
+          source={{ src: video.src }}
           initialTime={view.resumeAt}
+          persist={draftPersist(view, draftKey.video)}
         />
         <aside aria-label="About this video" mix={sideCard}>
           <p mix={sideText}>
