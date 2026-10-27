@@ -311,7 +311,9 @@
     /* Fixed-size windows for content that fills in (decision 023): they
      * scroll inside instead of pushing the page. */
     --run-log-height: clamp(220px, 42svh, 420px); /* composer runs */
-    --terminal-height: clamp(420px, 72svh, 760px); /* terminal-mode log */
+    /* terminal-mode log: never taller than the room under the sticky header,
+       so the whole panel fits on screen at once (floor for short landscapes). */
+    --terminal-height: max(320px, min(clamp(420px, 72svh, 760px), calc(100svh - var(--shell-h) - var(--space-8))));
     --output-panel-height: 240px; /* :::terminal / code output */
     --toast-width: 480px; /* RewardRegion overlay */
     --z-toast: 20; /* above the sticky bars (5) */

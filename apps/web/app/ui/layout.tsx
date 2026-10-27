@@ -25,6 +25,12 @@ export interface LayoutProps {
   bar?: 'static' | 'sticky'
   head?: RemixNode
   /**
+   * Extra self-hosted faces this page shows above the fold, by file name
+   * (`unbounded-latin-500-normal.woff2`). Preloaded after the two every page
+   * gets (Geist 400, Unbounded 700; decision 023).
+   */
+  preloadFonts?: string[]
+  /**
    * The signed-in viewer, or `null` when signed out: XP, streak and avatar
    * when signed in, "Sign in" + "Start free" otherwise (components §3.1b).
    * Omitting it renders the signed-out actions, so pass it on every page that
@@ -72,6 +78,7 @@ export function Layout(handle: Handle<LayoutProps>) {
       canonicalPath,
       bar = 'sticky',
       head,
+      preloadFonts = [],
       viewer,
       xp,
       sub,
@@ -87,7 +94,17 @@ export function Layout(handle: Handle<LayoutProps>) {
         siteName={APP_NAME}
         title={pageTitle(title)}
         description={description}
-        head={head}
+        head={
+          <>
+            {preloadFonts.map((name) => {
+              let href = platform.assets.fonts[name]
+              return href ? (
+                <link key={name} rel="preload" as="font" type="font/woff2" href={href} crossOrigin="anonymous" />
+              ) : null
+            })}
+            {head}
+          </>
+        }
       >
         <a href="#main" mix={skipLinkStyle}>
           Skip to content

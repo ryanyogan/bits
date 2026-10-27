@@ -155,7 +155,7 @@ function Quiz(handle: Handle<{ view: LessonView; block: QuizBlock }>) {
     let explanation = answered ? chosen.map((option) => option.explanation).join(' ') : undefined
     let anchor = `quiz-${block.id}`
     return (
-      <div id={anchor} mix={[attachedBlock, quizStyle]}>
+      <div id={anchor} mix={attachedBlock}>
         <QuizChoice
           name={anchor}
           question={inlineNodes(block.question)}
@@ -186,6 +186,5 @@ const columnStyle = css({
   '@media (max-width: 759px)': { gap: 'var(--space-5_5)' },
 })
 // The composer's runs list and toast sit in the column flow above it.
-const exerciseStyle = css({ display: 'flex', flexDirection: 'column', scrollMarginTop: '96px' })
+const exerciseStyle = css({ display: 'flex', flexDirection: 'column' })
 const codeStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', minWidth: 0 })
-const quizStyle = css({ scrollMarginTop: '96px' })

@@ -55,9 +55,14 @@ composer disappearing at hydration, and late font swaps re-wrapping text
     height in the web font and the matched fallback for Geist 400/600,
     Unbounded 700 and Geist Mono (0.0% difference). Unmatched fallbacks
     differ by 8–32%.
-- **Preload stays at two faces**: Geist 400 latin (body copy on every
-  page) and Unbounded 700 latin (the landing/catalogue headline, the usual
-  LCP). Everything else swaps in under its matched fallback.
+- **Every page preloads two faces**: Geist 400 latin (body copy on every
+  page) and Unbounded 700 latin (the logo on every page, and the
+  landing/catalogue headline, the usual LCP). A page adds the faces it
+  shows above the fold with `Layout`'s `preloadFonts` (file names, looked up
+  in `platform.assets.fonts`): lesson pages add Unbounded 500, the sub-bar
+  title; the landing page adds Unbounded 800 itself. Everything else swaps
+  in under its matched fallback. Keep a page at three or four preloads:
+  each one competes with the CSS for early bandwidth.
 - **Rendering knobs**: `-webkit-font-smoothing: antialiased` stays, since
   light text on near-black looks heavy with macOS subpixel AA. No
   `text-rendering: optimizeLegibility` (kerning and ligatures are on by

@@ -52,6 +52,8 @@ describe('lesson page and author preview', () => {
     assert.match(html, /<header[\s\S]*<h1[^>]*>Temperature &amp; randomness<\/h1>[\s\S]*<\/header>/)
     // Narrow screens get the mode tabs at the top of the lesson.
     assert.equal(count(html, /aria-label="Lesson format"/), 2)
+    // The sub-bar title's face is preloaded with the two every page gets (decision 023).
+    assert.match(html, /<link rel="preload" as="font" type="font\/woff2" href="[^"]*unbounded-latin-500-normal\.woff2"/)
 
     let user = await signIn('shell@example.com')
     let signedIn = await page(lessonHref(temperature), user.cookie)
