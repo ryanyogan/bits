@@ -64,4 +64,4 @@ const actionsStyle = css({
 
 const keyStyle = css({ '@media (max-width: 480px)': { width: '100%' } })
 
-const passkeyStyle = css({ flex: '1 1 220px', minWidth: 0 })
+const passkeyStyle = css({ flex: '1 1 220px', minWidth: 0, '@media (max-width: 480px)': { flex: 'none' } })

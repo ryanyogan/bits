@@ -384,8 +384,10 @@ export type EmailChangeResult = { ok: true; email: string } | { ok: false; reaso
  * after the first acts only if this batch spent the token (`used_at = now`),
  * so an expired or already-used token changes nothing. If the address was
  * taken meanwhile, the unique index on users.email fails the whole batch and
- * the token stays open. Sessions are left alone: the old address's revert
- * link is what signs everyone out (decision 030).
+ * the token stays open. While an earlier change's revert link is open, the
+ * token can't be spent at all, so no change can replace or cancel it.
+ * Sessions are left alone: the old address's revert link is what signs
+ * everyone out (decision 030).
  */
 export async function completeEmailChange(
   db: D1DataTableDatabase,
@@ -397,14 +399,11 @@ export async function completeEmailChange(
     db.d1
       .prepare(
         `update email_tokens set used_at = ?3
-         where token_hash = ?2 and user_id = ?1 and purpose = 'email-change' and used_at is null and expires_at > ?3`,
-      )
-      .bind(userId, tokenHash, now),
-    // Only the newest change can be undone: earlier revert links are withdrawn.
-    db.d1
-      .prepare(
-        `update email_tokens set used_at = ?3
-         where user_id = ?1 and purpose = 'email-revert' and used_at is null and ${spent}`,
+         where token_hash = ?2 and user_id = ?1 and purpose = 'email-change' and used_at is null and expires_at > ?3
+           and not exists (
+             select 1 from email_tokens r
+             where r.user_id = ?1 and r.purpose = 'email-revert' and r.used_at is null and r.expires_at > ?3
+           )`,
       )
       .bind(userId, tokenHash, now),
     // The revert link's row holds the old address and the new one; no code (link only).
@@ -535,4 +534,19 @@ export async function revertEmailChange(
   }
   if ((results[0]?.meta.changes ?? 0) === 0) return { ok: false, reason: 'expired' }
   return { ok: true, email: open.email, userId }
+}
+
+/**
+ * When the user's open revert window ends, or null. While it is open, no
+ * new email change can be requested or completed (decision 030).
+ */
+export async function openRevertUntil(db: D1DataTableDatabase, userId: string, now: number): Promise<number | null> {
+  let row = await db.d1
+    .prepare(
+      `select max(expires_at) as until from email_tokens
+       where user_id = ? and purpose = 'email-revert' and used_at is null and expires_at > ?`,
+    )
+    .bind(userId, now)
+    .first<{ until: number | null }>()
+  return row?.until ?? null
 }

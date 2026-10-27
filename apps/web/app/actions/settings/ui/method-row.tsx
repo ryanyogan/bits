@@ -131,8 +131,9 @@ const renameFormStyle = css({ display: 'flex', alignItems: 'center', gap: 'var(-
 
 const renameInputStyle = css({
   minHeight: 'var(--touch-target)',
-  width: '14rem',
-  maxWidth: '100%',
+  flex: '1 1 10rem',
+  minWidth: 0,
+  maxWidth: '14rem',
   padding: '0 var(--space-3)',
   borderRadius: 'var(--radius-10)',
   border: '1px solid var(--line-control)',

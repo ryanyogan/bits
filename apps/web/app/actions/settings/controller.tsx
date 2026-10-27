@@ -161,6 +161,16 @@ export default createController(routes.settings, {
           ip: context.headers.get('CF-Connecting-IP'),
           origin: context.url.origin,
         })
+        if (!result.ok && result.reason === 'revert-window') {
+          let date = new Date(result.until).toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            timeZone: user.timezone || 'UTC',
+          })
+          let text = `An email change is waiting for confirmation from your previous address. Try again after ${date}.`
+          return invalid(context, user, 'email', { email: text }, ['email'], 409)
+        }
         if (!result.ok) {
           let failure = emailFailures[result.reason]
           return invalid(context, user, 'email', { email: failure.text }, ['email'], failure.status)

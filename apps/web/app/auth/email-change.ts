@@ -9,6 +9,7 @@ import {
   findPendingEmailChange,
   findUserByEmail,
   insertEmailToken,
+  openRevertUntil,
   peekEmailChange,
   reserveEmailChangeAttempt,
   peekEmailRevert,
@@ -26,7 +27,10 @@ import { confirmEmailChangeMail, emailChangedMail, emailTakenMail } from './emai
 import { checkEmailLimits, codeHash, isTokenShaped, MAX_CODE_ATTEMPTS, TOKEN_TTL_MINUTES } from './email-sign-in.ts'
 import { MailError, sendMail } from './mailer.ts'
 
-export type EmailChangeRequestResult = { ok: true } | { ok: false; reason: 'rate-email' | 'rate-ip' | 'send-failed' }
+export type EmailChangeRequestResult =
+  | { ok: true }
+  | { ok: false; reason: 'rate-email' | 'rate-ip' | 'send-failed' }
+  | { ok: false; reason: 'revert-window'; until: number }
 
 /**
  * Stores a change token for `email` and mails the new address. When the
@@ -38,6 +42,10 @@ export async function requestEmailChange(
   input: { user: User; email: string; ip: string | null; origin: string },
 ): Promise<EmailChangeRequestResult> {
   let now = Date.now()
+  // The last change's undo link is still open: one change per window, so a
+  // second change can't cancel the first one's revert link.
+  let until = await openRevertUntil(db, input.user.id, now)
+  if (until) return { ok: false, reason: 'revert-window', until }
   let limits = await checkEmailLimits(db, input.email, input.ip, now)
   if (!limits.ok) return limits
 

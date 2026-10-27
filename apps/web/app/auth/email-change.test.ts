@@ -172,29 +172,29 @@ describe('email change', () => {
     assert.equal((await signIn('victim@example.com')).user.id, user.id)
   })
 
-  it('a stale revert link can’t rewrite a later email; only the newest change can be undone', async () => {
+  it('blocks another change while the revert window is open, so nobody can cancel the undo link', async () => {
     let { cookie, user } = await signIn('chain-a@example.com')
     let { code: toB } = await askToChange(cookie, 'chain-b@example.com')
     await fetchAs(cookie, routes.settings.emailConfirm.href(), post({ code: toB! }))
     let revertAtoB = revertTokenFor('chain-a@example.com')
 
-    let fresh = (await signIn('chain-b@example.com')).cookie
-    let { code: toC } = await askToChange(fresh, 'chain-c@example.com')
-    await fetchAs(fresh, routes.settings.emailConfirm.href(), post({ code: toC! }))
-    assert.equal((await findUserById(testDb, user.id))!.email, 'chain-c@example.com')
-    let revertBtoC = revertTokenFor('chain-b@example.com')
-
-    // A→B's link is withdrawn (and B is no longer the account's email anyway).
-    let stalePage = await fetchAs(null, routes.auth.emailRevert.index.href(undefined, { searchParams: { token: revertAtoB } }))
-    assert.equal(stalePage.headers.get('Location'), '/login?error=email-link-expired')
-    let stale = await fetchAs(null, routes.auth.emailRevert.action.href(), post({ token: revertAtoB }))
-    assert.equal(stale.headers.get('Location'), '/login?error=email-link-expired')
-    assert.equal((await findUserById(testDb, user.id))!.email, 'chain-c@example.com')
-
-    // B→C's link still works while the account is on C.
-    let undone = await fetchAs(null, routes.auth.emailRevert.action.href(), post({ token: revertBtoC }))
-    assert.equal(undone.headers.get('Location'), '/login?notice=email-reverted')
+    // Whoever now holds B tries to move on to C (a fresh sign-in, so step-up passes).
+    let attacker = (await signIn('chain-b@example.com')).cookie
+    let blocked = await fetchAs(attacker, routes.settings.email.href(), post({ email: 'chain-c@example.com' }))
+    assert.equal(blocked.status, 409)
+    assert.match(await blocked.text(), /waiting for confirmation from your previous address\. Try again after \d+ \w+ \d{4}/)
+    assert.equal(outbox.findLast((m) => m.to === 'chain-c@example.com'), undefined, 'no mail to C')
     assert.equal((await findUserById(testDb, user.id))!.email, 'chain-b@example.com')
+
+    // A's undo link still works and ends the attacker's session.
+    let undone = await fetchAs(null, routes.auth.emailRevert.action.href(), post({ token: revertAtoB }))
+    assert.equal(undone.headers.get('Location'), '/login?notice=email-reverted')
+    assert.equal((await findUserById(testDb, user.id))!.email, 'chain-a@example.com')
+    assert.equal((await fetchAs(attacker, routes.settings.index.href())).status, 303)
+
+    // Once the window is closed (here: the link is spent), changes work again.
+    let owner = (await signIn('chain-a@example.com')).cookie
+    await askToChange(owner, 'chain-d@example.com')
   })
 
   it('a revert link stops working once the account has moved on', async () => {

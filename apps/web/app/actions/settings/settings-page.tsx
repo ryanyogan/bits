@@ -208,7 +208,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                     </form>
                     <form method="post" action={routes.settings.email.href()}>
                       <Keycap type="submit" variant="ghost-mono" name="intent" value="cancel" mix={footerKeyStyle}>
-                        Keep {viewer.email}
+                        Cancel the change
                       </Keycap>
                     </form>
                   </div>
