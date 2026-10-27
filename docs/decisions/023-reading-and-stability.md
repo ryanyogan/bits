@@ -147,6 +147,12 @@ After the change (same method):
 
 No page scrolls sideways at 360px.
 
+Follow-up (integrated review): once a run earned the reward, later runs
+landed above the toast and pushed it down (0.014 at 1440px), and at 360px
+the toast's nowrap "Next: … →" key widened the lesson column to 407px
+(CLS 0.17). The toast now sits inside the run that earned it and its key
+wraps; 3–5 runs measure ~0 at both widths.
+
 - The composer always takes its window's height, even before a run. That
   is deliberate: the space the replies need is reserved, not taken from the
   page later.
