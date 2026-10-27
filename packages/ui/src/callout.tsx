@@ -48,7 +48,7 @@ const baseStyle = css({
   alignItems: 'flex-start',
   gap: 'var(--space-2_5)',
   borderRadius: 'var(--radius-10)',
-  border: '1px solid transparent',
+  border: 'var(--border-w) solid transparent',
 })
 
 const blockStyle = css({

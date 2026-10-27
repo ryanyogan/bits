@@ -3,6 +3,7 @@ import { css } from 'remix/component'
 
 import { AppBarMenu, type AppBarLink } from './app-bar-menu.tsx'
 import { Logo } from './logo.tsx'
+import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
 import { navLinkStyle, navLinkVariants } from './nav-link.tsx'
 
 export type { AppBarLink }
@@ -82,6 +83,7 @@ export function AppBar(handle: Handle<AppBarProps>) {
                 key={link.href}
                 href={link.href}
                 aria-current={link.href === currentPath ? 'page' : undefined}
+                data-rmx-prefetch={prefetchFor(link.href)}
                 mix={[navLinkStyle, navLinkVariants[marketing ? 'marketing' : 'app']]}
               >
                 {link.label}
@@ -112,7 +114,7 @@ const stickyStyle = css({
   background: 'var(--appbar-bg)',
   WebkitBackdropFilter: 'blur(var(--blur-glass))',
   backdropFilter: 'blur(var(--blur-glass))',
-  borderBottom: '1px solid var(--line-bar)',
+  borderBottom: 'var(--border-w) solid var(--line-bar)',
 })
 
 const staticStyle = css({ background: 'transparent' })
@@ -130,14 +132,14 @@ const marketingInner = css({
   justifyContent: 'space-between',
   gap: 'var(--space-5)',
   // The menu sheet drops from `--appbar-h`, so the narrow bar matches it.
-  [NARROW]: { height: 'calc(var(--appbar-h) - 1px)', padding: '0 var(--page-gutter)', flexWrap: 'nowrap' },
+  [NARROW]: { height: 'calc(var(--appbar-h) - var(--border-w))', padding: '0 var(--page-gutter)', flexWrap: 'nowrap' },
 })
 
 // One row at a fixed height (`--appbar-h` with the sticky bar's 1px border,
 // decision 022): sticky offsets below the bar (lesson sub-bar, outline,
 // scroll-padding) depend on it.
 const appInner = css({
-  height: 'calc(var(--appbar-h) - 1px)',
+  height: 'calc(var(--appbar-h) - var(--border-w))',
   padding: '0 var(--page-gutter)',
   gap: 'var(--space-7)',
   flexWrap: 'nowrap',

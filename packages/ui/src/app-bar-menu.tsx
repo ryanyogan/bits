@@ -2,6 +2,8 @@ import type { Handle } from 'remix/component'
 import { clientEntry, css, on } from 'remix/component'
 
 import { Icon } from './icon.tsx'
+import { prefetchFor } from './lib/prefetch.ts'
+import { ACTIVE, FORCED_COLORS, forcedSelected, HOVER } from './lib/states.ts'
 
 export interface AppBarLink {
   href: string
@@ -58,6 +60,7 @@ export const AppBarMenu = clientEntry(
                   key={link.href}
                   href={link.href}
                   aria-current={link.href === currentPath ? 'page' : undefined}
+                  data-rmx-prefetch={prefetchFor(link.href)}
                   mix={linkStyle}
                 >
                   {link.label}
@@ -83,12 +86,14 @@ const buttonStyle = css({
   height: 'var(--touch-target)',
   padding: 0,
   borderRadius: 'var(--radius-12)',
-  border: '1px solid var(--line-strong)',
+  border: 'var(--border-w) solid var(--line-strong)',
   background: 'transparent',
   color: 'var(--text)',
   cursor: 'pointer',
   transition: 'background-color var(--duration-fast), border-color var(--duration-fast)',
-  '&:hover': { background: 'var(--fill-ghost-hover)', borderColor: 'var(--line-drop)' },
+  // The ghost-key recipe (Keycap ghost, BackButton): hover lifts the border, press fills.
+  [HOVER]: { background: 'var(--fill-ghost-hover)', borderColor: 'var(--line-drop)' },
+  [ACTIVE]: { background: 'var(--fill-btn)' },
 })
 
 const sheetStyle = css({
@@ -105,7 +110,7 @@ const sheetStyle = css({
   margin: 0,
   padding: 'var(--space-2) var(--page-gutter) var(--space-4)',
   border: 0,
-  borderBottom: '1px solid var(--line-bar)',
+  borderBottom: 'var(--border-w) solid var(--line-bar)',
   background: 'var(--surface)',
   color: 'var(--text)',
   boxShadow: 'var(--shadow-float)',
@@ -130,10 +135,13 @@ const linkStyle = css({
   fontSize: 'var(--fs-15)',
   textDecoration: 'none',
   transition: 'background-color var(--duration-fast), color var(--duration-fast)',
-  '&:hover': { color: 'var(--text)', background: 'var(--fill-hover)' },
+  [HOVER]: { color: 'var(--text)', background: 'var(--fill-hover)' },
+  [ACTIVE]: { background: 'var(--fill-btn)' },
   '&[aria-current="page"]': {
     color: 'var(--text)',
     background: 'var(--fill-ghost-hover)',
-    boxShadow: 'inset 2px 0 0 var(--volt)',
+    boxShadow: 'inset var(--border-w-strong) 0 0 var(--volt)',
   },
+  // The tint and the inset rule vanish in forced colours (decision 025).
+  [FORCED_COLORS]: { '&[aria-current="page"]': forcedSelected },
 })

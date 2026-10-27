@@ -1,7 +1,7 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
-import { FORCED_COLORS, forcedSelected } from './lib/states.ts'
+import { focusOutline, FORCED_COLORS, forcedSelected } from './lib/states.ts'
 
 export interface QuizOption {
   value: string
@@ -86,7 +86,7 @@ const cardStyle = css({
   padding: 'var(--space-3_5)',
   borderRadius: 'var(--radius-lg)',
   background: 'var(--surface)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   fontSize: 'var(--fs-14)',
 })
 const fieldsetStyle = css({ margin: 0, padding: 0, border: 0, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' })
@@ -98,13 +98,13 @@ const optionStyle = css({
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-3)',
   borderRadius: 'var(--radius-10)',
-  border: '1px solid var(--line-panel)',
+  border: 'var(--border-w) solid var(--line-panel)',
   color: 'var(--text-quiet)',
   cursor: 'pointer',
   transition: 'background-color var(--duration-fast), border-color var(--duration-fast)',
   '&:not([data-result]):hover': { borderColor: 'var(--line-node-next)' },
   '&:has(:checked)': { borderColor: 'var(--volt-a60)', background: 'var(--volt-tint-on)', color: 'var(--volt-soft)' },
-  '&:has(:focus-visible)': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:has(:focus-visible)': focusOutline,
   '&[data-result="correct"]': { borderColor: 'var(--volt-a45)', background: 'var(--volt-tint-on)', color: 'var(--volt-soft)' },
   '&[data-result="incorrect"]': { borderColor: 'var(--warn-line)', background: 'var(--warn-tint)', color: 'var(--warn)' },
   // The ✓ / ! marks carry the result in forced colours; selection gets the highlight pair.

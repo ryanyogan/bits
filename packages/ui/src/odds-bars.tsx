@@ -1,6 +1,7 @@
 import type { Handle } from 'remix/component'
 import { clientEntry, css, on } from 'remix/component'
 
+import { focusOutline } from './lib/states.ts'
 import { Ghost, stackStyle } from './lib/stable.tsx'
 import { OddsList } from './odds-list.tsx'
 
@@ -118,7 +119,7 @@ const panelStyle = css({
   padding: 'var(--space-5_5)',
   borderRadius: 'var(--radius-xl)',
   background: 'var(--surface)',
-  border: '1px solid var(--ion-a28)',
+  border: 'var(--border-w) solid var(--ion-a28)',
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--space-4_5)',
@@ -140,7 +141,7 @@ const sliderRow = css({
   gap: 'var(--space-4)',
   flexWrap: 'wrap',
   paddingTop: 'var(--space-1)',
-  borderTop: '1px solid var(--line-hair)',
+  borderTop: 'var(--border-w) solid var(--line-hair)',
 })
 const sliderLabel = css({ paddingTop: 'var(--space-3)', fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--muted)' })
 const sliderStyle = css({
@@ -150,7 +151,7 @@ const sliderStyle = css({
   marginTop: 'var(--space-3)',
   accentColor: 'var(--volt)',
   cursor: 'pointer',
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:focus-visible': focusOutline,
   [NARROW]: { minWidth: 0, flexBasis: '100%', order: 3 },
 })
 const badgeStyle = css({
@@ -158,7 +159,7 @@ const badgeStyle = css({
   marginTop: 'var(--space-3)',
   borderRadius: 'var(--radius-sm)',
   background: 'var(--well)',
-  border: '1px solid var(--line-panel)',
+  border: 'var(--border-w) solid var(--line-panel)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-14)',
   color: 'var(--volt)',

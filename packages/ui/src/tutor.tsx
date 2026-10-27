@@ -163,7 +163,7 @@ export function ModelOutput(handle: Handle<ModelOutputProps>) {
 export const modelPanelStyle = css({
   padding: 'var(--space-3_5) var(--space-4)',
   borderRadius: 'var(--radius-lg)',
-  border: '1px solid var(--ion-a25)',
+  border: 'var(--border-w) solid var(--ion-a25)',
   background: 'var(--ion-a04)',
   display: 'flex',
   flexDirection: 'column',

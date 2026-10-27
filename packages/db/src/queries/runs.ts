@@ -180,8 +180,3 @@ export async function listRunTemperatures(
 export async function claimVisitorRuns(db: D1DataTableDatabase, visitor: string, userId: string): Promise<void> {
   await db.d1.prepare('update exercise_attempts set user_id = ? where visitor = ? and user_id is null').bind(userId, visitor).run()
 }
-
-/** Daily cron: signed-out runs older than `before` are dropped. */
-export async function deleteOldAnonymousRuns(db: D1DataTableDatabase, before: number): Promise<void> {
-  await db.d1.prepare('delete from exercise_attempts where user_id is null and created_at < ?').bind(before).run()
-}

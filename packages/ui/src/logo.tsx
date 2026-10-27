@@ -2,6 +2,7 @@ import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
 import { BrandMark } from './brand-mark.tsx'
+import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
 
 export type LogoVariant = 'nav' | 'auth' | 'app' | 'footer'
 
@@ -13,6 +14,8 @@ export interface LogoProps {
   variant?: LogoVariant
   /** Accessible name for the link; defaults to "<Brand> home". */
   label?: string
+  /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
+  prefetch?: PrefetchProp
   mix?: MixInput<HTMLElement>
 }
 
@@ -24,12 +27,12 @@ const markSize: Record<LogoVariant, number | null> = { nav: 30, auth: 28, app: 2
  */
 export function Logo(handle: Handle<LogoProps>) {
   return () => {
-    let { brand, href, variant = 'app', label, mix } = handle.props
+    let { brand, href, variant = 'app', label, prefetch, mix } = handle.props
     let size = markSize[variant]
     let name = label ?? `${brand.charAt(0).toUpperCase()}${brand.slice(1)} home`
 
     return (
-      <a href={href} aria-label={name} mix={[linkStyle, wordStyles[variant], mix]}>
+      <a href={href} data-rmx-prefetch={prefetchFor(href, prefetch)} aria-label={name} mix={[linkStyle, wordStyles[variant], mix]}>
         {size ? <BrandMark size={size} /> : null}
         <span>{brand}</span>
       </a>

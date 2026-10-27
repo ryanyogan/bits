@@ -181,16 +181,6 @@ export async function listUserSessions(
   return result.results
 }
 
-/** Housekeeping for the scheduled handler: drops expired sessions and tokens. */
-export async function deleteExpiredAuthRows(db: D1DataTableDatabase, now: number): Promise<void> {
-  await db.batch([
-    db.d1.prepare('delete from sessions where expires_at <= ?').bind(now),
-    // Keep spent tokens for an hour so the per-email and per-IP limits still count them.
-    db.d1.prepare('delete from email_tokens where expires_at <= ?').bind(now - 60 * 60 * 1000),
-    db.d1.prepare('delete from webauthn_challenges where expires_at <= ?').bind(now),
-  ])
-}
-
 // ---------------------------------------------------------------------------
 // Email sign-in tokens
 

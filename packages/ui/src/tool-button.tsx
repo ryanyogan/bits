@@ -1,7 +1,7 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
-import { FOCUS, FORCED_COLORS, forcedSelected, HOVER, type ForcedState } from './lib/states.ts'
+import { ACTIVE, busyStyle, DISABLED, FOCUS, focusOutline, FORCED_COLORS, forcedSelected, HOVER, type ForcedState } from './lib/states.ts'
 
 export type ToolButtonVariant = 'outline' | 'quiz' | 'video'
 
@@ -42,7 +42,7 @@ export function ToolButton(handle: Handle<ToolButtonProps>) {
         aria-label={label}
         aria-pressed={pressed === undefined ? undefined : pressed ? 'true' : 'false'}
         data-force={forceState}
-        mix={[baseStyle, variantStyles[variant], square ? squareStyle : undefined, mix]}
+        mix={[baseStyle, variantStyles[variant], square ? squareStyle : undefined, busyStyle, mix]}
       >
         {children}
       </button>
@@ -56,7 +56,7 @@ export const toolButtonBase = css({
   alignItems: 'center',
   justifyContent: 'center',
   gap: 'var(--space-1_5)',
-  border: '1px solid var(--line-control)',
+  border: 'var(--border-w) solid var(--line-control)',
   background: 'transparent',
   color: 'var(--text-quiet)',
   fontFamily: 'var(--font-mono)',
@@ -67,9 +67,9 @@ export const toolButtonBase = css({
   transition: 'background-color var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast)',
   '&::before': { content: '""', position: 'absolute', inset: '-5px -1px' },
   [HOVER]: { background: 'var(--fill-btn)' },
-  [FOCUS]: { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
-  '&:disabled': { color: 'var(--dim)', cursor: 'not-allowed', borderColor: 'var(--line)' },
-  '&[aria-busy="true"]': { cursor: 'progress' },
+  [ACTIVE]: { background: 'var(--fill-tab-on)' },
+  [FOCUS]: focusOutline,
+  [DISABLED]: { color: 'var(--dim)', cursor: 'not-allowed', borderColor: 'var(--line)' },
 })
 
 // Each variant repeats this after its own pressed colours: a rule in the base
@@ -80,14 +80,14 @@ const baseStyle = toolButtonBase
 
 const variantStyles: Record<ToolButtonVariant, ReturnType<typeof css>> = {
   outline: css({
-    minHeight: '34px',
+    minHeight: 'var(--control-xs)',
     padding: '0 var(--space-3)',
     borderRadius: 'var(--radius-sm)',
     '&[aria-pressed="true"]': { background: 'var(--volt-a14)', color: 'var(--volt-soft)', borderColor: 'var(--volt-a50)' },
     [FORCED_COLORS]: forcedPressed,
   }),
   quiz: css({
-    minHeight: '40px',
+    minHeight: 'var(--control-compact)',
     padding: '0 var(--space-3)',
     borderRadius: 'var(--radius-9)',
     color: 'var(--text)',
@@ -97,8 +97,8 @@ const variantStyles: Record<ToolButtonVariant, ReturnType<typeof css>> = {
     [FORCED_COLORS]: forcedPressed,
   }),
   video: css({
-    minHeight: '40px',
-    minWidth: '40px',
+    minHeight: 'var(--control-compact)',
+    minWidth: 'var(--control-compact)',
     padding: '0 var(--space-2_5)',
     borderRadius: 'var(--radius-10)',
     border: 0,
@@ -112,4 +112,4 @@ const variantStyles: Record<ToolButtonVariant, ReturnType<typeof css>> = {
   }),
 }
 
-const squareStyle = css({ width: '40px', padding: 0 })
+const squareStyle = css({ width: 'var(--control-compact)', padding: 0 })
