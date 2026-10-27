@@ -1,6 +1,7 @@
 import type { Handle } from 'remix/component'
 import { clientEntry, css, on } from 'remix/component'
 
+import { focusOutline } from './lib/states.ts'
 import { Ghost, stackStyle } from './lib/stable.tsx'
 import { needsScriptStyle, NoScript, toyNoteStyle, ToyPanel } from './toy-panel.tsx'
 
@@ -162,7 +163,7 @@ const outputBox = css({
   padding: 'var(--space-3_5) var(--space-4)',
   borderRadius: 'var(--radius-lg)',
   background: 'var(--well)',
-  border: '1px solid var(--line-panel)',
+  border: 'var(--border-w) solid var(--line-panel)',
 })
 const chartRow = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' })
 // width: 100% drops the SVG's default 300px intrinsic width, which otherwise
@@ -195,7 +196,7 @@ const sliderRow = css({
   gap: 'var(--space-4)',
   flexWrap: 'wrap',
   paddingTop: 'var(--space-3)',
-  borderTop: '1px solid var(--line-hair)',
+  borderTop: 'var(--border-w) solid var(--line-hair)',
 })
 const sliderLabel = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--muted)' })
 const sliderStyle = css({
@@ -204,14 +205,14 @@ const sliderStyle = css({
   height: 'var(--touch-target)',
   accentColor: 'var(--volt)',
   cursor: 'pointer',
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:focus-visible': focusOutline,
   '@media (max-width: 480px)': { minWidth: 0, flexBasis: '100%', order: 3 },
 })
 const badgeStyle = css({
   padding: 'var(--space-1_5) var(--space-2_5)',
   borderRadius: 'var(--radius-sm)',
   background: 'var(--well)',
-  border: '1px solid var(--line-panel)',
+  border: 'var(--border-w) solid var(--line-panel)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-14)',
   color: 'var(--volt)',

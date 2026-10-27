@@ -106,10 +106,10 @@ const compactLabel = css({ fontSize: 'var(--fs-13)', color: 'var(--muted)' })
 
 export const inputStyle = css({
   width: '100%',
-  minHeight: '50px',
+  minHeight: 'var(--control-field)',
   padding: '0 var(--space-4)',
   borderRadius: 'var(--radius-12)',
-  border: '1px solid var(--line-strong)',
+  border: 'var(--border-w) solid var(--line-strong)',
   background: 'var(--well)',
   color: 'var(--text)',
   fontFamily: 'var(--font-sans)',
@@ -122,7 +122,7 @@ export const inputStyle = css({
     boxShadow: 'var(--focus-ring)',
   },
   '&[aria-invalid="true"]': { borderColor: 'var(--danger-line)' },
-  '&[aria-invalid="true"]:focus': { borderColor: 'var(--danger)', boxShadow: '0 0 0 4px var(--danger-tint)' },
+  '&[aria-invalid="true"]:focus': { borderColor: 'var(--danger)', boxShadow: 'var(--focus-ring-danger)' },
   '&:disabled': { color: 'var(--dim)', cursor: 'not-allowed', borderColor: 'var(--line)', borderStyle: 'solid' },
   // Read-only (and read-only while its form is pending): dashed, no caret change.
   '&:read-only:not(:disabled)': { borderStyle: 'dashed' },

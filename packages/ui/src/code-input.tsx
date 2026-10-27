@@ -176,11 +176,11 @@ const boxLabel = css({ display: 'block', minWidth: 0 })
 const boxStyle = css({
   display: 'block',
   width: '100%',
-  height: '60px',
+  height: 'var(--control-code)',
   padding: 0,
   textAlign: 'center',
   borderRadius: 'var(--radius-12)',
-  border: '1px solid var(--line-control)',
+  border: 'var(--border-w) solid var(--line-control)',
   background: 'var(--well)',
   color: 'var(--text)',
   fontFamily: 'var(--font-display)',
@@ -190,7 +190,7 @@ const boxStyle = css({
   transition: 'border-color var(--duration-focus), box-shadow var(--duration-focus)',
   '&:focus': { ...hiddenOutline, borderColor: 'var(--focus-border)', boxShadow: 'var(--focus-ring)' },
   '&[aria-invalid="true"]': { borderColor: 'var(--danger-line)' },
-  '&[aria-invalid="true"]:focus': { borderColor: 'var(--danger)', boxShadow: '0 0 0 4px var(--danger-tint)' },
+  '&[aria-invalid="true"]:focus': { borderColor: 'var(--danger)', boxShadow: 'var(--focus-ring-danger)' },
   // Read-only while the form submits (PendingSubmit), disabled with the fieldset.
   '&:read-only': { borderStyle: 'dashed' },
   '&:disabled': { color: 'var(--dim)', borderColor: 'var(--line)', borderStyle: 'solid', cursor: 'not-allowed' },

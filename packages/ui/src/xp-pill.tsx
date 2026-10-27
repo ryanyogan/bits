@@ -31,7 +31,7 @@ const pillStyle = css({
   padding: 'var(--space-2) var(--space-3)',
   borderRadius: 'var(--radius-pill)',
   background: 'var(--volt-a08)',
-  border: '1px solid var(--volt-a25)',
+  border: 'var(--border-w) solid var(--volt-a25)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-13)',
   lineHeight: 1,

@@ -128,8 +128,8 @@
   /* [data-force="focus"] renders the same ring statically in the style guide. */
   :focus-visible,
   [data-force='focus'] {
-    outline: 2px solid var(--focus-ring-color);
-    outline-offset: 2px;
+    outline: var(--focus-outline);
+    outline-offset: var(--focus-offset);
     box-shadow: var(--focus-ring);
   }
 

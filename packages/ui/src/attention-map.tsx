@@ -182,7 +182,7 @@ const chipStyle = css({
   minHeight: 'var(--touch-target)',
   padding: 'var(--space-1) var(--space-2)',
   borderRadius: 'var(--radius-7)',
-  border: '1px solid var(--line-control)',
+  border: 'var(--border-w) solid var(--line-control)',
   background: 'var(--well)',
   color: 'var(--text)',
   cursor: 'pointer',

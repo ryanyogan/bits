@@ -75,16 +75,16 @@ const fieldStyle = css({
   alignItems: 'center',
   gap: 'var(--space-3)',
   padding: '0 var(--space-3_5) 0 var(--space-4_5)',
-  minHeight: '56px',
+  minHeight: 'var(--control-lg)',
   borderRadius: 'var(--radius-16)',
   background: 'var(--surface)',
-  border: '1px solid var(--line-strong)',
+  border: 'var(--border-w) solid var(--line-strong)',
   cursor: 'text',
   transition: 'border-color var(--duration-focus), box-shadow var(--duration-focus)',
   '&:focus-within, &[data-force="focus"]': {
     ...hiddenOutline,
     borderColor: 'var(--volt-a60)',
-    boxShadow: '0 0 0 4px var(--volt-tint)',
+    boxShadow: 'var(--focus-ring-soft)',
   },
   '@media (max-width: 480px)': { '& kbd': { display: 'none' } },
 })
@@ -92,7 +92,7 @@ const fieldStyle = css({
 const inputStyle = css({
   flex: 1,
   minWidth: 0,
-  height: '52px',
+  height: 'var(--control-search-input)',
   padding: 0,
   background: 'transparent',
   border: 0,
