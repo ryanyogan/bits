@@ -9,6 +9,7 @@ declare global {
   type ExecutionContext = import('@cloudflare/workers-types/index.ts').ExecutionContext
   type SendEmail = import('@cloudflare/workers-types/index.ts').SendEmail
   type RateLimit = import('@cloudflare/workers-types/index.ts').RateLimit
+  type ScheduledController = import('@cloudflare/workers-types/index.ts').ScheduledController
 
   // Secrets are not in wrangler.jsonc, so `wrangler types` cannot see them.
   // Optional because development and tests run without them (app/auth/config.ts).

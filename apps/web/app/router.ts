@@ -38,6 +38,7 @@ import { loadDatabase } from './middleware/database.ts'
 import { cspNonce } from './middleware/csp-nonce.tsx'
 import { responseHeaders } from './middleware/headers.ts'
 import { serveMedia } from './middleware/media.ts'
+import { logServerErrors } from './middleware/server-errors.ts'
 import { webAnalytics } from './middleware/web-analytics.tsx'
 import { routes } from './routes.ts'
 
@@ -46,6 +47,9 @@ export const router = createRouter({
     // Outermost, so every response gets the security and cache headers. It
     // also makes the request's CSP nonce (decision 027).
     responseHeaders(),
+    // One error line per 5xx, with path, status and ray id; a throw below
+    // becomes a plain 500 here, inside the security headers (decision 039).
+    logServerErrors(),
     // Lesson videos answer here, before cop, D1, the session and auth: every
     // Range request would otherwise read the session (decision 035).
     serveMedia(),

@@ -1,7 +1,8 @@
 // Email sign-in: one email carries a magic link and a 6-digit code (handoff,
 // Auth). Only SHA-256 hashes are stored; both expire after 15 minutes and are
 // single use; the code allows 5 attempts. Requests are limited to 3 per email
-// per 10 minutes and 20 per IP per hour, counted from the email_tokens rows.
+// per 10 minutes and 20 per IP per hour, counted from the email_tokens rows,
+// and every email takes a slot of the global daily cap (decision 039).
 import {
   consumeEmailToken,
   countEmailTokensForEmail,
@@ -15,6 +16,7 @@ import {
 
 import { routes } from '../routes.ts'
 import { digestsEqual, randomCode, randomToken, sha256Hex } from './crypto.ts'
+import { reserveMail } from './mail-quota.ts'
 import { MailError, sendMail } from './mailer.ts'
 import { signInEmail } from './sign-in-email.ts'
 import type { SignupDetails } from './users.ts'
@@ -24,7 +26,9 @@ export const MAX_CODE_ATTEMPTS = 5
 const PER_EMAIL = { limit: 3, windowMs: 10 * 60 * 1000 }
 const PER_IP = { limit: 20, windowMs: 60 * 60 * 1000 }
 
-export type EmailRequestResult = { ok: true } | { ok: false; reason: 'rate-email' | 'rate-ip' | 'send-failed' }
+export type EmailRequestResult =
+  | { ok: true }
+  | { ok: false; reason: 'rate-email' | 'rate-ip' | 'rate-global' | 'send-failed' }
 
 export interface EmailRequest {
   email: string
@@ -63,6 +67,7 @@ export async function requestEmailSignIn(db: D1DataTableDatabase, input: EmailRe
   let limits = await checkEmailLimits(db, input.email, input.ip, now)
   if (!limits.ok) return limits
   let { ipHash } = limits
+  if (!(await reserveMail(db, 'sign-in'))) return { ok: false, reason: 'rate-global' }
 
   let token = randomToken()
   let code = randomCode()

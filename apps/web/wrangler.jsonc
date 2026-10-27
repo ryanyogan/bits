@@ -107,6 +107,10 @@
     "AI_GATEWAY_ID": "bits",
     // Spend guard: live model runs per UTC day, for everyone.
     "RUN_DAILY_LIVE_CAP": "1000",
+    // Spend and reputation guard (decision 039): emails people can ask for
+    // (sign-in, step-up and confirm-new-address codes) per UTC day, for
+    // everyone. Past it, /login offers passkeys, GitHub and Google.
+    "SIGNIN_MAIL_DAILY_CAP": "300",
     // Cloudflare Web Analytics site token (decision 033): public, it ships in
     // every page. Empty = no beacon. Create the site under Web Analytics →
     // Add a site (bits.yogan.dev) with automatic injection off, then paste
@@ -114,16 +118,27 @@
     "WEB_ANALYTICS_TOKEN": ""
   },
 
-  // Daily housekeeping: delete expired sessions and email tokens, and
-  // signed-out prompt runs older than a week (worker.ts).
+  // Daily housekeeping (decision 039, app/housekeeping/): expired sessions,
+  // email tokens and WebAuthn challenges, signed-out prompt runs older than
+  // a week, mail counters older than 30 days, and video uploads that never
+  // finished. Test locally: `wrangler dev --test-scheduled`, then
+  // `curl "http://localhost:<port>/cdn-cgi/local/scheduled?cron=17+4+*+*+*"`.
   "triggers": {
     "crons": ["17 4 * * *"]
   },
 
+  // Workers Logs keep every request (well inside the included events at
+  // this traffic); traces sample 10%. Query strings are dropped from request
+  // URLs in logs and traces: magic links, email-change links and
+  // /login/check carry tokens and addresses there. Issues (open beta, free)
+  // groups uncaught exceptions, 5xx responses and `error` log lines; owner
+  // alerting on top of it is in decision 039.
   "observability": {
     "enabled": true,
+    "redact_query_string": true,
     "logs": { "enabled": true, "head_sampling_rate": 1 },
-    "traces": { "enabled": true, "head_sampling_rate": 0.1 }
+    "traces": { "enabled": true, "head_sampling_rate": 0.1 },
+    "issues": { "enabled": true }
   },
 
   // Workers Previews (`wrangler preview`, decision 032). A Preview inherits
@@ -137,7 +152,8 @@
   "previews": {
     "vars": {
       "APP_ENV": "preview",
-      "EMAIL_FROM": "signin@bits.yogan.dev"
+      "EMAIL_FROM": "signin@bits.yogan.dev",
+      "SIGNIN_MAIL_DAILY_CAP": "300"
     },
     "d1_databases": [
       {
@@ -165,6 +181,7 @@
     "placement": { "region": "azure:northcentralus" },
     "observability": {
       "enabled": true,
+      "redact_query_string": true,
       "logs": { "enabled": true, "head_sampling_rate": 1 },
       "traces": { "enabled": true, "head_sampling_rate": 0.1 }
     }
