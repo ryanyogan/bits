@@ -21,6 +21,7 @@ import { Session } from 'remix/session'
 
 import { exercisesOf } from '../actions/courses/lesson/content.ts'
 import { currentUser } from '../auth/identity.ts'
+import { completedLoadedWith } from '../auth/session.ts'
 import type { Catalog } from '../content/catalog.ts'
 import { contentBucket, getCatalog } from '../content/request.ts'
 import { loadCatalog } from '../content/store.ts'
@@ -63,7 +64,9 @@ function readAnonymous(session: Session | undefined): AnonymousProgress {
 export async function loadCompleted(context: ProgressContext): Promise<Completed> {
   let user = currentUser(context)
   if (user) {
-    let rows = await listCompletedLessons(getDatabase(context), user.id)
+    // Usually read with the session (session.ts, decision 026).
+    let rows =
+      completedLoadedWith(context.get(Session), user.id) ?? (await listCompletedLessons(getDatabase(context), user.id))
     return new Map(rows.map((row) => [`${row.course_id}/${row.lesson_slug}`, row.completed_at]))
   }
   let anonymous = readAnonymous(context.get(Session))

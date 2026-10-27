@@ -1,5 +1,6 @@
 export { createD1Database, D1DataTableDatabase } from './d1/database.ts'
 export { D1DatabaseDriver, D1UnsupportedError } from './d1/driver.ts'
+export { createD1Meter, meterD1, type D1Meter } from './d1/meter.ts'
 export type { D1Database } from './d1/types.ts'
 export * from './tables.ts'
 export * from './queries/users.ts'

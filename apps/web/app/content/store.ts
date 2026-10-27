@@ -20,6 +20,7 @@ import {
 } from '@bits/db'
 
 import type { LessonContent } from '../actions/courses/lesson/content.ts'
+import { errorFields, log } from '../log.ts'
 import type { CourseBuild } from './compile/index.ts'
 import { Catalog } from './catalog.ts'
 import type { CourseManifest } from './types.ts'
@@ -67,9 +68,10 @@ async function readVersionJson<T>(bucket: R2Bucket, version: VersionRef, key: st
   return value
 }
 
-/** Forgets every memoised version (tests). */
+/** Forgets every memoised version and the live catalog (tests). */
 export function clearContentMemo() {
   memo.clear()
+  forgetLiveCatalog()
 }
 
 // ---- Reading ----------------------------------------------------------------
@@ -98,6 +100,68 @@ export async function loadCatalog(db: D1DataTableDatabase, bucket: R2Bucket): Pr
     }),
   )
   return catalogOf(bucket, entries.filter((entry) => entry !== undefined))
+}
+
+// ---- The live catalog, per isolate (decision 026) ----------------------------
+//
+// Which version of each course is live changes only on publish, yet reading
+// it was a D1 round trip on every page. The isolate keeps the last catalog
+// and serves it stale-while-revalidate: younger than LIVE_FRESH_MS it is used
+// as is; up to LIVE_MAX_AGE_MS it is used while one background refresh
+// (waitUntil) re-reads D1; older, the request waits for D1. So after a
+// publish elsewhere (another isolate, the CLI), an isolate shows the old
+// version for at most LIVE_FRESH_MS plus one request, never more than
+// LIVE_MAX_AGE_MS. A publish in this isolate forgets it at once. Versions are
+// immutable, so a stale catalog is still a consistent one. Learner progress
+// is never part of it.
+
+const LIVE_FRESH_MS = 5_000
+const LIVE_MAX_AGE_MS = 60_000
+
+let live: { catalog: Catalog; at: number } | undefined
+let liveGeneration = 0
+let liveRefreshing = false
+
+/** Drops the memoised live catalog (after a publish in this isolate). */
+export function forgetLiveCatalog() {
+  live = undefined
+  liveGeneration++
+}
+
+async function refreshLiveCatalog(db: D1DataTableDatabase, bucket: R2Bucket): Promise<Catalog> {
+  let generation = liveGeneration
+  let at = Date.now()
+  let catalog = await loadCatalog(db, bucket)
+  // Don't let a slow read overwrite a newer one, or outlive a publish.
+  if (generation === liveGeneration && (!live || live.at <= at)) live = { catalog, at }
+  return catalog
+}
+
+/**
+ * The published catalog, from the isolate's memo when it is recent enough.
+ * `waitUntil` keeps a background refresh alive past the response.
+ */
+export function liveCatalog(
+  db: D1DataTableDatabase,
+  bucket: R2Bucket,
+  waitUntil: (promise: Promise<unknown>) => void,
+): Promise<Catalog> {
+  let age = live ? Date.now() - live.at : Infinity
+  if (live && age < LIVE_FRESH_MS) return Promise.resolve(live.catalog)
+  if (live && age < LIVE_MAX_AGE_MS) {
+    if (!liveRefreshing) {
+      liveRefreshing = true
+      waitUntil(
+        refreshLiveCatalog(db, bucket)
+          .catch((error: unknown) => log('error', 'Live catalog refresh failed', errorFields(error)))
+          .finally(() => {
+            liveRefreshing = false
+          }),
+      )
+    }
+    return Promise.resolve(live.catalog)
+  }
+  return refreshLiveCatalog(db, bucket)
 }
 
 /** A catalog holding just one built version of a course (the author's draft preview). */
@@ -182,6 +246,8 @@ export async function saveBuild(
 }
 
 /** Makes version `n` live (publish) or live again (rollback). False if it can't go live. */
-export function publishVersion(db: D1DataTableDatabase, slug: string, n: number, now = Date.now()): Promise<boolean> {
-  return setLiveVersion(db, slug, n, now)
+export async function publishVersion(db: D1DataTableDatabase, slug: string, n: number, now = Date.now()): Promise<boolean> {
+  let published = await setLiveVersion(db, slug, n, now)
+  forgetLiveCatalog()
+  return published
 }
