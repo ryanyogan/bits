@@ -72,12 +72,18 @@ describe('/settings', () => {
     }
   })
 
-  it('validates the new email and says changing it is not available yet', async () => {
+  it('validates the new email and changes nothing until it is confirmed', async () => {
     assert.equal((await fetchAs(cookie, routes.settings.email.href(), post({ email: 'x' }))).status, 422)
+    assert.equal((await fetchAs(cookie, routes.settings.email.href(), post({ email: 'Jamie@Example.com' }))).status, 422)
     let ok = await fetchAs(cookie, routes.settings.email.href(), post({ email: 'new@example.com' }))
     assert.equal(ok.status, 303)
-    assert.match(ok.headers.get('Location')!, /saved=email-unavailable/)
+    assert.match(ok.headers.get('Location')!, /saved=email-sent/)
     assert.equal((await findUserByEmail(testDb, 'jamie@example.com'))?.email, 'jamie@example.com')
+    let html = await (await fetchAs(cookie, routes.settings.index.href())).text()
+    assert.match(html, /Check <span[^>]*>new@example\.com<\/span>/)
+    let cancel = await fetchAs(cookie, routes.settings.email.href(), post({ intent: 'cancel' }))
+    assert.match(cancel.headers.get('Location')!, /saved=email-cancelled/)
+    assert.doesNotMatch(await (await fetchAs(cookie, routes.settings.index.href())).text(), /new@example\.com/)
   })
 
   it('disconnects a provider', async () => {

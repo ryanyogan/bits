@@ -6,7 +6,7 @@ import { Tag } from '@bits/ui/tag'
 
 import { routes } from '../../../routes.ts'
 import type { MethodKind, SignInMethod } from '../data.ts'
-import { confirmButtonStyle, ConfirmDisclosure } from './confirm-disclosure.tsx'
+import { confirmButtonStyle, ConfirmDisclosure, summaryStyle } from './confirm-disclosure.tsx'
 
 const icons: Record<MethodKind, IconName> = { email: 'mail', github: 'github', google: 'globe', passkey: 'key' }
 
@@ -49,6 +49,32 @@ export function MethodRow(handle: Handle<{ method: SignInMethod }>) {
             >
               Connect
             </Keycap>
+          ) : method.kind === 'passkey' ? (
+            <>
+              <ConfirmDisclosure label="Rename" describedBy={labelId}>
+                <form method="post" action={routes.settings.methods.href()} mix={renameFormStyle}>
+                  <input
+                    name="name"
+                    aria-label={`New name for ${method.name}`}
+                    value={method.name}
+                    required
+                    maxLength={60}
+                    autoComplete="off"
+                    mix={renameInputStyle}
+                  />
+                  <button type="submit" name="intent" value={`rename:${method.id}`} mix={saveButtonStyle}>
+                    Save
+                  </button>
+                </form>
+              </ConfirmDisclosure>
+              <ConfirmDisclosure label="Remove" describedBy={labelId}>
+                <form method="post" action={routes.settings.methods.href()}>
+                  <button type="submit" name="intent" value={`remove:${method.id}`} mix={confirmButtonStyle}>
+                    Remove passkey
+                  </button>
+                </form>
+              </ConfirmDisclosure>
+            </>
           ) : (
             <ConfirmDisclosure label={provider ? 'Disconnect' : 'Remove'} describedBy={labelId}>
               <form method="post" action={routes.settings.methods.href()}>
@@ -101,11 +127,33 @@ const metaStyle = css({
   overflowWrap: 'anywhere',
 })
 
+const renameFormStyle = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' })
+
+const renameInputStyle = css({
+  minHeight: 'var(--touch-target)',
+  flex: '1 1 10rem',
+  minWidth: 0,
+  maxWidth: '14rem',
+  padding: '0 var(--space-3)',
+  borderRadius: 'var(--radius-10)',
+  border: '1px solid var(--line-control)',
+  background: 'var(--ink)',
+  color: 'var(--text)',
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--fs-15)',
+  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+})
+
+// Ghost-mono, like the summaries; a summary style reused on a real button.
+const saveButtonStyle = summaryStyle
+
 // The action wraps to its own line under the label on narrow rows (Settings, responsive).
 const actionStyle = css({
   marginLeft: 'auto',
   display: 'flex',
   alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: 'var(--space-2)',
   '@media (max-width: 480px)': { flexBasis: '100%', marginLeft: '30px', paddingBottom: 'var(--space-1_5)' },
 })
 

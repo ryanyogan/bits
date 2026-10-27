@@ -24,6 +24,8 @@ export interface LoginPageProps {
   issues?: readonly FormIssue[]
   /** A message above the providers: OAuth errors, rate limits, sign-out confirmations. */
   notice?: LoginNotice
+  /** A passkey this site doesn't know (decision 030): the island signals it to the browser. */
+  unknownPasskey?: { rpId: string; credentialId: string }
 }
 
 const copy = {
@@ -44,7 +46,7 @@ const copy = {
 /** `/login` and `/login?mode=signup` (Auth spec, states A and B). */
 export function LoginPage(handle: Handle<LoginPageProps>) {
   return () => {
-    let { mode, next, values = {}, issues, notice } = handle.props
+    let { mode, next, values = {}, issues, notice, unknownPasskey } = handle.props
     let signup = mode === 'signup'
     let text = copy[mode]
     let nextParam = next ? { next } : {}
@@ -67,7 +69,12 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
           ) : null}
 
           <div mix={providersStyle}>
-            <PasskeyButton optionsUrl={routes.api.passkey.href({ step: 'login-options' })} next={next} />
+            <PasskeyButton
+              optionsUrl={routes.api.passkey.href({ step: 'login-options' })}
+              action={routes.login.passkey.href()}
+              next={next}
+              unknownCredential={unknownPasskey}
+            />
             <ProviderButton
               icon="github"
               href={routes.auth.oauth.start.href({ provider: 'github' }, { searchParams: nextParam })}

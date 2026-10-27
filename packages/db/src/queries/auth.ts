@@ -4,7 +4,7 @@
 // and conditional semantics are visible in one statement each. Callers hash
 // every secret before it reaches these functions (see decision 015).
 import type { D1DataTableDatabase } from '../d1/database.ts'
-import type { OAuthProvider, User } from '../tables.ts'
+import type { EmailTokenPurpose, OAuthProvider, User } from '../tables.ts'
 import type { CompletedLesson } from './progress.ts'
 import { userFromRawRow } from './users.ts'
 
@@ -150,6 +150,7 @@ export async function deleteExpiredAuthRows(db: D1DataTableDatabase, now: number
     db.d1.prepare('delete from sessions where expires_at <= ?').bind(now),
     // Keep spent tokens for an hour so the per-email and per-IP limits still count them.
     db.d1.prepare('delete from email_tokens where expires_at <= ?').bind(now - 60 * 60 * 1000),
+    db.d1.prepare('delete from webauthn_challenges where expires_at <= ?').bind(now),
   ])
 }
 
@@ -166,14 +167,17 @@ export interface EmailTokenInput {
   nextPath: string | null
   expiresAt: number
   now: number
+  /** Defaults to 'sign-in'. An 'email-change' token needs `userId`. */
+  purpose?: EmailTokenPurpose
+  userId?: string | null
 }
 
 export async function insertEmailToken(db: D1DataTableDatabase, input: EmailTokenInput): Promise<void> {
   await db.d1
     .prepare(
       `insert into email_tokens
-         (token_hash, code_hash, email, attempts, expires_at, used_at, next_path, created_at, ip_hash, signup)
-       values (?, ?, ?, 0, ?, null, ?, ?, ?, ?)`,
+         (token_hash, code_hash, email, attempts, expires_at, used_at, next_path, created_at, ip_hash, signup, purpose, user_id)
+       values (?, ?, ?, 0, ?, null, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       input.tokenHash,
@@ -184,6 +188,8 @@ export async function insertEmailToken(db: D1DataTableDatabase, input: EmailToke
       input.now,
       input.ipHash,
       input.signup,
+      input.purpose ?? 'sign-in',
+      input.userId ?? null,
     )
     .run()
 }
@@ -233,7 +239,7 @@ export async function reserveCodeAttempts(
       `update email_tokens set attempts = attempts + 1
        where attempts < ?3 and token_hash in (
          select token_hash from email_tokens
-         where email = ?1 and used_at is null and expires_at > ?2 and attempts < ?3
+         where email = ?1 and purpose = 'sign-in' and used_at is null and expires_at > ?2 and attempts < ?3
          order by created_at desc limit 3
        )
        returning token_hash, code_hash, email, attempts, next_path, signup`,
@@ -255,7 +261,7 @@ export async function consumeEmailToken(
   return db.d1
     .prepare(
       `update email_tokens set used_at = ?1
-       where token_hash = ?2 and used_at is null and expires_at > ?1
+       where token_hash = ?2 and purpose = 'sign-in' and used_at is null and expires_at > ?1
        returning token_hash, code_hash, email, attempts, next_path, signup`,
     )
     .bind(now, tokenHash)
@@ -271,7 +277,7 @@ export async function peekEmailToken(
   return db.d1
     .prepare(
       `select token_hash, code_hash, email, attempts, next_path, signup from email_tokens
-       where token_hash = ? and used_at is null and expires_at > ?`,
+       where token_hash = ? and purpose = 'sign-in' and used_at is null and expires_at > ?`,
     )
     .bind(tokenHash, now)
     .first<OpenEmailToken>()
@@ -330,4 +336,260 @@ export async function unlinkIdentity(
     .bind(userId, provider)
     .run()
   return result.meta.changes ?? 0
+}
+
+// ---------------------------------------------------------------------------
+// Email change (decision 030): 'email-change' rows in email_tokens, owned by
+// `user_id`, carrying the new address in `email`.
+
+export interface PendingEmailChange {
+  token_hash: string
+  code_hash: string
+  email: string
+  user_id: string
+  attempts: number
+  created_at: number
+  expires_at: number
+}
+
+const changeColumns = 'token_hash, code_hash, email, user_id, attempts, created_at, expires_at'
+
+/** The newest open change for a user (Settings shows "check your inbox"). */
+export async function findPendingEmailChange(
+  db: D1DataTableDatabase,
+  userId: string,
+  now: number,
+): Promise<PendingEmailChange | null> {
+  return db.d1
+    .prepare(
+      `select ${changeColumns} from email_tokens
+       where user_id = ? and purpose = 'email-change' and used_at is null and expires_at > ?
+       order by created_at desc limit 1`,
+    )
+    .bind(userId, now)
+    .first<PendingEmailChange>()
+}
+
+/** Looks up an open change token without spending it (the link confirmation page). */
+export async function peekEmailChange(
+  db: D1DataTableDatabase,
+  tokenHash: string,
+  now: number,
+): Promise<PendingEmailChange | null> {
+  return db.d1
+    .prepare(
+      `select ${changeColumns} from email_tokens
+       where token_hash = ? and purpose = 'email-change' and used_at is null and expires_at > ?`,
+    )
+    .bind(tokenHash, now)
+    .first<PendingEmailChange>()
+}
+
+/**
+ * Spends one code attempt on the user's newest open change and returns it,
+ * counted before the code is compared (like `reserveCodeAttempts`). Null when
+ * there is no open change or it is out of attempts.
+ */
+export async function reserveEmailChangeAttempt(
+  db: D1DataTableDatabase,
+  userId: string,
+  now: number,
+  maxAttempts: number,
+): Promise<PendingEmailChange | null> {
+  return db.d1
+    .prepare(
+      `update email_tokens set attempts = attempts + 1
+       where attempts < ?3 and token_hash = (
+         select token_hash from email_tokens
+         where user_id = ?1 and purpose = 'email-change' and used_at is null and expires_at > ?2
+         order by created_at desc limit 1
+       )
+       returning ${changeColumns}`,
+    )
+    .bind(userId, now, maxAttempts)
+    .first<PendingEmailChange>()
+}
+
+/** Withdraws every open change for a user ("use a different address"). */
+export async function cancelEmailChanges(db: D1DataTableDatabase, userId: string, now: number): Promise<void> {
+  await db.d1
+    .prepare(`update email_tokens set used_at = ? where user_id = ? and purpose = 'email-change' and used_at is null`)
+    .bind(now, userId)
+    .run()
+}
+
+export type EmailChangeResult = { ok: true; email: string } | { ok: false; reason: 'expired' | 'taken' }
+
+/**
+ * Moves the user to the token's address in one D1 batch: store the revert
+ * token for the old address, spend the change token, set the email
+ * (verified) and withdraw the user's other open changes. Every statement
+ * after the first acts only if this batch spent the token (`used_at = now`),
+ * so an expired or already-used token changes nothing. If the address was
+ * taken meanwhile, the unique index on users.email fails the whole batch and
+ * the token stays open. While an earlier change's revert link is open, the
+ * token can't be spent at all, so no change can replace or cancel it.
+ * Sessions are left alone: the old address's revert link is what signs
+ * everyone out (decision 030).
+ */
+export async function completeEmailChange(
+  db: D1DataTableDatabase,
+  input: { tokenHash: string; userId: string; now: number; revertTokenHash: string; revertExpiresAt: number },
+): Promise<EmailChangeResult> {
+  let { tokenHash, userId, now } = input
+  let spent = `exists (select 1 from email_tokens where token_hash = ?2 and user_id = ?1 and purpose = 'email-change' and used_at = ?3)`
+  let statements = [
+    db.d1
+      .prepare(
+        `update email_tokens set used_at = ?3
+         where token_hash = ?2 and user_id = ?1 and purpose = 'email-change' and used_at is null and expires_at > ?3
+           and not exists (
+             select 1 from email_tokens r
+             where r.user_id = ?1 and r.purpose = 'email-revert' and r.used_at is null and r.expires_at > ?3
+           )`,
+      )
+      .bind(userId, tokenHash, now),
+    // The revert link's row holds the old address and the new one; no code (link only).
+    db.d1
+      .prepare(
+        `insert into email_tokens (token_hash, code_hash, email, attempts, expires_at, used_at, next_path, created_at, ip_hash, signup, purpose, user_id, changed_to)
+         select ?4, '-', users.email, 0, ?5, null, null, ?3, null, null, 'email-revert', ?1,
+                (select email from email_tokens where token_hash = ?2)
+         from users where users.id = ?1 and ${spent}`,
+      )
+      .bind(userId, tokenHash, now, input.revertTokenHash, input.revertExpiresAt),
+    db.d1
+      .prepare(
+        `update users set
+           email = (select email from email_tokens where token_hash = ?2),
+           email_verified_at = ?3,
+           updated_at = ?3
+         where id = ?1 and ${spent}`,
+      )
+      .bind(userId, tokenHash, now),
+    db.d1
+      .prepare(
+        `update email_tokens set used_at = ?3
+         where user_id = ?1 and purpose = 'email-change' and used_at is null and ${spent}`,
+      )
+      .bind(userId, tokenHash, now),
+  ]
+  let results
+  try {
+    results = await db.batch(statements)
+  } catch (error) {
+    if (/unique/i.test(String(error))) return { ok: false, reason: 'taken' }
+    throw error
+  }
+  if ((results[0]?.meta.changes ?? 0) === 0) return { ok: false, reason: 'expired' }
+  let row = await db.d1
+    .prepare('select email from email_tokens where token_hash = ?')
+    .bind(tokenHash)
+    .first<{ email: string }>()
+  return { ok: true, email: row!.email }
+}
+
+export interface OpenEmailRevert {
+  token_hash: string
+  /** The old address the account goes back to. */
+  email: string
+  user_id: string
+  created_at: number
+}
+
+/** An open revert link, without spending it (confirmation page). */
+export async function peekEmailRevert(
+  db: D1DataTableDatabase,
+  tokenHash: string,
+  now: number,
+): Promise<OpenEmailRevert | null> {
+  return db.d1
+    .prepare(
+      `select token_hash, email, user_id, created_at from email_tokens
+       where token_hash = ? and purpose = 'email-revert' and used_at is null and expires_at > ?
+         and exists (select 1 from users where users.id = email_tokens.user_id and users.email = email_tokens.changed_to)`,
+    )
+    .bind(tokenHash, now)
+    .first<OpenEmailRevert>()
+}
+
+export type EmailRevertResult =
+  | { ok: true; email: string; userId: string }
+  | { ok: false; reason: 'expired' | 'taken' }
+
+/**
+ * Undoes an email change from the old address, in one batch: spend the
+ * revert token, but only while the account still has the address that
+ * change moved to (`changed_to`, checked in the same statement, so a stale
+ * link can't rewrite a later email); then put the old email back, withdraw
+ * open changes and other revert links, end every session of the user, and
+ * remove passkeys added since `passkeysSince` (whoever changed the email may
+ * have added one first). Statements after the first act only if this batch
+ * spent the token.
+ */
+export async function revertEmailChange(
+  db: D1DataTableDatabase,
+  input: { tokenHash: string; now: number; passkeysSince: number },
+): Promise<EmailRevertResult> {
+  let { tokenHash, now } = input
+  let open = await peekEmailRevert(db, tokenHash, now)
+  if (!open) return { ok: false, reason: 'expired' }
+  let userId = open.user_id
+  let spent = `exists (select 1 from email_tokens where token_hash = ?2 and user_id = ?1 and purpose = 'email-revert' and used_at = ?3)`
+  let statements = [
+    db.d1
+      .prepare(
+        `update email_tokens set used_at = ?3
+         where token_hash = ?2 and user_id = ?1 and purpose = 'email-revert' and used_at is null and expires_at > ?3
+           and changed_to is not null
+           and exists (select 1 from users where users.id = ?1 and users.email = email_tokens.changed_to)`,
+      )
+      .bind(userId, tokenHash, now),
+    db.d1
+      .prepare(
+        `update users set email = (select email from email_tokens where token_hash = ?2), email_verified_at = ?3, updated_at = ?3
+         where id = ?1 and ${spent}`,
+      )
+      .bind(userId, tokenHash, now),
+    db.d1
+      .prepare(
+        `update email_tokens set used_at = ?3
+         where user_id = ?1 and purpose = 'email-revert' and used_at is null and ${spent}`,
+      )
+      .bind(userId, tokenHash, now),
+    db.d1
+      .prepare(
+        `update email_tokens set used_at = ?3
+         where user_id = ?1 and purpose = 'email-change' and used_at is null and ${spent}`,
+      )
+      .bind(userId, tokenHash, now),
+    db.d1.prepare(`delete from sessions where user_id = ?1 and ${spent}`).bind(userId, tokenHash, now),
+    db.d1
+      .prepare(`delete from passkeys where user_id = ?1 and created_at >= ?4 and ${spent}`)
+      .bind(userId, tokenHash, now, input.passkeysSince),
+  ]
+  let results
+  try {
+    results = await db.batch(statements)
+  } catch (error) {
+    if (/unique/i.test(String(error))) return { ok: false, reason: 'taken' }
+    throw error
+  }
+  if ((results[0]?.meta.changes ?? 0) === 0) return { ok: false, reason: 'expired' }
+  return { ok: true, email: open.email, userId }
+}
+
+/**
+ * When the user's open revert window ends, or null. While it is open, no
+ * new email change can be requested or completed (decision 030).
+ */
+export async function openRevertUntil(db: D1DataTableDatabase, userId: string, now: number): Promise<number | null> {
+  let row = await db.d1
+    .prepare(
+      `select max(expires_at) as until from email_tokens
+       where user_id = ? and purpose = 'email-revert' and used_at is null and expires_at > ?`,
+    )
+    .bind(userId, now)
+    .first<{ until: number | null }>()
+  return row?.until ?? null
 }

@@ -29,6 +29,7 @@ export const routes = route({
   login: route('/login', {
     index: get('/'), // actions/login/controller.tsx
     action: post('/'),
+    passkey: post('/passkey'), // verify a passkey sign-in (decision 030)
     check: route('/check', {
       index: get('/'), // actions/login/check/controller.tsx
     }),
@@ -37,6 +38,10 @@ export const routes = route({
   auth: {
     // GET ?token= (magic link), POST (6-digit code).
     verify: form('/auth/verify'), // actions/auth/verify/controller.tsx
+    // GET ?token= (confirm-new-email link), POST spends it. actions/auth/email/controller.tsx
+    email: form('/auth/email'),
+    // GET ?token= (the old address's 7-day undo link), POST spends it. actions/auth/email-revert/controller.tsx
+    emailRevert: form('/auth/email/revert'),
     oauth: route('/auth/oauth/:provider', {
       start: get('/'), // actions/auth/oauth/controller.tsx
       callback: get('/callback'),
@@ -60,6 +65,8 @@ export const routes = route({
     export: get('/export'), // JSON download
     profile: post('/profile'),
     email: post('/email'),
+    emailConfirm: post('/email/confirm'), // the 6-digit code for a new email (decision 030)
+    reauth: post('/reauth'), // mail a sign-in code to the current address to confirm it's you
     methods: post('/methods'),
     sessions: post('/sessions'),
     deleteAccount: post('/delete'),

@@ -37,16 +37,32 @@ export interface EmailRequest {
   origin: string
 }
 
-/** Rate-limits, stores a new token + code, and sends the email. */
-export async function requestEmailSignIn(db: D1DataTableDatabase, input: EmailRequest): Promise<EmailRequestResult> {
-  let now = Date.now()
-  let ipHash = await sha256Hex(`ip:${input.ip ?? 'local'}`)
-  if ((await countEmailTokensForEmail(db, input.email, now - PER_EMAIL.windowMs)) >= PER_EMAIL.limit) {
+/**
+ * The durable mail limits, counted from email_tokens rows (sign-in and
+ * email-change mail alike): 3 per address per 10 minutes, 20 per IP per hour.
+ */
+export async function checkEmailLimits(
+  db: D1DataTableDatabase,
+  email: string,
+  ip: string | null,
+  now: number,
+): Promise<{ ok: true; ipHash: string } | { ok: false; reason: 'rate-email' | 'rate-ip' }> {
+  let ipHash = await sha256Hex(`ip:${ip ?? 'local'}`)
+  if ((await countEmailTokensForEmail(db, email, now - PER_EMAIL.windowMs)) >= PER_EMAIL.limit) {
     return { ok: false, reason: 'rate-email' }
   }
   if ((await countEmailTokensForIp(db, ipHash, now - PER_IP.windowMs)) >= PER_IP.limit) {
     return { ok: false, reason: 'rate-ip' }
   }
+  return { ok: true, ipHash }
+}
+
+/** Rate-limits, stores a new token + code, and sends the email. */
+export async function requestEmailSignIn(db: D1DataTableDatabase, input: EmailRequest): Promise<EmailRequestResult> {
+  let now = Date.now()
+  let limits = await checkEmailLimits(db, input.email, input.ip, now)
+  if (!limits.ok) return limits
+  let { ipHash } = limits
 
   let token = randomToken()
   let code = randomCode()
@@ -108,10 +124,10 @@ export async function redeemCode(db: D1DataTableDatabase, email: string, code: s
 }
 
 /** The code is salted with its token's hash so equal codes never share a digest. */
-function codeHash(tokenHash: string, code: string): Promise<string> {
+export function codeHash(tokenHash: string, code: string): Promise<string> {
   return sha256Hex(`code:${tokenHash}:${code}`)
 }
 
-function isTokenShaped(token: string): boolean {
+export function isTokenShaped(token: string): boolean {
   return /^[A-Za-z0-9_-]{43}$/.test(token)
 }

@@ -32,10 +32,34 @@ export const emailForm = f.object({
   ),
 })
 
-/** POST /settings/methods: `intent` is `remove:<id>`, `disconnect:<provider>` or `add-passkey`. */
+/**
+ * POST /settings/methods: `intent` is `add-passkey` (with the browser's
+ * `response`), `rename:<credential id>` (with `name`), `remove:<credential id>`
+ * or `disconnect:<provider>`. Credential ids are base64url.
+ */
 export const methodsForm = f.object({
   intent: f.field(
-    s.string().refine((value) => /^(remove:[\w-]+|disconnect:(github|google)|add-passkey)$/.test(value), 'Unknown action.'),
+    s
+      .string()
+      .refine(
+        (value) => /^((remove|rename):[\w-]{1,1400}|disconnect:(github|google)|add-passkey)$/.test(value),
+        'Unknown action.',
+      ),
+  ),
+})
+
+/** `name` for `rename:<id>`: 1–60 characters once trimmed. */
+export const passkeyNameForm = f.object({
+  name: f.field(trimmed.refine((value) => value.length > 0, 'Enter a name.').pipe(checks.maxLength(60))),
+})
+
+/** POST /settings/email/confirm: the 6-digit code mailed to the new address. */
+export const emailCodeForm = f.object({
+  code: f.field(
+    s
+      .string()
+      .transform((value) => value.replace(/\s+/g, ''))
+      .refine((value) => /^\d{6}$/.test(value), 'Enter the 6-digit code from the email.'),
   ),
 })
 

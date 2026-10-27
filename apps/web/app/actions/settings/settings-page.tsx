@@ -2,7 +2,9 @@ import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 import { Callout, type CalloutTone } from '@bits/ui/callout'
 import { Card } from '@bits/ui/card'
+import { CodeInput } from '@bits/ui/code-input'
 import { Eyebrow, MonoHeading } from '@bits/ui/eyebrow'
+import { Icon } from '@bits/ui/icon'
 import { Keycap } from '@bits/ui/keycap'
 import { KeyValueList } from '@bits/ui/key-value-list'
 import { Switch } from '@bits/ui/switch'
@@ -18,6 +20,7 @@ import { DeleteConfirm } from './public/delete-confirm.tsx'
 import { summaryStyle } from './ui/confirm-disclosure.tsx'
 import { HandleField } from './ui/handle-field.tsx'
 import { MethodRow } from './ui/method-row.tsx'
+import { ReauthBlock } from './ui/reauth-block.tsx'
 import { Layout } from '../../ui/layout.tsx'
 
 export type SettingsSection = 'profile' | 'email' | 'sign-in' | 'data' | 'sessions' | 'danger'
@@ -38,6 +41,8 @@ export interface SettingsErrors {
 export interface SettingsPageProps {
   viewer: Viewer
   account: AccountSettings
+  /** Signed in within the last 10 minutes: email change and new passkeys need it (decision 030). */
+  recentAuth: boolean
   notice?: SettingsNotice
   errors?: SettingsErrors
 }
@@ -54,7 +59,7 @@ const outline: Array<{ id: SettingsSection; label: string }> = [
 /** `/settings` (docs/design/spec/pages/Settings.md). Every action is a plain POST form. */
 export function SettingsPage(handle: Handle<SettingsPageProps>) {
   return () => {
-    let { viewer, account, notice, errors } = handle.props
+    let { viewer, account, recentAuth, notice, errors } = handle.props
     let err = (section: SettingsSection, field: string) =>
       errors?.section === section ? errors.fields[field] : undefined
     let val = (section: SettingsSection, field: string, fallback: string) =>
@@ -176,30 +181,66 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                     },
                   ]}
                 />
-                <details mix={disclosureStyle} open={errors?.section === 'email' ? true : undefined}>
-                  <summary mix={summaryStyle}>Change email</summary>
-                  <form method="post" action={routes.settings.email.href()} mix={formStyle} noValidate>
-                    <TextField
-                      name="email"
-                      label="New email"
-                      type="email"
-                      placeholder="you@somewhere.dev"
-                      value={val('email', 'email', '')}
-                      error={err('email', 'email')}
-                      autoComplete="email"
-                      inputMode="email"
-                      enterKeyHint="send"
-                      required
-                      mono
-                      autoFocus={Boolean(err('email', 'email'))}
-                    />
-                    <div mix={footerStyle}>
-                      <Keycap type="submit" mix={footerKeyStyle}>
-                        Send confirmation link →
-                      </Keycap>
+                {account.pendingEmail ? (
+                  <div mix={pendingStyle}>
+                    <div mix={pendingHeadStyle}>
+                      <span aria-hidden="true" mix={pendingTileStyle}>
+                        <Icon name="mail" />
+                      </span>
+                      <p mix={pendingTextStyle}>
+                        Check <span mix={pendingEmailStyle}>{account.pendingEmail}</span> for a link to confirm the
+                        change, or type the 6-digit code from that email.
+                      </p>
                     </div>
-                  </form>
-                </details>
+                    <form method="post" action={routes.settings.emailConfirm.href()} mix={formStyle} noValidate>
+                      <CodeInput
+                        name="code"
+                        label="6-digit code"
+                        value={val('email', 'code', '')}
+                        error={err('email', 'code')}
+                        autoFocus={Boolean(err('email', 'code'))}
+                      />
+                      <div mix={footerStyle}>
+                        <Keycap type="submit" mix={footerKeyStyle}>
+                          Confirm new email
+                        </Keycap>
+                      </div>
+                    </form>
+                    <form method="post" action={routes.settings.email.href()}>
+                      <Keycap type="submit" variant="ghost-mono" name="intent" value="cancel" mix={footerKeyStyle}>
+                        Cancel the change
+                      </Keycap>
+                    </form>
+                  </div>
+                ) : null}
+                {recentAuth ? (
+                  <details mix={disclosureStyle} open={err('email', 'email') ? true : undefined}>
+                    <summary mix={summaryStyle}>{account.pendingEmail ? 'Use a different address' : 'Change email'}</summary>
+                    <form method="post" action={routes.settings.email.href()} mix={formStyle} noValidate>
+                      <TextField
+                        name="email"
+                        label="New email"
+                        type="email"
+                        placeholder="you@somewhere.dev"
+                        value={val('email', 'email', '')}
+                        error={err('email', 'email')}
+                        autoComplete="email"
+                        inputMode="email"
+                        enterKeyHint="send"
+                        required
+                        mono
+                        autoFocus={Boolean(err('email', 'email'))}
+                      />
+                      <div mix={footerStyle}>
+                        <Keycap type="submit" mix={footerKeyStyle}>
+                          Send confirmation link →
+                        </Keycap>
+                      </div>
+                    </form>
+                  </details>
+                ) : (
+                  <ReauthBlock what="change your email" email={viewer.email} />
+                )}
               </Section>
 
               {/* 3. Sign-in methods */}
@@ -209,9 +250,13 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                     <MethodRow key={method.id} method={method} />
                   ))}
                 </ul>
-                <form method="post" action={routes.settings.methods.href()}>
-                  <AddPasskey optionsUrl={routes.api.passkey.href({ step: 'register-options' })} />
-                </form>
+                {recentAuth ? (
+                  <form method="post" action={routes.settings.methods.href()}>
+                    <AddPasskey optionsUrl={routes.api.passkey.href({ step: 'register-options' })} />
+                  </form>
+                ) : (
+                  <ReauthBlock what="add a passkey" email={viewer.email} />
+                )}
                 <p mix={noteStyle}>
                   {passkeyCount === 1 ? 'You have 1 passkey.' : `You have ${passkeyCount} passkeys.`} Email sign-in
                   always works, so you can't lock yourself out.
@@ -340,6 +385,35 @@ function Section(handle: Handle<SectionProps>) {
     )
   }
 }
+
+// Settings §2: the check-inbox pattern from /login/check, inline.
+const pendingStyle = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'var(--space-4)',
+  padding: 'var(--space-4)',
+  borderRadius: 'var(--radius-12)',
+  border: '1px solid var(--line-strong)',
+  background: 'var(--well)',
+})
+
+const pendingHeadStyle = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-3_5)' })
+
+const pendingTileStyle = css({
+  flex: 'none',
+  width: '64px',
+  height: '64px',
+  borderRadius: 'var(--radius-xl)',
+  background: 'var(--volt-tint)',
+  border: '1px solid var(--volt-a40)',
+  display: 'grid',
+  placeItems: 'center',
+  '@media (max-width: 480px)': { width: '48px', height: '48px' },
+})
+
+const pendingTextStyle = css({ margin: 0, fontSize: 'var(--fs-15)', lineHeight: 1.55, color: 'var(--text-body)' })
+
+const pendingEmailStyle = css({ color: 'var(--text)', fontFamily: 'var(--font-mono)', overflowWrap: 'anywhere' })
 
 const pageStyle = css({
   maxWidth: 'var(--page-max)',

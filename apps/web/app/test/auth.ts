@@ -72,6 +72,17 @@ export async function signIn(
   return { cookie, user: { ...user, goals: user.goals as string[], role: options.role ?? user.role } }
 }
 
+/**
+ * Backdates the sign-in time of every session of a user by an hour, so it
+ * no longer counts as a recent sign-in (decision 030).
+ */
+export async function ageSessions(userId: string): Promise<void> {
+  await testDb.d1
+    .prepare(`update sessions set data = json_set(data, '$[0].user.at', json_extract(data, '$[0].user.at') - 3600000) where user_id = ?`)
+    .bind(userId)
+    .run()
+}
+
 /** router.fetch with an optional session cookie. */
 export function fetchAs(cookie: string | null, path: string, init: RequestInit = {}): Promise<Response> {
   let headers = new Headers(init.headers)

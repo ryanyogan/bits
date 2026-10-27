@@ -4,6 +4,8 @@ import { createController } from 'remix/router'
 
 import { requestEmailSignIn, type EmailRequestResult } from '../../auth/email-sign-in.ts'
 import { currentUser } from '../../auth/identity.ts'
+import { relyingParty, verifyPasskeySignIn } from '../../auth/passkeys.ts'
+import { startUserSession } from '../../auth/users.ts'
 import { rateLimit } from '../../middleware/rate-limit.tsx'
 import { routes } from '../../routes.ts'
 import { LoginPage, type LoginNotice } from './login-page.tsx'
@@ -73,6 +75,41 @@ export default createController(routes.login, {
         )
       },
     },
+
+    // The browser's answer to a passkey prompt (PasskeyButton submits it as
+    // `response`). Verified: rotate the session and go on, like email sign-in.
+    passkey: {
+      middleware: [rateLimit('RL_SIGNIN')],
+      async handler(context) {
+        let next = safeNextPath(readText(context.formData, 'next'))
+        let result = await verifyPasskeySignIn(context.db, {
+          rp: relyingParty(context.url, context.headers.get('Origin')),
+          response: readText(context.formData, 'response'),
+        })
+        if (!result.ok) {
+          let rp = relyingParty(context.url, context.headers.get('Origin'))
+          return context.render(
+            <LoginPage
+              mode="signin"
+              next={next}
+              unknownPasskey={
+                result.reason === 'unknown' && /^[\w-]{1,1400}$/.test(result.credentialId)
+                  ? { rpId: rp.id, credentialId: result.credentialId }
+                  : undefined
+              }
+              notice={
+                result.reason === 'unknown'
+                  ? { tone: 'warning', text: 'That passkey isn’t on any Bits account. It may have been removed. Use email instead.' }
+                  : { tone: 'danger', text: 'That passkey didn’t work. Try again, or use email.' }
+              }
+            />,
+            { status: result.reason === 'unknown' ? 404 : 422 },
+          )
+        }
+        await startUserSession(context, result.user, 'passkey')
+        return redirect(next ?? routes.courses.index.href(), 303)
+      },
+    },
   },
 })
 
@@ -106,6 +143,21 @@ function noticeFor(code: string | null): LoginNotice | undefined {
       }
     case 'link-expired':
       return { tone: 'warning', text: 'That sign-in link has expired or was already used. Ask for a new one.' }
+    case 'email-reverted':
+      return {
+        tone: 'ok',
+        text: 'Done: your old email is back and every device is signed out. Sign in with it below.',
+      }
+    case 'email-revert-taken':
+      return {
+        tone: 'danger',
+        text: 'That email now belongs to another Bits account, so it couldn’t be put back. Nothing changed.',
+      }
+    case 'email-link-expired':
+      return {
+        tone: 'warning',
+        text: 'That confirmation link has expired or was already used. Sign in and ask for a new one in Settings.',
+      }
     default:
       return undefined
   }

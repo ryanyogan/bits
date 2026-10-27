@@ -46,7 +46,8 @@ export const assetAccess = {
   ],
   // @remix-run/ui: headless primitives used by @bits/ui islands (decision 010).
   // three: the landing page's 3D field, imported dynamically by its island.
-  allowPackages: ['remix', '@remix-run/ui', 'three'],
+  // @simplewebauthn/browser: the passkey islands' WebAuthn calls (decision 030).
+  allowPackages: ['remix', '@remix-run/ui', 'three', '@simplewebauthn/browser'],
   denyFiles: ['**/*.test.*', `${rel(uiSourceDir)}/assets.ts`],
   files: { extensions: ['.woff2', '.svg', '.png', '.webp'] },
 }

@@ -9,6 +9,8 @@ import { platform } from '#platform'
 
 import controller from './actions/controller.tsx'
 import apiController from './actions/api/controller.tsx'
+import authEmailController from './actions/auth/email/controller.tsx'
+import authEmailRevertController from './actions/auth/email-revert/controller.tsx'
 import authOauthController from './actions/auth/oauth/controller.tsx'
 import authVerifyController from './actions/auth/verify/controller.tsx'
 import authorController from './actions/author/controller.tsx'
@@ -81,6 +83,8 @@ router.map(routes.login, loginController)
 router.map(routes.login.check, loginCheckController)
 router.map(routes.auth.verify, authVerifyController)
 router.map(routes.auth.oauth, authOauthController)
+router.map(routes.auth.email, authEmailController)
+router.map(routes.auth.emailRevert, authEmailRevertController)
 router.map(routes.logout, logoutController)
 router.map(routes.me, meController)
 router.map(routes.profile, profileController)

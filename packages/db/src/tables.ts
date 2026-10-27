@@ -12,6 +12,9 @@ export type UserRole = (typeof userRoles)[number]
 export const oauthProviders = ['github', 'google'] as const
 export type OAuthProvider = (typeof oauthProviders)[number]
 
+export const emailTokenPurposes = ['sign-in', 'email-change', 'email-revert'] as const
+export type EmailTokenPurpose = (typeof emailTokenPurposes)[number]
+
 // D1 stores booleans as 0/1 and JSON as text. The driver encodes on write;
 // these afterRead hooks decode on read so rows come back as their TS types.
 export function decodeJsonArray(value: unknown): unknown {
@@ -111,10 +114,32 @@ export const emailTokens = table({
     ip_hash: c.text().nullable(),
     /** Sign-up answers as JSON text, applied when the user row is created. */
     signup: c.text().nullable(),
+    /** 'sign-in' (magic link + code), 'email-change' (confirm a new address) or 'email-revert' (undo from the old one). */
+    purpose: c.enum(emailTokenPurposes),
+    /** The account an 'email-change' token belongs to; null for sign-in. */
+    user_id: c.text().nullable(),
+    /** 'email-revert' only: the address the change moved to. */
+    changed_to: c.text().nullable(),
   },
 })
 
 export type EmailToken = TableRow<typeof emailTokens>
+
+export const passkeyChallengePurposes = ['register', 'sign-in'] as const
+export type PasskeyChallengePurpose = (typeof passkeyChallengePurposes)[number]
+
+/** Single-use WebAuthn challenges (decision 030). */
+export const webauthnChallenges = table({
+  name: 'webauthn_challenges',
+  primaryKey: 'challenge',
+  columns: {
+    challenge: c.text(),
+    purpose: c.enum(passkeyChallengePurposes),
+    user_id: c.text().nullable(),
+    expires_at: c.integer(),
+    created_at: c.integer(),
+  },
+})
 
 export const passkeys = table({
   name: 'passkeys',
@@ -128,10 +153,18 @@ export const passkeys = table({
     name: c.text().nullable(),
     created_at: c.integer(),
     last_used_at: c.integer().nullable(),
+    /** Synced (backed up) to a cloud keychain or password manager. */
+    backed_up: c.boolean(),
+    /** 'singleDevice' or 'multiDevice'. */
+    device_type: c.text().nullable(),
+    /** Authenticator model id (UUID text). */
+    aaguid: c.text().nullable(),
   },
   afterRead({ value }) {
-    if (!('transports' in value)) return { value }
-    return { value: { ...value, transports: decodeJsonArray(value.transports) } }
+    let next = { ...value }
+    if ('transports' in next) next.transports = decodeJsonArray(next.transports)
+    if ('backed_up' in next) next.backed_up = decodeBoolean(next.backed_up) as boolean
+    return { value: next }
   },
 })
 
