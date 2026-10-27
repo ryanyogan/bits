@@ -75,6 +75,20 @@ describe('landing page', () => {
     }
   })
 
+  it('prefetches page links on intent, never same-page anchors (decisions 040, 042)', async () => {
+    let { html } = await page(routes.home.href())
+    assert.match(html, /href="\/courses\?track=agents"[^>]*data-rmx-prefetch="intent"/)
+    assert.match(html, /href="\/courses" data-rmx-prefetch="intent"/)
+    assert.doesNotMatch(html, /href="#how"[^>]*data-rmx-prefetch/)
+    assert.doesNotMatch(html, /href="#path"[^>]*data-rmx-prefetch/)
+  })
+
+  it('keeps Sign in reachable on phones through the menu sheet', async () => {
+    let { html } = await page(routes.home.href())
+    let sheet = html.slice(html.indexOf('id="landing-nav-sheet"'))
+    assert.match(sheet, /href="\/login"[^>]*>Sign in<\/a>/)
+  })
+
   it('renders the field layer hidden from assistive tech, with the lesson preview inert', async () => {
     let { html } = await page(routes.home.href())
     assert.match(html, /<div aria-hidden="true"[^>]*><canvas data-field=""/)

@@ -4,7 +4,7 @@ import { SuggestionChip } from '@bits/ui/chip'
 import { agentLessonHref, lessonOneHref } from './links.ts'
 import { FieldMotionToggle } from './public/field-motion-toggle.tsx'
 import { HeroPromptInput } from './public/hero-prompt-input.tsx'
-import { FORCED, monoNote, PHONE, prefetch, REDUCED, voltText } from './styles.ts'
+import { dotBreak, FORCED, monoNote, PHONE, REDUCED, voltText } from './styles.ts'
 
 export const typewriterPrompts = [
   "Explain tokens like I'm ten",
@@ -63,7 +63,7 @@ export function Hero(handle: Handle<{ signedIn?: boolean }>) {
       <ul aria-label="Try asking" mix={[chipsStyle, rise[3]]}>
         {suggestions.map((s) => (
           <li key={s.label}>
-            <SuggestionChip href={s.href} mix={[chipStyle, prefetch]}>
+            <SuggestionChip href={s.href} mix={chipStyle}>
               {s.label}
             </SuggestionChip>
           </li>
@@ -71,9 +71,14 @@ export function Hero(handle: Handle<{ signedIn?: boolean }>) {
       </ul>
 
       <p mix={[monoNote, noteStyle, rise[4]]}>
-        {handle.props.signedIn
-          ? 'Signed in · your progress saves as you go'
-          : 'No account needed to start · sign in to save progress'}
+        {/* The signed-in line fits one phone line, so it stays plain text. */}
+        {handle.props.signedIn ? (
+          'Signed in · your progress saves as you go'
+        ) : (
+          <>
+            No account needed to start<span mix={dotBreak}> · </span>sign in to save progress
+          </>
+        )}
       </p>
 
       <div mix={[cueStyle, rise[5]]}>
@@ -315,7 +320,7 @@ const chipStyle = css({
   backdropFilter: 'blur(var(--space-2_5))',
 })
 
-const noteStyle = css({ marginTop: 'var(--space-1_5)', textWrap: 'balance' })
+const noteStyle = css({ marginTop: 'var(--space-1_5)' })
 
 const cueStyle = css({
   marginTop: 'auto',

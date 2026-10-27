@@ -1,8 +1,9 @@
 import { css, type Handle, type RemixNode } from 'remix/component'
 import { AppBarMenu, type AppBarLink } from '@bits/ui/app-bar-menu'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 import { Logo } from '@bits/ui/logo'
 
-import { FORCED, prefetch, REDUCED } from './styles.ts'
+import { FORCED, REDUCED } from './styles.ts'
 
 export interface LandingLink extends AppBarLink {
   /** A section on this page (`#how`): highlighted while that section is in view. */
@@ -53,7 +54,7 @@ export function LandingHeader(handle: Handle<LandingHeaderProps>) {
                   {link.label}
                 </a>
               ) : (
-                <a key={link.href} href={link.href} mix={[navLinkStyle, prefetch]}>
+                <a key={link.href} href={link.href} data-rmx-prefetch={prefetchFor(link.href)} mix={navLinkStyle}>
                   {link.label}
                 </a>
               ),
@@ -80,7 +81,7 @@ export const navLinkStyle = css({
   boxSizing: 'border-box',
   borderRadius: 'var(--radius-pill)',
   color: 'var(--text-lead)',
-  fontSize: 'var(--fs-15)',
+  fontSize: 'var(--landing-link-fs, var(--fs-15))',
   whiteSpace: 'nowrap',
   textDecoration: 'none',
   transition: 'color var(--duration-fast), background-color var(--duration-fast)',
@@ -107,7 +108,7 @@ const sectionLinkStyle = css({
 const headerStyle = css({
   position: 'relative',
   zIndex: 5,
-  borderBottom: '1px solid transparent',
+  borderBottom: 'var(--border-w) solid transparent',
   '@supports (animation-timeline: scroll())': {
     position: 'sticky',
     top: 0,
@@ -128,23 +129,31 @@ const innerStyle = css({
   gridTemplateColumns: '1fr auto 1fr',
   alignItems: 'center',
   gap: 'var(--space-5)',
-  '@media (max-width: 759.98px)': { gridTemplateColumns: '1fr auto', gap: 'var(--space-3)' },
+  // 760–1023px: tighter links so logo, nav and actions fit without overlap
+  // (the 1fr columns would otherwise squeeze the actions under the nav).
+  '@media (max-width: 1023.98px)': {
+    gridTemplateColumns: 'auto 1fr auto',
+    gap: 'var(--space-3)',
+    '--landing-link-pad': 'var(--space-2_5)',
+    '--landing-link-fs': 'var(--fs-14)',
+  },
+  '@media (max-width: 759.98px)': { gridTemplateColumns: '1fr auto' },
 })
 
 const logoStyle = css({ justifySelf: 'start' })
 
 const navStyle = css({
+  justifySelf: 'center',
   display: 'flex',
   alignItems: 'center',
   gap: 'var(--space-0_5)',
   padding: 'var(--space-1)',
   borderRadius: 'var(--radius-pill)',
-  border: '1px solid var(--line-glass)',
+  border: 'var(--border-w) solid var(--line-glass)',
   background: 'var(--ink-a60)',
   WebkitBackdropFilter: 'blur(var(--blur-glass))',
   backdropFilter: 'blur(var(--blur-glass))',
   boxShadow: 'inset 0 1px 0 var(--fill-hover)',
-  '@media (max-width: 1023.98px)': { '--landing-link-pad': 'var(--space-3)' },
   '@media (max-width: 759.98px)': { display: 'none' },
   [FORCED]: { border: '1px solid CanvasText' },
 })

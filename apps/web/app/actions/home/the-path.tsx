@@ -1,8 +1,9 @@
 import { css, type Handle } from 'remix/component'
 import { Eyebrow } from '@bits/ui/eyebrow'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import { trackHref } from './links.ts'
-import { cardDesc, cardTitle, h2Style, leadStyle, PHONE, prefetch, REDUCED, sectionStyle, stackSection } from './styles.ts'
+import { cardDesc, cardTitle, h2Style, leadStyle, PHONE, REDUCED, sectionStyle, stackSection } from './styles.ts'
 
 type TrackKey = 'foundations' | 'prompting' | 'tools' | 'agents'
 
@@ -43,7 +44,7 @@ export function ThePath(_handle: Handle) {
         <ol mix={gridStyle}>
           {tracks.map((t) => (
             <li key={t.key} mix={itemStyle}>
-              <a href={trackHref(t.key)} style={{ '--track': t.color, '--ring': t.ring }} mix={[cardLink, prefetch]}>
+              <a href={trackHref(t.key)} style={{ '--track': t.color, '--ring': t.ring }} data-rmx-prefetch={prefetchFor(trackHref(t.key))} mix={cardLink}>
                 <span aria-hidden="true" mix={discStyle}>
                   {t.n}
                 </span>
@@ -111,8 +112,13 @@ const cardLink = css({
   textDecoration: 'none',
   borderRadius: 'var(--radius-xl)',
   transition: 'transform var(--duration-card) var(--ease)',
-  '&:hover': { color: 'var(--text)', transform: 'translateY(-4px)', '--card-line': 'var(--volt-a35)' },
-  '@media (prefers-reduced-motion: reduce)': { '&:hover': { transform: 'none' } },
+  '&:hover, &:focus-visible': {
+    color: 'var(--text)',
+    transform: 'translateY(-4px)',
+    '--card-line': 'var(--volt-a35)',
+    '--card-shadow': 'var(--shadow-card-hover)',
+  },
+  [REDUCED]: { transition: 'none', '&:hover, &:focus-visible': { transform: 'none' } },
 })
 const discStyle = css({
   width: '72px',
@@ -143,7 +149,8 @@ const bodyStyle = css({
   border: '1px solid var(--card-line, var(--line-glass))',
   minHeight: '260px',
   boxSizing: 'border-box',
-  transition: 'border-color var(--duration-card) var(--ease)',
+  boxShadow: 'var(--card-shadow, none)',
+  transition: 'border-color var(--duration-card) var(--ease), box-shadow var(--duration-card) var(--ease)',
   [PHONE]: { minHeight: 'auto' },
 })
 const trackName = css({

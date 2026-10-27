@@ -4,6 +4,7 @@ import { AvatarButton } from '@bits/ui/avatar-button'
 import { Document } from '@bits/ui/document'
 import { Footer } from '@bits/ui/footer'
 import { Keycap } from '@bits/ui/keycap'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 import { XpPill } from '@bits/ui/xp-pill'
 
 import { platform } from '#platform'
@@ -21,7 +22,7 @@ import { lessonOneHref } from './home/links.ts'
 import { Modes } from './home/modes.tsx'
 import { Progress } from './home/progress.tsx'
 import { NeuralField } from './home/public/neural-field.tsx'
-import { PHONE, prefetch } from './home/styles.ts'
+import { PHONE } from './home/styles.ts'
 import { ThePath } from './home/the-path.tsx'
 
 const brandName = `${APP_NAME.charAt(0).toUpperCase()}${APP_NAME.slice(1)}`
@@ -88,14 +89,14 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
                 viewer ? (
                   <>
                     <XpPill neurons={viewer.xp} />
-                    <AvatarButton initials={viewer.initials} href={routes.me.index.href()} mix={prefetch} />
+                    <AvatarButton initials={viewer.initials} href={routes.me.index.href()} />
                   </>
                 ) : (
                   <>
-                    <a href={routes.login.index.href()} mix={[navLinkStyle, signInStyle, prefetch]}>
+                    <a href={routes.login.index.href()} data-rmx-prefetch={prefetchFor(routes.login.index.href())} mix={[navLinkStyle, signInStyle]}>
                       Sign in
                     </a>
-                    <Keycap href={lessonOneHref()} mix={[startFreeStyle, prefetch]}>
+                    <Keycap href={lessonOneHref()} mix={startFreeStyle}>
                       Start free
                     </Keycap>
                   </>
