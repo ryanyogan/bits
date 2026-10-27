@@ -15,7 +15,7 @@ import { sha256Hex } from './crypto.ts'
 /** Session key for the signed-in record. (`__auth` is remix/auth's OAuth transaction.) */
 export const USER_KEY = 'user'
 
-export type SignInMethod = 'email' | 'github' | 'google'
+export type SignInMethod = 'email' | 'github' | 'google' | 'passkey'
 
 /** What a signed-in session stores about its user. */
 export interface UserRecord {

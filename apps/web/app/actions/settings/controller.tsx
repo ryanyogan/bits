@@ -1,9 +1,11 @@
 import {
+  deletePasskey,
   deleteUserSessions,
   findUserByHandle,
   listAttempts,
   listCompletedLessons,
   listUserBadges,
+  renamePasskey,
   reservedHandles,
   unlinkIdentity,
   users,
@@ -13,13 +15,21 @@ import * as s from 'remix/data-schema'
 import { redirect } from 'remix/response/redirect'
 import { createController } from 'remix/router'
 
+import {
+  cancelEmailChange,
+  confirmEmailChangeCode,
+  requestEmailChange,
+} from '../../auth/email-change.ts'
 import { requireUser, toViewer } from '../../auth/identity.ts'
+import { registerPasskey, relyingParty } from '../../auth/passkeys.ts'
+import { rateLimit } from '../../middleware/rate-limit.tsx'
 import { currentStreak } from '../../progress/days.ts'
 import type { AppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
+import { emailFailures } from '../login/controller.tsx'
 import { issueField, readText, type FormIssue } from '../login/schema.ts'
-import { getAccountSettings } from './data.ts'
-import { deleteForm, emailForm, methodsForm, profileForm } from './schema.ts'
+import { deviceLabel, getAccountSettings } from './data.ts'
+import { deleteForm, emailCodeForm, emailForm, methodsForm, passkeyNameForm, profileForm } from './schema.ts'
 import { SettingsPage, type SettingsErrors, type SettingsNotice, type SettingsSection } from './settings-page.tsx'
 
 // Signed-in only (requireUser sends everyone else to /login?next=). Each form
@@ -122,34 +132,102 @@ export default createController(routes.settings, {
       return saved('profile')
     },
 
-    // Changing the sign-in email needs its own confirm-the-new-address flow,
-    // which is not built yet: validate, then say so instead of pretending.
-    email(context) {
-      let user = context.auth.identity
-      let parsed = s.parseSafe(emailForm, context.formData)
-      if (!parsed.success) {
-        return invalid(context, user, 'email', { email: 'Enter an email address like you@somewhere.dev.' }, ['email'])
-      }
-      if (parsed.value.email === user.email) {
-        return invalid(context, user, 'email', { email: 'That is already your email.' }, ['email'])
-      }
-      return saved('email-unavailable')
+    // Change the sign-in email (decision 030): mail a code + link to the new
+    // address; nothing changes until it comes back. `intent=cancel` withdraws
+    // an open change.
+    email: {
+      middleware: [rateLimit('RL_SIGNIN')],
+      async handler(context) {
+        let user = context.auth.identity
+        if (readText(context.formData, 'intent') === 'cancel') {
+          await cancelEmailChange(context.db, user.id)
+          return saved('email-cancelled')
+        }
+        let parsed = s.parseSafe(emailForm, context.formData)
+        if (!parsed.success) {
+          return invalid(context, user, 'email', { email: 'Enter an email address like you@somewhere.dev.' }, ['email'])
+        }
+        if (parsed.value.email === user.email.toLowerCase()) {
+          return invalid(context, user, 'email', { email: 'That is already your email.' }, ['email'])
+        }
+        let result = await requestEmailChange(context.db, {
+          user,
+          email: parsed.value.email,
+          ip: context.headers.get('CF-Connecting-IP'),
+          origin: context.url.origin,
+        })
+        if (!result.ok) {
+          let failure = emailFailures[result.reason]
+          return invalid(context, user, 'email', { email: failure.text }, ['email'], failure.status)
+        }
+        return saved('email-sent')
+      },
     },
 
-    async methods(context) {
-      let user = context.auth.identity
-      let parsed = s.parseSafe(methodsForm, context.formData)
-      if (!parsed.success) return saved('methods-error')
-      let { intent } = parsed.value
-      if (intent === 'add-passkey') return saved('passkey-needs-js')
-      if (intent === 'disconnect:github' || intent === 'disconnect:google') {
-        let provider = intent === 'disconnect:github' ? ('github' as const) : ('google' as const)
-        // Email sign-in always works, so removing a provider never locks anyone out.
-        await unlinkIdentity(context.db, user.id, provider)
-        return saved('disconnected', { method: provider })
-      }
-      // remove:<passkey id>: there are no passkeys until the passkey milestone.
-      return saved('methods-error')
+    // The 6-digit code from the new address.
+    emailConfirm: {
+      middleware: [rateLimit('RL_SIGNIN')],
+      async handler(context) {
+        let user = context.auth.identity
+        let parsed = s.parseSafe(emailCodeForm, context.formData)
+        if (!parsed.success) {
+          return invalid(context, user, 'email', { code: 'Enter the 6-digit code from the email.' }, ['code'])
+        }
+        let result = await confirmEmailChangeCode(context.db, { user, code: parsed.value.code, sessionId: context.session.id })
+        if (!result.ok) {
+          let text = {
+            wrong: 'That code isn’t right. Check the newest email and try again.',
+            expired: 'That code has expired or had too many tries. Ask for a new one.',
+            taken: 'That address already has a Bits account, so it can’t be yours too.',
+          }[result.reason]
+          return invalid(context, user, 'email', { code: text }, ['code'])
+        }
+        return saved('email-changed')
+      },
+    },
+
+    // Sign-in methods: add a passkey (the AddPasskey island submits the
+    // browser's answer as `response`), rename or remove one, or disconnect a
+    // provider. Email sign-in always works, so nothing here can lock anyone out.
+    methods: {
+      middleware: [rateLimit('RL_WRITES')],
+      async handler(context) {
+        let user = context.auth.identity
+        let parsed = s.parseSafe(methodsForm, context.formData)
+        if (!parsed.success) return saved('methods-error')
+        let { intent } = parsed.value
+
+        if (intent === 'add-passkey') {
+          let response = readText(context.formData, 'response')
+          // Without JS the button still submits, with no response.
+          if (!response) return saved('passkey-needs-js')
+          let result = await registerPasskey(context.db, {
+            user,
+            rp: relyingParty(context.url),
+            response,
+            name: deviceLabel(context.headers.get('User-Agent')),
+          })
+          if (result.ok) return saved('passkey-added')
+          return saved(result.reason === 'duplicate' ? 'passkey-duplicate' : result.reason === 'too-many' ? 'passkey-limit' : 'passkey-failed')
+        }
+
+        if (intent === 'disconnect:github' || intent === 'disconnect:google') {
+          let provider = intent === 'disconnect:github' ? ('github' as const) : ('google' as const)
+          await unlinkIdentity(context.db, user.id, provider)
+          return saved('disconnected', { method: provider })
+        }
+
+        if (intent.startsWith('rename:')) {
+          let name = s.parseSafe(passkeyNameForm, context.formData)
+          if (!name.success) return saved('passkey-name')
+          let renamed = await renamePasskey(context.db, user.id, intent.slice('rename:'.length), name.value.name)
+          return saved(renamed ? 'renamed' : 'methods-error')
+        }
+
+        // remove:<credential id>; only the owner's rows match.
+        let removed = await deletePasskey(context.db, user.id, intent.slice('remove:'.length))
+        return saved(removed ? 'removed' : 'methods-error')
+      },
     },
 
     async sessions(context) {
@@ -180,6 +258,7 @@ async function invalid(
   section: SettingsSection,
   fields: SettingsErrors['fields'],
   names: string[],
+  status = 422,
 ) {
   let values = Object.fromEntries(names.map((name) => [name, readText(context.formData, name)]))
   return context.render(
@@ -188,7 +267,7 @@ async function invalid(
       account={await getAccountSettings(context.db, user, context.session.id)}
       errors={{ section, fields, values }}
     />,
-    { status: 422 },
+    { status },
   )
 }
 
@@ -205,8 +284,17 @@ function fieldOf(issue: FormIssue): string | undefined {
 
 const anchors: Record<string, SettingsSection> = {
   profile: 'profile',
-  'email-unavailable': 'email',
+  'email-sent': 'email',
+  'email-changed': 'email',
+  'email-cancelled': 'email',
+  'email-taken': 'email',
   removed: 'sign-in',
+  renamed: 'sign-in',
+  'passkey-added': 'sign-in',
+  'passkey-failed': 'sign-in',
+  'passkey-duplicate': 'sign-in',
+  'passkey-limit': 'sign-in',
+  'passkey-name': 'sign-in',
   disconnected: 'sign-in',
   connected: 'sign-in',
   'already-linked': 'sign-in',
@@ -227,14 +315,40 @@ export function noticeFor(params: URLSearchParams): SettingsNotice | undefined {
   switch (params.get('saved')) {
     case 'profile':
       return { section: 'profile', tone: 'ok', text: 'Saved. Your profile is up to date.' }
-    case 'email-unavailable':
+    case 'email-sent':
+      return { section: 'email', tone: 'ok', text: 'Check your new inbox. Your email changes once you confirm it.' }
+    case 'email-changed':
+      return {
+        section: 'email',
+        tone: 'ok',
+        text: 'Email changed. Sign-in links go there now, and your other devices are signed out.',
+      }
+    case 'email-taken':
       return {
         section: 'email',
         tone: 'warning',
-        text: 'Changing your email isn’t available yet. Your sign-in email hasn’t changed.',
+        text: 'That address already has a Bits account, so your email hasn’t changed.',
       }
+    case 'email-cancelled':
+      return { section: 'email', tone: 'ok', text: 'Cancelled. Your email hasn’t changed.' }
     case 'removed':
-      return { section: 'sign-in', tone: 'ok', text: 'Passkey removed.' }
+      return {
+        section: 'sign-in',
+        tone: 'ok',
+        text: 'Passkey removed. Your device may still offer it; you can delete it there too.',
+      }
+    case 'renamed':
+      return { section: 'sign-in', tone: 'ok', text: 'Passkey renamed.' }
+    case 'passkey-added':
+      return { section: 'sign-in', tone: 'ok', text: 'Passkey added. Use it next time you sign in.' }
+    case 'passkey-failed':
+      return { section: 'sign-in', tone: 'warning', text: 'Passkey wasn’t added. Try again.' }
+    case 'passkey-duplicate':
+      return { section: 'sign-in', tone: 'warning', text: 'That passkey is already on your account.' }
+    case 'passkey-limit':
+      return { section: 'sign-in', tone: 'warning', text: 'You have the most passkeys an account can hold. Remove one first.' }
+    case 'passkey-name':
+      return { section: 'sign-in', tone: 'warning', text: 'Give the passkey a name of up to 60 characters.' }
     case 'disconnected':
       return { section: 'sign-in', tone: 'ok', text: `${provider} disconnected.` }
     case 'connected':

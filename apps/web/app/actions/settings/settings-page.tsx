@@ -2,7 +2,9 @@ import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 import { Callout, type CalloutTone } from '@bits/ui/callout'
 import { Card } from '@bits/ui/card'
+import { CodeInput } from '@bits/ui/code-input'
 import { Eyebrow, MonoHeading } from '@bits/ui/eyebrow'
+import { Icon } from '@bits/ui/icon'
 import { Keycap } from '@bits/ui/keycap'
 import { KeyValueList } from '@bits/ui/key-value-list'
 import { Switch } from '@bits/ui/switch'
@@ -176,8 +178,40 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                     },
                   ]}
                 />
-                <details mix={disclosureStyle} open={errors?.section === 'email' ? true : undefined}>
-                  <summary mix={summaryStyle}>Change email</summary>
+                {account.pendingEmail ? (
+                  <div mix={pendingStyle}>
+                    <div mix={pendingHeadStyle}>
+                      <span aria-hidden="true" mix={pendingTileStyle}>
+                        <Icon name="mail" />
+                      </span>
+                      <p mix={pendingTextStyle}>
+                        Check <span mix={pendingEmailStyle}>{account.pendingEmail}</span> for a link to confirm the
+                        change, or type the 6-digit code from that email.
+                      </p>
+                    </div>
+                    <form method="post" action={routes.settings.emailConfirm.href()} mix={formStyle} noValidate>
+                      <CodeInput
+                        name="code"
+                        label="6-digit code"
+                        value={val('email', 'code', '')}
+                        error={err('email', 'code')}
+                        autoFocus={Boolean(err('email', 'code'))}
+                      />
+                      <div mix={footerStyle}>
+                        <Keycap type="submit" mix={footerKeyStyle}>
+                          Confirm new email
+                        </Keycap>
+                      </div>
+                    </form>
+                    <form method="post" action={routes.settings.email.href()}>
+                      <Keycap type="submit" variant="ghost-mono" name="intent" value="cancel" mix={footerKeyStyle}>
+                        Keep {viewer.email}
+                      </Keycap>
+                    </form>
+                  </div>
+                ) : null}
+                <details mix={disclosureStyle} open={err('email', 'email') ? true : undefined}>
+                  <summary mix={summaryStyle}>{account.pendingEmail ? 'Use a different address' : 'Change email'}</summary>
                   <form method="post" action={routes.settings.email.href()} mix={formStyle} noValidate>
                     <TextField
                       name="email"
@@ -340,6 +374,35 @@ function Section(handle: Handle<SectionProps>) {
     )
   }
 }
+
+// Settings §2: the check-inbox pattern from /login/check, inline.
+const pendingStyle = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'var(--space-4)',
+  padding: 'var(--space-4)',
+  borderRadius: 'var(--radius-12)',
+  border: '1px solid var(--line-strong)',
+  background: 'var(--well)',
+})
+
+const pendingHeadStyle = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-3_5)' })
+
+const pendingTileStyle = css({
+  flex: 'none',
+  width: '64px',
+  height: '64px',
+  borderRadius: 'var(--radius-xl)',
+  background: 'var(--volt-tint)',
+  border: '1px solid var(--volt-a40)',
+  display: 'grid',
+  placeItems: 'center',
+  '@media (max-width: 480px)': { width: '48px', height: '48px' },
+})
+
+const pendingTextStyle = css({ margin: 0, fontSize: 'var(--fs-15)', lineHeight: 1.55, color: 'var(--text-body)' })
+
+const pendingEmailStyle = css({ color: 'var(--text)', fontFamily: 'var(--font-mono)', overflowWrap: 'anywhere' })
 
 const pageStyle = css({
   maxWidth: 'var(--page-max)',

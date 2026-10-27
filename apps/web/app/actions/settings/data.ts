@@ -1,7 +1,14 @@
 // Account data for Settings (docs/design/spec/pages/Settings.md), read from
-// D1: linked identities and live sessions. Passkeys land with the passkey
-// milestone, so the list never has passkey rows yet.
-import { listIdentities, listUserSessions, type D1DataTableDatabase, type User } from '@bits/db'
+// D1: linked identities, passkeys, live sessions and an open email change.
+import {
+  findPendingEmailChange,
+  listIdentities,
+  listPasskeys,
+  listUserSessions,
+  type D1DataTableDatabase,
+  type PasskeyRow,
+  type User,
+} from '@bits/db'
 
 import { sha256Hex } from '../../auth/crypto.ts'
 
@@ -25,6 +32,8 @@ export interface SessionRow {
 
 export interface AccountSettings {
   verified: boolean
+  /** The new address an open email change waits on (Settings §2, check your inbox). */
+  pendingEmail: string | null
   methods: SignInMethod[]
   sessions: SessionRow[]
   export: { size: string; prompts: number }
@@ -36,10 +45,12 @@ export async function getAccountSettings(
   currentSessionId: string,
 ): Promise<AccountSettings> {
   let now = Date.now()
-  let [identities, sessions, currentHash] = await Promise.all([
+  let [identities, sessions, currentHash, passkeys, pending] = await Promise.all([
     listIdentities(db, user.id),
     listUserSessions(db, user.id, now),
     sha256Hex(currentSessionId),
+    listPasskeys(db, user.id),
+    findPendingEmailChange(db, user.id, now),
   ])
   let provider = (kind: 'github' | 'google', name: string): SignInMethod => {
     let identity = identities.find((row) => row.provider === kind)
@@ -53,10 +64,20 @@ export async function getAccountSettings(
   }
   return {
     verified: user.email_verified_at != null,
+    pendingEmail: pending?.email ?? null,
     methods: [
       { id: 'email', kind: 'email', name: 'Email link + code', meta: user.email, connected: true },
       provider('github', 'GitHub'),
       provider('google', 'Google'),
+      ...passkeys.map(
+        (row): SignInMethod => ({
+          id: row.credential_id,
+          kind: 'passkey',
+          name: row.name || 'Passkey',
+          meta: passkeyMeta(row, now),
+          connected: true,
+        }),
+      ),
     ],
     sessions: sessions.map((session) => ({
       label: deviceLabel(session.user_agent),
@@ -102,6 +123,26 @@ function relativeTime(at: number, now: number): string {
   if (hours < 24) return hours === 1 ? '1 hour ago' : `${hours} hours ago`
   let days = Math.round(hours / 24)
   if (days < 14) return days === 1 ? 'yesterday' : `${days} days ago`
+  return `${Math.round(days / 7)} weeks ago`
+}
+
+/** `synced · added 12 Oct 2026 · last used today` (Settings §3). */
+export function passkeyMeta(row: Pick<PasskeyRow, 'backed_up' | 'created_at' | 'last_used_at'>, now: number): string {
+  let added = new Date(row.created_at).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+  let used = row.last_used_at == null ? 'not used yet' : `last used ${relativeDay(row.last_used_at, now)}`
+  return [row.backed_up ? 'synced' : 'this device only', `added ${added}`, used].join(' · ')
+}
+
+function relativeDay(at: number, now: number): string {
+  let days = Math.floor((now - at) / 86_400_000)
+  if (days < 1) return 'today'
+  if (days < 2) return 'yesterday'
+  if (days < 14) return `${days} days ago`
   return `${Math.round(days / 7)} weeks ago`
 }
 

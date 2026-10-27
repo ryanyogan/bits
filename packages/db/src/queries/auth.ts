@@ -4,7 +4,7 @@
 // and conditional semantics are visible in one statement each. Callers hash
 // every secret before it reaches these functions (see decision 015).
 import type { D1DataTableDatabase } from '../d1/database.ts'
-import type { OAuthProvider } from '../tables.ts'
+import type { EmailTokenPurpose, OAuthProvider } from '../tables.ts'
 
 // ---------------------------------------------------------------------------
 // Sessions (the D1 store behind remix/session)
@@ -107,6 +107,7 @@ export async function deleteExpiredAuthRows(db: D1DataTableDatabase, now: number
     db.d1.prepare('delete from sessions where expires_at <= ?').bind(now),
     // Keep spent tokens for an hour so the per-email and per-IP limits still count them.
     db.d1.prepare('delete from email_tokens where expires_at <= ?').bind(now - 60 * 60 * 1000),
+    db.d1.prepare('delete from webauthn_challenges where expires_at <= ?').bind(now),
   ])
 }
 
@@ -123,14 +124,17 @@ export interface EmailTokenInput {
   nextPath: string | null
   expiresAt: number
   now: number
+  /** Defaults to 'sign-in'. An 'email-change' token needs `userId`. */
+  purpose?: EmailTokenPurpose
+  userId?: string | null
 }
 
 export async function insertEmailToken(db: D1DataTableDatabase, input: EmailTokenInput): Promise<void> {
   await db.d1
     .prepare(
       `insert into email_tokens
-         (token_hash, code_hash, email, attempts, expires_at, used_at, next_path, created_at, ip_hash, signup)
-       values (?, ?, ?, 0, ?, null, ?, ?, ?, ?)`,
+         (token_hash, code_hash, email, attempts, expires_at, used_at, next_path, created_at, ip_hash, signup, purpose, user_id)
+       values (?, ?, ?, 0, ?, null, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       input.tokenHash,
@@ -141,6 +145,8 @@ export async function insertEmailToken(db: D1DataTableDatabase, input: EmailToke
       input.now,
       input.ipHash,
       input.signup,
+      input.purpose ?? 'sign-in',
+      input.userId ?? null,
     )
     .run()
 }
@@ -190,7 +196,7 @@ export async function reserveCodeAttempts(
       `update email_tokens set attempts = attempts + 1
        where attempts < ?3 and token_hash in (
          select token_hash from email_tokens
-         where email = ?1 and used_at is null and expires_at > ?2 and attempts < ?3
+         where email = ?1 and purpose = 'sign-in' and used_at is null and expires_at > ?2 and attempts < ?3
          order by created_at desc limit 3
        )
        returning token_hash, code_hash, email, attempts, next_path, signup`,
@@ -212,7 +218,7 @@ export async function consumeEmailToken(
   return db.d1
     .prepare(
       `update email_tokens set used_at = ?1
-       where token_hash = ?2 and used_at is null and expires_at > ?1
+       where token_hash = ?2 and purpose = 'sign-in' and used_at is null and expires_at > ?1
        returning token_hash, code_hash, email, attempts, next_path, signup`,
     )
     .bind(now, tokenHash)
@@ -228,7 +234,7 @@ export async function peekEmailToken(
   return db.d1
     .prepare(
       `select token_hash, code_hash, email, attempts, next_path, signup from email_tokens
-       where token_hash = ? and used_at is null and expires_at > ?`,
+       where token_hash = ? and purpose = 'sign-in' and used_at is null and expires_at > ?`,
     )
     .bind(tokenHash, now)
     .first<OpenEmailToken>()
@@ -287,4 +293,143 @@ export async function unlinkIdentity(
     .bind(userId, provider)
     .run()
   return result.meta.changes ?? 0
+}
+
+// ---------------------------------------------------------------------------
+// Email change (decision 030): 'email-change' rows in email_tokens, owned by
+// `user_id`, carrying the new address in `email`.
+
+export interface PendingEmailChange {
+  token_hash: string
+  code_hash: string
+  email: string
+  user_id: string
+  attempts: number
+  created_at: number
+  expires_at: number
+}
+
+const changeColumns = 'token_hash, code_hash, email, user_id, attempts, created_at, expires_at'
+
+/** The newest open change for a user (Settings shows "check your inbox"). */
+export async function findPendingEmailChange(
+  db: D1DataTableDatabase,
+  userId: string,
+  now: number,
+): Promise<PendingEmailChange | null> {
+  return db.d1
+    .prepare(
+      `select ${changeColumns} from email_tokens
+       where user_id = ? and purpose = 'email-change' and used_at is null and expires_at > ?
+       order by created_at desc limit 1`,
+    )
+    .bind(userId, now)
+    .first<PendingEmailChange>()
+}
+
+/** Looks up an open change token without spending it (the link confirmation page). */
+export async function peekEmailChange(
+  db: D1DataTableDatabase,
+  tokenHash: string,
+  now: number,
+): Promise<PendingEmailChange | null> {
+  return db.d1
+    .prepare(
+      `select ${changeColumns} from email_tokens
+       where token_hash = ? and purpose = 'email-change' and used_at is null and expires_at > ?`,
+    )
+    .bind(tokenHash, now)
+    .first<PendingEmailChange>()
+}
+
+/**
+ * Spends one code attempt on the user's newest open change and returns it,
+ * counted before the code is compared (like `reserveCodeAttempts`). Null when
+ * there is no open change or it is out of attempts.
+ */
+export async function reserveEmailChangeAttempt(
+  db: D1DataTableDatabase,
+  userId: string,
+  now: number,
+  maxAttempts: number,
+): Promise<PendingEmailChange | null> {
+  return db.d1
+    .prepare(
+      `update email_tokens set attempts = attempts + 1
+       where attempts < ?3 and token_hash = (
+         select token_hash from email_tokens
+         where user_id = ?1 and purpose = 'email-change' and used_at is null and expires_at > ?2
+         order by created_at desc limit 1
+       )
+       returning ${changeColumns}`,
+    )
+    .bind(userId, now, maxAttempts)
+    .first<PendingEmailChange>()
+}
+
+/** Withdraws every open change for a user ("use a different address"). */
+export async function cancelEmailChanges(db: D1DataTableDatabase, userId: string, now: number): Promise<void> {
+  await db.d1
+    .prepare(`update email_tokens set used_at = ? where user_id = ? and purpose = 'email-change' and used_at is null`)
+    .bind(now, userId)
+    .run()
+}
+
+export type EmailChangeResult =
+  | { ok: true; email: string; signedOut: number }
+  | { ok: false; reason: 'expired' | 'taken' }
+
+/**
+ * Moves the user to the token's address in one D1 batch: spend the token,
+ * set the email (verified), withdraw the user's other open changes and end
+ * every other session of the user. The later statements act only if this
+ * batch spent the token (`used_at = now`), so an expired or already-used
+ * token changes nothing. If the address was taken meanwhile, the unique
+ * index on users.email fails the whole batch and the token stays open.
+ */
+export async function completeEmailChange(
+  db: D1DataTableDatabase,
+  input: { tokenHash: string; userId: string; now: number; keepSessionHash: string | null },
+): Promise<EmailChangeResult> {
+  let { tokenHash, userId, now } = input
+  let spent = `exists (select 1 from email_tokens where token_hash = ?2 and user_id = ?1 and purpose = 'email-change' and used_at = ?3)`
+  let statements = [
+    db.d1
+      .prepare(
+        `update email_tokens set used_at = ?3
+         where token_hash = ?2 and user_id = ?1 and purpose = 'email-change' and used_at is null and expires_at > ?3`,
+      )
+      .bind(userId, tokenHash, now),
+    db.d1
+      .prepare(
+        `update users set
+           email = (select email from email_tokens where token_hash = ?2),
+           email_verified_at = ?3,
+           updated_at = ?3
+         where id = ?1 and ${spent}`,
+      )
+      .bind(userId, tokenHash, now),
+    db.d1
+      .prepare(
+        `update email_tokens set used_at = ?3
+         where user_id = ?1 and purpose = 'email-change' and used_at is null and ${spent}`,
+      )
+      .bind(userId, tokenHash, now),
+    db.d1
+      .prepare(`delete from sessions where user_id = ?1 and id is not ?4 and ${spent}`)
+      .bind(userId, tokenHash, now, input.keepSessionHash),
+  ]
+  let results
+  try {
+    results = await db.batch(statements)
+  } catch (error) {
+    if (/unique/i.test(String(error))) return { ok: false, reason: 'taken' }
+    throw error
+  }
+  if ((results[0]?.meta.changes ?? 0) === 0) return { ok: false, reason: 'expired' }
+  let row = await db.d1
+    .prepare('select email from email_tokens where token_hash = ?')
+    .bind(tokenHash)
+    .first<{ email: string }>()
+  return { ok: true, email: row!.email, signedOut: results[3]?.meta.changes ?? 0 }
 }
