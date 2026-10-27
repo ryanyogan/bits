@@ -66,16 +66,45 @@ pnpm test                 # all packages (remix test; db tests run real D1 in Mi
 pnpm typecheck            # all packages
 pnpm build                # apps/web/build: client assets + Worker bundle
 pnpm preview              # build, then run the real Worker under wrangler dev
-pnpm deploy               # build, then wrangler deploy → https://bits.yogan.dev (workers.dev 301s there)
+pnpm deploy               # manual fallback: build, then wrangler deploy → https://bits.yogan.dev (CI deploys master)
 pnpm db:migrate:local     # wrangler d1 migrations apply (local state shared by dev and preview)
-pnpm db:migrate:remote
+pnpm db:migrate:remote    # manual fallback: production migrations (CI runs them before each deploy)
 pnpm db:seed:local        # demo user demo@bits.local / @demo, then upload + publish content/courses/*
 pnpm content validate <dir…>            # build course folders, print path:line problems
-pnpm content upload <dir…> [--publish]  # save as the next version (local; --remote for deployed)
+pnpm content upload <dir…> [--publish]  # save as the next version (local; --remote for deployed, --preview for the Workers Previews DB/bucket)
 pnpm og                   # screenshot /cards/* into apps/web/public/og/*.png + app/ui/og-cards.generated.ts (commit both)
 pnpm cf-typegen           # regenerate apps/web/worker-configuration.d.ts after wrangler.jsonc changes
 pnpm remix:doctor         # `pnpm doctor` is pnpm's own builtin
 ```
+
+Deploys (decision 032) happen in CI (`.github/workflows/ci.yml`), after the
+`check` job (typecheck, test, build) passes:
+
+- **Push to master** → `deploy` job (GitHub Environment `production`):
+  `wrangler d1 migrations apply DB --remote`, `wrangler deploy` of the
+  checked build, then a smoke test (`/health`, `/`, `/courses`, `/login`
+  must be 200). Deploys never overlap and are never cancelled. Migrations
+  run before the code, so keep them additive.
+- **Same-repo pull request** → `preview` job (Environment `preview`): a
+  Workers Preview at `https://pr-<n>-bits.ryanyogan.workers.dev`,
+  commented on the PR. It runs on the separate `bits-preview-db` /
+  `bits-preview-content`, shared by all previews and never production
+  (`previews` block in `wrangler.jsonc`). It migrates and publishes
+  `content/courses/` there only (`scripts/preview.ts migrate`,
+  `pnpm content upload --all --publish --preview`). There's no sign-in
+  mail and no live runs on previews. Fork and Dependabot PRs get `check`
+  only. `preview-cleanup.yml` deletes the Preview when the PR closes.
+- Secrets (in both Environments): `CLOUDFLARE_API_TOKEN`, an
+  account-owned token with Workers Scripts Edit, D1 Edit, Workers R2
+  Storage Edit, Account Settings Read, and Workers Routes Edit on
+  yogan.dev; and `CLOUDFLARE_ACCOUNT_ID`.
+- Manual fallback: `pnpm db:migrate:remote && pnpm deploy` (needs
+  `wrangler login`). Roll back code with
+  `pnpm --filter @bits/web exec wrangler rollback`; migrations stay.
+- Never point the `previews` block at `bits-db` or `bits-content`.
+  `scripts/lib/preview-resources.ts` refuses that, and its tests cover it.
+  A new rate-limit tier goes in both `ratelimits` lists (production
+  2xxx, previews 3xxx).
 
 ## Layout
 
@@ -97,6 +126,7 @@ apps/web/                 @bits/web: the Remix app and Worker
   app/platform/           runtime seam: `#platform` → platform.node.ts | platform.worker.ts
   scripts/build.ts        asset crawl into build/client + esbuild Worker bundle
   scripts/content.ts      content CLI (validate / upload); scripts/lib/ reads course folders
+  scripts/preview.ts      CI: check the `previews` block, migrate the preview D1 (decision 032)
   worker.ts               Workers entry; server.ts / hmr.ts are the Node entries
   wrangler.jsonc          Worker "bits", D1 DB=bits-db, R2 CONTENT=bits-content, static assets, observability
 packages/ui/              @bits/ui: tokens, fonts, base CSS, design-system components

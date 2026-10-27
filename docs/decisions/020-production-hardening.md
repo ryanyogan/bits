@@ -106,7 +106,7 @@ three.js. A security review then found two more problems:
     no placement) lets replicas serve reads near the visitor.
 - **`preview_urls: false`.** A preview URL would be a second full host on
   the production D1, R2, email and secrets. Turn previews back on only
-  with separate preview resources.
+  with separate preview resources. (Done in 032: Workers Previews on separate preview resources, and Version URL hosts 301 to the canonical one.)
 - **Worker bundle.** `scripts/build.ts` resolves browser-only packages
   (`three`) to a module that throws if evaluated, and fails the build if
   one leaks into the Worker. The metafile goes to `build/worker-meta.json`.

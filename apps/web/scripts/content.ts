@@ -6,7 +6,9 @@
 //
 // Options: --as <email> records that user as the uploader and course author;
 // --remote talks to the deployed D1 and R2 instead of the local state that
-// `pnpm dev` and `pnpm preview` use (needs `wrangler login`).
+// `pnpm dev` and `pnpm preview` use (needs `wrangler login`); --preview
+// talks to the shared Workers Previews database and bucket from the
+// `previews` block of wrangler.jsonc instead (CI, decision 032).
 //
 // Problems print as `path:line: error: text`, and the exit code is 1 when a
 // folder has errors. A failed upload is still recorded, report only, so the
@@ -17,10 +19,11 @@ import * as path from 'node:path'
 import { parseArgs } from 'node:util'
 
 import { createD1Database, type ReportItem } from '@bits/db'
-import { getPlatformProxy, unstable_readConfig } from 'wrangler'
+import { getPlatformProxy } from 'wrangler'
 
 import { buildCourse } from '../app/content/compile/index.ts'
 import { listCourseFolders, readCourseFolder } from './lib/content-folder.ts'
+import { previewResources, readConfigShape } from './lib/preview-resources.ts'
 import { uploadCourseFolder } from './lib/upload.ts'
 
 const appDir = path.resolve(import.meta.dirname, '..')
@@ -34,13 +37,14 @@ const { values, positionals } = parseArgs({
     all: { type: 'boolean', default: false },
     publish: { type: 'boolean', default: false },
     remote: { type: 'boolean', default: false },
+    preview: { type: 'boolean', default: false },
     as: { type: 'string' },
     help: { type: 'boolean', short: 'h', default: false },
   },
 })
 
 const [command, ...folders] = positionals
-const usage = 'usage: pnpm content <validate|upload> <dir…> [--all] [--publish] [--as email] [--remote]'
+const usage = 'usage: pnpm content <validate|upload> <dir…> [--all] [--publish] [--as email] [--remote | --preview]'
 
 if (values.help || (command !== 'validate' && command !== 'upload')) {
   console.log(usage)
@@ -62,13 +66,19 @@ if (command === 'validate') {
     if (build.errors) failed++
   }
 } else {
-  let proxy = await openBindings(values.remote)
+  if (values.remote && values.preview) {
+    console.error(`--remote and --preview are exclusive
+${usage}`)
+    process.exit(1)
+  }
+  let target: 'local' | 'remote' | 'preview' = values.preview ? 'preview' : values.remote ? 'remote' : 'local'
+  let proxy = await openBindings(target)
   try {
     let db = createD1Database(proxy.env.DB)
     let userId = values.as ? await findUserId(proxy.env.DB, values.as) : null
     for (let dir of dirs) {
       let result = await uploadCourseFolder(db, proxy.env.CONTENT, dir, {
-        source: values.remote ? 'cli (remote)' : 'cli',
+        source: target === 'local' ? 'cli' : `cli (${target})`,
         userId,
         publish: values.publish,
       })
@@ -102,15 +112,26 @@ function print(dir: string, slug: string, report: ReportItem[]) {
 }
 
 /**
- * D1 and R2 from wrangler.jsonc: the local state `pnpm dev` uses, or, with
- * --remote, the deployed resources through wrangler's remote bindings.
+ * D1 and R2 from wrangler.jsonc: the local state `pnpm dev` uses, or the
+ * deployed resources through wrangler's remote bindings: production with
+ * --remote, the `previews` block's with --preview.
  */
-async function openBindings(remote: boolean) {
-  if (!remote) {
+async function openBindings(target: 'local' | 'remote' | 'preview') {
+  if (target === 'local') {
     return getPlatformProxy<Env>({ configPath, persist: { path: path.join(appDir, '.wrangler/state/v3') } })
   }
   // A throwaway config with only DB and CONTENT, both marked remote.
-  let config = unstable_readConfig({ config: configPath })
+  // previewResources refuses a previews block that is unset or names production.
+  let config = readConfigShape(configPath)
+  let { db, content } =
+    target === 'preview'
+      ? previewResources(config)
+      : {
+          db: config.d1_databases.find((entry) => entry.binding === 'DB'),
+          content: config.r2_buckets.find((entry) => entry.binding === 'CONTENT'),
+        }
+  let databases = db ? [db] : []
+  let buckets = content ? [content] : []
   let dir = await fs.mkdtemp(path.join(os.tmpdir(), 'bits-content-'))
   let remoteConfig = path.join(dir, 'wrangler.json')
   await fs.writeFile(
@@ -118,8 +139,8 @@ async function openBindings(remote: boolean) {
     JSON.stringify({
       name: config.name,
       compatibility_date: config.compatibility_date,
-      d1_databases: config.d1_databases.filter((db: Binding) => db.binding === 'DB').map((db: Binding) => ({ ...db, remote: true })),
-      r2_buckets: config.r2_buckets.filter((bucket: Binding) => bucket.binding === 'CONTENT').map((bucket: Binding) => ({ ...bucket, remote: true })),
+      d1_databases: databases.map((entry) => ({ ...entry, remote: true })),
+      r2_buckets: buckets.map((entry) => ({ ...entry, remote: true })),
     }),
   )
   let proxy = await getPlatformProxy<Env>({ configPath: remoteConfig, persist: false, remoteBindings: true })
@@ -131,8 +152,6 @@ async function openBindings(remote: boolean) {
     },
   }
 }
-
-type Binding = { binding: string }
 
 async function findUserId(db: D1Database, email: string): Promise<string> {
   let row = await db.prepare('select id from users where email = ?').bind(email.toLowerCase()).first<{ id: string }>()

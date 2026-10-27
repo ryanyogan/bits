@@ -1,3 +1,11 @@
+# Checks every push to master and every pull request, then deploys
+# (decision 032):
+#   - master: apply D1 migrations to production, deploy, smoke-test
+#     https://bits.yogan.dev. GitHub Environment `production`.
+#   - same-repo pull requests: a Workers Preview at
+#     pr-<n>-bits.ryanyogan.workers.dev on the separate preview D1 and R2,
+#     commented on the PR. GitHub Environment `preview`. Fork PRs and
+#     Dependabot get the check only, never a secret.
 name: CI
 
 on:
@@ -5,9 +13,14 @@ on:
     branches: [master]
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # A new push to a PR supersedes its last run. On master, never cancel: the
+  # run may be mid-migration or mid-deploy. The next one waits instead.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
@@ -24,3 +37,182 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      # The deploy jobs ship exactly what was checked here.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: apps/web/build
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://bits.yogan.dev
+    # One production deploy at a time, and never cancel one in flight.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      # For the lockfile's wrangler.
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: apps/web/build
+      # Before the code that needs them. Migrations must be additive
+      # (expand, deploy, then contract), because the old code serves
+      # traffic until the deploy below finishes.
+      - name: Apply D1 migrations (production)
+        working-directory: apps/web
+        run: pnpm exec wrangler d1 migrations apply DB --remote
+      - name: Deploy
+        working-directory: apps/web
+        env:
+          SHA: ${{ github.sha }}
+        run: pnpm exec wrangler deploy --message "ci ${SHA}" --tag "${SHA:0:12}"
+      - name: Smoke test https://bits.yogan.dev
+        run: |
+          set -euo pipefail
+          base=https://bits.yogan.dev
+          for path in /health / /courses /login; do
+            status=000
+            for _ in 1 2 3 4 5; do
+              status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$base$path" || echo 000)
+              [ "$status" = 200 ] && break
+              sleep 6
+            done
+            echo "$path -> $status"
+            if [ "$status" != 200 ]; then
+              echo "::error::$base$path answered $status after the deploy. Roll back with: pnpm --filter @bits/web exec wrangler rollback (code only; migrations stay)."
+              exit 1
+            fi
+          done
+
+  preview:
+    needs: check
+    # Same-repo PRs only: fork and Dependabot runs get no secrets.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    environment:
+      name: preview
+      url: ${{ steps.preview.outputs.url }}
+    # One deploy per PR at a time; don't cancel one mid-migration.
+    concurrency:
+      group: preview-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PR: ${{ github.event.pull_request.number }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Previews stay off (a notice, not a failure) until the owner creates
+      # the preview D1 and sets its id in wrangler.jsonc. A previews block
+      # that names production fails here.
+      - name: Check preview resources
+        id: ready
+        working-directory: apps/web
+        run: |
+          set +e
+          node --import remix/node-tsx scripts/preview.ts check
+          code=$?
+          set -e
+          if [ "$code" = 3 ]; then
+            echo "::notice::Workers Previews are not set up yet (decision 032); skipping the preview."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          elif [ "$code" = 0 ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            exit "$code"
+          fi
+      - uses: actions/download-artifact@v4
+        if: steps.ready.outputs.ready == 'true'
+        with:
+          name: web-build
+          path: apps/web/build
+      # The shared preview database only; scripts/preview.ts can't reach bits-db.
+      - name: Apply D1 migrations (preview database)
+        if: steps.ready.outputs.ready == 'true'
+        working-directory: apps/web
+        run: node --import remix/node-tsx scripts/preview.ts migrate
+      - name: Publish this branch's courses to the preview database
+        if: steps.ready.outputs.ready == 'true'
+        run: pnpm content upload --all --publish --preview
+      - name: Create or update the Preview
+        id: preview
+        if: steps.ready.outputs.ready == 'true'
+        working-directory: apps/web
+        run: |
+          set -euo pipefail
+          # A fresh session secret per deploy: preview sessions don't need to
+          # outlive a push, and no long-lived secret is shared with previews.
+          secrets="$RUNNER_TEMP/preview-secrets.env"
+          umask 077
+          printf 'SESSION_SECRET=%s\n' "$(openssl rand -hex 32)" > "$secrets"
+          output="$(pnpm exec wrangler preview --name "pr-$PR" --ignore-base-config \
+            --message "ci $SHA" --tag "${SHA:0:12}" --secrets-file "$secrets" --json)"
+          rm -f "$secrets"
+          printf '%s\n' "$output"
+          url="$(printf '%s' "$output" | jq -er '.preview.urls[0]')"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Smoke test the Preview
+        if: steps.ready.outputs.ready == 'true'
+        env:
+          URL: ${{ steps.preview.outputs.url }}
+        run: |
+          set -euo pipefail
+          for path in /health / /courses; do
+            status=000
+            for _ in 1 2 3 4 5; do
+              status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "${URL%/}$path" || echo 000)
+              [ "$status" = 200 ] && break
+              sleep 6
+            done
+            echo "$path -> $status"
+            [ "$status" = 200 ] || { echo "::error::${URL%/}$path answered $status"; exit 1; }
+          done
+      - name: Comment the Preview URL on the PR
+        if: steps.ready.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          URL: ${{ steps.preview.outputs.url }}
+        run: |
+          set -euo pipefail
+          marker='<!-- bits-preview -->'
+          # shellcheck disable=SC2016 # the backticks are Markdown
+          body="$(printf '%s\n**Preview:** %s\n\nCommit `%s`. Runs on the shared preview database and bucket (`bits-preview-db`, `bits-preview-content`), never production data. No sign-in mail or live model runs on previews (decision 032).\n' \
+            "$marker" "$URL" "${SHA:0:12}")"
+          id="$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id" | sed -n 1p)"
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -f body="$body" > /dev/null
+          else
+            gh api -X POST "repos/$REPO/issues/$PR/comments" -f body="$body" > /dev/null
+          fi
