@@ -89,21 +89,21 @@ three.js. A security review then found two more problems:
   escapes, simple classes, groups, `|`, anchors and at most 4 `?`. There is
   no repetition, and at most 64 paths. `check.ts` re-validates stored
   patterns.
-- **Smart Placement on.** D1 is in ENAM with no read replicas, and a page
-  makes several D1 round trips one after another. Static assets never
-  invoke the Worker, so placement can't slow them down.
-  - *Checked 2026-10-26.* It hasn't moved yet (`cf-placement: local-*`):
-    it needs steady traffic from many locations first.
+- **Placement pinned to ORD** (`placement.region: "azure:northcentralus"`).
+  D1 is in ENAM with no read replicas (`read_replication.mode: disabled`),
+  and a page makes several D1 round trips one after another, so the Worker
+  should run next to the primary. Static assets never invoke the Worker,
+  so placement can't slow them down.
   - The primary is served from ORD (`wrangler d1 execute --remote --json`,
-    `meta.served_by_colo`).
-  - We tried explicit hints and kept Smart:
-    - `aws:us-east-1` put the Worker in IAD, which was slower than the
-      edge (`/health` went from ~80 ms to 150–460 ms);
-    - `azure:northcentralus` put it in ORD, at about the edge's speed for
-      a Chicago-area visitor.
-  - If far-away visitors turn out slow before Smart Placement kicks in,
-    `placement.region: "azure:northcentralus"` is the tested fallback.
-  - Revert if the status becomes `UNSUPPORTED_APPLICATION`.
+    `meta.served_by_colo`). The R2 bucket `bits-content` is also ENAM.
+  - We started on Smart Placement. *Checked 2026-10-26:* it first stayed at
+    the edge (`cf-placement: local-*`), then sent an ORD visitor's requests
+    to ATL (`remote-ATL`), away from D1. It never settled next to D1.
+  - *Pinned 2026-10-26 at the owner's request.* `azure:northcentralus`
+    puts the Worker in ORD (`remote-ORD`). `aws:us-east-1` put it in IAD,
+    which was slower (`/health` went from ~80 ms to 150–460 ms).
+  - Revisit if D1 read replication is turned on: then Smart Placement (or
+    no placement) lets replicas serve reads near the visitor.
 - **`preview_urls: false`.** A preview URL would be a second full host on
   the production D1, R2, email and secrets. Turn previews back on only
   with separate preview resources.
@@ -130,7 +130,7 @@ three.js. A security review then found two more problems:
 - Deploying needs no new remote resources: the rate-limit namespaces exist
   once the config is deployed. Migrations 0004 and 0005 still need
   `pnpm db:migrate:remote` (unchanged by this decision).
-- After deploying, watch Smart Placement's status and latency.
+- After deploying, check `cf-placement: remote-ORD` and latency.
 - Not done:
   - a strict `script-src` CSP (needs nonces);
   - an `og:image` (needs a designed PNG);

@@ -14,12 +14,14 @@
   // email and secrets (decision 020). Turn it on only with separate
   // preview resources.
   "preview_urls": false,
-  // Run near D1 (ENAM, no read replicas) rather than near the visitor: a
-  // page makes several sequential D1 round trips (decision 020). Smart
-  // Placement only moves once it sees steady traffic from many locations;
-  // until then requests show `cf-placement: local-*`. Static assets never
-  // invoke the Worker, so they are unaffected.
-  "placement": { "mode": "smart" },
+  // Run next to D1, not next to the visitor: a page makes several
+  // sequential D1 round trips (decision 020). The D1 primary (ENAM, no read
+  // replicas) and the R2 bucket are served from ORD, and this hint lands the
+  // Worker in ORD (`cf-placement: remote-ORD`). Pinned at the owner's request
+  // on 2026-10-26: Smart Placement never settled next to D1 (it showed
+  // `local-*`, then `remote-ATL`). Static assets never invoke the Worker, so
+  // they are unaffected.
+  "placement": { "region": "azure:northcentralus" },
   // The public address. Cloudflare creates the DNS record and certificate
   // (yogan.dev is a zone on this account). The workers.dev host stays on
   // and 301s to here (worker.ts, LEGACY_HOSTS).
