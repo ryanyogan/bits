@@ -1,6 +1,7 @@
 import type { Handle } from 'remix/component'
 import { clientEntry, css, on } from 'remix/component'
 import { Keycap } from '@bits/ui/keycap'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import { whenPassed } from './lesson-state.ts'
 
@@ -136,7 +137,7 @@ export const LessonComplete = clientEntry(
           )}
           {showDone ? <span data-lesson-passed="" hidden /> : null}
           {passedNow && loginHref ? (
-            <a data-rmx-prefetch="intent" href={loginHref} mix={nudgeStyle}>
+            <a href={loginHref} data-rmx-prefetch={prefetchFor(loginHref)} mix={nudgeStyle}>
               Sign in to keep these neurons →
             </a>
           ) : null}

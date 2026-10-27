@@ -104,7 +104,7 @@ const rowStyle = css({
   gap: 'var(--space-2) var(--space-3)',
   padding: 'var(--space-1_5) var(--space-2) var(--space-1_5) var(--space-4)',
   borderRadius: 'var(--radius-12)',
-  border: '1px solid var(--line-strong)',
+  border: 'var(--border-w) solid var(--line-strong)',
   background: 'var(--well)',
 })
 
@@ -137,12 +137,12 @@ const renameInputStyle = css({
   maxWidth: '14rem',
   padding: '0 var(--space-3)',
   borderRadius: 'var(--radius-10)',
-  border: '1px solid var(--line-control)',
+  border: 'var(--border-w) solid var(--line-control)',
   background: 'var(--ink)',
   color: 'var(--text)',
   fontFamily: 'var(--font-sans)',
   fontSize: 'var(--fs-15)',
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: '2px' },
 })
 
 // Ghost-mono, like the summaries; a summary style reused on a real button,

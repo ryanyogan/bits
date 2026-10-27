@@ -6,6 +6,7 @@ import { AvatarButton } from '@bits/ui/avatar-button'
 import { Keycap } from '@bits/ui/keycap'
 import { StreakPill } from '@bits/ui/streak-pill'
 import { XpPill } from '@bits/ui/xp-pill'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import { platform } from '#platform'
 
@@ -140,7 +141,7 @@ export function Layout(handle: Handle<LayoutProps>) {
               </>
             ) : (
               <>
-                <a data-rmx-prefetch="intent" href={routes.login.index.href()} mix={signInStyle}>
+                <a href={routes.login.index.href()} data-rmx-prefetch={prefetchFor(routes.login.index.href())} mix={signInStyle}>
                   Sign in
                 </a>
                 <Keycap href={routes.courses.index.href()}>Start free</Keycap>

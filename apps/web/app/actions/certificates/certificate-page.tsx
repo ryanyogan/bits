@@ -6,6 +6,7 @@ import { CourseCover } from '@bits/ui/course-cover'
 import { Eyebrow } from '@bits/ui/eyebrow'
 import { HexBadge } from '@bits/ui/hex-badge'
 import { Keycap } from '@bits/ui/keycap'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import type { Viewer } from '../../auth/identity.ts'
 import { APP_NAME, APP_TITLE } from '../../config.ts'
@@ -53,7 +54,7 @@ export function CertificatePage(handle: Handle<CertificatePageProps>) {
           {certificate.isPrivate ? (
             <Callout tone="info" title="Only you can see this.">
               Your profile is private, so this certificate is too. Make your profile public in{' '}
-              <a data-rmx-prefetch="intent" href={routes.settings.index.href()}>Settings</a> to share it.
+              <a href={routes.settings.index.href()} data-rmx-prefetch={prefetchFor(routes.settings.index.href())}>Settings</a> to share it.
             </Callout>
           ) : null}
           <article aria-labelledby="certificate-title" mix={certStyle}>
@@ -69,7 +70,7 @@ export function CertificatePage(handle: Handle<CertificatePageProps>) {
               </h1>
               <p mix={awardStyle}>
                 Finished by{' '}
-                <a data-rmx-prefetch="intent" href={routes.profile.index.href({ handle: certificate.handle })} mix={nameStyle}>
+                <a href={routes.profile.index.href({ handle: certificate.handle })} data-rmx-prefetch={prefetchFor(routes.profile.index.href({ handle: certificate.handle }))} mix={nameStyle}>
                   {name}
                 </a>{' '}
                 <span mix={handleStyle}>@{certificate.handle}</span>
@@ -125,7 +126,7 @@ const certStyle = css({
   alignItems: 'center',
   gap: 'var(--space-8)',
   padding: 'var(--space-10)',
-  border: '1px solid var(--volt-a35)',
+  border: 'var(--border-w) solid var(--volt-a35)',
   borderRadius: 'var(--radius-2xl)',
   background: 'var(--volt-a05)',
   '@media (max-width: 760px)': { padding: 'var(--space-6)', gap: 'var(--space-6)' },

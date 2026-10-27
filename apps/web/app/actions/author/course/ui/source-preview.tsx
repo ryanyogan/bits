@@ -192,7 +192,7 @@ const treeCard = css({
   padding: 'var(--space-5)',
   borderRadius: 'var(--radius-xl)',
   background: 'var(--well)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-13)',
   lineHeight: 2,
@@ -230,7 +230,7 @@ const paneStyle = css({
   overflow: 'hidden',
   borderRadius: 'var(--radius-xl)',
   background: 'var(--well)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
 })
 const previewPane = css({ background: 'var(--ink)' })
 const paneHead = css({
@@ -238,7 +238,7 @@ const paneHead = css({
   alignItems: 'center',
   justifyContent: 'space-between',
   padding: 'var(--space-3) var(--space-4)',
-  borderBottom: '1px solid var(--line-bar)',
+  borderBottom: 'var(--border-w) solid var(--line-bar)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',
   color: 'var(--muted)',
@@ -252,7 +252,7 @@ const preStyle = css({
   fontSize: 'var(--fs-13)',
   lineHeight: 1.75,
   color: 'var(--text-quiet)',
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '-2px' },
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: '-2px' },
 })
 const dimStyle = css({ color: 'var(--dim)' })
 const keyStyle = css({ color: 'var(--ion)' })
@@ -275,7 +275,7 @@ const oddsStyle = css({
   marginLeft: 'calc(26px + var(--space-3))', // under the text: avatar + row gap
   padding: 'var(--space-3_5)',
   borderRadius: 'var(--radius-lg)',
-  border: '1px solid var(--ion-a28)',
+  border: 'var(--border-w) solid var(--ion-a28)',
   background: 'var(--surface)',
   display: 'flex',
   flexDirection: 'column',
@@ -290,7 +290,7 @@ const oddsTemp = css({ color: 'var(--muted)', overflowWrap: 'anywhere' })
 const composerStyle = css({
   padding: 'var(--space-3_5)',
   borderRadius: 'var(--radius-lg)',
-  border: '1px solid var(--volt-a40)',
+  border: 'var(--border-w) solid var(--volt-a40)',
   background: 'var(--well)',
   display: 'flex',
   flexDirection: 'column',
@@ -308,12 +308,12 @@ const chipsStyle = css({
   fontSize: 'var(--fs-12)',
   color: 'var(--muted)',
 })
-const chipStyle = css({ padding: 'var(--space-1) var(--space-2)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--line-strong)' })
+const chipStyle = css({ padding: 'var(--space-1) var(--space-2)', borderRadius: 'var(--radius-xs)', border: 'var(--border-w) solid var(--line-strong)' })
 const quizStyle = css({
   padding: 'var(--space-3_5)',
   borderRadius: 'var(--radius-lg)',
   background: 'var(--surface)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--space-2)',
@@ -327,6 +327,6 @@ const quizOption = css({
   minHeight: '40px',
   padding: '0 var(--space-3)',
   borderRadius: 'var(--radius-10)',
-  border: '1px solid var(--line-panel)',
+  border: 'var(--border-w) solid var(--line-panel)',
   color: 'var(--text-quiet)',
 })

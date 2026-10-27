@@ -48,7 +48,7 @@ export const summaryStyle = css({
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-4)',
   borderRadius: 'var(--radius-10)',
-  border: '1px solid var(--line-control)',
+  border: 'var(--border-w) solid var(--line-control)',
   background: 'transparent',
   color: 'var(--text)',
   fontFamily: 'var(--font-mono)',
@@ -60,7 +60,7 @@ export const summaryStyle = css({
   '&::-webkit-details-marker': { display: 'none' },
   '&::marker': { content: '""' },
   '&:hover': { background: 'var(--fill-ghost-hover)', borderColor: 'var(--line-drop)' },
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: '2px' },
   '@media (max-width: 480px)': { padding: '0 var(--space-3)' },
 })
 
@@ -73,7 +73,7 @@ export const confirmButtonStyle = [
     minHeight: 'var(--touch-target)',
     padding: '0 var(--space-4)',
     borderRadius: 'var(--radius-10)',
-    border: '1px solid var(--danger-line)',
+    border: 'var(--border-w) solid var(--danger-line)',
     background: 'transparent',
     color: 'var(--danger)',
     fontFamily: 'var(--font-mono)',
@@ -82,7 +82,7 @@ export const confirmButtonStyle = [
     cursor: 'pointer',
     transition: 'background-color var(--duration-fast), border-color var(--duration-fast)',
     '&:hover': { background: 'var(--danger-tint)', borderColor: 'var(--danger)' },
-    '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+    '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: '2px' },
     '@media (max-width: 480px)': { padding: '0 var(--space-3)' },
   }),
   // While the removal is in flight (the navigation runtime sets aria-busy).

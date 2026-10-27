@@ -4,6 +4,7 @@ import { Card } from '@bits/ui/card'
 import { HexBadge } from '@bits/ui/hex-badge'
 import { KeyValueList } from '@bits/ui/key-value-list'
 import { ProgressRing } from '@bits/ui/progress-ring'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import { formatDate, type CourseView } from '../course-data.ts'
 
@@ -53,7 +54,7 @@ export function CourseAside(handle: Handle<CourseAsideProps>) {
           <p mix={sourceText}>
             {`This course is ${view.source.files} markdown files. Spot a typo? Fix it in one pull request.`}
           </p>
-          <a data-rmx-prefetch="intent" href={sourceHref} mix={sourceLink}>
+          <a href={sourceHref} data-rmx-prefetch={prefetchFor(sourceHref)} mix={sourceLink}>
             {`${view.source.path} →`}
           </a>
           <p mix={bylineStyle}>

@@ -2,6 +2,7 @@ import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 import { CourseCover } from '@bits/ui/course-cover'
 import { ProgressBar } from '@bits/ui/progress-bar'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import type { CourseSummary } from '../../../content/types.ts'
 import { routes } from '../../../routes.ts'
@@ -37,8 +38,9 @@ export function CourseRow(handle: Handle<CourseRowProps>) {
             <span mix={titleStyle}>{course.title}</span>
             <span mix={finishedMeta}>Finished · certificate ready</span>
           </span>
-          <a data-rmx-prefetch="intent"
+          <a
             href={routes.certificates.show.href({ handle: owner, course: course.slug })}
+            data-rmx-prefetch={prefetchFor(routes.certificates.show.href({ handle: owner, course: course.slug }))}
             mix={certificateLink}
             aria-label={`View certificate for ${course.title}`}
           >
@@ -50,7 +52,7 @@ export function CourseRow(handle: Handle<CourseRowProps>) {
 
     let colour = toneColour[course.tone]
     return (
-      <a data-rmx-prefetch="intent" href={href} mix={[rowStyle, linkRow]}>
+      <a href={href} data-rmx-prefetch={prefetchFor(href)} mix={[rowStyle, linkRow]}>
         <CourseCover pattern={course.pattern} tone={course.tone} sigil={course.sigil} variant="thumb" mix={thumbStyle} />
         <span mix={bodyStyle}>
           <span mix={titleStyle}>{course.title}</span>
@@ -82,11 +84,11 @@ const rowStyle = css({
 })
 const linkRow = css({
   background: 'var(--surface)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   transition: 'border-color var(--duration-fast)',
   '&:hover': { color: 'var(--text)', borderColor: 'var(--line-control)' },
 })
-const finishedStyle = css({ border: '1px solid var(--volt-a35)', background: 'var(--volt-a05)' })
+const finishedStyle = css({ border: 'var(--border-w) solid var(--volt-a35)', background: 'var(--volt-a05)' })
 const thumbStyle = css({ [MOBILE]: { width: '48px', height: '48px', borderRadius: 'var(--radius-12)' } })
 const finishedThumb = css({
   flex: 'none',
@@ -111,7 +113,7 @@ const certificateLink = css({
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-3_5)',
   borderRadius: 'var(--radius-10)',
-  border: '1px solid var(--volt-a40)',
+  border: 'var(--border-w) solid var(--volt-a40)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-13)',
   textDecoration: 'none',

@@ -48,7 +48,7 @@ const boxStyle = css({
   gap: 'var(--space-4)',
   padding: 'var(--space-16) var(--space-12)',
   borderRadius: 'var(--radius-20)',
-  border: '1px dashed var(--line-dashed)',
+  border: 'var(--border-w) dashed var(--line-dashed)',
   textAlign: 'center',
   '@media (max-width: 480px)': { padding: 'var(--space-10) var(--space-5)' },
 })

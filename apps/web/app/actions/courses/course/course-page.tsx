@@ -110,7 +110,7 @@ const outcomeCard = css({
   padding: 'var(--space-4_5)',
   borderRadius: 'var(--radius-lg)',
   background: 'var(--surface)',
-  border: '1px solid var(--line-bar)',
+  border: 'var(--border-w) solid var(--line-bar)',
   fontSize: 'var(--fs-15)',
   lineHeight: 1.5,
   color: 'var(--text-body)',

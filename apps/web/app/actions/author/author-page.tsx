@@ -3,6 +3,7 @@ import { css } from 'remix/component'
 import { CourseCover } from '@bits/ui/course-cover'
 import { EmptyState } from '@bits/ui/empty-state'
 import { MonoHeading } from '@bits/ui/eyebrow'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import type { Viewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
@@ -94,7 +95,7 @@ function AuthorCourseRow(handle: Handle<{ item: AuthorCourse }>) {
       `last push ${item.lastPush}`,
     ].join(' · ')
     return (
-      <a data-rmx-prefetch="intent" href={routes.author.course.index.href({ course: course.slug })} mix={rowStyle}>
+      <a href={routes.author.course.index.href({ course: course.slug })} data-rmx-prefetch={prefetchFor(routes.author.course.index.href({ course: course.slug }))} mix={rowStyle}>
         <CourseCover pattern={course.pattern} tone={course.tone} sigil={course.sigil} variant="thumb" mix={thumbStyle} />
         <span mix={bodyStyle}>
           <span mix={titleStyle}>{course.title}</span>
@@ -130,7 +131,7 @@ const rowStyle = css({
   padding: 'var(--space-4)',
   borderRadius: 'var(--radius-16)',
   background: 'var(--surface)',
-  border: '1px solid var(--line)',
+  border: 'var(--border-w) solid var(--line)',
   color: 'var(--text)',
   textDecoration: 'none',
   transition: 'border-color var(--duration-fast)',
