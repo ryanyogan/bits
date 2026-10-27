@@ -92,7 +92,12 @@ const lesson = (course: string, slug: string, mode?: 'read' | 'watch' | 'termina
 
 /** Pages that look the same to everyone: audited signed out (and, where the shell differs, signed in below). */
 const publicPages: Array<{ name: string; href: string; ready?: (page: Page) => Promise<void> }> = [
-  { name: 'landing', href: routes.home.href() },
+  {
+    name: 'landing',
+    href: routes.home.href(),
+    // Audit with the field live, so its pause toggle (decision 034) is visible.
+    ready: (page) => page.getByRole('button', { name: 'Pause animation' }).waitFor({ timeout: 15_000 }),
+  },
   { name: 'courses', href: routes.courses.index.href() },
   { name: 'courses search', href: routes.courses.index.href(undefined, { searchParams: { q: 'token' } }) },
   { name: 'courses search, no results', href: routes.courses.index.href(undefined, { searchParams: { q: 'zzzzqx' } }) },

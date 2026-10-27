@@ -28,8 +28,17 @@ export interface FieldOptions {
 }
 
 export interface Field {
+  /** Runs the render loop (autonomous motion). */
   start(): void
+  /** Cancels the render loop; the last frame stays on the canvas. */
   stop(): void
+  /**
+   * Draws one still frame on the next animation frame, unless the loop is
+   * running: time frozen, the formation set straight to the scroll target,
+   * no easing left to play out. Paused, this keeps the field in step with
+   * the viewer's own scrolling and redraws it after a resize clears it.
+   */
+  draw(): void
   resize(width: number, height: number): void
   dispose(): void
 }
@@ -359,11 +368,20 @@ export function createField(T: Three, options: FieldOptions): Field {
   let mouse = { x: 0, y: 0 }
   let last = 0
   let raf = 0
+  let stillRaf = 0
+  let frames = 0
 
   function frame(now: number) {
     raf = requestAnimationFrame(frame)
     let dt = last ? Math.min(0.05, (now - last) / 1000) : 1 / 60
     last = now
+    step(dt, false)
+    // A coarse loop counter for the e2e test (decision 034): it moves while
+    // the loop runs and stops when it is paused. Written every 30 frames.
+    if (++frames % 30 === 0) canvas.dataset.frames = String(frames)
+  }
+
+  function step(dt: number, still: boolean) {
     time += dt * (reducedMotion ? 0.25 : 1)
 
     // Scroll → formation, with smoothstep holds at each one. Without a
@@ -380,7 +398,7 @@ export function createField(T: Three, options: FieldOptions): Field {
       let base = Math.floor(tri)
       target = Math.min(3, base + smooth(0.45, 1.0, tri - base))
     }
-    morph += (target - morph) * ease(MORPH_EASE, dt)
+    morph = still ? target : morph + (target - morph) * ease(MORPH_EASE, dt)
 
     // Palette shifts per stage.
     let si = Math.min(2, Math.floor(morph))
@@ -404,7 +422,7 @@ export function createField(T: Three, options: FieldOptions): Field {
     // Reduced motion keeps the spec's ¼-speed drift but drops cursor
     // parallax: motion that follows the pointer is the vestibular trigger
     // the setting exists for (decision 031).
-    let k = reducedMotion ? 0 : ease(PARALLAX_EASE, dt)
+    let k = reducedMotion || still ? 0 : ease(PARALLAX_EASE, dt)
     mouse.x += (input.pointer.x - mouse.x) * k
     mouse.y += (input.pointer.y - mouse.y) * k
     group.rotation.y =
@@ -424,12 +442,21 @@ export function createField(T: Three, options: FieldOptions): Field {
   return {
     start() {
       if (raf) return
+      cancelAnimationFrame(stillRaf)
+      stillRaf = 0
       last = 0
       raf = requestAnimationFrame(frame)
     },
     stop() {
       cancelAnimationFrame(raf)
       raf = 0
+    },
+    draw() {
+      if (raf || stillRaf) return
+      stillRaf = requestAnimationFrame(() => {
+        stillRaf = 0
+        step(0, true)
+      })
     },
     resize(w, h) {
       if (!w || !h) return
@@ -440,7 +467,9 @@ export function createField(T: Three, options: FieldOptions): Field {
     },
     dispose() {
       cancelAnimationFrame(raf)
+      cancelAnimationFrame(stillRaf)
       raf = 0
+      stillRaf = 0
       for (let d of [geo, mat, lineGeo, lineMat, signalGeo, signalMat]) d.dispose()
       renderer.dispose()
     },

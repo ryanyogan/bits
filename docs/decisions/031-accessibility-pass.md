@@ -111,7 +111,8 @@ Key: contrast = `color-contrast`, name = `label-content-name-mismatch`
   - A client navigation mounts a fresh region per award (028), so the same
     path covers that case.
 - **Reduced motion, landing field.** The spec (Main §NeuralField, tokens
-  §6.5) says ¼ time speed, and that stays. Cursor parallax is now off under
+  §6.5) says ¼ time speed, and that stays. (Superseded in part by 034:
+  reduced motion now starts paused; ¼ speed applies once the viewer plays it.) Cursor parallax is now off under
   reduced motion, because motion that follows the pointer is the main
   vestibular trigger the setting exists for. Toasts, the composer and the
   terminal already drop their animations (`bits-pop`/`bits-rise` → none).
@@ -145,6 +146,9 @@ Key: contrast = `color-contrast`, name = `label-content-name-mismatch`
   `aria-hidden`, it stops when hidden or off-screen, and under reduced
   motion it runs at ¼ speed with no parallax. A pause control is a design
   change for the owner.
+  **Resolved by 034:** a "Pause animation" toggle in the hero cancels the
+  render loop and remembers the choice per viewer. Reduced motion now
+  starts paused, not at ¼ speed.
 - Moderate and minor axe findings don't fail the suite (the acceptance bar
   is serious or critical), and this pass didn't review them.
 - No screen-reader run with NVDA, VoiceOver or Orca on this pass. The

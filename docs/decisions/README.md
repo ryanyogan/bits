@@ -38,3 +38,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 030 | [Passkeys and email change: step-up, owner-only links, revert window](030-passkeys-and-email-change.md) |
 | 031 | [Accessibility pass: axe suite at 360 and 1440, fixes at the source](031-accessibility-pass.md) |
 | 033 | [Cloudflare Web Analytics: a nonced beacon we load ourselves](033-web-analytics.md) |
+| 034 | [A pause control for the landing field (WCAG 2.2.2)](034-landing-field-pause.md) |

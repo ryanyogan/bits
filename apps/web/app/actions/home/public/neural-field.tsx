@@ -1,5 +1,6 @@
 import { clientEntry, css, ref, type Handle } from 'remix/component'
 
+import { fieldMotion, onFieldMotion, setFieldLive } from './field-motion.ts'
 import type { Field, FieldInput } from './field-scene.ts'
 import { createField } from './field-scene.ts'
 
@@ -19,10 +20,17 @@ const stages = [
  * checks for WebGL 2, then dynamically imports `three` and starts the scene.
  * Any failure leaves the dot grid alone, silently. The whole layer is
  * `aria-hidden` and ignores the pointer.
+ *
+ * The loop runs only while the page is visible, the layer is on screen and
+ * the viewer hasn't paused it (`FieldMotionToggle` in the hero, decision
+ * 034). Paused, the loop is cancelled; scrolling still redraws one still
+ * frame per animation frame, so the formations follow the viewer's own
+ * scroll and nothing moves on its own.
  */
 export const NeuralField = clientEntry(import.meta.url, function NeuralField(handle: Handle) {
   let stage = 0
   let live = false
+  let paused = false
   let layer: HTMLElement | undefined
   let canvas: HTMLCanvasElement | undefined
 
@@ -85,10 +93,34 @@ export const NeuralField = clientEntry(import.meta.url, function NeuralField(han
     let pageVisible = document.visibilityState === 'visible'
     let onScreen = true
     let lost = false
-    let sync = () => (pageVisible && onScreen && !lost ? field.start() : field.stop())
+    let drawn = false
+    let showing = () => pageVisible && onScreen && !lost
+    let sync = () => {
+      paused = fieldMotion().paused
+      if (!showing()) return field.stop()
+      if (!paused) {
+        drawn = true
+        return field.start()
+      }
+      field.stop()
+      // Paused before the first frame (reduced motion, or a stored choice):
+      // draw the formation once, still. Pausing later keeps the last frame.
+      if (!drawn) field.draw()
+      drawn = true
+    }
+    let redrawIfPaused = () => {
+      if (paused && showing()) field.draw()
+    }
 
     let options = { signal, passive: true }
-    window.addEventListener('scroll', () => (scrollY = window.scrollY), options)
+    window.addEventListener(
+      'scroll',
+      () => {
+        scrollY = window.scrollY
+        redrawIfPaused()
+      },
+      options,
+    )
     window.addEventListener(
       'pointermove',
       (event) => {
@@ -112,13 +144,21 @@ export const NeuralField = clientEntry(import.meta.url, function NeuralField(han
         lost = true
         live = false
         sync()
+        setFieldLive(false)
         handle.update()
       },
       { signal },
     )
+    onFieldMotion(() => {
+      sync()
+      handle.update()
+    }, signal)
 
     let resizeObserver = new ResizeObserver(() => {
-      if (canvas) field.resize(canvas.clientWidth, canvas.clientHeight)
+      if (!canvas) return
+      field.resize(canvas.clientWidth, canvas.clientHeight)
+      // Resizing clears the drawing buffer; the loop repaints on its own.
+      redrawIfPaused()
     })
     resizeObserver.observe(canvas)
     let rootObserver = new ResizeObserver(measure)
@@ -134,10 +174,12 @@ export const NeuralField = clientEntry(import.meta.url, function NeuralField(han
       rootObserver.disconnect()
       intersection.disconnect()
       field.dispose()
+      setFieldLive(false)
     })
 
     live = true
     sync()
+    setFieldLive(true)
     handle.update()
   }
 
@@ -146,6 +188,7 @@ export const NeuralField = clientEntry(import.meta.url, function NeuralField(han
       <canvas
         data-field=""
         data-live={live ? 'true' : undefined}
+        data-paused={live && paused ? 'true' : undefined}
         mix={[canvasStyle, ref((node) => (canvas = node))]}
       />
       <div mix={dotGridStyle} />
