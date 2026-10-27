@@ -79,7 +79,7 @@ export const platform: Platform = {
     // one address, so the limiters are off (app/middleware/rate-limit.test.ts
     // installs its own).
     isTest
-      ? { ANTHROPIC_API_KEY: undefined, CF_AIG_TOKEN: undefined, RL_WRITES: undefined, RL_SIGNIN: undefined, RL_RUNS: undefined, RL_REPORTS: undefined, RL_DRAFTS: undefined }
+      ? { ANTHROPIC_API_KEY: undefined, CF_AIG_TOKEN: undefined, RL_WRITES: undefined, RL_SIGNIN: undefined, RL_RUNS: undefined, RL_REPORTS: undefined, RL_DRAFTS: undefined, RL_UPLOADS: undefined }
       : {},
   ),
   assets,

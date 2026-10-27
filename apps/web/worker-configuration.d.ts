@@ -9,6 +9,7 @@ interface __BaseEnv_Env {
 	RL_RUNS: RateLimit;
 	RL_REPORTS: RateLimit;
 	RL_DRAFTS: RateLimit;
+	RL_UPLOADS: RateLimit;
 	ASSETS: Fetcher;
 	EMAIL_FROM: string;
 	CANONICAL_ORIGIN: string;

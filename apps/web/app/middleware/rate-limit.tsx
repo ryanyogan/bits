@@ -23,6 +23,8 @@ export type RateLimitTier =
   | 'RL_REPORTS'
   /** Background draft and watch-position saves (/api/drafts): 60 a minute. */
   | 'RL_DRAFTS'
+  /** Video upload parts (/api/author/videos/:id/parts/:n): 120 a minute (decision 029). */
+  | 'RL_UPLOADS'
 
 /**
  * Keyed by the signed-in user, else by the client IP. The binding is

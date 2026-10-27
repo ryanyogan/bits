@@ -65,7 +65,14 @@ export default createController(routes.api, {
       middleware: [rateLimit('RL_WRITES', () => jsonError('rate_limited', 429, { retryAfter: 60 }))],
       handler: (context) => startVideoUpload(context),
     },
-    authorVideoPart: (context) => uploadVideoPart(context),
-    authorVideoComplete: (context) => completeVideoUpload(context),
+    // A 1 GB video is ~100 parts, so parts get their own, roomier tier.
+    authorVideoPart: {
+      middleware: [rateLimit('RL_UPLOADS', () => jsonError('rate_limited', 429, { retryAfter: 60 }))],
+      handler: (context) => uploadVideoPart(context),
+    },
+    authorVideoComplete: {
+      middleware: [rateLimit('RL_WRITES', () => jsonError('rate_limited', 429, { retryAfter: 60 }))],
+      handler: (context) => completeVideoUpload(context),
+    },
   },
 })

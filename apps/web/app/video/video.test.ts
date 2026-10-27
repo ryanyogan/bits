@@ -52,6 +52,21 @@ describe('lesson videos', () => {
       asAdmin(routes.api.authorVideoPart.href({ id: started.id, part: String(n) }), { method: 'PUT', body: new Blob([body as BlobPart]) })
     // A part of the wrong size is refused.
     assert.equal((await part(1, bytes.slice(0, 10))).status, 422)
+    // So is one that runs past the part's length with no Content-Length: the
+    // read stops at the limit instead of buffering the whole body.
+    let oversized = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes.slice(PART_SIZE))
+        controller.enqueue(new Uint8Array(10))
+        controller.close()
+      },
+    })
+    let streamed = await asAdmin(routes.api.authorVideoPart.href({ id: started.id, part: '2' }), {
+      method: 'PUT',
+      body: oversized,
+      duplex: 'half',
+    } as RequestInit)
+    assert.equal(streamed.status, 413)
     assert.equal((await part(1, bytes.slice(0, PART_SIZE))).status, 200)
 
     // Completing early names the missing part.

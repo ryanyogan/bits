@@ -106,6 +106,11 @@ change.
     middleware also reads D1 once per range request. That's acceptable at
     this scale, and a pre-router fast path in `worker.ts` could drop it
     later.
+- **Upload limits** (added at merge, after a security review). A part's
+  body is read with a hard cap at the part's length, so a missing or wrong
+  `Content-Length` can't make the Worker buffer more than 10 MiB. Parts are
+  rate-limited by `RL_UPLOADS` (120 a minute: a 1 GB video is about 100
+  parts) and completion by `RL_WRITES`.
 - **Hotlinking.** Three cheap guards:
   - a request with `Sec-Fetch-Site: cross-site`, or with a Referer from
     another host, gets 403;
@@ -161,7 +166,9 @@ change.
   - Only keys the lesson has are accepted (`lessonDraftKeys`), with values
     up to 4,000 characters and at most 8 per request. It's rate-limited by
     `RL_DRAFTS` (60 a minute).
-  - The lesson page loads the viewer's drafts in one query. It renders the
+  - The lesson page reads the viewer's drafts in the same D1 batch as the
+    session (`loadSession({ withDrafts })`, decision 026), so a signed-in
+    lesson stays at one round trip. It renders the
     saved prompt into the composer and Terminal input, and the saved
     position as the player's `initialTime`.
   - The author draft preview neither reads nor writes drafts on the server.

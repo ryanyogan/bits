@@ -143,8 +143,11 @@ export async function uploadVideoPart(context: RequestContext<any, any>): Promis
   let expected = partLength(video, n)
   let declared = Number(context.request.headers.get('Content-Length'))
   if (Number.isFinite(declared) && declared > expected) return json({ error: 'part_size', expected }, 413)
-  // At most PART_SIZE (10 MiB) in memory; a buffer also gives R2 the exact length.
-  let bytes = await context.request.arrayBuffer()
+  // Content-Length can be absent or wrong, so the read itself stops past the
+  // part's length: at most PART_SIZE (10 MiB) in memory. A buffer also gives
+  // R2 the exact length.
+  let bytes = await readAtMost(context.request, expected)
+  if (!bytes) return json({ error: 'part_size', expected }, 413)
   if (bytes.byteLength !== expected) return json({ error: 'part_size', expected, got: bytes.byteLength }, 422)
 
   let upload = contentBucket().resumeMultipartUpload(video.r2_key, video.upload_id!)
@@ -177,4 +180,22 @@ export async function completeVideoUpload(context: RequestContext<any, any>): Pr
   await markVideoReady(db, video.id, durationS, Date.now())
   log('info', 'Video upload ready', { video: video.id, course: video.course_id, path: video.path })
   return json({ id: video.id, status: 'ready', src: videoHref(video.id), duration: durationS })
+}
+
+/** The request body, or null as soon as it runs past `limit` bytes. */
+async function readAtMost(request: Request, limit: number): Promise<Uint8Array | null> {
+  if (!request.body) return new Uint8Array(0)
+  let reader = request.body.getReader()
+  let buffer = new Uint8Array(limit)
+  let length = 0
+  while (true) {
+    let { done, value } = await reader.read()
+    if (done || !value) return buffer.subarray(0, length)
+    if (length + value.byteLength > limit) {
+      await reader.cancel()
+      return null
+    }
+    buffer.set(value, length)
+    length += value.byteLength
+  }
 }
