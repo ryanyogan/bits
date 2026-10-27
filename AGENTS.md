@@ -195,8 +195,8 @@ Rationale: `docs/decisions/010-component-library.md`.
 | Component | File | Key props | Kind |
 |---|---|---|---|
 | Document | document.tsx | assets, title, description, url (canonical + og:url), siteName, head | static |
-| AppBar | app-bar.tsx | brand, homeHref, links, currentPath, actions, variant, position | static |
-| AppBarMenu | app-bar-menu.tsx | links, currentPath, label (mobile sheet <760px, native popover) | island |
+| AppBar | app-bar.tsx | brand, homeHref, links, currentPath, actions, variant, position, sub (second header row; `--appbar-h` tall, decision 022) | static |
+| AppBarMenu | app-bar-menu.tsx | links, currentPath, label (mobile sheet <760px from `--appbar-h`, native popover) | island |
 | Logo / BrandMark | logo.tsx / brand-mark.tsx | brand, href, variant / size | static |
 | NavLink | nav-link.tsx | href, variant, current | static |
 | Icon | icon.tsx | name (`iconNames`), size, color, label | static |
@@ -231,7 +231,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | ProgressBar / SegmentedProgress | progress-bar.tsx | pct, variant card/banner/art/row/level, color, label / segments | static |
 | ProgressRing | progress-ring.tsx | pct, size 96/132, color, caption, label | static |
 | LessonNode / LessonNodeRow | lesson-node.tsx | state done/current/next, size, n, passed / state, badge | static |
-| LessonBar | lesson-bar.tsx | backHref, context, title, segments, modes, neurons | static |
+| LessonBar / LessonModes | lesson-bar.tsx | backHref, context, title, titleAs, segments, modes, neurons, xp, position shell/sticky/static (`shell` = AppBar `sub`) / segments, modes (<760px row) | static |
 | TutorAvatar / TutorMessage / LearnerBubble / ModelOutput | tutor.tsx | size / variant / variant / temperature, tokens, state done/streaming/example/error, note | static |
 | CheckChip | check-chip.tsx | passed, compact | static |
 | TokenPill / TokenizerPanel | token-pill.tsx | text, id, index / tokens, illustrative | static |

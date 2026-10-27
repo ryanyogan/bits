@@ -33,6 +33,13 @@ export interface AppBarProps {
   position?: 'static' | 'sticky'
   /** Accessible name of the primary nav. */
   navLabel?: string
+  /**
+   * A second row inside the same sticky `<header>`, e.g. the lesson sub-bar
+   * (`<LessonBar position="shell">`). Its height must be `--lessonbar-h`;
+   * the header marks itself `data-shell="sub"` so `--shell-h` grows to match
+   * (decision 022).
+   */
+  sub?: RemixNode
   mix?: MixInput<HTMLElement>
 }
 
@@ -54,12 +61,16 @@ export function AppBar(handle: Handle<AppBarProps>) {
       variant = 'app',
       position = 'sticky',
       navLabel = 'Primary',
+      sub,
       mix,
     } = handle.props
     let marketing = variant === 'marketing'
 
     return (
-      <header mix={[barStyle, position === 'sticky' ? stickyStyle : staticStyle, marketing ? marketingBar : appBar, mix]}>
+      <header
+        data-shell={sub ? 'sub' : undefined}
+        mix={[barStyle, position === 'sticky' ? stickyStyle : staticStyle, mix]}
+      >
         <div mix={[innerStyle, marketing ? marketingInner : appInner]}>
           <Logo brand={brand} href={homeHref} variant={marketing ? 'nav' : 'app'} />
           <nav aria-label={navLabel} mix={[navStyle, marketing ? marketingNav : appNav]}>
@@ -79,6 +90,7 @@ export function AppBar(handle: Handle<AppBarProps>) {
             <AppBarMenu links={links} currentPath={currentPath} label={navLabel} />
           </div>
         </div>
+        {sub}
       </header>
     )
   }
@@ -90,9 +102,6 @@ const barStyle = css({
   position: 'relative',
   zIndex: 5,
 })
-
-const marketingBar = css({ '--appbar-h': '88px' })
-const appBar = css({ '--appbar-h': '73px' })
 
 const stickyStyle = css({
   position: 'sticky',
@@ -117,23 +126,29 @@ const marketingInner = css({
   padding: 'var(--space-5_5) var(--page-gutter)',
   justifyContent: 'space-between',
   gap: 'var(--space-5)',
-  [NARROW]: { padding: 'var(--space-3_5) var(--page-gutter)', flexWrap: 'nowrap' },
+  // The menu sheet drops from `--appbar-h`, so the narrow bar matches it.
+  [NARROW]: { height: 'calc(var(--appbar-h) - 1px)', padding: '0 var(--page-gutter)', flexWrap: 'nowrap' },
 })
 
+// One row at a fixed height (`--appbar-h` with the sticky bar's 1px border,
+// decision 022): sticky offsets below the bar (lesson sub-bar, outline,
+// scroll-padding) depend on it.
 const appInner = css({
-  padding: 'var(--space-3_5) var(--page-gutter)',
+  height: 'calc(var(--appbar-h) - 1px)',
+  padding: '0 var(--page-gutter)',
   gap: 'var(--space-7)',
-  [NARROW]: { gap: 'var(--space-3)', flexWrap: 'nowrap' },
+  flexWrap: 'nowrap',
+  [NARROW]: { gap: 'var(--space-3)' },
 })
 
 const navStyle = css({
   display: 'flex',
-  flexWrap: 'wrap',
   fontSize: 'var(--fs-15)',
+  whiteSpace: 'nowrap',
   [NARROW]: { display: 'none' },
 })
 
-const marketingNav = css({ gap: 'var(--space-7)' })
+const marketingNav = css({ gap: 'var(--space-7)', flexWrap: 'wrap' })
 const appNav = css({ gap: 'var(--space-5_5)' })
 
 const actionsStyle = css({

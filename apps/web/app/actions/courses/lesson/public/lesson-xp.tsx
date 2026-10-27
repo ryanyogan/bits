@@ -1,6 +1,5 @@
 import type { Handle } from 'remix/component'
 import { clientEntry } from 'remix/component'
-import { lessonBarXpStyle } from '@bits/ui/lesson-bar'
 import { XpPill } from '@bits/ui/xp-pill'
 
 import { whenPassed } from './lesson-state.ts'
@@ -13,7 +12,7 @@ export interface LessonXpProps {
 }
 
 /**
- * The lesson bar's neurons pill. Server-renders the current total; once the
+ * The neurons pill in the AppBar on lesson pages (decision 022). Server-renders the current total; once the
  * lesson's checks pass it adds the award (1,240 → 1,280) and marks the page
  * as passed. Client entry.
  */
@@ -30,6 +29,6 @@ export const LessonXp = clientEntry(import.meta.url, function LessonXp(handle: H
 
   return () => {
     let { neurons, award } = handle.props
-    return <XpPill neurons={passed ? neurons + award : neurons} mix={lessonBarXpStyle} />
+    return <XpPill neurons={passed ? neurons + award : neurons} />
   }
 })

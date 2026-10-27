@@ -40,6 +40,26 @@ describe('lesson page and author preview', () => {
     assert.match(html, /Moon café tagline/)
   })
 
+  it('renders the app shell: one sticky header with the AppBar and the lesson sub-bar (decision 022)', async () => {
+    let { html } = await page(lessonHref(temperature))
+    assert.equal(count(html, /<header[\s>]/), 1)
+    assert.match(html, /<header data-shell="sub"/)
+    assert.equal(count(html, /Skip to content/), 1)
+    // The same nav as every app page, with Courses current.
+    assert.match(html, /aria-current="page"[^>]*>Courses</)
+    assert.match(html, />My learning</)
+    // The lesson title is the page's h1, inside the header's sub-bar.
+    assert.match(html, /<header[\s\S]*<h1[^>]*>Temperature &amp; randomness<\/h1>[\s\S]*<\/header>/)
+    // Narrow screens get the mode tabs at the top of the lesson.
+    assert.equal(count(html, /aria-label="Lesson format"/), 2)
+
+    let user = await signIn('shell@example.com')
+    let signedIn = await page(lessonHref(temperature), user.cookie)
+    // The reward XP island takes the bar's XP slot, keyed per lesson.
+    assert.match(signedIn.html, /<span data-rmx-key="tokens-and-temperature\/temperature"[^>]*>[\s\S]{0,400}neurons/)
+    assert.equal(count(signedIn.html, / neurons</), 1)
+  })
+
   it('offers Watch only for lessons with video', async () => {
     let withVideo = await page(lessonHref(temperature))
     assert.match(withVideo.html, />Watch</)

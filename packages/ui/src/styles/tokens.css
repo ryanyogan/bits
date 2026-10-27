@@ -292,6 +292,11 @@
     --measure: 68ch;
     --touch-target: 44px; /* minimum hit area */
     --bp-mobile: 760px; /* resolutions §8 (documentation only: CSS cannot read it in @media) */
+    /* App shell (decision 022): the sticky header stack. Bars are fixed to
+       these heights so sticky offsets and scroll-padding agree. */
+    --appbar-h: 72px; /* AppBar row */
+    --lessonbar-h: 64px; /* lesson sub-bar under the AppBar */
+    --shell-h: var(--appbar-h); /* whole sticky stack; lesson pages add --lessonbar-h */
 
     /* ------------------------------------------------------------------
      * 4. Radii. Scale: 8 · 11 · 14 · 18 · 22 · pill. Off-scale values the
@@ -378,6 +383,14 @@
     --reveal-rise: 8px;
     --morph-lerp: 0.055; /* 3D field ease per frame */
     --copy-confirm-ms: 1600; /* copy-confirm reset (read by script) */
+  }
+
+  /* <760px: shorter shell bars (decision 022). */
+  @media (max-width: 759.98px) {
+    :root {
+      --appbar-h: 64px;
+      --lessonbar-h: 56px;
+    }
   }
 
   /* ≤480px: 16px page gutter (tokens §7.1, proposed for 360px support). */
