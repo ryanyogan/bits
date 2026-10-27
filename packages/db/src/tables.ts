@@ -118,6 +118,8 @@ export const emailTokens = table({
     purpose: c.enum(emailTokenPurposes),
     /** The account an 'email-change' token belongs to; null for sign-in. */
     user_id: c.text().nullable(),
+    /** 'email-revert' only: the address the change moved to. */
+    changed_to: c.text().nullable(),
   },
 })
 

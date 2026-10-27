@@ -177,3 +177,11 @@ export async function revertEmailChangeLink(db: D1DataTableDatabase, token: stri
     passkeysSince: open.created_at - REVERT_PASSKEY_WINDOW_MS,
   })
 }
+
+/** `r***@g***.com`: enough for the owner to recognise, not enough to learn the address. */
+export function maskEmail(email: string): string {
+  let [local = '', domain = ''] = email.split('@')
+  let labels = domain.split('.')
+  let tld = labels.length > 1 ? `.${labels.pop()}` : ''
+  return `${local.slice(0, 1)}***@${labels.join('.').slice(0, 1)}***${tld}`
+}

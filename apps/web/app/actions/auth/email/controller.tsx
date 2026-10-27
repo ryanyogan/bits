@@ -2,7 +2,7 @@ import { findUserById, type User } from '@bits/db'
 import { redirect } from 'remix/response/redirect'
 import { createController } from 'remix/router'
 
-import { confirmEmailChangeLink, peekEmailChangeLink } from '../../../auth/email-change.ts'
+import { confirmEmailChangeLink, maskEmail, peekEmailChangeLink } from '../../../auth/email-change.ts'
 import { currentUser } from '../../../auth/identity.ts'
 import { rateLimit } from '../../../middleware/rate-limit.tsx'
 import { routes } from '../../../routes.ts'
@@ -55,7 +55,7 @@ async function signInFirst(
 ) {
   let owner: User | null = await findUserById(context.db, userId)
   if (!owner) return emailLinkExpired()
-  return context.render(<EmailLinkPage kind="sign-in-first" email={email} account={owner.email} />, {
+  return context.render(<EmailLinkPage kind="sign-in-first" email={email} account={maskEmail(owner.email)} />, {
     status,
     headers: pageHeaders,
   })

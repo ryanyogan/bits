@@ -35,5 +35,8 @@ create index webauthn_challenges_expires_at on webauthn_challenges (expires_at);
 alter table email_tokens add column purpose text not null default 'sign-in' check (purpose in ('sign-in', 'email-change', 'email-revert'));
 -- The account an 'email-change' or 'email-revert' token moves to `email`. Null for sign-in.
 alter table email_tokens add column user_id text references users (id) on delete cascade;
+-- 'email-revert' only: the address the change moved TO. A revert applies only
+-- while the account still has it, so a stale link can't rewrite a later email.
+alter table email_tokens add column changed_to text collate nocase;
 
 create index email_tokens_user_purpose on email_tokens (user_id, purpose, created_at);

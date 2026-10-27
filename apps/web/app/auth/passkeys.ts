@@ -34,6 +34,7 @@ import { isoBase64URL } from '@simplewebauthn/server/helpers'
 import { platform } from '#platform'
 
 import { APP_TITLE } from '../config.ts'
+import { log } from '../log.ts'
 import { isProduction } from './config.ts'
 
 export const CHALLENGE_TTL_MS = 10 * 60 * 1000
@@ -140,7 +141,10 @@ export async function registerPasskey(
       requireUserVerification: true,
       supportedAlgorithmIDs: ALGORITHMS,
     })
-  } catch {
+  } catch (error) {
+    // Expected for replays, wrong origins and cancelled ceremonies; logged so
+    // a runtime problem (Web Crypto, encoding) shows up too.
+    log('info', 'Passkey registration refused', { reason: String((error as Error)?.message ?? error) })
     return { ok: false, reason: 'invalid' }
   }
   if (!verification.verified) return { ok: false, reason: 'invalid' }
@@ -222,7 +226,8 @@ export async function verifyPasskeySignIn(
       },
       requireUserVerification: true,
     })
-  } catch {
+  } catch (error) {
+    log('info', 'Passkey sign-in refused', { reason: String((error as Error)?.message ?? error) })
     return { ok: false, reason: 'invalid' }
   }
   if (!verification.verified) return { ok: false, reason: 'invalid' }

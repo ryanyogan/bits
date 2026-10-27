@@ -111,7 +111,8 @@ describe('email change', () => {
     assert.equal(page.headers.get('Cache-Control'), 'no-store')
     let html = await page.text()
     assert.match(html, /Sign in first/)
-    assert.match(html, /link-move@example\.com/)
+    assert.match(html, /l\*\*\*@e\*\*\*\.com/, 'the account, masked')
+    assert.doesNotMatch(html, /link-move@example\.com/, 'never the full address')
     let { cookie: stranger } = await signIn('stranger@example.com')
     for (let who of [null, stranger]) {
       let refused = await fetchAs(who, routes.auth.email.action.href(), post({ token: token! }))
@@ -169,6 +170,43 @@ describe('email change', () => {
     assert.equal(twice.headers.get('Location'), '/login?error=email-link-expired')
     // The victim signs in again with their own address.
     assert.equal((await signIn('victim@example.com')).user.id, user.id)
+  })
+
+  it('a stale revert link can’t rewrite a later email; only the newest change can be undone', async () => {
+    let { cookie, user } = await signIn('chain-a@example.com')
+    let { code: toB } = await askToChange(cookie, 'chain-b@example.com')
+    await fetchAs(cookie, routes.settings.emailConfirm.href(), post({ code: toB! }))
+    let revertAtoB = revertTokenFor('chain-a@example.com')
+
+    let fresh = (await signIn('chain-b@example.com')).cookie
+    let { code: toC } = await askToChange(fresh, 'chain-c@example.com')
+    await fetchAs(fresh, routes.settings.emailConfirm.href(), post({ code: toC! }))
+    assert.equal((await findUserById(testDb, user.id))!.email, 'chain-c@example.com')
+    let revertBtoC = revertTokenFor('chain-b@example.com')
+
+    // A→B's link is withdrawn (and B is no longer the account's email anyway).
+    let stalePage = await fetchAs(null, routes.auth.emailRevert.index.href(undefined, { searchParams: { token: revertAtoB } }))
+    assert.equal(stalePage.headers.get('Location'), '/login?error=email-link-expired')
+    let stale = await fetchAs(null, routes.auth.emailRevert.action.href(), post({ token: revertAtoB }))
+    assert.equal(stale.headers.get('Location'), '/login?error=email-link-expired')
+    assert.equal((await findUserById(testDb, user.id))!.email, 'chain-c@example.com')
+
+    // B→C's link still works while the account is on C.
+    let undone = await fetchAs(null, routes.auth.emailRevert.action.href(), post({ token: revertBtoC }))
+    assert.equal(undone.headers.get('Location'), '/login?notice=email-reverted')
+    assert.equal((await findUserById(testDb, user.id))!.email, 'chain-b@example.com')
+  })
+
+  it('a revert link stops working once the account has moved on', async () => {
+    let { cookie, user } = await signIn('drift-a@example.com')
+    let { code } = await askToChange(cookie, 'drift-b@example.com')
+    await fetchAs(cookie, routes.settings.emailConfirm.href(), post({ code: code! }))
+    let token = revertTokenFor('drift-a@example.com')
+    // The email moves without a revert row (e.g. an admin fix): the link must not apply.
+    await testDb.d1.prepare('update users set email = ? where id = ?').bind('drift-z@example.com', user.id).run()
+    let refused = await fetchAs(null, routes.auth.emailRevert.action.href(), post({ token }))
+    assert.equal(refused.headers.get('Location'), '/login?error=email-link-expired')
+    assert.equal((await findUserById(testDb, user.id))!.email, 'drift-z@example.com')
   })
 
   it('never reveals a taken address, and never lets two accounts share one', async () => {

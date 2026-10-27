@@ -400,11 +400,19 @@ export async function completeEmailChange(
          where token_hash = ?2 and user_id = ?1 and purpose = 'email-change' and used_at is null and expires_at > ?3`,
       )
       .bind(userId, tokenHash, now),
-    // The revert link's row holds the old address; no code (link only).
+    // Only the newest change can be undone: earlier revert links are withdrawn.
     db.d1
       .prepare(
-        `insert into email_tokens (token_hash, code_hash, email, attempts, expires_at, used_at, next_path, created_at, ip_hash, signup, purpose, user_id)
-         select ?4, '-', users.email, 0, ?5, null, null, ?3, null, null, 'email-revert', ?1
+        `update email_tokens set used_at = ?3
+         where user_id = ?1 and purpose = 'email-revert' and used_at is null and ${spent}`,
+      )
+      .bind(userId, tokenHash, now),
+    // The revert link's row holds the old address and the new one; no code (link only).
+    db.d1
+      .prepare(
+        `insert into email_tokens (token_hash, code_hash, email, attempts, expires_at, used_at, next_path, created_at, ip_hash, signup, purpose, user_id, changed_to)
+         select ?4, '-', users.email, 0, ?5, null, null, ?3, null, null, 'email-revert', ?1,
+                (select email from email_tokens where token_hash = ?2)
          from users where users.id = ?1 and ${spent}`,
       )
       .bind(userId, tokenHash, now, input.revertTokenHash, input.revertExpiresAt),
@@ -456,7 +464,8 @@ export async function peekEmailRevert(
   return db.d1
     .prepare(
       `select token_hash, email, user_id, created_at from email_tokens
-       where token_hash = ? and purpose = 'email-revert' and used_at is null and expires_at > ?`,
+       where token_hash = ? and purpose = 'email-revert' and used_at is null and expires_at > ?
+         and exists (select 1 from users where users.id = email_tokens.user_id and users.email = email_tokens.changed_to)`,
     )
     .bind(tokenHash, now)
     .first<OpenEmailRevert>()
@@ -468,10 +477,13 @@ export type EmailRevertResult =
 
 /**
  * Undoes an email change from the old address, in one batch: spend the
- * revert token, put the old email back, withdraw open changes, end every
- * session of the user, and remove passkeys added since `passkeysSince`
- * (whoever changed the email may have added one first). Statements after
- * the first act only if this batch spent the token.
+ * revert token, but only while the account still has the address that
+ * change moved to (`changed_to`, checked in the same statement, so a stale
+ * link can't rewrite a later email); then put the old email back, withdraw
+ * open changes and other revert links, end every session of the user, and
+ * remove passkeys added since `passkeysSince` (whoever changed the email may
+ * have added one first). Statements after the first act only if this batch
+ * spent the token.
  */
 export async function revertEmailChange(
   db: D1DataTableDatabase,
@@ -486,13 +498,21 @@ export async function revertEmailChange(
     db.d1
       .prepare(
         `update email_tokens set used_at = ?3
-         where token_hash = ?2 and user_id = ?1 and purpose = 'email-revert' and used_at is null and expires_at > ?3`,
+         where token_hash = ?2 and user_id = ?1 and purpose = 'email-revert' and used_at is null and expires_at > ?3
+           and changed_to is not null
+           and exists (select 1 from users where users.id = ?1 and users.email = email_tokens.changed_to)`,
       )
       .bind(userId, tokenHash, now),
     db.d1
       .prepare(
         `update users set email = (select email from email_tokens where token_hash = ?2), email_verified_at = ?3, updated_at = ?3
          where id = ?1 and ${spent}`,
+      )
+      .bind(userId, tokenHash, now),
+    db.d1
+      .prepare(
+        `update email_tokens set used_at = ?3
+         where user_id = ?1 and purpose = 'email-revert' and used_at is null and ${spent}`,
       )
       .bind(userId, tokenHash, now),
     db.d1

@@ -10,7 +10,7 @@ import { AuthShell, formHeadingStyle, headingGroupStyle, riseStyle, subStyle } f
 export type EmailLinkPageProps =
   /** The account's own session: one click confirms the new email. */
   | { kind: 'confirm'; token: string; email: string }
-  /** Anyone else: sign in to the account first (a link never signs anyone in). */
+  /** Anyone else: sign in to the account first (a link never signs anyone in). `account` is masked. */
   | { kind: 'sign-in-first'; email: string; account: string }
   /** The old address undoing a change (7-day link). */
   | { kind: 'revert'; token: string; email: string }
@@ -47,9 +47,9 @@ export function EmailLinkPage(handle: Handle<EmailLinkPageProps>) {
               <div mix={headingGroupStyle}>
                 <h1 mix={formHeadingStyle}>Sign in first.</h1>
                 <p mix={subStyle}>
-                  This link moves the Bits account <span mix={emailStyle}>{props.account}</span> to{' '}
-                  <span mix={emailStyle}>{props.email}</span>. Only that account can confirm it: sign in to it on this
-                  device, then type the code from the email in Settings.
+                  This link moves a Bits account (<span mix={emailStyle}>{props.account}</span>) to{' '}
+                  <span mix={emailStyle}>{props.email}</span>. Only the account that asked for this change can confirm
+                  it: sign in to it on this device, then type the code from the email in Settings.
                 </p>
               </div>
               <Keycap
