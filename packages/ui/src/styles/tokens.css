@@ -308,6 +308,21 @@
     --measure: 68ch;
     --touch-target: 44px; /* minimum hit area */
 
+    /* Strokes and control sizes (decision 042). Every border, divider and
+     * underline uses one of the two widths; colour comes from the --line-*
+     * or accent alphas above. Control heights are the System artboard's
+     * steps (resolutions §3 and §7): never set a control's height in px. */
+    --border-w: 1px; /* hairline: cards, fields, chips, dividers */
+    --border-w-strong: 2px; /* nav underline, current lesson node, active-row rule */
+    --control-xs: 34px; /* "Type it" tool toggle (44px hit area via ::before) */
+    --control-sm: 36px; /* sm keycap (44px hit area via ::before) */
+    --control-compact: 40px; /* avatar, quiz and video tool buttons (44px hit area via ::before) */
+    --control-md: 46px; /* md keycap, editor file tab */
+    --control-field: 50px; /* text field, provider button */
+    --control-search-input: 52px; /* search input inside its 56px frame */
+    --control-lg: 56px; /* lg keycap, search field */
+    --control-code: 60px; /* one-time-code boxes */
+
     /* Fixed-size windows for content that fills in (decision 023): they
      * scroll inside instead of pushing the page. */
     --run-log-height: clamp(220px, 42svh, 420px); /* composer runs */
@@ -399,7 +414,15 @@
     /* 8. Focus: 4px volt glow + 2px solid volt outline (resolutions §6). */
     --focus-ring: 0 0 0 4px var(--volt-tint-on);
     --focus-ring-color: var(--volt);
+    /* The outline half of the ring, one definition for every control (decision 042). */
+    --focus-outline-w: 2px;
+    --focus-outline: var(--focus-outline-w) solid var(--focus-ring-color);
+    --focus-offset: 2px; /* default: outside the control */
+    --focus-offset-wide: 4px; /* controls that sit flush against a frame (tab panels, composer, video) */
+    --focus-offset-inset: -2px; /* cells inside a clipped box (editor tabs, terminal rows) */
     --focus-border: var(--volt-a70); /* text-field border on focus */
+    --focus-ring-soft: 0 0 0 4px var(--volt-tint); /* search field: the artboard's .1 glow */
+    --focus-ring-danger: 0 0 0 4px var(--danger-tint); /* an invalid field while focused */
 
     /* ------------------------------------------------------------------
      * 6. Motion

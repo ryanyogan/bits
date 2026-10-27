@@ -71,5 +71,5 @@ const panelStyle = css({
   color: 'var(--text-body)',
   '& > p': { margin: 0 },
   '&[hidden]': { display: 'none' },
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '4px' },
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-wide)' },
 })

@@ -7,12 +7,34 @@
  * press never apply to disabled controls. They are literal-typed constants so
  * they can be used as computed keys in css() objects.
  */
+import { css } from 'remix/component'
+
 export type ForcedState = 'hover' | 'active' | 'focus'
 
 export const HOVER = '&:hover:not(:disabled):not([aria-disabled="true"]), &[data-force="hover"]'
 export const ACTIVE = '&:active:not(:disabled):not([aria-disabled="true"]), &[data-force="active"]'
 export const FOCUS = '&:focus-visible, &[data-force="focus"]'
 export const DISABLED = '&:disabled, &[aria-disabled="true"]'
+/**
+ * Pending: the app's navigation feedback sets `aria-busy="true"` on a form's
+ * submitter while the POST is in flight (decision 024); `loading`/`busy` props
+ * set it too.
+ */
+export const BUSY = '&[aria-busy="true"]'
+/**
+ * The one pending look for every button (decision 042): a progress cursor and
+ * a blinking caret after the label. The caret's alt text ("/ """) keeps it
+ * out of the accessible name; reduced motion holds it still. Add this mixin
+ * after a button's own styles.
+ */
+export const busyStyle = css({
+  [BUSY]: { cursor: 'progress' },
+  '&[aria-busy="true"]::after': {
+    content: '"▍" / ""',
+    animation: 'bits-blink var(--duration-caret) steps(1) infinite',
+  },
+  '@media (prefers-reduced-motion: reduce)': { '&[aria-busy="true"]::after': { animation: 'none' } },
+})
 /** For containers whose focus shows on an inner control. */
 export const FOCUS_WITHIN = '&:focus-within, &[data-force="focus"]'
 /**
@@ -40,7 +62,7 @@ export const forcedFill = { forcedColorAdjust: 'none', background: 'CanvasText' 
  */
 export const forcedInlineFill = { forcedColorAdjust: 'none', boxShadow: 'inset 0 0 0 999px CanvasText' } as const
 /** The empty part of a bar: a hairline frame, so the fill reads as a share of it. */
-export const forcedTrack = { outline: '1px solid CanvasText', outlineOffset: '0' } as const
+export const forcedTrack = { outline: 'var(--border-w) solid CanvasText', outlineOffset: '0' } as const
 /**
  * SVG drawn with token colours in its attributes (icons, the brand mark):
  * forced colours never touch `fill`/`stroke`, so a light glyph vanished on a
@@ -58,9 +80,9 @@ export const forcedMark = { forcedColorAdjust: 'none', background: 'Mark', color
  * outline is invisible normally, but forced-colors paints it, so keyboard
  * focus never disappears in high-contrast mode.
  */
-export const hiddenOutline = { outline: '2px solid transparent', outlineOffset: '2px' } as const
+export const hiddenOutline = { outline: 'var(--focus-outline-w) solid transparent', outlineOffset: 'var(--focus-offset)' } as const
 /** The focus outline every custom-styled control repeats when it sets its own box-shadow. */
 export const focusOutline = {
-  outline: '2px solid var(--focus-ring-color)',
-  outlineOffset: '2px',
+  outline: 'var(--focus-outline)',
+  outlineOffset: 'var(--focus-offset)',
 } as const

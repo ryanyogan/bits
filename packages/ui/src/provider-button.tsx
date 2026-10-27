@@ -2,7 +2,7 @@ import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
 import { Icon, type IconName } from './icon.tsx'
-import { FOCUS, HOVER, type ForcedState } from './lib/states.ts'
+import { ACTIVE, busyStyle, DISABLED, FOCUS, focusOutline, HOVER, type ForcedState } from './lib/states.ts'
 
 export interface ProviderButtonProps {
   /** `github` / `globe` (Google) / `key` (passkey). */
@@ -49,7 +49,7 @@ export function ProviderButton(handle: Handle<ProviderButtonProps>) {
         disabled={disabled}
         aria-busy={busy ? 'true' : undefined}
         data-force={forceState}
-        mix={[buttonStyle, mix]}
+        mix={[buttonStyle, busyStyle, mix]}
       >
         {content}
       </button>
@@ -63,10 +63,10 @@ const buttonStyle = css({
   justifyContent: 'center',
   gap: 'var(--space-3)',
   width: '100%',
-  minHeight: '50px',
+  minHeight: 'var(--control-field)',
   padding: '0 var(--space-4)',
   borderRadius: 'var(--radius-12)',
-  border: '1px solid var(--line-strong)',
+  border: 'var(--border-w) solid var(--line-strong)',
   background: 'var(--surface)',
   color: 'var(--text)',
   fontFamily: 'var(--font-sans)',
@@ -76,7 +76,8 @@ const buttonStyle = css({
   cursor: 'pointer',
   transition: 'background-color var(--duration-fast), border-color var(--duration-fast)',
   [HOVER]: { background: 'var(--fill-ghost-hover)', borderColor: 'var(--line-drop)', color: 'var(--text)' },
-  [FOCUS]: { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
-  '&:disabled': { color: 'var(--dim)', cursor: 'not-allowed' },
-  '&[aria-busy="true"]': { cursor: 'progress' },
+  [ACTIVE]: { background: 'var(--fill-btn)' },
+  [FOCUS]: focusOutline,
+  // The ghost-key disabled recipe (Keycap ghost): dim text on a quiet border.
+  [DISABLED]: { color: 'var(--dim)', borderColor: 'var(--line)', cursor: 'not-allowed' },
 })

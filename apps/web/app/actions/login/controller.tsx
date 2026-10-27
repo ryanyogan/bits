@@ -64,7 +64,7 @@ export default createController(routes.login, {
         })
         if (!result.ok) {
           let failure = emailFailures[result.reason]
-          return rerender(failure.status, { notice: { tone: 'danger', text: failure.text } })
+          return rerender(failure.status, { notice: { tone: failure.tone ?? 'danger', text: failure.text } })
         }
 
         return redirect(
@@ -114,12 +114,21 @@ export default createController(routes.login, {
 })
 
 /** Re-render statuses: 4xx, since the browser runtime treats a 5xx as a failed navigation. */
-export const emailFailures: Record<Extract<EmailRequestResult, { ok: false }>['reason'], { status: number; text: string }> = {
+export const emailFailures: Record<
+  Extract<EmailRequestResult, { ok: false }>['reason'],
+  { status: number; text: string; tone?: LoginNotice['tone'] }
+> = {
   'rate-email': {
     status: 429,
     text: 'We’ve sent this address 3 emails in the last 10 minutes. Use the newest one, or try again in a few minutes.',
   },
   'rate-ip': { status: 429, text: 'Too many sign-in emails from this network. Try again in an hour.' },
+  // The global daily cap (decision 039): nobody did anything wrong, so it's calm.
+  'rate-global': {
+    status: 429,
+    tone: 'warning',
+    text: 'We’ve sent all the email we can for today. Use a passkey, GitHub or Google instead, or try email again tomorrow.',
+  },
   'send-failed': { status: 422, text: 'We couldn’t send the email just now. Try again in a minute.' },
 }
 

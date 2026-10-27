@@ -26,11 +26,12 @@ import { routes } from '../routes.ts'
 import { digestsEqual, randomCode, randomToken, sha256Hex } from './crypto.ts'
 import { confirmEmailChangeMail, emailChangedMail, emailTakenMail } from './email-change-mail.ts'
 import { checkEmailLimits, codeHash, isTokenShaped, MAX_CODE_ATTEMPTS, TOKEN_TTL_MINUTES } from './email-sign-in.ts'
+import { reserveMail } from './mail-quota.ts'
 import { MailError, sendMail } from './mailer.ts'
 
 export type EmailChangeRequestResult =
   | { ok: true }
-  | { ok: false; reason: 'rate-email' | 'rate-ip' | 'send-failed' }
+  | { ok: false; reason: 'rate-email' | 'rate-ip' | 'rate-global' | 'send-failed' }
   | { ok: false; reason: 'revert-window'; until: number }
 
 /**
@@ -49,6 +50,7 @@ export async function requestEmailChange(
   if (until) return { ok: false, reason: 'revert-window', until }
   let limits = await checkEmailLimits(db, input.email, input.ip, now)
   if (!limits.ok) return limits
+  if (!(await reserveMail(db, 'email-change'))) return { ok: false, reason: 'rate-global' }
 
   let token = randomToken()
   let code = randomCode()

@@ -4,9 +4,10 @@ import { clientEntry, css, on, ref } from 'remix/component'
 import { Keycap } from './keycap.tsx'
 import { TEMPERATURE_EVENT } from './odds-bars.tsx'
 import { readDraft, writeDraft, type DraftPersist } from './lib/drafts.ts'
+import { prefetchFor } from './lib/prefetch.ts'
 import { runNote, streamRun, type RunEndpoint } from './lib/run-stream.ts'
 import { createFollower, Ghost, scrollWindowStyle, stackStyle } from './lib/stable.tsx'
-import { FORCED_COLORS, forcedMark, forcedSelected } from './lib/states.ts'
+import { focusOutline, FORCED_COLORS, forcedMark, forcedSelected } from './lib/states.ts'
 import {
   cannedOutput,
   checkPasses,
@@ -388,7 +389,7 @@ function TerminalEntryView(
           <div mix={tutorBody}>{entry.message}</div>
           {entry.next ? (
             <div mix={pointerStyle}>
-              <a href={entry.next.href} mix={nextLink}>
+              <a href={entry.next.href} data-rmx-prefetch={prefetchFor(entry.next.href)} mix={nextLink}>
                 {entry.next.label}
               </a>
             </div>
@@ -548,7 +549,7 @@ const termStyle = css({
   flexDirection: 'column',
   borderRadius: 'var(--radius-xl)',
   background: 'var(--terminal)',
-  border: '1px solid var(--line-glass)',
+  border: 'var(--border-w) solid var(--line-glass)',
   overflow: 'hidden',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-14)',
@@ -566,7 +567,7 @@ const titleRow = css({
   gap: 'var(--space-3)',
   whiteSpace: 'nowrap',
   padding: 'var(--space-3) var(--space-4)',
-  borderBottom: '1px solid var(--line-bar)',
+  borderBottom: 'var(--border-w) solid var(--line-bar)',
   fontSize: 'var(--fs-12)',
   color: 'var(--muted)',
 })
@@ -575,7 +576,7 @@ const pushRight = css({ marginLeft: 'auto', flexShrink: 0 })
 const logStyle = css({
   flex: 1,
   minHeight: 0,
-  '&:focus-visible': { outlineOffset: '-2px' },
+  '&:focus-visible': { outlineOffset: 'var(--focus-offset-inset)' },
   padding: 'var(--space-5) var(--space-5) var(--space-2)',
   display: 'flex',
   flexDirection: 'column',
@@ -609,13 +610,13 @@ const outputBox = css({
   padding: 'var(--space-3) var(--space-3_5)',
   borderRadius: 'var(--radius-10)',
   background: 'var(--surface)',
-  border: '1px solid var(--line-hair)',
+  border: 'var(--border-w) solid var(--line-hair)',
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--space-0_5)',
   fontSize: 'var(--fs-13)',
   overflowX: 'auto',
-  '&:focus-visible': { outlineOffset: '-2px' },
+  '&:focus-visible': { outlineOffset: 'var(--focus-offset-inset)' },
   '@media (max-width: 480px)': { marginLeft: 0 },
 })
 const preLine = css({ whiteSpace: 'pre' })
@@ -628,7 +629,7 @@ const inputRow = css({
   padding: '0 var(--space-2) 0 var(--space-3_5)',
   borderRadius: 'var(--radius-12)',
   background: 'var(--surface)',
-  border: '1px solid var(--volt-a35)',
+  border: 'var(--border-w) solid var(--volt-a35)',
   '&:focus-within': { borderColor: 'var(--volt-a70)', boxShadow: 'var(--focus-ring)' },
 })
 const inputStyle = css({
@@ -651,7 +652,7 @@ const promptTools = css({
   flexDirection: 'column',
   gap: 'var(--space-2)',
   padding: 'var(--space-3) var(--space-5) 0',
-  borderTop: '1px solid var(--line-bar)',
+  borderTop: 'var(--border-w) solid var(--line-bar)',
   fontSize: 'var(--fs-13)',
   '@media (max-width: 480px)': { padding: 'var(--space-3) var(--space-3_5) 0' },
 })
@@ -683,13 +684,13 @@ const tempChip = css({
   minWidth: '48px',
   padding: '0 var(--space-2_5)',
   borderRadius: 'var(--radius-9)',
-  border: '1px solid var(--line-control)',
+  border: 'var(--border-w) solid var(--line-control)',
   color: 'var(--text-quiet)',
   cursor: 'pointer',
   '&::before': { content: '""', position: 'absolute', inset: '-4px 0' },
   '&:hover': { borderColor: 'var(--line-node-next)' },
   '&:has(:checked)': { background: 'var(--ion)', borderColor: 'var(--ion)', color: 'var(--ink)' },
-  '&:has(:focus-visible)': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:has(:focus-visible)': focusOutline,
   [FORCED_COLORS]: { '&:has(:checked)': forcedSelected },
 })
 const noJsStyle = css({ margin: '0 var(--space-4) var(--space-3)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
@@ -697,7 +698,7 @@ const noJsStyle = css({ margin: '0 var(--space-4) var(--space-3)', fontSize: 'va
 const panelStyle = css({
   borderRadius: 'var(--radius-xl)',
   background: 'var(--terminal)',
-  border: '1px solid var(--line-glass)',
+  border: 'var(--border-w) solid var(--line-glass)',
   overflow: 'hidden',
 })
 const panelHeader = css({
@@ -706,7 +707,7 @@ const panelHeader = css({
   justifyContent: 'space-between',
   gap: 'var(--space-3)',
   padding: 'var(--space-2_5) var(--space-4)',
-  borderBottom: '1px solid var(--line-bar)',
+  borderBottom: 'var(--border-w) solid var(--line-bar)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',
   color: 'var(--muted)',
@@ -720,5 +721,5 @@ const panelBody = css({
   overflowX: 'auto',
   minHeight: '120px',
   maxHeight: 'var(--output-panel-height)',
-  '&:focus-visible': { outlineOffset: '-2px' },
+  '&:focus-visible': { outlineOffset: 'var(--focus-offset-inset)' },
 })

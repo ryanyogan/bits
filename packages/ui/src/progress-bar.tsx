@@ -92,7 +92,7 @@ const segmentStyle = css({
   [FORCED_COLORS]: {
     forcedColorAdjust: 'none',
     background: 'Canvas',
-    outline: '1px solid CanvasText',
+    outline: 'var(--border-w) solid CanvasText',
     outlineOffset: '-1px',
     '&[data-state="done"], &[data-state="passed"]': { background: 'CanvasText' },
     '&[data-state="current"]': { background: 'linear-gradient(90deg, CanvasText 50%, Canvas 50%)' },

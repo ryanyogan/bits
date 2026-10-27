@@ -4,7 +4,8 @@ import { css } from 'remix/component'
 import { CourseCover, type CoverPattern } from './course-cover.tsx'
 import { Eyebrow } from './eyebrow.tsx'
 import { keycapFace } from './keycap.tsx'
-import { type ForcedState } from './lib/states.ts'
+import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
+import { focusOutline, type ForcedState } from './lib/states.ts'
 import { toneVars, type Tone } from './lib/tone.ts'
 import { ProgressBar } from './progress-bar.tsx'
 
@@ -19,6 +20,8 @@ export interface ContinueBannerProps {
   sigil: string
   tone: Tone
   pattern: CoverPattern
+  /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
+  prefetch?: PrefetchProp
   forceState?: ForcedState
   mix?: MixInput<HTMLElement>
 }
@@ -30,9 +33,9 @@ export interface ContinueBannerProps {
  */
 export function ContinueBanner(handle: Handle<ContinueBannerProps>) {
   return () => {
-    let { href, courseTitle, eyebrow, nextLesson, mins, pct, sigil, tone, pattern, forceState, mix } = handle.props
+    let { href, courseTitle, eyebrow, nextLesson, mins, pct, sigil, tone, pattern, prefetch, forceState, mix } = handle.props
     return (
-      <a href={href} data-force={forceState} mix={[bannerStyle, toneVars[tone], mix]}>
+      <a href={href} data-rmx-prefetch={prefetchFor(href, prefetch)} data-force={forceState} mix={[bannerStyle, toneVars[tone], mix]}>
         <CourseCover pattern={pattern} tone={tone} sigil={sigil} variant="banner" mix={artNarrow} />
         <div mix={bodyStyle}>
           <Eyebrow tone="ion" size="sm">
@@ -65,12 +68,12 @@ const bannerStyle = css({
   color: 'var(--text)',
   borderRadius: 'var(--radius-2xl)',
   overflow: 'hidden',
-  border: '1px solid var(--ion-a30)',
+  border: 'var(--border-w) solid var(--ion-a30)',
   background: 'var(--surface)',
   transition: 'border-color var(--duration-card) var(--ease)',
   '&:hover, &[data-force="hover"]': { color: 'var(--text)', borderColor: 'var(--ion-a50)' },
   '&:hover .key, &[data-force="hover"] .key': { transform: 'translateY(-1px)', background: 'var(--volt-hover)' },
-  '&:focus-visible, &[data-force="focus"]': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:focus-visible, &[data-force="focus"]': focusOutline,
 })
 const bodyStyle = css({
   padding: 'var(--space-7) var(--space-8)',

@@ -6,7 +6,7 @@ import { Keycap } from './keycap.tsx'
 import { readDraft, writeDraft, type DraftPersist } from './lib/drafts.ts'
 import { runNote, streamRun, type RunEndpoint } from './lib/run-stream.ts'
 import { createFollower, scrollWindowStyle } from './lib/stable.tsx'
-import { FOCUS_WITHIN, FORCED_COLORS, forcedSelected } from './lib/states.ts'
+import { FOCUS_WITHIN, focusOutline, FORCED_COLORS, forcedSelected } from './lib/states.ts'
 import { TEMPERATURE_EVENT } from './odds-bars.tsx'
 import { announceReward, RewardToast, type RewardNext } from './reward-toast.tsx'
 import { Tag } from './tag.tsx'
@@ -378,11 +378,11 @@ const runWindowStyle = css({
   padding: 'var(--space-1) var(--space-1) var(--space-2) 0',
   borderRadius: 'var(--radius-xl)',
   // Always 1px, only coloured while empty, so the first run doesn't resize it.
-  border: '1px dashed transparent',
+  border: 'var(--border-w) dashed transparent',
   // Empty: just the hint. The first run (always the learner's own action)
   // grows it to --run-log-height once; after that the height never changes.
   '&[data-empty]': { height: 'var(--run-log-empty-height)', borderColor: 'var(--line-dashed)' },
-  '&:focus-visible': { outlineOffset: '4px' },
+  '&:focus-visible': { outlineOffset: 'var(--focus-offset-wide)' },
 })
 const emptyStyle = css({
   margin: 'auto',
@@ -411,7 +411,7 @@ const composerStyle = css({
   padding: 'var(--space-4)',
   borderRadius: 'var(--radius-xl)',
   background: 'var(--well)',
-  border: '1px solid var(--volt-a40)',
+  border: 'var(--border-w) solid var(--volt-a40)',
   transition: 'border-color var(--duration-focus), box-shadow var(--duration-focus)',
   [FOCUS_WITHIN]: { borderColor: 'var(--volt-a75)', boxShadow: 'var(--focus-ring)' },
 })
@@ -438,7 +438,7 @@ const footerStyle = css({
   gap: 'var(--space-2_5)',
   flexWrap: 'wrap',
   paddingTop: 'var(--space-1)',
-  borderTop: '1px solid var(--line-hair)',
+  borderTop: 'var(--border-w) solid var(--line-hair)',
 })
 const tempsStyle = css({ margin: 0, padding: 0, border: 0, minWidth: 0, display: 'flex', alignItems: 'center', gap: 'var(--space-2_5)', paddingTop: 'var(--space-2_5)' })
 const runAtStyle = css({ float: 'left', padding: 0, marginRight: 'var(--space-2_5)', fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--dim)' })
@@ -452,7 +452,7 @@ const tempStyle = css({
   minWidth: '52px',
   padding: '0 var(--space-2_5)',
   borderRadius: 'var(--radius-9)',
-  border: '1px solid var(--line-control)',
+  border: 'var(--border-w) solid var(--line-control)',
   color: 'var(--text-quiet)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-13)',
@@ -461,7 +461,7 @@ const tempStyle = css({
   '&::before': { content: '""', position: 'absolute', inset: '-2px 0' },
   '&:hover': { borderColor: 'var(--line-node-next)' },
   '&:has(:checked)': { background: 'var(--ion)', borderColor: 'var(--ion)', color: 'var(--ink)' },
-  '&:has(:focus-visible)': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:has(:focus-visible)': focusOutline,
   // Forced colours drop the fill, so the picked temperature looked like the others.
   [FORCED_COLORS]: { '&:has(:checked)': forcedSelected },
 })
