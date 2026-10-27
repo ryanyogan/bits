@@ -3,6 +3,7 @@ import { SuggestionChip } from '@bits/ui/chip'
 import { Keycap } from '@bits/ui/keycap'
 
 import { agentLessonHref, lessonOneHref } from './links.ts'
+import { FieldMotionToggle } from './public/field-motion-toggle.tsx'
 import { HeroPromptInput } from './public/hero-prompt-input.tsx'
 import { monoNote, PHONE, voltText } from './styles.ts'
 
@@ -71,9 +72,13 @@ export function Hero(handle: Handle<{ signedIn?: boolean }>) {
           : 'No account needed to start · sign in to save progress'}
       </p>
 
-      <div aria-hidden="true" mix={cueStyle}>
-        Scroll — the network rewires itself
-        <span mix={cueLine} />
+      <div mix={cueStyle}>
+        <div aria-hidden="true" mix={cueTextStyle}>
+          Scroll — the network rewires itself
+          <span mix={cueLine} />
+        </div>
+        {/* Pauses the field's own motion (WCAG 2.2.2, decision 034). */}
+        <FieldMotionToggle />
       </div>
     </section>
   )
@@ -213,6 +218,13 @@ const noteStyle = css({ marginTop: 'var(--space-1_5)' })
 const cueStyle = css({
   marginTop: 'auto',
   paddingTop: 'var(--space-14)',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 'var(--space-5)',
+})
+
+const cueTextStyle = css({
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',

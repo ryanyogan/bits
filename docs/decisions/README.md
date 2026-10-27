@@ -37,3 +37,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 029 | [Lesson video in R2, drafts and the watch position](029-video-and-drafts.md) |
 | 030 | [Passkeys and email change: step-up, owner-only links, revert window](030-passkeys-and-email-change.md) |
 | 031 | [Accessibility pass: axe suite at 360 and 1440, fixes at the source](031-accessibility-pass.md) |
+| 034 | [A pause control for the landing field (WCAG 2.2.2)](034-landing-field-pause.md) |
