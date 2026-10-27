@@ -1,6 +1,7 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
+import type { Viewer } from '../auth/identity.ts'
 import { Layout } from './layout.tsx'
 
 export interface PlaceholderPageProps {
@@ -13,6 +14,8 @@ export interface PlaceholderPageProps {
   /** What the finished page will do. */
   summary: string
   currentPath?: string
+  /** The signed-in viewer (`getViewer(context)`), so the bar shows their account. */
+  viewer?: Viewer | null
   children?: RemixNode
 }
 
@@ -22,10 +25,10 @@ export interface PlaceholderPageProps {
  */
 export function PlaceholderPage(handle: Handle<PlaceholderPageProps>) {
   return () => {
-    let { title, pattern, artboard, summary, currentPath, children } = handle.props
+    let { title, pattern, artboard, summary, currentPath, viewer, children } = handle.props
 
     return (
-      <Layout title={title} currentPath={currentPath}>
+      <Layout title={title} currentPath={currentPath} viewer={viewer}>
         <section mix={sectionStyle} aria-labelledby="page-title">
           <p mix={eyebrowStyle}>
             {pattern}

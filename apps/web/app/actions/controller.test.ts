@@ -92,6 +92,27 @@ describe('router smoke test', () => {
     assert.match(html, /bits \/ system/)
   })
 
+  it('GET / drops the "no account needed" note when signed in', async () => {
+    let { cookie } = await signIn('home-viewer@example.com')
+    let html = await (await fetchAs(cookie, routes.home.href())).text()
+    assert.match(html, /Signed in · your progress saves as you go/)
+    assert.doesNotMatch(html, /No account needed to start/)
+  })
+
+  it('GET /styleguide shows the signed-in account in the bar (decision 022)', async () => {
+    let { cookie } = await signIn('styleguide-viewer@example.com')
+    let html = await (await fetchAs(cookie, routes.styleguide.index.href())).text()
+    // The page's own bar, before <main> (the specimens below show both states).
+    let bar = html.slice(0, html.indexOf('<main'))
+    assert.match(bar, /aria-label="Your profile"/)
+    assert.doesNotMatch(bar, />Start free</)
+    // Specimen bars get their own menu sheet ids, and only the page's own
+    // header is a direct child of <body> (it alone sets --shell-h).
+    let ids = [...html.matchAll(/ id="([^"]+)"/g)].map((m) => m[1])
+    assert.equal(ids.length, new Set(ids).size, 'ids are unique')
+    assert.equal((html.match(/<h1[\s>]/g) ?? []).length, 1)
+  })
+
   it('GET /health reports ok', async () => {
     let response = await request(routes.health.href())
     assert.equal(response.status, 200)

@@ -384,7 +384,7 @@ const asideStyle = css({
   flex: '1 1 320px',
   minWidth: 0,
   position: 'sticky',
-  top: '88px',
+  top: 'calc(var(--shell-h) + var(--space-4))',
   '@media (max-width: 951px)': { position: 'static' },
   '@media (max-width: 820px)': { display: 'none' },
 })
@@ -416,7 +416,6 @@ const outlineLinkStyle = css({
 
 const sectionStyle = css({
   padding: 'var(--space-6)',
-  scrollMarginTop: '88px',
   '@media (max-width: 480px)': { padding: 'var(--space-4_5)' },
 })
 
@@ -426,7 +425,7 @@ const dangerSectionStyle = css({
   background: 'var(--danger-a04)',
 })
 
-const sectionHeadStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', scrollMarginTop: '96px' })
+const sectionHeadStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' })
 
 const dangerHeadingStyle = css({ color: 'var(--danger)' })
 

@@ -33,6 +33,8 @@ export interface AppBarProps {
   position?: 'static' | 'sticky'
   /** Accessible name of the primary nav. */
   navLabel?: string
+  /** id of the mobile menu sheet; give each extra bar on a page its own (styleguide specimens). */
+  menuId?: string
   /**
    * A second row inside the same sticky `<header>`, e.g. the lesson sub-bar
    * (`<LessonBar position="shell">`). Its height must be `--lessonbar-h`;
@@ -61,6 +63,7 @@ export function AppBar(handle: Handle<AppBarProps>) {
       variant = 'app',
       position = 'sticky',
       navLabel = 'Primary',
+      menuId,
       sub,
       mix,
     } = handle.props
@@ -87,7 +90,7 @@ export function AppBar(handle: Handle<AppBarProps>) {
           </nav>
           <div mix={[actionsStyle, marketing ? undefined : pushRight]}>
             {actions}
-            <AppBarMenu links={links} currentPath={currentPath} label={navLabel} />
+            <AppBarMenu links={links} currentPath={currentPath} label={navLabel} id={menuId} />
           </div>
         </div>
         {sub}

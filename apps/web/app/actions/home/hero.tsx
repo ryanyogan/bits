@@ -24,7 +24,7 @@ const suggestions = [
  * the LCP paint with no JS; only the prompt input's typewriter placeholder
  * hydrates. The prompt bar is a GET form to lesson 1 with `?q=`.
  */
-export function Hero(_handle: Handle) {
+export function Hero(handle: Handle<{ signedIn?: boolean }>) {
   return () => (
     <section aria-labelledby="hero-title" mix={heroStyle}>
       <p mix={badgeStyle}>
@@ -65,7 +65,11 @@ export function Hero(_handle: Handle) {
         ))}
       </ul>
 
-      <p mix={[monoNote, noteStyle]}>No account needed to start · sign in to save progress</p>
+      <p mix={[monoNote, noteStyle]}>
+        {handle.props.signedIn
+          ? 'Signed in · your progress saves as you go'
+          : 'No account needed to start · sign in to save progress'}
+      </p>
 
       <div aria-hidden="true" mix={cueStyle}>
         Scroll — the network rewires itself

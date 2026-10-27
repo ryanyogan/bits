@@ -34,7 +34,7 @@ export function RewardToast(handle: Handle<RewardToastProps>) {
           <span mix={system ? systemBody : lessonBody}>{message}</span>
         </div>
         {next ? (
-          <Keycap variant="inverse" size="md" href={next.href}>
+          <Keycap variant="inverse" size="md" href={next.href} mix={nextStyle}>
             {next.label}
           </Keycap>
         ) : null}
@@ -67,6 +67,15 @@ const popStyle = css({
   '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
 })
 const textStyle = css({ flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', gap: 'var(--space-0_5)' })
+// "Next: <long lesson title> →" wraps instead of widening the toast past a
+// 360px column (it sits in the composer's run window).
+const nextStyle = css({
+  maxWidth: '100%',
+  whiteSpace: 'normal',
+  textAlign: 'center',
+  lineHeight: 'var(--type-heading-leading)',
+  paddingBlock: 'var(--space-2)',
+})
 const titleStyle = css({ fontFamily: 'var(--font-display)', fontWeight: 700, lineHeight: 1.2 })
 const lessonTitle = css({ fontSize: 'var(--fs-20)' })
 const systemTitle = css({ fontSize: 'var(--fs-18)' })

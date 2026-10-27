@@ -46,6 +46,8 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[] 
         title={`${content.title} · ${course.title}${view.draft ? ' (draft)' : ''}`}
         description={`Lesson ${view.index + 1} of ${view.total} in ${course.title}.`}
         canonicalPath={view.draft ? undefined : view.href.lesson(lesson.slug)}
+        // The title in the sub-bar is Unbounded 500, the lesson's first big text.
+        preloadFonts={['unbounded-latin-500-normal.woff2']}
         currentPath={view.draft ? routes.author.index.href() : routes.courses.index.href()}
         head={<style innerHTML={unsafeHTML(pageStyles)} />}
         viewer={viewer}

@@ -174,7 +174,7 @@ const titleStyle = css({
   fontWeight: 500,
   fontSize: 'var(--fs-17)',
   letterSpacing: 'var(--tracking-title)',
-  lineHeight: 1.3,
+  lineHeight: 'var(--type-heading-leading)',
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',

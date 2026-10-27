@@ -311,10 +311,14 @@
     /* Fixed-size windows for content that fills in (decision 023): they
      * scroll inside instead of pushing the page. */
     --run-log-height: clamp(220px, 42svh, 420px); /* composer runs */
-    --terminal-height: clamp(420px, 72svh, 760px); /* terminal-mode log */
+    /* terminal-mode log: never taller than the room under the sticky header,
+       so the whole panel fits on screen at once (floor for short landscapes). */
+    --terminal-height: max(320px, min(clamp(420px, 72svh, 760px), calc(100svh - var(--shell-h) - var(--space-8))));
     --output-panel-height: 240px; /* :::terminal / code output */
     --toast-width: 480px; /* RewardRegion overlay */
     --z-toast: 20; /* above the sticky bars (5) */
+    --z-nav-progress: 30; /* navigation progress bar (decision 024), above everything in the page */
+    --nav-progress-h: 3px;
     --bp-mobile: 760px; /* resolutions §8 (documentation only: CSS cannot read it in @media) */
     /* App shell (decision 022): the sticky header stack. Bars are fixed to
        these heights so sticky offsets and scroll-padding agree. */
@@ -415,6 +419,12 @@
       --appbar-h: 64px;
       --lessonbar-h: 56px;
     }
+  }
+
+  /* The page's own header (a child of <body>) with a sub-bar grows the
+     sticky stack; a specimen header inside the page (styleguide) doesn't. */
+  :root:has(> body > header[data-shell="sub"]) {
+    --shell-h: calc(var(--appbar-h) + var(--lessonbar-h));
   }
 
   /* ≤480px: 16px page gutter (tokens §7.1, proposed for 360px support). */

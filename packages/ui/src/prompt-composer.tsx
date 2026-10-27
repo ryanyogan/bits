@@ -116,7 +116,7 @@ const DEFAULT_TEMPS: TemperatureOption[] = [
  * window above the composer that scrolls inside and follows the newest
  * reply while you're at its bottom (decision 023), so a streaming reply
  * never pushes the page. When every check passes a RewardToast joins the
- * end of that window and `bits:reward` fires. The draft is kept in
+ * reply that earned it (later runs land below it) and `bits:reward` fires. The draft is kept in
  * localStorage. With JS off the composer renders with Run disabled and a
  * note in the same slot as the keyboard hint. Client entry.
  */
@@ -129,7 +129,9 @@ export const PromptComposer = clientEntry(
     let runs: Run[] = []
     let ranAt = new Set<number>()
     let running = false
-    let rewarded = false
+    // The run that earned the reward: its toast sits under that reply, so
+    // later runs land below it instead of pushing it down (a layout shift).
+    let rewardedRun: number | undefined
     let runCount = 0
     let textarea: HTMLTextAreaElement | undefined
     let follower = createFollower()
@@ -221,8 +223,8 @@ export const PromptComposer = clientEntry(
       ranAt.add(entry.temperature.value)
       window.dispatchEvent(new CustomEvent('bits:run', { detail: { prompt, temperature: entry.temperature.value } }))
       let reward = handle.props.reward
-      if (reward && !rewarded && allPassed()) {
-        rewarded = true
+      if (reward && rewardedRun === undefined && allPassed()) {
+        rewardedRun = id
         announceReward(reward)
       }
       await handle.update()
@@ -257,12 +259,12 @@ export const PromptComposer = clientEntry(
                   >
                     {entry.output}
                   </ModelOutput>
+                  {entry.id === rewardedRun && reward ? (
+                    <RewardToast xp={reward.xp} message={reward.message} next={reward.next} animate />
+                  ) : null}
                 </li>
               ))}
             </ol>
-            <div role="status" mix={toastSlot}>
-              {rewarded && reward ? <RewardToast xp={reward.xp} message={reward.message} next={reward.next} animate /> : null}
-            </div>
           </section>
           <form
             data-force={forceFocus ? 'focus' : undefined}
@@ -388,7 +390,6 @@ const runsStyle = css({
   '&:empty': { display: 'none' },
 })
 const runStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', animation: 'bits-rise var(--duration-sigil) var(--ease) both', '@media (prefers-reduced-motion: reduce)': { animation: 'none' } })
-const toastSlot = css({ '&:empty': { display: 'none' } })
 
 const composerStyle = css({
   display: 'flex',

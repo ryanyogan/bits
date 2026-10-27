@@ -45,7 +45,9 @@ A sweep of inputs and states before the next milestone found the following:
     a `role="progressbar"` element appended to `<html>` after `<body>`,
     because the top frame's reconcile would remove it from `<body>`. It
     animates with the Web Animations API (so no stylesheet is needed), and
-    under reduced motion it is a static bar.
+    under reduced motion it is a static bar. Its height and z-index are tokens
+    (`--nav-progress-h`, `--z-nav-progress`, above the sticky header and
+    the reward overlay).
 - **Keycap draws its busy caret from `[aria-busy="true"]` in CSS**, with
   `content: "▍" / ""` so the caret stays out of the accessible name. Any
   server-rendered Keycap submitter gets the pending look without an

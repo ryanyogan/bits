@@ -79,6 +79,35 @@ describe('PromptComposer', () => {
     assert.match($('[aria-label="Your runs"]')?.textContent ?? '', /Brew among the stars/)
   })
 
+  it('keeps the reward under the run that earned it, so later runs land below it', async (t) => {
+    try {
+      window.localStorage.removeItem('bits:draft:t-reward')
+    } catch {}
+    let { $, $$, act, cleanup } = render(
+      <PromptComposer
+        id="t-reward"
+        task="Write it"
+        defaultDraft="Write a tagline"
+        checks={[{ label: 'Asks for a tagline', patterns: [{ source: 'tagline', flags: 'i' }] }]}
+        examples={{ '0': ['Brew among the stars.'] }}
+        reward={{ xp: 30, message: 'Nice.', next: { href: '#next', label: 'Next: a lesson with a long title →' } }}
+      />,
+    )
+    t.after(cleanup)
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+    let runOnce = async () => {
+      await act(() => ($('form') as HTMLFormElement).requestSubmit())
+      await act(() => new Promise((resolve) => setTimeout(resolve, 600)))
+    }
+    await runOnce()
+    await runOnce()
+
+    let runs = $$('[aria-label="Your runs"] ol > li')
+    assert.equal(runs.length, 2)
+    assert.match(runs[0]!.textContent ?? '', /\+30 neurons/)
+    assert.doesNotMatch(runs[1]!.textContent ?? '', /neurons/)
+  })
+
   it('streams a server run, labels canned output, and only then ticks the run check', async (t) => {
     try {
       window.localStorage.removeItem('bits:draft:t-live')

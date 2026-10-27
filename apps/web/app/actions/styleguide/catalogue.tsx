@@ -137,6 +137,7 @@ export function Catalogue(handle: Handle) {
               currentPath="#sg-nav"
               position="static"
               navLabel="App (sample)"
+              menuId="sg-nav-sheet-app"
               actions={
                 <>
                   <XpPill neurons={1240} />
@@ -155,6 +156,7 @@ export function Catalogue(handle: Handle) {
               variant="marketing"
               position="static"
               navLabel="Primary (sample)"
+              menuId="sg-nav-sheet-marketing"
               links={[
                 { href: '#sg-nav-c', label: 'Courses' },
                 { href: '#sg-nav-h', label: 'How it works' },
@@ -180,6 +182,7 @@ export function Catalogue(handle: Handle) {
               currentPath="#sg-nav"
               position="static"
               navLabel="App (shell sample)"
+              menuId="sg-nav-sheet-shell"
               actions={
                 <>
                   <XpPill neurons={1240} />

@@ -37,10 +37,11 @@ outline couldn't be reached without scrolling the whole page back up.
   stack). The bars set their row heights from these tokens (including their
   1px borders) and don't wrap, so every offset agrees. A header with a
   sub-bar is `data-shell="sub"`, and `:root:has(header[data-shell="sub"])`
-  sets `--shell-h` to the sum. `Layout` ships that rule and
-  `html { scroll-padding-top: calc(var(--shell-h) + var(--space-2)) }` in a
-  small `@layer app` style, so anchors and focused elements land clear of the
-  header.
+  sets `--shell-h` to the sum (`tokens.css`; only the page's own
+  `body > header`, so a specimen bar in the styleguide doesn't count).
+  `base.css` sets `html { scroll-padding-top: calc(var(--shell-h) +
+  var(--space-2)) }`, so anchors and focused elements land clear of the
+  header. Don't add `scroll-margin-top` on top of it: the two add up.
 - **The outline stays put.** `OutlineNav` is `position: sticky` at
   `top: var(--shell-h)`, `height: calc(100dvh - var(--shell-h))`, with
   `overflow-y: auto` and `overscroll-behavior: contain`: a long outline
@@ -59,12 +60,9 @@ outline couldn't be reached without scrolling the whole page back up.
 
 ## Consequences
 
-- Pages should pass `viewer` to `Layout`; without it the bar shows the
-  signed-out actions. The styleguide, placeholder pages and the lesson
-  not-found page don't pass it yet.
+- Pages must pass `viewer` to `Layout`; without it the bar shows the
+  signed-out actions. Every page does.
 - Anything that adds a row to the sticky header must give it a fixed height
   and fold it into `--shell-h`.
 - The progress "passed" marker now targets `[data-lesson-progress]`, which
   both the sub-bar and `LessonModes` wrap their progress in.
-- `base.css` still sets `scroll-padding-top: 72px`; `Layout`'s rule wins in
-  the `app` layer. It can move to `var(--shell-h)` there.

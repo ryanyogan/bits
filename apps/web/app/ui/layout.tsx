@@ -1,5 +1,5 @@
 import type { Handle, RemixNode } from 'remix/component'
-import { css, unsafeHTML } from 'remix/component'
+import { css } from 'remix/component'
 import { AppBar } from '@bits/ui/app-bar'
 import { Document } from '@bits/ui/document'
 import { AvatarButton } from '@bits/ui/avatar-button'
@@ -24,6 +24,12 @@ export interface LayoutProps {
   /** `sticky` for app pages, `static` over the landing hero. */
   bar?: 'static' | 'sticky'
   head?: RemixNode
+  /**
+   * Extra self-hosted faces this page shows above the fold, by file name
+   * (`unbounded-latin-500-normal.woff2`). Preloaded after the two every page
+   * gets (Geist 400, Unbounded 700; decision 023).
+   */
+  preloadFonts?: string[]
   /**
    * The signed-in viewer, or `null` when signed out: XP, streak and avatar
    * when signed in, "Sign in" + "Start free" otherwise (components §3.1b).
@@ -57,14 +63,6 @@ export function canonicalUrl(path: string): string | undefined {
   return origin && platform.env.APP_ENV === 'production' ? new URL(path, origin).href : undefined
 }
 
-// Shell rules that must reach <html> (decision 022), static and trusted.
-// A header with a sub-bar grows the sticky stack, and in-page anchors and
-// focused elements scroll clear of it.
-const shellStyles = `@layer app {
-  :root:has(header[data-shell="sub"]) { --shell-h: calc(var(--appbar-h) + var(--lessonbar-h)); }
-  html { scroll-padding-top: calc(var(--shell-h) + var(--space-2)); }
-}`
-
 /**
  * The app's page shell (decision 022): the design-system Document wired to
  * this runtime's assets, the skip link and the sticky AppBar, the same on
@@ -80,6 +78,7 @@ export function Layout(handle: Handle<LayoutProps>) {
       canonicalPath,
       bar = 'sticky',
       head,
+      preloadFonts = [],
       viewer,
       xp,
       sub,
@@ -97,7 +96,12 @@ export function Layout(handle: Handle<LayoutProps>) {
         description={description}
         head={
           <>
-            <style innerHTML={unsafeHTML(shellStyles)} />
+            {preloadFonts.map((name) => {
+              let href = platform.assets.fonts[name]
+              return href ? (
+                <link key={name} rel="preload" as="font" type="font/woff2" href={href} crossOrigin="anonymous" />
+              ) : null
+            })}
             {head}
           </>
         }

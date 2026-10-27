@@ -2,15 +2,16 @@ import type { Handle } from 'remix/component'
 import { EmptyState } from '@bits/ui/empty-state'
 import { Keycap } from '@bits/ui/keycap'
 
+import type { Viewer } from '../../../../auth/identity.ts'
 import { routes } from '../../../../routes.ts'
 import { Layout } from '../../../../ui/layout.tsx'
 
 /** 404 for an unknown course or lesson slug. */
-export function LessonNotFoundPage(handle: Handle<{ course: string; currentPath: string }>) {
+export function LessonNotFoundPage(handle: Handle<{ course: string; currentPath: string; viewer: Viewer | null }>) {
   return () => {
-    let { course, currentPath } = handle.props
+    let { course, currentPath, viewer } = handle.props
     return (
-      <Layout title="Lesson not found" currentPath={currentPath}>
+      <Layout title="Lesson not found" currentPath={currentPath} viewer={viewer}>
         <h1 class="sr-only">Lesson not found</h1>
         <EmptyState
           title="That lesson doesn’t exist."

@@ -55,9 +55,14 @@ composer disappearing at hydration, and late font swaps re-wrapping text
     height in the web font and the matched fallback for Geist 400/600,
     Unbounded 700 and Geist Mono (0.0% difference). Unmatched fallbacks
     differ by 8–32%.
-- **Preload stays at two faces**: Geist 400 latin (body copy on every
-  page) and Unbounded 700 latin (the landing/catalogue headline, the usual
-  LCP). Everything else swaps in under its matched fallback.
+- **Every page preloads two faces**: Geist 400 latin (body copy on every
+  page) and Unbounded 700 latin (the logo on every page, and the
+  landing/catalogue headline, the usual LCP). A page adds the faces it
+  shows above the fold with `Layout`'s `preloadFonts` (file names, looked up
+  in `platform.assets.fonts`): lesson pages add Unbounded 500, the sub-bar
+  title; the landing page adds Unbounded 800 itself. Everything else swaps
+  in under its matched fallback. Keep a page at three or four preloads:
+  each one competes with the CSS for early bandwidth.
 - **Rendering knobs**: `-webkit-font-smoothing: antialiased` stays, since
   light text on near-black looks heavy with macOS subpixel AA. No
   `text-rendering: optimizeLegibility` (kerning and ligatures are on by
@@ -141,6 +146,12 @@ After the change (same method):
 | terminal mode + 3 runs | 0 | 0 |
 
 No page scrolls sideways at 360px.
+
+Follow-up (integrated review): once a run earned the reward, later runs
+landed above the toast and pushed it down (0.014 at 1440px), and at 360px
+the toast's nowrap "Next: … →" key widened the lesson column to 407px
+(CLS 0.17). The toast now sits inside the run that earned it and its key
+wraps; 3–5 runs measure ~0 at both widths.
 
 - The composer always takes its window's height, even before a run. That
   is deliberate: the space the replies need is reserved, not taken from the
