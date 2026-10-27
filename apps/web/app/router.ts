@@ -20,6 +20,7 @@ import lessonController from './actions/courses/lesson/controller.tsx'
 import loginController from './actions/login/controller.tsx'
 import loginCheckController from './actions/login/check/controller.tsx'
 import logoutController from './actions/logout/controller.tsx'
+import mediaController from './actions/media/controller.tsx'
 import meController from './actions/me/controller.tsx'
 import profileController from './actions/profile/controller.tsx'
 import settingsController from './actions/settings/controller.tsx'
@@ -83,3 +84,4 @@ router.map(routes.author, authorController)
 router.map(routes.author.course, authorCourseController)
 router.map(routes.api, apiController)
 router.map(routes.webhooks, webhooksController)
+router.map(routes.media, mediaController)

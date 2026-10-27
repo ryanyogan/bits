@@ -19,6 +19,8 @@ export type RateLimitTier =
   | 'RL_SIGNIN'
   /** Prompt runs (/api/run): 15 a minute. */
   | 'RL_RUNS'
+  /** Background draft and watch-position saves (/api/drafts): 60 a minute. */
+  | 'RL_DRAFTS'
 
 /**
  * Keyed by the signed-in user, else by the client IP. The binding is

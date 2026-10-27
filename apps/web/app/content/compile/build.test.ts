@@ -33,7 +33,9 @@ const errors = (result: ReturnType<typeof build>) => result.report.filter((item)
 describe('content build', () => {
   it('builds the repo courses into the lesson shapes', async () => {
     let dir = path.join(coursesDir, 'tokens-and-temperature')
-    let result = buildCourse(await readCourseFolder(dir), { folder: 'tokens-and-temperature' })
+    let videos = (slug: string, file: string) =>
+      slug === 'tokens-and-temperature' && file === 'assets/06-temperature.mp4' ? { src: '/media/videos/t.mp4' } : undefined
+    let result = buildCourse(await readCourseFolder(dir), { folder: 'tokens-and-temperature', videos })
     assert.equal(result.errors, 0)
     assert.equal(result.manifest?.lessons, 8)
     assert.deepEqual(result.manifest?.modules.map((m) => m.title), ['How text becomes numbers', 'Picking the next word', 'Putting it together'])
@@ -46,10 +48,50 @@ describe('content build', () => {
     ])
     assert.deepEqual(exercise?.run, { label: 'Ran at 0 and 1.0', temperatures: [0, 1] })
     assert.deepEqual(exercise?.temperatures, [0, 0.7, 1])
+    // Linked to the upload; the duration falls back to frontmatter.
+    assert.equal(temperature.video?.src, '/media/videos/t.mp4')
     assert.equal(temperature.video?.duration, 270)
+    // Lesson 1's video isn't uploaded: text-only.
+    assert.equal(result.lessons!.get('what-is-a-token')!.video, undefined)
     assert.equal(temperature.video?.cues.length, 3)
     let odds = temperature.blocks.find((block) => block.type === 'odds')
     assert.deepEqual(odds?.type === 'odds' && odds.candidates[0], [' Brew', 3.1])
+  })
+
+  it('links ready video uploads; a lesson without one publishes text-only (decision 029)', () => {
+    let files = (video: string): SourceFile[] =>
+      Object.entries({
+        'course.md': course,
+        '01-one.md': lesson('Hello.', `title: One\norder: 1\nminutes: 5\nxp: 10\nvideo: ${video}\nchapters:\n  - { at: 0:00, title: "Start" }`),
+        'assets/01-one.vtt': 'WEBVTT\n\n00:00.000 --> 00:02.000\nHi.\n',
+      }).map(([p, text]) => ({ path: p, text, size: text.length }))
+    let videos = (slug: string, file: string) =>
+      slug === 'test' && file === 'assets/01-one.mp4' ? { src: '/media/videos/x.mp4', duration: 61 } : undefined
+
+    let linked = buildCourse(files('assets/01-one.mp4'), { folder: 'test', videos })
+    assert.deepEqual(errors(linked), [])
+    let video = linked.lessons?.get('one')?.video
+    assert.equal(video?.src, '/media/videos/x.mp4')
+    assert.equal(video?.duration, 61)
+    assert.equal(video?.cues.length, 1)
+    assert.deepEqual(linked.manifest?.formats, ['text', 'video'])
+    assert.equal(linked.manifest?.videos?.[0]?.found, true)
+
+    let missing = buildCourse(files('assets/02-other.mp4'), { folder: 'test', videos })
+    assert.deepEqual(errors(missing), [])
+    assert.equal(missing.lessons?.get('one')?.video, undefined)
+    assert.deepEqual(missing.manifest?.formats, ['text'])
+    assert.equal(missing.manifest?.videos?.[0]?.found, false)
+    assert.ok(missing.report.map(formatItem).some((text) => /video not uploaded yet: assets\/02-other\.mp4/.test(text)))
+
+    // A chapter past the end is still an error once the length is known.
+    let late = buildCourse(
+      files('assets/01-one.mp4').map((file) =>
+        file.path === '01-one.md' ? { ...file, text: file.text!.replace('at: 0:00', 'at: 1:30') } : file,
+      ),
+      { folder: 'test', videos },
+    )
+    assert.ok(errors(late).some((text) => /starts after the video ends/.test(text)))
   })
 
   it('turns paragraphs, ::ask and ==marks== into tutor turns', () => {

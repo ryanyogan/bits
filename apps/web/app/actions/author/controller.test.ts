@@ -70,7 +70,10 @@ describe('/author and /author/:course', () => {
     assert.equal(response.status, 200)
     let html = await response.text()
     assert.match(html, /<title>Tokens &amp; temperature · Authoring · Bits<\/title>|<title>Tokens & temperature · Authoring · Bits<\/title>/)
-    assert.match(html, /Warning: <\/span>06-temperature\.md → video not found: assets\/06-temperature\.mp4/)
+    // Lesson 6's video is uploaded and ready (the test platform seeds it); lesson 1's isn't (decision 029).
+    assert.match(html, /Warning: <\/span>01-what-is-a-token\.md → video not uploaded yet: assets\/01-what-is-a-token\.mp4/)
+    assert.doesNotMatch(html, /video not uploaded yet: assets\/06-temperature/)
+    assert.match(html, /ready · 4:30/)
     assert.match(html, /Passed: <\/span>8 lessons, order 1–8, no gaps/)
     assert.match(html, /href="\/author\/tokens-and-temperature\/preview\/what-is-a-token"/)
     assert.match(html, /live · v1/)

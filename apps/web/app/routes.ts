@@ -3,7 +3,7 @@
 // Each page area is its own nested route map so it gets its own controller
 // directory under app/actions/<key>/ (see AGENTS.md). Build every URL with
 // `routes.<name>.href(...)`; never hand-write paths.
-import { form, get, post, route } from 'remix/routes'
+import { form, get, post, put, route } from 'remix/routes'
 
 export const routes = route({
   // Root controller: app/actions/controller.tsx
@@ -82,15 +82,24 @@ export const routes = route({
   // JSON endpoints: actions/api/controller.tsx
   api: route('/api', {
     run: post('/run'),
+    drafts: post('/drafts'), // a signed-in learner's lesson drafts and watch position (decision 029)
     passkey: post('/passkey/:step'),
     authorUpload: post('/author/upload'),
-    authorVideoUploadUrl: post('/author/video-upload-url'),
+    // A lesson MP4 into R2, in parts through the Worker (decision 029): start
+    // (or resume) the upload, PUT each part, then complete it.
+    authorVideoStart: post('/author/videos'),
+    authorVideoPart: put('/author/videos/:id/parts/:part'),
+    authorVideoComplete: post('/author/videos/:id/complete'),
+  }),
+
+  // Uploaded lesson videos from R2, with Range support: actions/media/controller.tsx
+  media: route('/media', {
+    video: get('/videos/:id.mp4'),
   }),
 
   // Third-party callbacks: actions/webhooks/controller.tsx
   webhooks: route('/webhooks', {
     github: post('/github'),
-    video: post('/video'),
   }),
 
   // Catch-all GET for unknown pages: the least specific pattern, so every

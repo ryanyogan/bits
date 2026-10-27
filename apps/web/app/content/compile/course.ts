@@ -14,7 +14,7 @@ import {
   type Track,
 } from '../types.ts'
 import { CourseFrontmatter, readFrontmatter } from './frontmatter.ts'
-import { compileLesson, parseMarkdown, type CompiledLesson } from './lesson.ts'
+import { compileLesson, parseMarkdown, type CompiledLesson, type LinkedVideo } from './lesson.ts'
 import { Report, type ReportItem, type SourceFile } from './report.ts'
 
 export interface CourseBuild {
@@ -38,6 +38,11 @@ export interface CourseBuild {
 export interface BuildOptions {
   /** The folder's name: the slug when course.md doesn't set one. */
   folder: string
+  /**
+   * Ready uploaded videos (decision 029): course slug + a lesson's `video:`
+   * path → where it plays. The build stays pure; callers look them up first.
+   */
+  videos?: (course: string, path: string) => LinkedVideo | undefined
 }
 
 const TONES: Tone[] = ['volt', 'ion', 'synapse']
@@ -70,7 +75,11 @@ export function buildCourse(sourceFiles: SourceFile[], options: BuildOptions): C
 
   let compiled: (CompiledLesson & { file: string })[] = []
   for (let file of lessonFiles) {
-    let lesson = compileLesson(file, { files, report: report.forFile(file.path) })
+    let lesson = compileLesson(file, {
+      files,
+      report: report.forFile(file.path),
+      videos: options.videos && ((path) => options.videos!(slug, path)),
+    })
     if (lesson) compiled.push({ ...lesson, file: file.path })
   }
 
@@ -86,7 +95,7 @@ export function buildCourse(sourceFiles: SourceFile[], options: BuildOptions): C
   let videos = compiled.flatMap((lesson) => (lesson.stats.video ? [lesson.stats.video] : []))
   if (videos.length) {
     let found = videos.filter((video) => video.found).length
-    report.ok(`${found} of ${videos.length} video${videos.length === 1 ? '' : 's'} in the folder`)
+    report.ok(`${found} of ${videos.length} video${videos.length === 1 ? '' : 's'} uploaded and ready`)
   }
 
   let build: CourseBuild = {
@@ -124,8 +133,8 @@ export function buildCourse(sourceFiles: SourceFile[], options: BuildOptions): C
     modules,
   }
   let courseVideos = compiled.flatMap((lesson, i) =>
-    lesson.stats.video && lesson.content.video
-      ? [{ n: i + 1, lesson: lesson.meta.title, file: lesson.stats.video.path, found: lesson.stats.video.found, duration: lesson.content.video.duration }]
+    lesson.stats.video
+      ? [{ n: i + 1, lesson: lesson.meta.title, file: lesson.stats.video.path, found: lesson.stats.video.found, duration: lesson.stats.video.duration ?? 0 }]
       : [],
   )
   if (courseVideos.length) manifest.videos = courseVideos

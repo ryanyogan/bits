@@ -5,8 +5,8 @@
 //
 // Fields: `files` (repeated; text files with their folder-relative path as
 // the file name) and `assets` (repeated; paths of media the DropZone didn't
-// send, so the build can check a lesson's video exists). Zips are not
-// unpacked yet.
+// send). Videos are uploaded separately on /author/:course and linked here
+// once ready (decision 029). Zips are not unpacked yet.
 import { listCourseAuthorIds, findCourse } from '@bits/db'
 import { redirect } from 'remix/response/redirect'
 import type { RequestContext } from 'remix/router'
@@ -17,6 +17,7 @@ import { contentBucket } from '../../content/request.ts'
 import { saveBuild } from '../../content/store.ts'
 import { getDatabase } from '../../middleware/database.ts'
 import { routes } from '../../routes.ts'
+import { loadVideoLinks } from '../../video/link.ts'
 import { canManageCourse } from '../author/data.ts'
 
 /** Files the build reads as text. */
@@ -59,6 +60,8 @@ export async function authorUpload(context: RequestContext<any, any>): Promise<R
   if (roots.length > MAX_COURSES) return json({ error: 'too_many_courses', message: `Upload at most ${MAX_COURSES} courses at once.` }, 422)
 
   let db = getDatabase(context)
+  // Lessons link to videos already uploaded and ready (decision 029).
+  let videos = await loadVideoLinks(db)
   let builds = roots.map((root) => {
     let prefix = root ? `${root}/` : ''
     // A file belongs to the deepest course folder that holds it.
@@ -66,7 +69,7 @@ export async function authorUpload(context: RequestContext<any, any>): Promise<R
       .filter((file) => file.path.startsWith(prefix))
       .filter((file) => !roots.some((other) => other.length > root.length && file.path.startsWith(`${other}/`)))
       .map((file) => ({ ...file, path: file.path.slice(prefix.length) }))
-    return buildCourse(files, { folder: root.split('/').pop() || 'course' })
+    return buildCourse(files, { folder: root.split('/').pop() || 'course', videos })
   })
 
   // Check every course before saving any: an author may only rebuild their

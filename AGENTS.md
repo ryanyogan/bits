@@ -91,6 +91,7 @@ apps/web/                 @bits/web: the Remix app and Worker
   app/progress/           lesson checks, progress store + anonymous merge, badges, levels, days
   app/content/            published courses: compile/ (markdown → JSON), store.ts (R2 + D1), catalog.ts, request.ts
   app/runs/               /api/run: model.ts (the only provider call), run.ts (limits, journal, fallback)
+  app/video/              lesson MP4s in R2: upload.ts (multipart via the Worker), serve.ts (/media, Range), link.ts (build lookup)
   app/test/auth.ts        test helpers: signIn, fetchAs, requestCode
   app/platform/           runtime seam: `#platform` → platform.node.ts | platform.worker.ts
   scripts/build.ts        asset crawl into build/client + esbuild Worker bundle
@@ -262,7 +263,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | TerminalLog | terminal.tsx | path, entries, replies, placeholder; fixed height (`--terminal-height`, capped below the header), log scrolls inside | island |
 | TerminalOutput | terminal.tsx | lines | static |
 | OutputPanel | terminal.tsx | command, lines (replayed); a Ghost holds the full size, scrolls past `--output-panel-height` | island |
-| VideoPlayer | video-player.tsx | title, duration, chapters, cues, transcriptOpen | island (visual shell, simulated clock) |
+| VideoPlayer | video-player.tsx | title, duration, chapters, cues, transcriptOpen, source {src} (plain `<video>`, MP4), initialTime, persist (position) | island (simulated clock without `source`) |
 Helpers (decision 023): `lib/stable.tsx` has `createFollower()` (a `ref`
 mixin that keeps a fixed-height scroll window at the bottom while the reader
 is there; pair it with `scrollWindowStyle`) and `stackStyle` + `<Ghost>`
@@ -391,6 +392,33 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   Worker: it would override the stored one. `ANTHROPIC_API_KEY` is optional
   and for local use only. Vars: `AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_ID`,
   `RUN_DAILY_LIVE_CAP`.
+
+## Video and drafts (decision 029)
+
+- Video is R2-only (owner's call, 2026-10-27; no Stream, no hls.js).
+  MP4s live in `CONTENT` under `videos/<uuid>.mp4`, uploaded in 10 MiB
+  parts through the Worker (`POST /api/author/videos`, `PUT
+  …/:id/parts/:n`, `POST …/:id/complete`) by the `VideoUpload` island on
+  `/author/:course`. The Worker marks the `videos` row ready itself; there
+  is no webhook. `GET /media/videos/:id.mp4` serves them with Range and
+  immutable caching, and refuses cross-site requests.
+- Builds link a lesson's `video:` path to the newest ready upload:
+  callers pass `buildCourse(files, { videos: await loadVideoLinks(db) })`.
+  No ready upload → a warning, no `content.video`, text-only. Check with
+  `hasVideo(content)`, never `content.video`. After uploading a video,
+  rebuild the course to link it.
+- Islands keep drafts with `persist` (`@bits/ui/lib/drafts`):
+  localStorage first, then (signed in) a debounced, batched
+  `POST /api/drafts` into `lesson_drafts`. Build it with
+  `draftPersist(view, draftKey.x(...))` from `lesson/ui/exercise.ts`. Keys
+  are `prompt:<exercise>`, `code:<file>` and `video`; the endpoint only
+  accepts keys from `lessonDraftKeys(content)`. Modules the content build
+  imports (like `exercise.ts`) must not import `#platform`, even
+  indirectly: the test platform builds content while `#platform` loads,
+  and the cycle hangs every test run. Use `progress/draft-keys.ts` and
+  `video/keys.ts`, which are pure.
+- Tests: `app/test/videos.ts` seeds a ready video for the Temperature
+  lesson, so it has Watch mode.
 
 ## Runtime rules
 

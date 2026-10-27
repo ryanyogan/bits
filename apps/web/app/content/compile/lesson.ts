@@ -66,13 +66,23 @@ export interface CompiledLesson {
   content: LessonContent
   kinds: LessonKind[]
   /** Number of `:::prompt` blocks and regex checks, for the report summary. */
-  stats: { prompts: number; patterns: number; video?: { path: string; found: boolean } }
+  stats: { prompts: number; patterns: number; video?: { path: string; found: boolean; duration?: number } }
+}
+
+/** An uploaded, ready video a lesson's `video:` path links to (decision 029). */
+export interface LinkedVideo {
+  /** Where it plays from, e.g. /media/videos/<id>.mp4. */
+  src: string
+  /** Seconds, as the upload measured it. */
+  duration?: number
 }
 
 export interface LessonContext {
-  /** Every path in the course folder (for video and caption lookups). */
+  /** Every path in the course folder (for caption lookups). */
   files: ReadonlyMap<string, SourceFile>
   report: FileReport
+  /** The ready upload for a `video:` path in this course, if there is one. */
+  videos?: (path: string) => LinkedVideo | undefined
 }
 
 /** Compiles one lesson file. Returns undefined when its frontmatter is unusable. */
@@ -100,20 +110,28 @@ export function compileLesson(file: SourceFile, context: LessonContext): Compile
 
   let video: LessonVideo | undefined
   if (meta.video) {
+    // Videos aren't part of the folder upload: authors upload them on
+    // /author, and the next build links the ready ones (decision 029).
     let path = meta.video.replace(/^\.\//, '')
-    let found = context.files.has(path)
-    stats.video = { path, found }
-    if (!found) report.warning(`video not found: ${path}`)
-    let duration = meta.duration === undefined ? undefined : parseClock(meta.duration)
-    if (duration === undefined) {
-      report.error('video needs a duration (like 4:30) until uploads report one')
-    } else {
-      let chapters = (meta.chapters ?? []).map((chapter) => ({ at: parseClock(chapter.at) ?? 0, title: chapter.title }))
+    let linked = context.videos?.(path)
+    let declared = meta.duration === undefined ? undefined : parseClock(meta.duration)
+    if (meta.duration !== undefined && declared === undefined) report.error(`duration "${meta.duration}" isn't a time like 4:30`)
+    let duration = linked?.duration ?? declared
+    stats.video = { path, found: Boolean(linked), duration }
+    let chapters = (meta.chapters ?? []).map((chapter) => ({ at: parseClock(chapter.at) ?? 0, title: chapter.title }))
+    if (duration !== undefined) {
       for (let chapter of chapters) {
         if (chapter.at > duration) report.error(`chapter “${chapter.title}” starts after the video ends`)
       }
+    }
+    if (!linked) {
+      report.warning(`video not uploaded yet: ${path} (the lesson publishes as text-only until it is ready)`)
+    } else if (duration === undefined) {
+      report.warning(`video ${path} has no duration: set duration: (like 4:30); text-only until then`)
+    } else {
       let captions = context.files.get(path.replace(/\.[^./]+$/, '.vtt'))
       video = {
+        src: linked.src,
         duration,
         chapters: chapters.sort((a, b) => a.at - b.at),
         cues: captions?.text ? parseVtt(captions.text) : [],

@@ -59,6 +59,9 @@ if (isTest) {
   let { listCourseFolders } = await import('../../scripts/lib/content-folder.ts')
   let { uploadCourseFolder } = await import('../../scripts/lib/upload.ts')
   let db = createD1Database(proxy.env.DB)
+  // A ready upload for the Temperature lesson's video, so builds link it (decision 029).
+  let { seedTestVideo } = await import('../test/videos.ts')
+  await seedTestVideo(db, proxy.env.CONTENT)
   for (let dir of await listCourseFolders()) {
     let result = await uploadCourseFolder(db, proxy.env.CONTENT, dir, { source: 'test', publish: true })
     if (!result.published) throw new Error(`content/courses/${result.build.slug} didn't build: ${JSON.stringify(result.build.report)}`)
@@ -76,7 +79,7 @@ export const platform: Platform = {
     // one address, so the limiters are off (app/middleware/rate-limit.test.ts
     // installs its own).
     isTest
-      ? { ANTHROPIC_API_KEY: undefined, CF_AIG_TOKEN: undefined, RL_WRITES: undefined, RL_SIGNIN: undefined, RL_RUNS: undefined }
+      ? { ANTHROPIC_API_KEY: undefined, CF_AIG_TOKEN: undefined, RL_WRITES: undefined, RL_SIGNIN: undefined, RL_RUNS: undefined, RL_DRAFTS: undefined }
       : {},
   ),
   assets,

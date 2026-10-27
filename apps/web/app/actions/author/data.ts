@@ -5,6 +5,7 @@ import {
   findCourse,
   listCourseAuthorIds,
   listCourseVersions,
+  listCourseVideos,
   listManagedCourses,
   type Course,
   type CourseVersion as VersionRow,
@@ -36,7 +37,12 @@ export interface CourseVersion {
 export interface VideoUpload {
   file: string
   lesson: string
-  status: 'ready' | 'uploading' | 'processing' | 'missing'
+  /**
+   * ready: the latest build plays it. uploaded: in R2, linked by the next
+   * build. uploading: started, not finished (resumable). missing: no upload
+   * (the lesson publishes text-only). Decision 029.
+   */
+  status: 'ready' | 'uploaded' | 'uploading' | 'missing'
   /** Upload progress for `uploading`, 0–100. */
   pct?: number
   duration?: string
@@ -97,7 +103,11 @@ export async function getAuthoredCourse(db: D1DataTableDatabase, bucket: R2Bucke
 }
 
 async function authorCourse(db: D1DataTableDatabase, bucket: R2Bucket, row: Course, now = Date.now()): Promise<AuthorCourse> {
-  let [versions, ownerIds] = await Promise.all([listCourseVersions(db, row.slug), listCourseAuthorIds(db, row.slug)])
+  let [versions, ownerIds, uploads] = await Promise.all([
+    listCourseVersions(db, row.slug),
+    listCourseAuthorIds(db, row.slug),
+    listCourseVideos(db, row.slug),
+  ])
   let latest = versions[0]
   let live = versions.find((version) => version.id === row.current_version_id)
   let ready = versions.find((version) => version.status === 'ready')
@@ -112,12 +122,18 @@ async function authorCourse(db: D1DataTableDatabase, bucket: R2Bucket, row: Cour
     live: live?.n,
     items: (latest?.report ?? []).map((item) => ({ level: item.level, text: formatItem(item) })),
     versions: versions.map((version) => versionOf(version, live?.n, latest?.n, now)),
-    videos: (manifest?.videos ?? []).map((video) => ({
-      file: video.file,
-      lesson: `L${video.n} · ${video.lesson}`,
-      status: video.found ? 'ready' : 'missing',
-      duration: clock(video.duration),
-    })),
+    videos: (manifest?.videos ?? []).map((video): VideoUpload => {
+      let upload = uploads.get(video.file)
+      let base = { file: video.file, lesson: `L${video.n} · ${video.lesson}` }
+      if (upload?.status === 'uploading') {
+        let parts = Math.ceil(upload.size / upload.part_size)
+        return { ...base, status: 'uploading', pct: Math.round((upload.parts.length / parts) * 100) }
+      }
+      let duration = upload?.duration_s ?? video.duration
+      if (video.found) return { ...base, status: 'ready', duration: clock(duration) }
+      if (upload?.status === 'ready') return { ...base, status: 'uploaded', duration: clock(duration) }
+      return { ...base, status: 'missing' }
+    }),
     preview: ready && firstLesson ? { n: ready.n, lesson: firstLesson } : undefined,
     ownerIds,
   }

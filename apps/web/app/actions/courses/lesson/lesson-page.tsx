@@ -6,7 +6,7 @@ import type { SegmentState } from '@bits/ui/progress-bar'
 
 import { routes } from '../../../routes.ts'
 import { Layout } from '../../../ui/layout.tsx'
-import { exercisesOf, hasCode } from './content.ts'
+import { exercisesOf, hasCode, hasVideo } from './content.ts'
 import { lessonAward, type LessonMode, type LessonView } from './lesson-view.ts'
 import { LessonComplete } from './public/lesson-complete.tsx'
 import { PASSED_ROOT } from './public/lesson-state.ts'
@@ -31,7 +31,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[] 
   return () => {
     let { view, issues } = handle.props
     let { course, lesson, content, mode, viewer } = view
-    let modes: LessonMode[] = content.video ? ['read', 'watch', 'terminal'] : ['read', 'terminal']
+    let modes: LessonMode[] = hasVideo(content) ? ['read', 'watch', 'terminal'] : ['read', 'terminal']
     let segments: SegmentState[] = view.lessons.map((l) =>
       l.slug === lesson.slug ? (l.state === 'done' ? 'done' : 'current') : l.state === 'done' ? 'done' : 'upcoming',
     )

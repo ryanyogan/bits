@@ -73,7 +73,7 @@ function ReadBlock(handle: Handle<{ view: LessonView; block: Block; index: numbe
         )
       }
       case 'code': {
-        let editor = codeEditorProps(block)
+        let editor = codeEditorProps(view, block)
         return (
           <div mix={codeStyle}>
             <CodeEditor {...editor} />

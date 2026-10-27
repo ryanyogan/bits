@@ -2,9 +2,11 @@
 // TerminalLog prompt mode, CodeEditor). Plain data only: these cross into
 // islands.
 import type { CodeFile } from '@bits/ui/code-editor'
+import type { DraftPersist } from '@bits/ui/lib/drafts'
 import type { PromptCheck, RunEndpoint, SubmitFields, TemperatureOption } from '@bits/ui/prompt-composer'
 import type { RewardNext } from '@bits/ui/reward-toast'
 
+import { draftKey } from '../../../../progress/draft-keys.ts'
 import { routes } from '../../../../routes.ts'
 import type { CodeBlock, PromptBlock } from '../content.ts'
 import type { LessonView } from '../lesson-view.ts'
@@ -33,6 +35,20 @@ export interface ExerciseProps {
   reward: { xp: number; message: string; next?: RewardNext }
   submit?: SubmitFields
   run?: RunEndpoint
+  persist: DraftPersist
+}
+
+/**
+ * How an island keeps one of the lesson's drafts (decision 029): locally
+ * under `localId` (unique across lessons), and on the server under `key`
+ * when signed in.
+ */
+export function draftPersist(view: LessonView, key: string, localId = `${view.key}/${key}`): DraftPersist {
+  let persist: DraftPersist = { id: localId, key }
+  let saved = view.drafts[key]
+  if (saved) persist.saved = saved
+  if (view.draftSync) persist.sync = view.draftSync
+  return persist
 }
 
 /** The exercise's checks, as the composer runs them and the server re-runs them. */
@@ -54,9 +70,11 @@ export function exerciseProps(view: LessonView, block: PromptBlock): ExercisePro
   let next: RewardNext = view.next
     ? { href: view.href.lesson(view.next.slug), label: block.success.nextLabel ?? `Next: ${view.next.title} →` }
     : { href: view.href.back, label: 'Back to the course →' }
+  // Keyed by course + lesson (+ exercise), so every mode shares the draft.
+  let id = `${view.key}/${block.id}`
   return {
-    // Keyed by course + lesson (+ exercise), so every mode shares the draft.
-    id: `${view.key}/${block.id}`,
+    id,
+    persist: draftPersist(view, draftKey.prompt(block.id), id),
     task: block.task,
     placeholder: block.placeholder,
     defaultDraft: block.draft,
@@ -74,7 +92,7 @@ export function exerciseProps(view: LessonView, block: PromptBlock): ExercisePro
   }
 }
 
-export function codeEditorProps(block: CodeBlock) {
+export function codeEditorProps(view: LessonView, block: CodeBlock) {
   let first = block.files[0]!
   let files: CodeFile[] = block.files.map((file) => ({
     name: file.file,
@@ -83,5 +101,12 @@ export function codeEditorProps(block: CodeBlock) {
     language: file.language,
     lines: file.lines,
   }))
-  return { files, highlight: first.highlight, focusLine: first.focusLine, typeMode: first.typeMode }
+  return {
+    files,
+    highlight: first.highlight,
+    focusLine: first.focusLine,
+    typeMode: first.typeMode,
+    // What was retyped is a draft too, shared by Read and Terminal mode.
+    persist: first.typeMode && !view.draft ? draftPersist(view, draftKey.code(first.file)) : undefined,
+  }
 }

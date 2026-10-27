@@ -4,9 +4,10 @@
 // preview /author/:course/preview/:lesson (a catalog of the draft build).
 import type { Viewer } from '../../../auth/identity.ts'
 import type { Catalog } from '../../../content/catalog.ts'
+import type { SavedDraft } from '@bits/db'
 import type { Completed, CourseDetail, LessonSummary } from '../../../content/types.ts'
 import { routes } from '../../../routes.ts'
-import { exercisesOf, type LessonContent } from './content.ts'
+import { exercisesOf, hasVideo, type LessonContent } from './content.ts'
 
 export type LessonMode = 'read' | 'watch' | 'terminal'
 
@@ -24,8 +25,12 @@ export interface LessonView {
   content: LessonContent
   mode: LessonMode
   viewer: Viewer | null
-  /** Watch-mode resume position, seconds (not stored yet; see decision 016). */
+  /** Watch-mode resume position, seconds (the saved `video` draft; the browser's own copy can be newer). */
   resumeAt?: number
+  /** The signed-in viewer's saved drafts in this lesson, by key (decision 029). */
+  drafts: Record<string, SavedDraft>
+  /** Where the browser saves drafts; absent when signed out or in the draft preview. */
+  draftSync?: { action: string; fields: Record<string, string> }
   /** Answers to quizzes submitted with the GET form: quiz id → option keys. */
   answers: Record<string, string[]>
   /** The author draft preview. */
@@ -51,6 +56,8 @@ export interface LessonViewOptions {
   viewer?: Viewer | null
   /** The viewer's completed lessons (lesson states, the done segment). */
   completed?: Completed
+  /** The signed-in viewer's saved drafts in this lesson (undefined when signed out). */
+  drafts?: Record<string, SavedDraft>
 }
 
 const MODES: LessonMode[] = ['read', 'watch', 'terminal']
@@ -70,7 +77,7 @@ export async function buildLessonView(
   if (!content) return undefined
   let requested = url.searchParams.get('mode') as LessonMode | null
   let mode: LessonMode = requested && MODES.includes(requested) ? requested : 'read'
-  if (mode === 'watch' && !content.video) mode = 'read'
+  if (mode === 'watch' && !hasVideo(content)) mode = 'read'
   let preview = Boolean(options.draft)
   let lessonHref = (slug: string, m?: LessonMode) => {
     let searchParams = m ? { mode: m } : undefined
@@ -87,6 +94,8 @@ export async function buildLessonView(
   }
 
   let self = lessonHref(lesson.slug)
+  let drafts = (!preview && options.drafts) || {}
+  let resumeAt = Number(drafts.video?.value)
   return {
     key: `${preview ? 'preview/' : ''}${course.slug}/${lesson.slug}`,
     course,
@@ -99,6 +108,12 @@ export async function buildLessonView(
     content,
     mode,
     viewer: options.viewer ?? null,
+    resumeAt: Number.isFinite(resumeAt) && resumeAt > 0 ? resumeAt : undefined,
+    drafts,
+    draftSync:
+      !preview && options.drafts
+        ? { action: routes.api.drafts.href(), fields: { course: course.slug, lesson: lesson.slug } }
+        : undefined,
     answers,
     draft: options.draft
       ? { version: options.draft.version, backHref: routes.author.course.index.href({ course: course.slug }) }

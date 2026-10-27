@@ -8,6 +8,7 @@ import type { CourseVersion, D1DataTableDatabase } from '@bits/db'
 
 import { buildCourse, type CourseBuild } from '../../app/content/compile/index.ts'
 import { publishVersion, saveBuild } from '../../app/content/store.ts'
+import { loadVideoLinks } from '../../app/video/link.ts'
 import { readCourseFolder } from './content-folder.ts'
 
 export interface UploadResult {
@@ -23,7 +24,8 @@ export async function uploadCourseFolder(
   dir: string,
   options: { source: string; userId?: string | null; publish?: boolean },
 ): Promise<UploadResult> {
-  let build = buildCourse(await readCourseFolder(dir), { folder: path.basename(dir) })
+  // Lessons link to videos already uploaded and ready (decision 029).
+  let build = buildCourse(await readCourseFolder(dir), { folder: path.basename(dir), videos: await loadVideoLinks(db) })
   // The CLI and the test platform hold the database already: trusted.
   let version = await saveBuild(db, build, { source: options.source, userId: options.userId, trusted: true }, bucket)
   if (!version) throw new Error(`${build.slug}: the build was not recorded`)

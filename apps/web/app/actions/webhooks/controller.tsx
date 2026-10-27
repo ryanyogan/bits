@@ -10,6 +10,5 @@ function notImplemented(source: string) {
 export default createController(routes.webhooks, {
   actions: {
     github: () => notImplemented('github'),
-    video: () => notImplemented('video'),
   },
 })

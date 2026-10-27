@@ -30,3 +30,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 022 | [App shell: one sticky header, lesson sub-bar, sticky outline](022-app-shell.md) |
 | 023 | [Reading comfort and layout stability](023-reading-and-stability.md) |
 | 024 | [Pending forms and navigation feedback, app-wide](024-pending-and-navigation-feedback.md) |
+| 029 | [Lesson video in R2, drafts and the watch position](029-video-and-drafts.md) |

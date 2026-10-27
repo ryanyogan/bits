@@ -166,6 +166,8 @@ export type ToyBlock = NextTokenBlock | TrainingBlock | AttentionBlock | Compare
 export type Block = MarkdownBlock | PromptBlock | CodeBlock | QuizBlock | OddsBlock | TokenizerBlock | TerminalBlock | ToyBlock
 
 export interface LessonVideo {
+  /** The uploaded MP4 (/media/videos/:id.mp4), linked by the build once it is ready (decision 029). */
+  src: string
   /** Seconds. */
   duration: number
   /** Frontmatter `chapters[] {at, title}`. */
@@ -183,6 +185,14 @@ export interface LessonContent {
   blocks: Block[]
   /** Canned replies for the Terminal-mode input until the tutor model is wired up. */
   replies?: { hint: string; fallback: string }
+}
+
+/**
+ * The lesson has a playable video. Builds before decision 029 stored a
+ * `video` without `src` (a simulated player); those are text-only now.
+ */
+export function hasVideo(content: LessonContent): content is LessonContent & { video: LessonVideo } {
+  return typeof content.video?.src === 'string'
 }
 
 /** Lesson exercises that gate "lesson complete". */

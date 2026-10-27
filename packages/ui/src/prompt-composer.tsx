@@ -3,6 +3,7 @@ import { clientEntry, css, on, ref } from 'remix/component'
 
 import { CheckChip, checkListStyle } from './check-chip.tsx'
 import { Keycap } from './keycap.tsx'
+import { readDraft, writeDraft, type DraftPersist } from './lib/drafts.ts'
 import { runNote, streamRun, type RunEndpoint } from './lib/run-stream.ts'
 import { createFollower, scrollWindowStyle } from './lib/stable.tsx'
 import { FOCUS_WITHIN } from './lib/states.ts'
@@ -79,6 +80,11 @@ export interface PromptComposerProps {
    * server's canned output, journalled. Without it, runs show `examples`.
    */
   run?: RunEndpoint
+  /**
+   * Where the draft is kept: localStorage under `persist.id`, plus the server
+   * when signed in (`lib/drafts.ts`). Defaults to localStorage under `id`.
+   */
+  persist?: DraftPersist
 }
 
 interface Run {
@@ -117,14 +123,15 @@ const DEFAULT_TEMPS: TemperatureOption[] = [
  * reply while you're at its bottom (decision 023), so a streaming reply
  * never pushes the page. When every check passes a RewardToast joins the
  * reply that earned it (later runs land below it) and `bits:reward` fires. The draft is kept in
- * localStorage. With JS off the composer renders with Run disabled and a
+ * localStorage, and on the server when signed in (`persist`). With JS off the composer renders with Run disabled and a
  * note in the same slot as the keyboard hint. Client entry.
  */
 export const PromptComposer = clientEntry(
   import.meta.url,
   function PromptComposer(handle: Handle<PromptComposerProps>) {
     let hydrated = false
-    let draft = handle.props.defaultDraft ?? ''
+    // The server's saved copy renders first (signed in); a newer local copy replaces it on hydration.
+    let draft = handle.props.persist?.saved?.value ?? handle.props.defaultDraft ?? ''
     let temperature = (handle.props.temperatures ?? DEFAULT_TEMPS)[0]!
     let runs: Run[] = []
     let ranAt = new Set<number>()
@@ -136,24 +143,16 @@ export const PromptComposer = clientEntry(
     let textarea: HTMLTextAreaElement | undefined
     let follower = createFollower()
 
-    let storageKey = () => `bits:draft:${handle.props.id}`
+    let persist = (): DraftPersist => handle.props.persist ?? { id: handle.props.id, key: 'prompt' }
 
     handle.queueTask(() => {
-      try {
-        draft = window.localStorage.getItem(storageKey()) ?? handle.props.defaultDraft ?? ''
-      } catch {
-        draft = handle.props.defaultDraft ?? ''
-      }
+      draft = readDraft(persist()) ?? handle.props.defaultDraft ?? ''
       hydrated = true
       handle.update()
     })
 
     function saveDraft() {
-      try {
-        window.localStorage.setItem(storageKey(), draft)
-      } catch {
-        // Storage can be unavailable (private mode); the draft just isn't kept.
-      }
+      writeDraft(persist(), draft)
     }
 
     function allPassed() {

@@ -1,6 +1,6 @@
 # 018. Content pipeline: markdown folders, versions in R2, a live pointer in D1
 
-Status: Accepted (2026-10-26)
+Status: Accepted (2026-10-26). Video linking superseded by 029.
 
 ## Context
 
