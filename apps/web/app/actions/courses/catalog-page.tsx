@@ -13,6 +13,7 @@ import type { CourseSummary } from '../../content/types.ts'
 import { routes } from '../../routes.ts'
 import { Layout } from '../../ui/layout.tsx'
 import { catalogHref, resultLabel, trackFilters, type CatalogQuery, type TrackSlug } from './catalog.ts'
+import { CatalogBackground } from './public/catalog-bg.tsx'
 import { LiveSearch } from './public/live-search.tsx'
 
 export interface ContinueTarget {
@@ -54,99 +55,102 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
         canonicalPath={routes.courses.index.href()}
         bleed
       >
-        <div mix={pageStyle}>
-          <div mix={titleRow}>
-            <div mix={titleBlock}>
-              <Eyebrow>All courses · free</Eyebrow>
-              <h1 mix={h1Style}>
-                Pick your next
-                <br />
-                rabbit hole.
-              </h1>
+        <div mix={stageStyle}>
+          <CatalogBackground replayKey={`catalog-bg:${query.track ?? 'all'}`} />
+          <div mix={pageStyle}>
+            <div mix={titleRow}>
+              <div mix={titleBlock}>
+                <Eyebrow>All courses · free</Eyebrow>
+                <h1 mix={h1Style}>
+                  Pick your next
+                  <br />
+                  rabbit hole.
+                </h1>
+              </div>
+              <SearchField
+                action={routes.courses.index.href()}
+                value={query.q}
+                hidden={hidden}
+                id={SEARCH_ID}
+                mix={searchStyle}
+              />
+              <LiveSearch target={SEARCH_ID} />
             </div>
-            <SearchField
-              action={routes.courses.index.href()}
-              value={query.q}
-              hidden={hidden}
-              id={SEARCH_ID}
-              mix={searchStyle}
-            />
-            <LiveSearch target={SEARCH_ID} />
-          </div>
 
-          {continueTarget ? (
-            <ContinueBanner
-              href={continueTarget.href}
-              courseTitle={continueTarget.courseTitle}
-              eyebrow={`Continue · lesson ${continueTarget.n} of ${continueTarget.total}`}
-              nextLesson={continueTarget.lessonTitle}
-              mins={continueTarget.mins}
-              pct={continueTarget.pct}
-              sigil={continueTarget.sigil}
-              tone={continueTarget.tone}
-              pattern={continueTarget.pattern}
-            />
-          ) : null}
-
-          <div mix={filterRow}>
-            <nav aria-label="Filter by track" mix={pillRow}>
-              {trackFilters.map((filter) => (
-                <FilterPill
-                  key={filter.label}
-                  href={catalogHref({ track: filter.slug, q: query.q })}
-                  dot={filter.dot}
-                  count={counts[filter.slug ?? 'all']}
-                  selected={filter.slug === query.track}
-                >
-                  {filter.label}
-                </FilterPill>
-              ))}
-            </nav>
-            <p aria-live="polite" mix={resultStyle}>
-              {resultLabel(results.length)}
-            </p>
-          </div>
-
-          <section aria-labelledby="courses-heading" mix={resultsStyle}>
-            <h2 id="courses-heading" class="sr-only">
-              Courses
-            </h2>
-            <ul mix={courseGridStyle}>
-              {results.map((course) => (
-                <li key={course.slug} mix={cellStyle}>
-                  <CourseCard
-                    href={courseHref(course.slug)}
-                    title={course.title}
-                    desc={course.desc}
-                    track={course.track}
-                    level={course.level}
-                    lessons={course.lessons}
-                    mins={course.mins}
-                    sigil={course.sigil}
-                    tone={course.tone}
-                    pattern={course.pattern}
-                    formats={course.formats}
-                    pct={course.pct}
-                    mix={cardFill}
-                  />
-                </li>
-              ))}
-              <li mix={cellStyle}>
-                <WriteCourseCard href={routes.author.index.href()} />
-              </li>
-            </ul>
-            {results.length === 0 ? (
-              <EmptyState
-                title={query.q ? `0 results for “${query.q}”` : '0 results'}
-                hint="Try “agents”, “tokens” or clear the filter."
-                action={
-                  <Keycap variant="ghost" size="sm" href={catalogHref({})}>
-                    Clear filters
-                  </Keycap>
-                }
+            {continueTarget ? (
+              <ContinueBanner
+                href={continueTarget.href}
+                courseTitle={continueTarget.courseTitle}
+                eyebrow={`Continue · lesson ${continueTarget.n} of ${continueTarget.total}`}
+                nextLesson={continueTarget.lessonTitle}
+                mins={continueTarget.mins}
+                pct={continueTarget.pct}
+                sigil={continueTarget.sigil}
+                tone={continueTarget.tone}
+                pattern={continueTarget.pattern}
               />
             ) : null}
-          </section>
+
+            <div mix={filterRow}>
+              <nav aria-label="Filter by track" mix={pillRow}>
+                {trackFilters.map((filter) => (
+                  <FilterPill
+                    key={filter.label}
+                    href={catalogHref({ track: filter.slug, q: query.q })}
+                    dot={filter.dot}
+                    count={counts[filter.slug ?? 'all']}
+                    selected={filter.slug === query.track}
+                  >
+                    {filter.label}
+                  </FilterPill>
+                ))}
+              </nav>
+              <p aria-live="polite" mix={resultStyle}>
+                {resultLabel(results.length)}
+              </p>
+            </div>
+
+            <section aria-labelledby="courses-heading" mix={resultsStyle}>
+              <h2 id="courses-heading" class="sr-only">
+                Courses
+              </h2>
+              <ul mix={courseGridStyle}>
+                {results.map((course) => (
+                  <li key={course.slug} mix={cellStyle}>
+                    <CourseCard
+                      href={courseHref(course.slug)}
+                      title={course.title}
+                      desc={course.desc}
+                      track={course.track}
+                      level={course.level}
+                      lessons={course.lessons}
+                      mins={course.mins}
+                      sigil={course.sigil}
+                      tone={course.tone}
+                      pattern={course.pattern}
+                      formats={course.formats}
+                      pct={course.pct}
+                      mix={cardFill}
+                    />
+                  </li>
+                ))}
+                <li mix={cellStyle}>
+                  <WriteCourseCard href={routes.author.index.href()} />
+                </li>
+              </ul>
+              {results.length === 0 ? (
+                <EmptyState
+                  title={query.q ? `0 results for “${query.q}”` : '0 results'}
+                  hint="Try “agents”, “tokens” or clear the filter."
+                  action={
+                    <Keycap variant="ghost" size="sm" href={catalogHref({})}>
+                      Clear filters
+                    </Keycap>
+                  }
+                />
+              ) : null}
+            </section>
+          </div>
         </div>
       </Layout>
     )
@@ -154,6 +158,9 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
 }
 
 const MOBILE = '@media (max-width: 480px)'
+
+/** Holds the page and its background layer (z-index -1 stays inside it). */
+const stageStyle = css({ position: 'relative', isolation: 'isolate' })
 
 const pageStyle = css({
   maxWidth: 'var(--page-max)',
