@@ -148,12 +148,21 @@ the new page into the old DOM. Write for that:
 - Cover the enhanced path with an e2e test (`app/*.test.e2e.ts`, Playwright
   via `remix test`).
 
-## Responses (decision 020)
+## Responses (decisions 020, 027)
 
 - `app/middleware/headers.ts` adds the security headers and the HTML
   Cache-Control default (`private, no-cache`; `no-store` under `/settings`,
   `/me`, `/login`, `/auth` and `/logout`). Set your own Cache-Control on a
-  response that needs another policy. Don't add `script-src` without nonces.
+  response that needs another policy.
+- HTML gets a strict CSP (decision 027): `script-src 'nonce-…'
+  'strict-dynamic'`, a fresh nonce per response. `Document` nonces the
+  import map and the entry, and everything else must be imported by them
+  (modules, islands). Never add an inline `<script>` or an `on*=`
+  attribute: it won't run. A script tag you must render takes
+  `nonce={cspNonce(handle)}` (`@bits/ui/csp-nonce`). Inline styles and
+  `style=` are allowed. New image, font or connect origins go in
+  `contentSecurityPolicy()`. Violations are logged as `CSP violation`
+  (`POST /csp-report`). `pnpm dev` (HMR) only reports.
 - Write endpoints get a burst limit: add
   `middleware: [rateLimit('RL_<tier>')]` to the action
   (`app/middleware/rate-limit.tsx`). Tiers are bindings in
@@ -203,7 +212,8 @@ Rationale: `docs/decisions/010-component-library.md`.
 
 | Component | File | Key props | Kind |
 |---|---|---|---|
-| Document | document.tsx | assets, title, description, url (canonical + og:url), siteName, head | static |
+| Document | document.tsx | assets, title, description, url (canonical + og:url), siteName, head; nonces its scripts from `CspNonce` | static |
+| CspNonce / cspNonce | csp-nonce.tsx | nonce (provider; the app's renderer wraps every page) / `cspNonce(handle)` reads it | static |
 | AppBar | app-bar.tsx | brand, homeHref, links, currentPath, actions, variant, position, sub (second header row; `--appbar-h` tall, decision 022) | static |
 | AppBarMenu | app-bar-menu.tsx | links, currentPath, label (mobile sheet <760px from `--appbar-h`, native popover) | island |
 | Logo / BrandMark | logo.tsx / brand-mark.tsx | brand, href, variant / size | static |

@@ -1,6 +1,8 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { ImportMap, type ImportMapData } from 'remix/component/server'
 
+import { cspNonce } from './csp-nonce.tsx'
+
 /** The browser runtime entry, as returned by the app's asset layer. */
 export interface DocumentScriptEntry {
   href: string
@@ -43,11 +45,18 @@ const LAYER_ORDER = '@layer reset, tokens, base, rmx-reset, rmx, app;'
  *
  * The layer order is declared inline first so it is established before any
  * stylesheet or Remix's generated `rmx` styles load.
+ *
+ * Scripts carry the response's CSP nonce from `CspNonce` (decision 027): the
+ * import map (Remix's runtime copies its nonce onto the maps it adds during
+ * client navigation) and the entry module, whose imports inherit its trust.
+ * Inline styles need no nonce: the policy allows them (`style-src
+ * 'unsafe-inline'`), since Remix's `<style data-rmx-style>` tags carry none.
  */
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
     let { assets, title, description, url, siteName, head, children } = handle.props
     let { entry, stylesheets, fontPreloads } = assets
+    let nonce = cspNonce(handle)
 
     return (
       <html lang="en">
@@ -75,11 +84,11 @@ export function Document(handle: Handle<DocumentProps>) {
             <link key={href} rel="stylesheet" href={href} />
           ))}
           {head}
-          <ImportMap value={entry.importMap} />
+          <ImportMap value={entry.importMap} nonce={nonce} />
           {entry.preloads.map((href) => (
-            <link key={href} rel="modulepreload" href={href} />
+            <link key={href} rel="modulepreload" href={href} nonce={nonce} />
           ))}
-          <script type="module" src={entry.href}></script>
+          <script type="module" src={entry.href} nonce={nonce}></script>
         </head>
         <body>{children}</body>
       </html>

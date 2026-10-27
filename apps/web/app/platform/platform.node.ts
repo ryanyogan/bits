@@ -76,10 +76,14 @@ export const platform: Platform = {
     // one address, so the limiters are off (app/middleware/rate-limit.test.ts
     // installs its own).
     isTest
-      ? { ANTHROPIC_API_KEY: undefined, CF_AIG_TOKEN: undefined, RL_WRITES: undefined, RL_SIGNIN: undefined, RL_RUNS: undefined }
+      ? { ANTHROPIC_API_KEY: undefined, CF_AIG_TOKEN: undefined, RL_WRITES: undefined, RL_SIGNIN: undefined, RL_RUNS: undefined, RL_REPORTS: undefined }
       : {},
   ),
   assets,
+  // `pnpm dev` (HMR): the HMR client appends import maps without a nonce and
+  // streams events from another port, so the policy only reports there.
+  // `pnpm dev:restart`, `pnpm start` and tests enforce it like the Worker.
+  csp: isHmr ? { reportOnly: true, connectSrc: ['http://localhost:*', 'http://127.0.0.1:*'] } : { reportOnly: false, connectSrc: [] },
   middleware: staticFiles(path.join(appDir, 'public'), { index: false }),
   waitUntil(promise) {
     promise.catch((error: unknown) => console.error(error))

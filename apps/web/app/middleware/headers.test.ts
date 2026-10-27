@@ -5,7 +5,7 @@ import { disposePlatform } from '#platform'
 
 import { routes } from '../routes.ts'
 import { fetchAs, requestCode, signIn } from '../test/auth.ts'
-import { CONTENT_SECURITY_POLICY } from './headers.ts'
+import { CSP_REPORT_PATH } from './headers.ts'
 
 // One flat suite: remix test runs after() around every describe.
 describe('response headers', () => {
@@ -18,11 +18,82 @@ describe('response headers', () => {
       assert.equal(response.headers.get('X-Content-Type-Options'), 'nosniff', path)
       assert.equal(response.headers.get('Referrer-Policy'), 'strict-origin-when-cross-origin', path)
       assert.match(response.headers.get('Permissions-Policy') ?? '', /camera=\(\)/, path)
-      assert.equal(response.headers.get('Content-Security-Policy'), CONTENT_SECURITY_POLICY, path)
-      assert.match(CONTENT_SECURITY_POLICY, /frame-ancestors 'self'/)
       assert.equal(response.headers.get('Cache-Control'), 'private, no-cache', path)
+      let csp = response.headers.get('Content-Security-Policy') ?? ''
+      let html = await response.text()
+      let nonce = /'nonce-([A-Za-z0-9+/=]+)'/.exec(csp)?.[1]
+      assert.ok(nonce, `${path}: a nonce in script-src`)
+      for (let directive of [
+        "'strict-dynamic'",
+        "default-src 'self'",
+        "style-src 'self' 'unsafe-inline'",
+        "object-src 'none'",
+        "base-uri 'none'",
+        "frame-ancestors 'self'",
+        "form-action 'self'",
+        `report-uri ${CSP_REPORT_PATH}`,
+      ]) {
+        assert.ok(csp.includes(directive), `${path}: ${directive}`)
+      }
+      assert.ok(!csp.includes('report-to'), `${path}: report-uri only`)
+      // Every script that runs carries this response's nonce (JSON data blocks don't run).
+      let scripts = [...html.matchAll(/<script\b[^>]*>/g)].map((m) => m[0]).filter((tag) => !tag.includes('application/json'))
+      assert.ok(scripts.length >= 2, `${path}: the import map and the entry`)
+      for (let tag of scripts) assert.ok(tag.includes(`nonce="${nonce}"`), `${path}: ${tag}`)
+    }
+  })
+
+  it('makes a new nonce for every response', async () => {
+    let nonces = new Set<string>()
+    for (let i = 0; i < 3; i++) {
+      let response = await fetchAs(null, routes.courses.index.href())
+      nonces.add(/'nonce-([^']+)'/.exec(response.headers.get('Content-Security-Policy') ?? '')?.[1] ?? '')
       await response.text()
     }
+    assert.equal(nonces.size, 3)
+    assert.ok(!nonces.has(''))
+  })
+
+  it('logs CSP reports in both shapes, without query strings', async () => {
+    let logged: string[] = []
+    let warn = console.warn
+    console.warn = (line: string) => logged.push(line)
+    try {
+      let legacy = await fetchAs(null, CSP_REPORT_PATH, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/csp-report' },
+        body: JSON.stringify({
+          'csp-report': {
+            'document-uri': 'http://localhost/auth/verify?token=secret',
+            'blocked-uri': 'inline',
+            'effective-directive': 'script-src-elem',
+          },
+        }),
+      })
+      assert.equal(legacy.status, 204)
+      let modern = await fetchAs(null, CSP_REPORT_PATH, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/reports+json' },
+        body: JSON.stringify([
+          {
+            type: 'csp-violation',
+            body: { documentURL: 'http://localhost/me', blockedURL: 'https://evil.example/x.js?a=1', effectiveDirective: 'script-src-elem' },
+          },
+          { type: 'deprecation', body: {} },
+        ]),
+      })
+      assert.equal(modern.status, 204)
+      let junk = await fetchAs(null, CSP_REPORT_PATH, { method: 'POST', body: 'not json' })
+      assert.equal(junk.status, 204)
+    } finally {
+      console.warn = warn
+    }
+    let violations = logged.map((line) => JSON.parse(line)).filter((entry) => entry.message === 'CSP violation')
+    assert.equal(violations.length, 2)
+    assert.equal(violations[0].csp.documentURL, 'http://localhost/auth/verify')
+    assert.equal(violations[0].csp.blockedURL, 'inline')
+    assert.equal(violations[1].csp.blockedURL, 'https://evil.example/x.js')
+    assert.ok(!logged.join('').includes('secret'))
   })
 
   it('account and sign-in pages are no-store', async () => {
@@ -41,7 +112,7 @@ describe('response headers', () => {
     assert.equal(confirm.status, 200)
     assert.equal(confirm.headers.get('Referrer-Policy'), 'no-referrer')
     assert.equal(confirm.headers.get('Cache-Control'), 'no-store')
-    assert.equal(confirm.headers.get('Content-Security-Policy'), CONTENT_SECURITY_POLICY)
+    assert.match(confirm.headers.get('Content-Security-Policy') ?? '', /'strict-dynamic'/)
     await confirm.text()
 
     let health = await fetchAs(null, routes.health.href())
