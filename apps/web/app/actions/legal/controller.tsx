@@ -1,6 +1,7 @@
 import { createController } from 'remix/router'
 
 import { getViewer } from '../../auth/identity.ts'
+import { webAnalyticsToken } from '../../middleware/web-analytics.tsx'
 import { routes } from '../../routes.ts'
 import { PrivacyPage } from './privacy-page.tsx'
 import { TermsPage } from './terms-page.tsx'
@@ -12,7 +13,7 @@ export default createController(routes.legal, {
       return context.render(<TermsPage viewer={getViewer(context)} />)
     },
     privacy(context) {
-      return context.render(<PrivacyPage viewer={getViewer(context)} />)
+      return context.render(<PrivacyPage viewer={getViewer(context)} analytics={webAnalyticsToken() !== undefined} />)
     },
   },
 })

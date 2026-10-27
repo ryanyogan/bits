@@ -77,9 +77,10 @@ export const platform: Platform = {
     // tests set these themselves and stub the gateway (app/runs/run.test.ts).
     // Nor do they share burst limits: every request in a test run comes from
     // one address, so the limiters are off (app/middleware/rate-limit.test.ts
-    // installs its own).
+    // installs its own). Nor do they render the Web Analytics beacon unless a
+    // test sets the token (app/middleware/web-analytics.test.ts).
     isTest
-      ? { ANTHROPIC_API_KEY: undefined, CF_AIG_TOKEN: undefined, RL_WRITES: undefined, RL_SIGNIN: undefined, RL_RUNS: undefined, RL_REPORTS: undefined, RL_DRAFTS: undefined, RL_UPLOADS: undefined }
+      ? { ANTHROPIC_API_KEY: undefined, CF_AIG_TOKEN: undefined, RL_WRITES: undefined, RL_SIGNIN: undefined, RL_RUNS: undefined, RL_REPORTS: undefined, RL_DRAFTS: undefined, RL_UPLOADS: undefined, WEB_ANALYTICS_TOKEN: undefined }
       : {},
   ),
   assets,
