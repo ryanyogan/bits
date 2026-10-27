@@ -2,6 +2,15 @@
 import { css } from 'remix/component'
 
 export const PHONE = '@media (max-width: 480px)'
+export const REDUCED = '@media (prefers-reduced-motion: reduce)'
+export const FORCED = '@media (forced-colors: active)'
+
+/**
+ * The " · " between two phrases of a mono note. On phones the note breaks
+ * here instead of mid-phrase; the dot stays in the text (size 0, a block
+ * of its own), so it is still read out.
+ */
+export const dotBreak = css({ [PHONE]: { display: 'block', height: 0, overflow: 'hidden', fontSize: 0 } })
 
 /** `max-width:1280px; margin:0 auto; padding:120px 32px` → 72px 16px on phones. */
 export const sectionStyle = css({

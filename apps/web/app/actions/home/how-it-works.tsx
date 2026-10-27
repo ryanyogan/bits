@@ -26,7 +26,7 @@ const sampleTokens: [string, string][] = [
 /** "02 — How it works" (Main.md §3): FeatureRows + a picture of a lesson. */
 export function HowItWorks(_handle: Handle) {
   return () => (
-    <section id="how" aria-labelledby="how-title" mix={sectionStyle}>
+    <section id="how" aria-labelledby="how-title" mix={[sectionStyle, timeline]}>
       <div mix={splitGrid('500px')}>
         <div mix={columnStyle}>
           <Eyebrow tone="ion" as="p">
@@ -104,6 +104,9 @@ function LessonPreview(_handle: Handle) {
     </figure>
   )
 }
+
+// Names the view timeline the header's "How it works" link follows (decision 040).
+const timeline = css({ viewTimelineName: '--how' })
 
 const columnStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-7)' })
 const leadWidth = css({ maxWidth: '520px' })

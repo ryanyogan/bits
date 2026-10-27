@@ -3,7 +3,7 @@ import { Keycap } from '@bits/ui/keycap'
 
 import { routes } from '../../routes.ts'
 import { lessonOneHref } from './links.ts'
-import { monoNote, PHONE } from './styles.ts'
+import { dotBreak, monoNote, PHONE } from './styles.ts'
 
 /** Closing CTA (Main.md §7). */
 export function ClosingCta(_handle: Handle) {
@@ -20,7 +20,9 @@ export function ClosingCta(_handle: Handle) {
           Browse courses
         </Keycap>
       </div>
-      <p mix={monoNote}>Free forever · progress saves when you sign in</p>
+      <p mix={monoNote}>
+        Free forever<span mix={dotBreak}> · </span>progress saves when you sign in
+      </p>
     </section>
   )
 }
@@ -28,7 +30,9 @@ export function ClosingCta(_handle: Handle) {
 const ctaStyle = css({
   maxWidth: 'var(--page-max)',
   margin: '0 auto',
-  padding: '160px var(--page-gutter) 140px',
+  // Spec: 160px top, 140px bottom.
+  padding:
+    'calc(var(--space-30) + var(--space-10)) var(--page-gutter) calc(var(--space-30) + var(--space-5))',
   boxSizing: 'border-box',
   display: 'flex',
   flexDirection: 'column',

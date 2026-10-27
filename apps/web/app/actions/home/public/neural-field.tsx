@@ -295,8 +295,12 @@ const hudItem = css({
 const hudBar = css({
   display: 'block',
   height: '2px',
-  width: '12px',
+  // Grows 12px → 36px with a transform, not width: animating width moved
+  // the label beside it, a (tiny) layout shift on every stage change.
+  width: 'var(--space-9)',
+  transform: 'scaleX(calc(1 / 3))',
+  transformOrigin: 'right',
   background: 'var(--line-dashed-strong)',
-  transition: 'width 500ms var(--ease), background-color 500ms',
-  '&[data-on="true"]': { width: '36px', background: 'var(--volt)' },
+  transition: 'transform 500ms var(--ease), background-color 500ms',
+  '&[data-on="true"]': { transform: 'none', background: 'var(--volt)' },
 })
