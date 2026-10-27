@@ -1,7 +1,8 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
-import { FOCUS, FORCED_COLORS, forcedSelected, HOVER, type ForcedState } from './lib/states.ts'
+import { prefetchFor } from './lib/prefetch.ts'
+import { FOCUS, FORCED_COLORS, focusOutline, forcedSelected, HOVER, type ForcedState } from './lib/states.ts'
 
 export interface SegmentedTabItem {
   label: RemixNode
@@ -45,6 +46,7 @@ export function SegmentedTabs(handle: Handle<SegmentedTabsProps>) {
             key={item.href}
             href={item.href}
             aria-current={item.current ? 'page' : undefined}
+            data-rmx-prefetch={prefetchFor(item.href)}
             data-force={item.forceState}
             data-rmx-reset-focus={place}
             data-rmx-reset-scroll={place}
@@ -163,12 +165,12 @@ export const itemBase = css({
     background: 'var(--selected)',
     color: 'var(--text)',
   },
-  [FOCUS]: { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px', zIndex: 1 },
+  [FOCUS]: { ...focusOutline, zIndex: 1 },
   [FORCED_COLORS]: { '&[aria-current="page"], &[aria-selected="true"]': forcedSelected },
 })
 
 export const modeItem = css({
-  minHeight: '38px',
+  minHeight: 'var(--control-tab)',
   padding: '0 var(--space-3_5)',
   borderRadius: 'var(--radius-sm)',
   // 38px visual, 44px hit area across the track padding (resolutions §7).

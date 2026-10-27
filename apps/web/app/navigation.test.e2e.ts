@@ -78,6 +78,25 @@ describe('client navigation', () => {
     )
   })
 
+  it('switches sign in / create account in place (decision 044)', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto(routes.login.index.href())
+    await page.getByLabel('Email').fill('ada@example.com')
+    let tabs = page.locator('nav[aria-label="Account"]')
+    let before = await tabs.boundingBox()
+    await page.evaluate(() => ((window as { navMarker?: number }).navMarker = 1))
+
+    await tabs.getByRole('link', { name: 'Create account' }).click()
+    await page.getByRole('heading', { level: 1, name: 'Make it yours.' }).waitFor()
+
+    assert.equal(await page.evaluate(() => (window as { navMarker?: number }).navMarker), 1, 'navigated on the client')
+    assert.equal((await tabs.boundingBox())?.y, before?.y, 'the tabs stay put')
+    assert.equal(await page.getByLabel('Email').inputValue(), 'ada@example.com', 'the typed email stays in Email')
+    assert.equal(await page.getByLabel('What should we call you?').inputValue(), '', 'and not in the name box')
+    assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Create account', 'focus stays on the tab')
+  })
+
   it('sends one request when the submit key is pressed twice', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     let email = `e2e-double-${Date.now()}@example.com`

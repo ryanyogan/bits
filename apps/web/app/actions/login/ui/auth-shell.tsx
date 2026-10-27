@@ -1,6 +1,7 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 import { Document } from '@bits/ui/document'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 import { Logo } from '@bits/ui/logo'
 import { SegmentedTabs } from '@bits/ui/segmented-tabs'
 
@@ -68,7 +69,7 @@ export function AuthShell(handle: Handle<AuthShellProps>) {
               />
               {children}
               <footer mix={footerStyle}>
-                <a href={lessonOneHref()} mix={exploreLinkStyle}>
+                <a href={lessonOneHref()} data-rmx-prefetch={prefetchFor(lessonOneHref())} mix={exploreLinkStyle}>
                   Just exploring? Start lesson 1 without an account →
                 </a>
                 <p mix={legalStyle}>
@@ -180,7 +181,7 @@ const footerStyle = css({
   flexDirection: 'column',
   gap: 'var(--space-3)',
   paddingTop: 'var(--space-5)',
-  borderTop: '1px solid var(--line)',
+  borderTop: 'var(--border-w) solid var(--line)',
 })
 
 const exploreLinkStyle = css({

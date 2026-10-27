@@ -86,7 +86,7 @@ const tileStyle = css({
   height: '64px',
   borderRadius: 'var(--radius-xl)',
   background: 'var(--volt-tint)',
-  border: '1px solid var(--volt-a40)',
+  border: 'var(--border-w) solid var(--volt-a40)',
   display: 'grid',
   placeItems: 'center',
 })
@@ -127,7 +127,7 @@ const linkButtonStyle = css({
   position: 'relative',
   '&::before': { content: '""', position: 'absolute', inset: '-14px -6px' },
   '&:hover': { color: 'var(--volt-link-hover)' },
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset)' },
   // While the resend is in flight (the navigation runtime sets aria-busy).
   '&[aria-busy="true"]': { cursor: 'progress', color: 'var(--muted)', textDecoration: 'none' },
   '&[aria-busy="true"]::after': { content: '" …" / ""' },

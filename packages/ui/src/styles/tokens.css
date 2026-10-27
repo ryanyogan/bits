@@ -316,6 +316,7 @@
     --border-w-strong: 2px; /* nav underline, current lesson node, active-row rule */
     --control-xs: 34px; /* "Type it" tool toggle (44px hit area via ::before) */
     --control-sm: 36px; /* sm keycap (44px hit area via ::before) */
+    --control-tab: 38px; /* mode tab item, Read / Watch / Terminal (44px hit area via ::before) */
     --control-compact: 40px; /* avatar, quiz and video tool buttons (44px hit area via ::before) */
     --control-md: 46px; /* md keycap, editor file tab */
     --control-field: 50px; /* text field, provider button */
