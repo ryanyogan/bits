@@ -1,6 +1,7 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 import { Document } from '@bits/ui/document'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 import { Logo } from '@bits/ui/logo'
 import { SegmentedTabs } from '@bits/ui/segmented-tabs'
 
@@ -37,13 +38,22 @@ export function AuthShell(handle: Handle<AuthShellProps>) {
           Skip to content
         </a>
         <div mix={rootStyle}>
-          <BrainPane brand={APP_NAME} homeHref={routes.home.href()} />
+          {/*
+            One logo for every breakpoint and every auth state, in the same
+            spot the app bar puts it (decision 044): an --appbar-h row at the
+            page gutter, top-left. It overlays the brain pane when that pane
+            is beside or above the form, and sits above the tabs on phones.
+          */}
+          <header mix={brandRowStyle}>
+            <Logo brand={APP_NAME} href={routes.home.href()} variant="app" />
+          </header>
+          <BrainPane />
           <main id="main" tabIndex={-1} mix={[skipTargetStyle, formPaneStyle]}>
             <div mix={columnStyle}>
-              <Logo brand={APP_NAME} href={routes.home.href()} variant="auth" mix={mobileLogoStyle} />
               <SegmentedTabs
                 label="Account"
                 flavour="account"
+                keepPlace
                 items={[
                   {
                     label: 'Sign in',
@@ -59,11 +69,12 @@ export function AuthShell(handle: Handle<AuthShellProps>) {
               />
               {children}
               <footer mix={footerStyle}>
-                <a href={lessonOneHref()} mix={exploreLinkStyle}>
+                <a href={lessonOneHref()} data-rmx-prefetch={prefetchFor(lessonOneHref())} mix={exploreLinkStyle}>
                   Just exploring? Start lesson 1 without an account →
                 </a>
                 <p mix={legalStyle}>
-                  By continuing you agree to the <a href="#terms">Terms</a> and <a href="#privacy">Privacy Policy</a>.
+                  By continuing you agree to the <a href={routes.legal.terms.href()}>Terms</a> and{' '}
+                  <a href={routes.legal.privacy.href()}>Privacy Policy</a>.
                 </p>
               </footer>
             </div>
@@ -113,6 +124,7 @@ const skipLinkStyle = css({
 })
 
 const rootStyle = css({
+  position: 'relative',
   minHeight: '100vh',
   display: 'flex',
   flexWrap: 'wrap',
@@ -123,15 +135,25 @@ const rootStyle = css({
 
 // The skip link's target takes focus (tabIndex -1) without drawing a ring round the pane (decision 031).
 const skipTargetStyle = css({ '&:focus': { outline: 'none' } })
+// The column hangs from a fixed top instead of being centred: sign-up is
+// ~240px taller than sign-in, so a centred column moved the tabs (and
+// everything under them) by half that on every switch (decision 044).
 const formPaneStyle = css({
   flex: '1 1 480px',
   minWidth: 0,
   display: 'flex',
-  alignItems: 'center',
+  alignItems: 'flex-start',
   justifyContent: 'center',
-  padding: 'var(--space-12) var(--space-6)',
-  // resolutions §8: below 760px the form comes first, the brain pane after it.
-  '@media (max-width: 759px)': { order: -1, flexBasis: '100%', padding: 'var(--space-8) var(--space-4)' },
+  padding: 'clamp(var(--space-12), 12vh, var(--space-30)) var(--space-6) var(--space-12)',
+  // Stacked under the brain pane (760–1039px): a fixed gap below it.
+  '@media (max-width: 1039px)': { paddingTop: 'var(--space-12)' },
+  // resolutions §8: below 760px the form comes first, under the logo row,
+  // and the brain pane follows it.
+  '@media (max-width: 759px)': {
+    order: -1,
+    flexBasis: '100%',
+    padding: 'var(--appbar-h) var(--page-gutter) var(--space-8)',
+  },
 })
 
 const columnStyle = css({
@@ -143,9 +165,15 @@ const columnStyle = css({
   '@media (max-width: 759px)': { maxWidth: '100%' },
 })
 
-const mobileLogoStyle = css({
-  alignSelf: 'flex-start',
-  '@media (min-width: 760px)': { display: 'none' },
+const brandRowStyle = css({
+  position: 'absolute',
+  zIndex: 1,
+  top: 0,
+  left: 0,
+  height: 'calc(var(--appbar-h) - 1px)',
+  padding: '0 var(--page-gutter)',
+  display: 'flex',
+  alignItems: 'center',
 })
 
 const footerStyle = css({
@@ -153,7 +181,7 @@ const footerStyle = css({
   flexDirection: 'column',
   gap: 'var(--space-3)',
   paddingTop: 'var(--space-5)',
-  borderTop: '1px solid var(--line)',
+  borderTop: 'var(--border-w) solid var(--line)',
 })
 
 const exploreLinkStyle = css({

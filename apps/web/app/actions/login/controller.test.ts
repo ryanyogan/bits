@@ -36,6 +36,13 @@ describe('/login', () => {
     assert.match(html, /<input type="hidden" name="next" value="\/courses"/)
     assert.match(html, /<main id="main"/)
     assert.doesNotMatch(html, /name="goals"/)
+    // Decision 044: one home link (the logo), tabs that keep focus and scroll,
+    // keyed slots so switching tabs keeps the typed email, real legal links.
+    assert.equal(html.match(/href="\/"/g)?.length, 1, 'one logo, linking home')
+    assert.equal(html.match(/data-rmx-reset-focus="manual"/g)?.length, 2)
+    assert.match(html, /data-rmx-key="email"/)
+    assert.match(html, /href="\/terms"/)
+    assert.doesNotMatch(html, /href="#terms"/)
   })
 
   it('answers every email failure with a 4xx page, which client navigation renders', () => {

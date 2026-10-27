@@ -6,14 +6,18 @@ import { clientEntry, css, ref } from 'remix/component'
  * of 2,800 points with an orbiting synapse ring, drawn with three.js.
  *
  * Decorative and progressive: the server renders an empty canvas, and the
- * browser loads three.js only when the pane is visible at ≥760px. Pauses
+ * browser loads three.js only when the pane is visible at ≥760px, after the
+ * page's load event and an idle moment, and fades the first frame in. Pauses
  * when the tab or pane is hidden, runs at quarter speed for reduced motion,
- * caps DPR at 2 and disposes everything when removed.
+ * caps DPR at 2 and disposes everything when removed. Client navigation
+ * between the auth pages keeps this node (and its GL context) in place;
+ * `data-ready` is client-owned, so reconciliation leaves it alone.
  */
 export const BrainCanvas = clientEntry(import.meta.url, function BrainCanvas(_handle: Handle) {
   return () => (
     <canvas
       aria-hidden="true"
+      data-rmx-preserve-attrs="data-ready"
       mix={[canvasStyle, ref((canvas, signal) => void start(canvas as HTMLCanvasElement, signal))]}
     />
   )
@@ -25,8 +29,21 @@ const canvasStyle = css({
   width: '100%',
   height: '100%',
   display: 'block',
+  opacity: 0,
+  transition: 'opacity var(--duration-pop) var(--ease-out)',
+  '&[data-ready]': { opacity: 1 },
+  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
   '@media (max-width: 759px)': { display: 'none' },
 })
+
+function afterLoadAndIdle() {
+  return new Promise<void>((resolve) => {
+    let idle = () =>
+      'requestIdleCallback' in window ? requestIdleCallback(() => resolve(), { timeout: 2000 }) : setTimeout(resolve, 200)
+    if (document.readyState === 'complete') idle()
+    else window.addEventListener('load', idle, { once: true })
+  })
+}
 
 async function start(canvas: HTMLCanvasElement, signal: AbortSignal) {
   let wide = window.matchMedia('(min-width: 760px)')
@@ -35,6 +52,11 @@ async function start(canvas: HTMLCanvasElement, signal: AbortSignal) {
     wide.addEventListener('change', () => wide.matches && start(canvas, signal), { once: true, signal })
     return
   }
+
+  // Decorative: never compete with first paint or the form. Wait for the
+  // page's load, then an idle moment, before fetching three.js (decision 044).
+  await afterLoadAndIdle()
+  if (signal.aborted) return
 
   let T: typeof import('three')
   try {
@@ -169,6 +191,8 @@ async function start(canvas: HTMLCanvasElement, signal: AbortSignal) {
     group.rotation.y = t * 0.12
     ring.rotation.y = -t * 0.3
     renderer.render(scene, camera)
+    // Fade in once there is a first frame, so the cloud never pops in.
+    if (!('ready' in canvas.dataset)) canvas.dataset.ready = ''
     schedule()
   }
 

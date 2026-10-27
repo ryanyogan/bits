@@ -1,7 +1,8 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
-import { FOCUS, FORCED_COLORS, forcedSelected, HOVER, type ForcedState } from './lib/states.ts'
+import { prefetchFor } from './lib/prefetch.ts'
+import { FOCUS, FORCED_COLORS, focusOutline, forcedSelected, HOVER, type ForcedState } from './lib/states.ts'
 
 export interface SegmentedTabItem {
   label: RemixNode
@@ -19,6 +20,13 @@ export interface SegmentedTabsProps {
   items: SegmentedTabItem[]
   /** `mode` (Read / Watch / Terminal, 38px items), `account` (2-up grid, 44px items). */
   flavour?: SegmentedTabsFlavour
+  /**
+   * Keep focus and scroll where they are when a tab is followed on the client
+   * (`data-rmx-reset-focus/scroll="manual"`). For tabs that stay in the same
+   * spot on the next page, like the sign-in / create-account pair: focus
+   * stays on the tab that was pressed instead of falling back to `<body>`.
+   */
+  keepPlace?: boolean
   mix?: MixInput<HTMLElement>
 }
 
@@ -29,15 +37,19 @@ export interface SegmentedTabsProps {
  */
 export function SegmentedTabs(handle: Handle<SegmentedTabsProps>) {
   return () => {
-    let { label, items, flavour = 'mode', mix } = handle.props
+    let { label, items, flavour = 'mode', keepPlace, mix } = handle.props
+    let place = keepPlace ? ('manual' as const) : undefined
     return (
-      <nav aria-label={label} mix={[flavour === 'account' ? accountTrack : modeTrack, mix]}>
+      <nav aria-label={label} mix={[flavour === 'account' ? [accountTrack, accountPill] : modeTrack, mix]}>
         {items.map((item) => (
           <a
             key={item.href}
             href={item.href}
             aria-current={item.current ? 'page' : undefined}
+            data-rmx-prefetch={prefetchFor(item.href)}
             data-force={item.forceState}
+            data-rmx-reset-focus={place}
+            data-rmx-reset-scroll={place}
             mix={[itemBase, flavour === 'account' ? accountItem : modeItem]}
           >
             {item.label}
@@ -102,6 +114,38 @@ export const accountTrack = css({
   fontSize: 'var(--fs-14)',
 })
 
+/**
+ * The account pair's selection is one pill that slides between the two cells
+ * (decision 044). Client navigation keeps the same `<nav>`, so when
+ * `aria-current` moves the pill transitions instead of one tab blinking off
+ * and the other on. Without a current tab there is no pill.
+ */
+const accountPill = css({
+  position: 'relative',
+  isolation: 'isolate',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    zIndex: -1,
+    top: 'var(--space-1)',
+    bottom: 'var(--space-1)',
+    left: 'var(--space-1)',
+    // Two equal columns with a --space-1 gap inside --space-1 padding.
+    width: 'calc((100% - 3 * var(--space-1)) / 2)',
+    borderRadius: 'var(--radius-10)',
+    background: 'var(--selected)',
+    opacity: 0,
+    transition: 'transform var(--duration-card) var(--ease-out), opacity var(--duration-fast)',
+  },
+  '&:has(> :first-child[aria-current="page"])::before': { opacity: 1 },
+  '&:has(> :last-child[aria-current="page"])::before': {
+    opacity: 1,
+    transform: 'translateX(calc(100% + var(--space-1)))',
+  },
+  '@media (prefers-reduced-motion: reduce)': { '&::before': { transition: 'none' } },
+  [FORCED_COLORS]: { '&::before': { display: 'none' } },
+})
+
 export const itemBase = css({
   position: 'relative',
   display: 'inline-flex',
@@ -121,12 +165,12 @@ export const itemBase = css({
     background: 'var(--selected)',
     color: 'var(--text)',
   },
-  [FOCUS]: { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px', zIndex: 1 },
+  [FOCUS]: { ...focusOutline, zIndex: 1 },
   [FORCED_COLORS]: { '&[aria-current="page"], &[aria-selected="true"]': forcedSelected },
 })
 
 export const modeItem = css({
-  minHeight: '38px',
+  minHeight: 'var(--control-tab)',
   padding: '0 var(--space-3_5)',
   borderRadius: 'var(--radius-sm)',
   // 38px visual, 44px hit area across the track padding (resolutions §7).
@@ -138,6 +182,9 @@ export const accountItem = css({
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-3)',
   borderRadius: 'var(--radius-10)',
+  // The track's pill draws the selection (forced colours keep itemBase's own).
+  '&[aria-current="page"]': { background: 'transparent' },
+  [FORCED_COLORS]: { '&[aria-current="page"]': forcedSelected },
 })
 
 const staticTrack = css({
