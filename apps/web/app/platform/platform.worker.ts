@@ -37,6 +37,7 @@ export const platform: Platform = {
   runtime: 'workerd',
   env,
   assets,
+  csp: { reportOnly: false, connectSrc: [] },
   middleware: passThrough,
   waitUntil,
 }

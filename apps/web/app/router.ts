@@ -31,17 +31,21 @@ import { loadAuth } from './auth/identity.ts'
 import { loadSession } from './auth/session.ts'
 import { errorFields, log } from './log.ts'
 import { loadDatabase } from './middleware/database.ts'
+import { cspNonce } from './middleware/csp-nonce.tsx'
 import { responseHeaders } from './middleware/headers.ts'
 import { routes } from './routes.ts'
 
 export const router = createRouter({
   middleware: [
-    // Outermost, so every response gets the security and cache headers.
+    // Outermost, so every response gets the security and cache headers. It
+    // also makes the request's CSP nonce (decision 027).
     responseHeaders(),
     platform.middleware,
     // Rejects cross-origin POSTs (Sec-Fetch-Site, then Origin). Webhooks are
     // server-to-server and verify their own signatures. See decision 015.
-    cop({ insecureBypassPatterns: ['POST /webhooks/{provider}'] }),
+    // CSP reports come from the browser's reporting machinery, which may not
+    // look same-origin, and only get logged (decision 027).
+    cop({ insecureBypassPatterns: ['POST /webhooks/{provider}', 'POST /csp-report'] }),
     loadDatabase(platform.env.DB),
     // Course pages show progress: a GET there reads the viewer's completed
     // lessons with the session, in one D1 round trip (decision 026).
@@ -56,6 +60,8 @@ export const router = createRouter({
       assets: platform.assets,
       onError: (error) => log('error', 'Render failed', errorFields(error)),
     }),
+    // Every page renders inside <CspNonce>, so Document can nonce its scripts.
+    cspNonce(),
   ],
 })
 

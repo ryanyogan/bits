@@ -9,6 +9,8 @@ export const routes = route({
   // Root controller: app/actions/controller.tsx
   assets: get('/assets/*path'),
   health: get('/health'),
+  // Content-Security-Policy violation reports (decision 027), logged only.
+  cspReport: post('/csp-report'),
   home: get('/'),
 
   // Catalog, course syllabus and lesson pages.

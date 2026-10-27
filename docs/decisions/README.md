@@ -32,4 +32,5 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 024 | [Pending forms and navigation feedback, app-wide](024-pending-and-navigation-feedback.md) |
 | 025 | [Compact run window, phone terminal height, forced colours checked](025-compact-windows-and-forced-colors.md) |
 | 026 | [Server performance: one D1 round trip per page, split Worker bundle](026-server-performance.md) |
+| 027 | [A strict, nonce-based Content-Security-Policy](027-strict-csp.md) |
 | 028 | [Terms and Privacy, link-preview cards, badge toast, certificates](028-small-platform-features.md) |
