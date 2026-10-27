@@ -1,0 +1,48 @@
+# Deletes a pull request's Workers Preview when the PR closes (decision 032).
+# Rows it wrote stay in the shared preview database; that's preview data.
+name: Preview cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  delete-preview:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    environment: preview
+    # Waits for a deploy of this PR that's still running, then deletes.
+    concurrency:
+      group: preview-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      # master's config: a closed, unmerged PR has no merge ref to check out.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Delete the Preview
+        working-directory: apps/web
+        run: |
+          set +e
+          node --import remix/node-tsx scripts/preview.ts check > /dev/null
+          if [ "$?" = 3 ]; then
+            echo "::notice::Workers Previews are not set up yet; nothing to delete."
+            exit 0
+          fi
+          set -e
+          pnpm exec wrangler preview delete --name "pr-$PR" --skip-confirmation

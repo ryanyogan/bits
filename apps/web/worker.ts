@@ -7,32 +7,18 @@ import { createD1Database, deleteExpiredAuthRows, deleteOldAnonymousRuns } from 
 
 import { platform } from '#platform'
 
+import { canonicalRedirect } from './app/canonical-host.ts'
 import { errorFields, log } from './app/log.ts'
 import { router } from './app/router.ts'
 
 /** Signed-out runs are only needed for the hourly limits and the run checks. */
 const ANONYMOUS_RUNS_KEPT_MS = 7 * 24 * 60 * 60 * 1000
 
-// One public address, so sessions and magic links don't split across hosts.
-const legacyHosts = new Set(
-  (platform.env.LEGACY_HOSTS ?? '')
-    .split(',')
-    .map((host) => host.trim())
-    .filter(Boolean),
-)
-
 export default {
   async fetch(request: Request): Promise<Response> {
-    let url = new URL(request.url)
-    let canonical = platform.env.CANONICAL_ORIGIN
-    if (canonical && legacyHosts.has(url.host)) {
-      // Assign the path rather than resolving it: `//evil.example` would
-      // otherwise resolve as a protocol-relative URL and leave the site.
-      let target = new URL(canonical)
-      target.pathname = url.pathname
-      target.search = url.search
-      return Response.redirect(target.href, 301)
-    }
+    // One public address: legacy and Version URL hosts 301 to it.
+    let redirect = canonicalRedirect(new URL(request.url), platform.env)
+    if (redirect) return Response.redirect(redirect, 301)
     try {
       return await router.fetch(request)
     } catch (error) {
