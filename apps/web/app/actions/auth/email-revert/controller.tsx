@@ -13,7 +13,7 @@ const toLogin = (key: 'notice' | 'error', value: string) =>
 
 // The old address's "this wasn't me" link (decision 030, 7 days). It puts
 // the old email back, ends every session (this browser's too) and removes
-// passkeys added around the change. It never signs anyone in: the owner
+// passkeys and OAuth identities added around the change. It never signs anyone in: the owner
 // signs in again with the restored email.
 export default createController(routes.auth.emailRevert, {
   actions: {

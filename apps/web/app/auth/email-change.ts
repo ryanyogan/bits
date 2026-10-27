@@ -2,7 +2,8 @@
 // address; it gets a 6-digit code and a link (the sign-in primitives: hashed,
 // 15 minutes, single use, 5 code tries). Nothing changes until one of them
 // comes back, from the account's own session. Then one D1 batch moves the
-// email, and the old address gets a notice with a 7-day revert link.
+// email and signs out the user's other sessions, and the old address gets a
+// notice with a 7-day revert link.
 import {
   cancelEmailChanges,
   completeEmailChange,
@@ -106,13 +107,16 @@ export type EmailChangeConfirmResult =
 
 /** How long the old address can undo a change (decision 030). */
 export const REVERT_TTL_DAYS = 7
-/** On revert, passkeys added this long before the change (or since) are removed too. */
-const REVERT_PASSKEY_WINDOW_MS = 24 * 60 * 60 * 1000
+/** On revert, passkeys and OAuth identities added this long before the change (or since) are removed too. */
+const REVERT_METHODS_WINDOW_MS = 24 * 60 * 60 * 1000
 
-/** Confirms with the 6-digit code, from the signed-in session of the account. */
+/**
+ * Confirms with the 6-digit code, from the signed-in session of the account.
+ * `sessionId` is that session's id: it stays signed in, the others end.
+ */
 export async function confirmEmailChangeCode(
   db: D1DataTableDatabase,
-  input: { user: User; code: string; origin: string },
+  input: { user: User; code: string; origin: string; sessionId: string },
 ): Promise<EmailChangeConfirmResult> {
   let now = Date.now()
   let open = await reserveEmailChangeAttempt(db, input.user.id, now, MAX_CODE_ATTEMPTS)
@@ -120,7 +124,7 @@ export async function confirmEmailChangeCode(
   if (!digestsEqual(await codeHash(open.token_hash, input.code), open.code_hash)) {
     return { ok: false, reason: open.attempts < MAX_CODE_ATTEMPTS ? 'wrong' : 'expired' }
   }
-  return finish(db, { tokenHash: open.token_hash, user: input.user, origin: input.origin })
+  return finish(db, { tokenHash: open.token_hash, user: input.user, origin: input.origin, sessionId: input.sessionId })
 }
 
 /**
@@ -130,16 +134,16 @@ export async function confirmEmailChangeCode(
  */
 export async function confirmEmailChangeLink(
   db: D1DataTableDatabase,
-  input: { token: string; user: User; origin: string },
+  input: { token: string; user: User; origin: string; sessionId: string },
 ): Promise<EmailChangeConfirmResult> {
   let open = await peekEmailChangeLink(db, input.token)
   if (!open || open.user_id !== input.user.id) return { ok: false, reason: 'expired' }
-  return finish(db, { tokenHash: open.token_hash, user: input.user, origin: input.origin })
+  return finish(db, { tokenHash: open.token_hash, user: input.user, origin: input.origin, sessionId: input.sessionId })
 }
 
 async function finish(
   db: D1DataTableDatabase,
-  input: { tokenHash: string; user: User; origin: string },
+  input: { tokenHash: string; user: User; origin: string; sessionId: string },
 ): Promise<EmailChangeConfirmResult> {
   let now = Date.now()
   let revertToken = randomToken()
@@ -149,6 +153,7 @@ async function finish(
     now,
     revertTokenHash: await sha256Hex(revertToken),
     revertExpiresAt: now + REVERT_TTL_DAYS * 24 * 60 * 60 * 1000,
+    keepSessionIdHash: await sha256Hex(input.sessionId),
   })
   if (!result.ok) return result
   let revertLink = new URL(
@@ -172,7 +177,8 @@ export async function peekEmailRevertLink(db: D1DataTableDatabase, token: string
 
 /**
  * Undoes a change from the old address: the old email comes back, every
- * session ends and passkeys added around the change are removed. Like the
+ * session ends, and passkeys and GitHub/Google identities added around the
+ * change are removed. Like the
  * change link, it never signs anyone in; the owner signs in again with the
  * restored email.
  */
@@ -182,7 +188,7 @@ export async function revertEmailChangeLink(db: D1DataTableDatabase, token: stri
   return revertEmailChange(db, {
     tokenHash: open.token_hash,
     now: Date.now(),
-    passkeysSince: open.created_at - REVERT_PASSKEY_WINDOW_MS,
+    methodsSince: open.created_at - REVERT_METHODS_WINDOW_MS,
   })
 }
 

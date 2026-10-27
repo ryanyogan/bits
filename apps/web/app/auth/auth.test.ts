@@ -1,11 +1,11 @@
-import { deleteUserSessions, findUserByEmail, findUserById } from '@bits/db'
+import { deleteUserSessions, findUserByEmail, findUserById, listIdentities } from '@bits/db'
 import * as assert from 'remix/assert'
 import { after, describe, it } from 'remix/test'
 
 import { disposePlatform } from '#platform'
 
 import { routes } from '../routes.ts'
-import { fetchAs, form, requestCode, sessionCookieFrom, signIn, testDb, testIp } from '../test/auth.ts'
+import { ageSessions, fetchAs, form, requestCode, sessionCookieFrom, signIn, testDb, testIp } from '../test/auth.ts'
 import { safeNextPath } from '../actions/login/schema.ts'
 import { sha256Hex } from './crypto.ts'
 import { createD1SessionStorage, sessionCookie } from './session.ts'
@@ -203,6 +203,31 @@ describe('auth', () => {
     let html = await (await fetchAs(null, github.headers.get('Location')!)).text()
     assert.match(html, /GitHub sign-in isn(?:'|’|&#39;)t switched on yet/)
     assert.equal((await fetchAs(null, routes.auth.oauth.start.href({ provider: 'myspace' }))).status, 404)
+  })
+
+  it('OAuth: connecting to a signed-in account needs a recent sign-in, at start and at the callback', async () => {
+    let { cookie, user } = await signIn('connect@example.com')
+    await ageSessions(user.id)
+    let reauth = '/settings?saved=reauth&for=connect#sign-in'
+    for (let provider of ['github', 'google']) {
+      let start = await fetchAs(cookie, routes.auth.oauth.start.href({ provider }, { searchParams: { link: '1', next: '/settings' } }))
+      assert.equal(start.headers.get('Location'), reauth, `${provider} start`)
+      // A callback reached without the start (or after the session went stale) links nothing.
+      let callback = await fetchAs(cookie, routes.auth.oauth.callback.href({ provider }, { searchParams: { code: 'c', state: 's' } }))
+      assert.equal(callback.headers.get('Location'), reauth, `${provider} callback`)
+    }
+    assert.equal((await listIdentities(testDb, user.id)).length, 0)
+    let page = await (await fetchAs(cookie, reauth)).text()
+    assert.match(page, /confirm it’s you first/)
+    assert.match(page, /To add a passkey or connect GitHub or Google, confirm it’s you first/)
+
+    // A fresh session passes the gate (here the provider isn't configured);
+    // signed out, OAuth is a sign-in, which step-up doesn't apply to.
+    let { cookie: fresh } = await signIn('connect@example.com')
+    for (let who of [fresh, null]) {
+      let start = await fetchAs(who, routes.auth.oauth.start.href({ provider: 'github' }))
+      assert.equal(start.headers.get('Location'), '/login?error=github-unavailable')
+    }
   })
 
   it('OAuth accounts: link by verified email, refuse without one, never steal an identity', async () => {

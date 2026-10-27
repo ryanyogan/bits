@@ -6,10 +6,10 @@ import { routes } from '../../../routes.ts'
 import { PasskeyButton } from '../../login/public/passkey-button.tsx'
 
 /**
- * Step-up (decision 030): changing the email or adding a passkey needs a
- * sign-in from the last 10 minutes. Older sessions confirm it's them with a
- * code to the current address (POST /settings/reauth → /login/check) or a
- * passkey (/login/passkey), and come back here.
+ * Step-up (decision 030): changing the email, adding a passkey or connecting
+ * GitHub or Google needs a sign-in from the last 10 minutes. Older sessions
+ * confirm it's them with a code to the current address (POST /settings/reauth
+ * → /login/check) or a passkey (/login/passkey), and come back here.
  */
 export function ReauthBlock(handle: Handle<{ what: string; email: string }>) {
   return () => {

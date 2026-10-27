@@ -65,7 +65,8 @@ export function EmailLinkPage(handle: Handle<EmailLinkPageProps>) {
                 <h1 mix={formHeadingStyle}>Undo the change?</h1>
                 <p mix={subStyle}>
                   This puts <span mix={emailStyle}>{props.email}</span> back as the sign-in email, signs out every
-                  device and removes passkeys added since the day before the change. Then sign in again.
+                  device and removes passkeys and GitHub or Google sign-ins added since the day before the change.
+                  Then sign in again.
                 </p>
               </div>
               <form method="post" action={routes.auth.emailRevert.action.href()}>

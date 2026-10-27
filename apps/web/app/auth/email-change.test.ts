@@ -1,6 +1,6 @@
 // Changing the sign-in email (decision 030): code and link confirmation,
 // recent sign-in, uniqueness, and the old address's 7-day revert link.
-import { findUserByEmail, findUserById, listPasskeys } from '@bits/db'
+import { findUserByEmail, findUserById, linkIdentity, listIdentities, listPasskeys } from '@bits/db'
 import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/server'
 import * as assert from 'remix/assert'
 import { after, describe, it } from 'remix/test'
@@ -39,7 +39,7 @@ function revertTokenFor(oldEmail: string): string {
 describe('email change', () => {
   after(() => disposePlatform())
 
-  it('confirms with the code: swaps the email, keeps sessions, mails the old address a revert link', async () => {
+  it('confirms with the code: swaps the email, signs out other sessions, mails the old address a revert link', async () => {
     let { cookie, user } = await signIn('move-me@example.com')
     let { cookie: laptop } = await signIn('move-me@example.com')
     let { code, message } = await askToChange(cookie, 'moved@example.com')
@@ -67,9 +67,13 @@ describe('email change', () => {
     assert.match(notice.text, /within 7 days/)
     assert.ok(revertTokenFor('move-me@example.com'))
 
-    // Sessions stay until the old address objects (the revert link ends them).
-    assert.equal((await fetchAs(cookie, routes.settings.index.href())).status, 200)
-    assert.equal((await fetchAs(laptop, routes.settings.index.href())).status, 200)
+    // The confirming session stays; every other one is signed out, as the notice says.
+    let settings = await fetchAs(cookie, routes.settings.index.href() + '?saved=email-changed')
+    assert.equal(settings.status, 200)
+    let html = await settings.text()
+    assert.match(html, /your other devices are signed out/)
+    assert.match(html, /signed in on 1 device\./)
+    assert.equal((await fetchAs(laptop, routes.settings.index.href())).status, 303, 'other sessions are out')
 
     // The new address signs in to the same account.
     let again = await signIn('moved@example.com')
@@ -102,6 +106,7 @@ describe('email change', () => {
 
   it('confirms with the link only from the account’s own session, and never signs anyone in', async () => {
     let { cookie, user } = await signIn('link-move@example.com')
+    let { cookie: phone } = await signIn('link-move@example.com')
     let { token } = await askToChange(cookie, 'link-moved@example.com')
     assert.ok(token)
 
@@ -130,13 +135,19 @@ describe('email change', () => {
     assert.equal(confirmed.status, 303)
     assert.match(confirmed.headers.get('Location')!, /saved=email-changed/)
     assert.equal((await findUserById(testDb, user.id))!.email, 'link-moved@example.com')
+    assert.equal((await fetchAs(cookie, routes.settings.index.href())).status, 200, 'the confirming session stays')
+    assert.equal((await fetchAs(phone, routes.settings.index.href())).status, 303, 'other sessions are out')
 
     let reused = await fetchAs(cookie, routes.auth.email.action.href(), post({ token: token! }))
     assert.equal(reused.headers.get('Location'), '/login?error=email-link-expired')
   })
 
-  it('the old address can undo it: email back, every session out, new passkeys gone', async () => {
+  it('the old address can undo it: email back, every session out, new passkeys and identities gone', async () => {
     let { cookie, user } = await signIn('victim@example.com')
+    // Google was connected long before; "the attacker" connects GitHub now.
+    let longAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+    await linkIdentity(testDb, { provider: 'google', providerUserId: 'g-victim', userId: user.id, email: 'victim@example.com', now: longAgo })
+    await linkIdentity(testDb, { provider: 'github', providerUserId: 'gh-attacker', userId: user.id, email: null, now: Date.now() })
     // "The attacker" adds a passkey, then moves the email.
     let authenticator = await createSoftAuthenticator()
     let options = (await (
@@ -165,6 +176,11 @@ describe('email change', () => {
     assert.equal((await findUserById(testDb, user.id))!.email, 'victim@example.com')
     assert.equal((await fetchAs(cookie, routes.settings.index.href())).status, 303, 'every session is out')
     assert.equal((await listPasskeys(testDb, user.id)).length, 0)
+    assert.deepEqual(
+      (await listIdentities(testDb, user.id)).map((row) => row.provider_user_id),
+      ['g-victim'],
+      'identities linked around the change are gone; older ones stay',
+    )
 
     let twice = await fetchAs(null, routes.auth.emailRevert.action.href(), post({ token }))
     assert.equal(twice.headers.get('Location'), '/login?error=email-link-expired')

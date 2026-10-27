@@ -458,7 +458,15 @@ export type EmailChangeResult = { ok: true; email: string } | { ok: false; reaso
  */
 export async function completeEmailChange(
   db: D1DataTableDatabase,
-  input: { tokenHash: string; userId: string; now: number; revertTokenHash: string; revertExpiresAt: number },
+  input: {
+    tokenHash: string
+    userId: string
+    now: number
+    revertTokenHash: string
+    revertExpiresAt: number
+    /** SHA-256 hex of the confirming session's id: it stays; every other session of the user ends. */
+    keepSessionIdHash: string
+  },
 ): Promise<EmailChangeResult> {
   let { tokenHash, userId, now } = input
   let spent = `exists (select 1 from email_tokens where token_hash = ?2 and user_id = ?1 and purpose = 'email-change' and used_at = ?3)`
@@ -497,6 +505,10 @@ export async function completeEmailChange(
          where user_id = ?1 and purpose = 'email-change' and used_at is null and ${spent}`,
       )
       .bind(userId, tokenHash, now),
+    // Sign out the user's other sessions; the one that confirmed stays.
+    db.d1
+      .prepare(`delete from sessions where user_id = ?1 and id <> ?4 and ${spent}`)
+      .bind(userId, tokenHash, now, input.keepSessionIdHash),
   ]
   let results
   try {
@@ -547,13 +559,13 @@ export type EmailRevertResult =
  * change moved to (`changed_to`, checked in the same statement, so a stale
  * link can't rewrite a later email); then put the old email back, withdraw
  * open changes and other revert links, end every session of the user, and
- * remove passkeys added since `passkeysSince` (whoever changed the email may
- * have added one first). Statements after the first act only if this batch
- * spent the token.
+ * remove the passkeys and OAuth identities added since `methodsSince`
+ * (whoever changed the email may have added a way back in first).
+ * Statements after the first act only if this batch spent the token.
  */
 export async function revertEmailChange(
   db: D1DataTableDatabase,
-  input: { tokenHash: string; now: number; passkeysSince: number },
+  input: { tokenHash: string; now: number; methodsSince: number },
 ): Promise<EmailRevertResult> {
   let { tokenHash, now } = input
   let open = await peekEmailRevert(db, tokenHash, now)
@@ -590,7 +602,10 @@ export async function revertEmailChange(
     db.d1.prepare(`delete from sessions where user_id = ?1 and ${spent}`).bind(userId, tokenHash, now),
     db.d1
       .prepare(`delete from passkeys where user_id = ?1 and created_at >= ?4 and ${spent}`)
-      .bind(userId, tokenHash, now, input.passkeysSince),
+      .bind(userId, tokenHash, now, input.methodsSince),
+    db.d1
+      .prepare(`delete from identities where user_id = ?1 and created_at >= ?4 and ${spent}`)
+      .bind(userId, tokenHash, now, input.methodsSince),
   ]
   let results
   try {
