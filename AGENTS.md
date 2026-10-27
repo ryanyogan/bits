@@ -37,6 +37,25 @@ Quality bar for every lesson:
 - **Honest.** Say what models can't do, label illustrative toys as
   illustrative, and never fake a live result.
 
+## Sub-agents
+
+Work is split across sub-agents, each in its own git worktree, and the lead
+session merges their branches.
+
+- **Hand off at about 250k tokens.** When your context nears 250k tokens
+  (err early), stop starting new work. Commit what's done on your branch,
+  and write a handoff note: the goal, what's done (with commits), what's
+  left, and any gotchas. Return the note's path. The lead starts a fresh
+  agent from it.
+- **Stay in your lane.** Edit only the files your brief gives you. If a
+  fix needs a file outside it, note it in your report instead.
+- **Run your own server.** Use `PORT=<your port> pnpm dev:restart`, never
+  the default 44100. In Chrome, open your own tab and close it when you're
+  done.
+- **Report faithfully.** Say what you verified and how. Surface anything
+  you couldn't do, including denied permissions, instead of working around
+  it.
+
 ## Commands (repo root)
 
 ```sh
