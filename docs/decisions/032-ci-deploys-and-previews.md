@@ -202,3 +202,15 @@ connected data and migrations stay.
   app is public anyway, and previews hold no production data.
 - `wrangler preview` is open beta. If its JSON shape changes, the
   `jq '.preview.urls[0]'` step fails loudly, and production is unaffected.
+
+## Follow-up (2026-10-27): pinned actions, step-scoped secrets
+
+After a security review: every action is pinned to a full commit SHA, with
+the version in a comment (Renovate keeps digests current). The Cloudflare
+token and account id are no longer job-level env; only the steps that call
+Cloudflare get them (migrations, deploy, preview content upload, preview
+create, preview delete). Steps before them, including third-party actions,
+never see the token. The preview job still runs this branch's own code
+(`pnpm install`, `scripts/preview.ts`, the content CLI) with the token, which
+is why previews are limited to same-repo PRs: only collaborators can open
+them.
