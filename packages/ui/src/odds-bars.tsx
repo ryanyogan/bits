@@ -1,6 +1,7 @@
 import type { Handle } from 'remix/component'
 import { clientEntry, css, on } from 'remix/component'
 
+import { Ghost, stackStyle } from './lib/stable.tsx'
 import { OddsList } from './odds-list.tsx'
 
 export const TEMPERATURE_EVENT = 'bits:temperature'
@@ -91,14 +92,25 @@ export const OddsBars = clientEntry(
               {t.toFixed(2)}
             </output>
           </div>
-          <p aria-live="polite" mix={noteStyle}>
-            {temperatureNote(t)}
-          </p>
+          {/* All four notes reserve the slot, so dragging never moves the page. */}
+          <div mix={stackStyle}>
+            <p aria-live="polite" mix={noteStyle}>
+              {temperatureNote(t)}
+            </p>
+            {NOTE_TEMPS.map((at) => (
+              <Ghost key={at}>
+                <p mix={noteStyle}>{temperatureNote(at)}</p>
+              </Ghost>
+            ))}
+          </div>
         </div>
       )
     }
   },
 )
+
+/** One temperature per `temperatureNote` band. */
+const NOTE_TEMPS = [0, 0.3, 0.8, 1.2]
 
 const NARROW = '@media (max-width: 480px)'
 
@@ -150,6 +162,7 @@ const badgeStyle = css({
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-14)',
   color: 'var(--volt)',
+  fontVariantNumeric: 'tabular-nums',
   minWidth: '44px',
   textAlign: 'center',
 })

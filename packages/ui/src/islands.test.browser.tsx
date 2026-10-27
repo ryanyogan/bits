@@ -5,6 +5,7 @@ import { describe, it } from 'remix/test'
 import { AttentionMap } from './attention-map.tsx'
 import { CodeInput } from './code-input.tsx'
 import { PendingSubmit } from './pending-submit.tsx'
+import { createFollower } from './lib/stable.tsx'
 import { NextTokenPlayer } from './next-token.tsx'
 import { OddsBars } from './odds-bars.tsx'
 import { PromptComposer } from './prompt-composer.tsx'
@@ -74,7 +75,7 @@ describe('PromptComposer', () => {
     assert.equal(enter.defaultPrevented, true)
     await act(() => new Promise((resolve) => setTimeout(resolve, 600)))
 
-    assert.equal($$('[aria-label="Your runs"] > li').length, 1)
+    assert.equal($$('[aria-label="Your runs"] ol > li').length, 1)
     assert.match($('[aria-label="Your runs"]')?.textContent ?? '', /Brew among the stars/)
   })
 
@@ -326,5 +327,36 @@ describe('AttentionMap', () => {
     assert.equal(chips()[2]?.getAttribute('aria-pressed'), 'true')
     assert.equal(document.activeElement, chips()[2])
     assert.match($('[aria-live]')?.textContent ?? '', /no links/)
+  })
+})
+
+describe('createFollower', () => {
+  it('follows new content at the bottom, and stops while the reader has scrolled up', async (t) => {
+    let follower = createFollower()
+    let { $, act, cleanup } = render(
+      <div id="t-window" style={{ height: '100px', overflowY: 'auto' }} mix={follower.mixin}>
+        <p style={{ height: '300px', margin: '0' }}>tall</p>
+      </div>,
+    )
+    t.after(cleanup)
+    let box = $('#t-window') as HTMLElement
+    let atBottom = () => box.scrollHeight - box.scrollTop - box.clientHeight < 2
+    let grow = async () => {
+      let p = document.createElement('p')
+      p.style.height = '50px'
+      box.append(p)
+      await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+    }
+
+    await grow()
+    assert.ok(atBottom(), 'pinned: follows the new line')
+
+    box.scrollTop = 0
+    await act(() => new Promise((resolve) => setTimeout(resolve, 20)))
+    await grow()
+    assert.equal(box.scrollTop, 0, 'scrolled up: stays put')
+
+    follower.pin()
+    assert.ok(atBottom(), 'pin() jumps back to the newest')
   })
 })

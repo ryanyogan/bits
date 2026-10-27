@@ -185,9 +185,11 @@
     /* ------------------------------------------------------------------
      * 2. Typography
      * ------------------------------------------------------------------ */
-    --font-display: 'Unbounded', ui-sans-serif, system-ui, sans-serif; /* 500 / 700 / 800 */
-    --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif; /* 400–600 */
-    --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace; /* 400 / 500 */
+    /* Each stack names its metric-matched fallback (fonts.css, decision 023)
+     * second, so text set before the web font loads takes the same space. */
+    --font-display: 'Unbounded', 'Unbounded Fallback', ui-sans-serif, system-ui, sans-serif; /* 500 / 700 / 800 */
+    --font-sans: 'Geist', 'Geist Fallback', ui-sans-serif, system-ui, sans-serif; /* 400–600 */
+    --font-mono: 'Geist Mono', 'Geist Mono Fallback', ui-monospace, SFMono-Regular, Menlo, monospace; /* 400 / 500 */
 
     /* Font sizes (px-named so the artboard value is greppable). */
     --fs-10: 10px;
@@ -236,6 +238,20 @@
     --type-body-size: var(--fs-17);
     --type-body-leading: 1.7;
     --type-body-measure: 68ch;
+
+    /* Reading (decision 023). Lesson prose: 16px on a 360px phone, 17px
+     * (the artboard size) from ~720px up, never below 16px. Leading 1.65
+     * sits between the artboard's 1.7 and the 1.5 floor for long text;
+     * the measure caps a line near 68 characters. Headings run tighter. */
+    --type-prose-size: clamp(var(--fs-16), 15.2px + 0.25vw, var(--fs-17));
+    --type-prose-leading: 1.65;
+    --type-prose-measure: var(--measure);
+    --type-prose-gap: 0.85em; /* between paragraphs: about half a line */
+    --type-heading-leading: 1.15;
+    --type-reply-size: clamp(var(--fs-16), 14.4px + 0.5vw, var(--fs-18)); /* model replies */
+    --type-reply-leading: 1.55;
+    --link-underline-offset: 0.2em;
+    --link-underline-thickness: 0.08em;
     --type-ui-size: var(--fs-15);
     --type-small-size: var(--fs-13);
     --type-mono-size: var(--fs-15);
@@ -291,6 +307,14 @@
     --form-width: 420px;
     --measure: 68ch;
     --touch-target: 44px; /* minimum hit area */
+
+    /* Fixed-size windows for content that fills in (decision 023): they
+     * scroll inside instead of pushing the page. */
+    --run-log-height: clamp(220px, 42svh, 420px); /* composer runs */
+    --terminal-height: clamp(420px, 72svh, 760px); /* terminal-mode log */
+    --output-panel-height: 240px; /* :::terminal / code output */
+    --toast-width: 480px; /* RewardRegion overlay */
+    --z-toast: 20; /* above the sticky bars (5) */
     --bp-mobile: 760px; /* resolutions §8 (documentation only: CSS cannot read it in @media) */
     /* App shell (decision 022): the sticky header stack. Bars are fixed to
        these heights so sticky offsets and scroll-padding agree. */

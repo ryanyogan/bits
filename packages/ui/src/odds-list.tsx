@@ -37,8 +37,10 @@ export function OddsList(handle: Handle<OddsListProps>) {
     let { rows, label = 'Next-token probabilities', top = true, mix } = handle.props
     return (
       <ul aria-label={label} mix={[barsStyle, mix]}>
+        {/* Keyed by rank, not token: a token that changes rank between steps
+          * would otherwise be moved (a layout shift) rather than repainted. */}
         {rows.map((row, index) => (
-          <li key={row.token} data-picked={row.picked ? 'true' : undefined} mix={rowStyle}>
+          <li key={index} data-picked={row.picked ? 'true' : undefined} mix={rowStyle}>
             <span mix={tokenStyle}>{row.token}</span>
             <span aria-hidden="true" mix={trackStyle}>
               <span
@@ -86,4 +88,10 @@ const fillStyle = css({
 const topFill = css({ background: 'var(--ion)' })
 const otherFill = css({ background: 'var(--ion-a45)' })
 const pickedFill = css({ background: 'var(--volt)' })
-const pctStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--text-quiet)', textAlign: 'right' })
+const pctStyle = css({
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-13)',
+  fontVariantNumeric: 'tabular-nums',
+  color: 'var(--text-quiet)',
+  textAlign: 'right',
+})

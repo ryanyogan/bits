@@ -29,7 +29,7 @@ const avatarSizes = {
 }
 
 export interface TutorMessageProps {
-  /** `lesson` 17/1.7 (default) or `preview` 16/1.6 (Main). */
+  /** `lesson` prose (default: 16–17px fluid, 1.65, ~68ch lines) or `preview` 16/1.6 (Main). */
   variant?: 'lesson' | 'preview'
   mix?: MixInput<HTMLElement>
   /** Paragraphs (`<p>`), `<strong>`, `<code>`. */
@@ -66,14 +66,16 @@ const contentStyle = css({
   minWidth: 0,
   display: 'flex',
   flexDirection: 'column',
-  gap: 'var(--space-3_5)',
+  gap: 'var(--type-prose-gap)',
   color: 'var(--text-body)',
-  '& p': { margin: 0 },
+  '& p': { margin: 0, maxWidth: 'var(--type-prose-measure)' },
   '& > p:first-of-type': { marginTop: '3px' },
   '& strong': { color: 'var(--text)' },
-  '& code': { fontFamily: 'var(--font-mono)', color: 'var(--ion)', fontSize: '0.94em' },
+  // Mono runs wide: 0.94em matches its x-height to Geist's. Long
+  // identifiers may break anywhere rather than overflow a phone.
+  '& code': { fontFamily: 'var(--font-mono)', color: 'var(--ion)', fontSize: '0.94em', overflowWrap: 'anywhere' },
 })
-const lessonContent = css({ fontSize: 'var(--fs-17)', lineHeight: 1.7 })
+const lessonContent = css({ fontSize: 'var(--type-prose-size)', lineHeight: 'var(--type-prose-leading)' })
 const previewContent = css({ fontSize: 'var(--fs-16)', lineHeight: 1.6 })
 
 /** Indent for blocks attached to a tutor turn (avatar 32 + gap 14); 0 at ≤480px. */
@@ -117,7 +119,7 @@ export interface ModelOutputProps {
   tokens?: number
   /** `done` (default), `streaming` (caret, aria-busy), `example` (fallback label), `error` (warn note). */
   state?: 'done' | 'streaming' | 'example' | 'error'
-  /** One line above the reply: why it is an example (muted), or what went wrong (`error`, warn). */
+  /** One line under the reply: why it is an example (muted), or what went wrong (`error`, warn). */
   note?: string
   mix?: MixInput<HTMLElement>
   children?: RemixNode
@@ -135,20 +137,23 @@ export function ModelOutput(handle: Handle<ModelOutputProps>) {
           : `model · T=${temperature} · ${tokens ?? 0} tokens`
     return (
       <div aria-busy={state === 'streaming' ? 'true' : undefined} mix={[outputStyle, attachedBlock, mix]}>
+        <p mix={metaStyle}>{meta}</p>
+        <p mix={textStyle}>
+          {children}
+          {/* Keyed by length: each chunk gets a fresh caret node, which isn't a layout shift (a moved one is). */}
+          {state === 'streaming' ? (
+            <span key={`caret-${typeof children === 'string' ? children.length : 0}`} aria-hidden="true" mix={caretStyle}>
+              ▍
+            </span>
+          ) : null}
+        </p>
+        {/* Below the reply: a note arrives when the stream ends, and adding it
+         * here moves nothing the reader is looking at (decision 023). */}
         {state === 'error' ? (
           <p mix={errorStyle}>{note ?? 'Couldn’t reach the model — showing the example output.'}</p>
         ) : note ? (
           <p mix={noteStyle}>{note}</p>
         ) : null}
-        <p mix={metaStyle}>{meta}</p>
-        <p mix={textStyle}>
-          {children}
-          {state === 'streaming' ? (
-            <span aria-hidden="true" mix={caretStyle}>
-              ▍
-            </span>
-          ) : null}
-        </p>
       </div>
     )
   }
@@ -165,7 +170,17 @@ export const modelPanelStyle = css({
 })
 const outputStyle = modelPanelStyle
 const metaStyle = css({ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--ion)' })
-const textStyle = css({ margin: 0, fontSize: 'var(--fs-18)', lineHeight: 1.5, color: 'var(--text)', overflowWrap: 'anywhere' })
+const textStyle = css({
+  margin: 0,
+  fontSize: 'var(--type-reply-size)',
+  lineHeight: 'var(--type-reply-leading)',
+  color: 'var(--text)',
+  // Replies keep their line breaks (lists, short poems) and never overflow.
+  whiteSpace: 'pre-line',
+  overflowWrap: 'anywhere',
+  // Streamed: greedy wrapping, so earlier lines never re-break as text arrives.
+  textWrap: 'wrap',
+})
 const errorStyle = css({ margin: 0, fontSize: 'var(--fs-13)', color: 'var(--warn)' })
 const noteStyle = css({ margin: 0, fontSize: 'var(--fs-13)', color: 'var(--muted)' })
 const caretStyle = css({

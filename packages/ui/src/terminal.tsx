@@ -1,9 +1,10 @@
 import type { Handle, RemixNode } from 'remix/component'
-import { clientEntry, css, on } from 'remix/component'
+import { clientEntry, css, on, ref } from 'remix/component'
 
 import { Keycap } from './keycap.tsx'
 import { TEMPERATURE_EVENT } from './odds-bars.tsx'
 import { runNote, streamRun, type RunEndpoint } from './lib/run-stream.ts'
+import { createFollower, Ghost, scrollWindowStyle, stackStyle } from './lib/stable.tsx'
 import {
   cannedOutput,
   checkPasses,
@@ -116,7 +117,10 @@ const DEFAULT_TEMPS: TemperatureOption[] = [
  * Server-rendered entries read in order with JS off; as a client entry the
  * input appends the learner's line and a canned tutor reply, quiz options
  * append the pick and its reply, and with `prompt` the input runs the
- * exercise (live checks, example output, reward). Client entry.
+ * exercise (live checks, example output, reward). The panel is a fixed
+ * height (`--terminal-height`) and the log scrolls inside it, like a real
+ * terminal: it opens at the top of the lesson, and once the learner acts it
+ * follows new lines while they're at the bottom (decision 023). Client entry.
  */
 export const TerminalLog = clientEntry(
   import.meta.url,
@@ -129,6 +133,8 @@ export const TerminalLog = clientEntry(
     let ranAt = new Set<number>()
     let runs = 0
     let rewarded = false
+    // Opens at the start of the lesson; the learner's first action pins it.
+    let follower = createFollower({ startPinned: false })
 
     let storageKey = () => `bits:draft:${handle.props.prompt?.id ?? ''}`
 
@@ -147,6 +153,7 @@ export const TerminalLog = clientEntry(
 
     function append(...entries: AppendedEntry[]) {
       appended = [...appended, ...entries].slice(-(handle.props.keepAppended ?? 6))
+      follower.pin()
       handle.update()
     }
 
@@ -212,7 +219,7 @@ export const TerminalLog = clientEntry(
             <span>{path}</span>
             {progress ? <span mix={pushRight}>{progress}</span> : null}
           </div>
-          <div role="log" aria-live="polite" mix={logStyle}>
+          <div role="log" aria-live="polite" aria-label="Session" tabIndex={0} mix={[logStyle, scrollWindowStyle, follower.mixin]}>
             {entries.map((entry, index) => (
               <TerminalEntryView
                 key={`s${index}`}
@@ -314,7 +321,8 @@ export const TerminalLog = clientEntry(
             </span>
             {prompt ? submitFieldInputs(prompt.submit, value) : null}
           </form>
-          {prompt && !hydrated ? <p mix={noJsStyle}>Turn on JavaScript to run prompts.</p> : null}
+          {/* The note keeps its line once hydrated (as the keyboard hint), so nothing moves. */}
+          {prompt ? <p mix={noJsStyle}>{hydrated ? 'Enter runs your prompt' : 'Turn on JavaScript to run prompts.'}</p> : null}
         </section>
       )
     }
@@ -371,10 +379,11 @@ function TerminalEntryView(
               ? `model · T=${entry.temperature} · streaming…`
               : `${entry.live ? 'model' : 'example output'} · T=${entry.temperature}`}
           </span>
-          {entry.note ? <div mix={tones.muted}>{entry.note}</div> : null}
           <div aria-busy={entry.streaming ? 'true' : undefined} mix={[tutorBody, tones.text]}>
             {entry.text}
           </div>
+          {/* Under the reply: it arrives when the stream ends and moves nothing above it. */}
+          {entry.note ? <div mix={tones.muted}>{entry.note}</div> : null}
         </div>
       )
     }
@@ -441,18 +450,29 @@ export const OutputPanel = clientEntry(
   function OutputPanel(handle: Handle<OutputPanelProps>) {
     let shown = handle.props.lines.length
     let running = false
+    let body: HTMLElement | undefined
+
+    // Keep the newest replayed line in view inside the panel (never the page).
+    function revealLast() {
+      let last = body?.querySelector<HTMLElement>('[data-live] > :last-child')
+      if (!body || !last) return
+      let below = last.getBoundingClientRect().bottom - body.getBoundingClientRect().bottom
+      if (below > 0) body.scrollTop += below
+    }
 
     async function replay() {
       if (running) return
       running = true
       shown = 0
       let signal = await handle.update()
+      if (body) body.scrollTop = 0
       let reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       for (let i = 1; i <= handle.props.lines.length; i++) {
         if (!reduced) await new Promise((resolve) => setTimeout(resolve, 120))
         if (signal.aborted || handle.signal.aborted) return
         shown = i
-        handle.update()
+        await handle.update()
+        revealLast()
       }
       running = false
       handle.update()
@@ -468,28 +488,54 @@ export const OutputPanel = clientEntry(
               ▶ Run
             </Keycap>
           </div>
-          <div aria-live="polite" mix={panelBody}>
-            <div mix={preLine}>
-              <span aria-hidden="true" mix={tones.synapse}>
-                ${' '}
-              </span>
-              <span mix={tones.text}>{command}</span>
-            </div>
-            {lines.slice(0, shown).map((line, index) => (
-              <div key={index} mix={preLine}>
-                {line.map(([tone, text], i) => (
-                  <span key={i} mix={tones[tone]}>
-                    {text}
-                  </span>
-                ))}
+          {/* The full output is a Ghost under the replay, so the panel is its
+           * final size from the start; past --output-panel-height it scrolls. */}
+          <div tabIndex={0} aria-label={`Output of ${command}`} role="region" mix={[panelBody, scrollWindowStyle, ref((node) => (body = node as HTMLElement))]}>
+            <div mix={stackStyle}>
+              <div aria-live="polite" data-live="">
+                <CommandLine command={command} />
+                <OutputLines lines={lines.slice(0, shown)} />
               </div>
-            ))}
+              {shown < lines.length ? (
+                <Ghost>
+                  <CommandLine command={command} />
+                  <OutputLines lines={lines} />
+                </Ghost>
+              ) : null}
+            </div>
           </div>
         </div>
       )
     }
   },
 )
+
+function CommandLine(handle: Handle<{ command: string }>) {
+  return () => (
+    <div mix={preLine}>
+      <span aria-hidden="true" mix={tones.synapse}>
+        ${' '}
+      </span>
+      <span mix={tones.text}>{handle.props.command}</span>
+    </div>
+  )
+}
+
+function OutputLines(handle: Handle<{ lines: TerminalPart[][] }>) {
+  return () => (
+    <>
+      {handle.props.lines.map((line, index) => (
+        <div key={index} mix={preLine}>
+          {line.map(([tone, text], i) => (
+            <span key={i} mix={tones[tone]}>
+              {text}
+            </span>
+          ))}
+        </div>
+      ))}
+    </>
+  )
+}
 
 const tones: Record<TerminalTone, ReturnType<typeof css>> = {
   text: css({ color: 'var(--text)' }),
@@ -512,6 +558,8 @@ const termStyle = css({
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-14)',
   lineHeight: 1.7,
+  // Fixed size: the log inside scrolls (decision 023).
+  height: 'var(--terminal-height)',
   transition: 'border-color var(--duration-focus)',
   '&:focus-within': { borderColor: 'var(--volt-a55)' },
 })
@@ -528,6 +576,8 @@ const titleRow = css({
 const pushRight = css({ marginLeft: 'auto' })
 const logStyle = css({
   flex: 1,
+  minHeight: 0,
+  '&:focus-visible': { outlineOffset: '-2px' },
   padding: 'var(--space-5) var(--space-5) var(--space-2)',
   display: 'flex',
   flexDirection: 'column',
@@ -651,4 +701,6 @@ const panelBody = css({
   color: 'var(--text-quiet)',
   overflowX: 'auto',
   minHeight: '120px',
+  maxHeight: 'var(--output-panel-height)',
+  '&:focus-visible': { outlineOffset: '-2px' },
 })

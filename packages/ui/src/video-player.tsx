@@ -352,6 +352,7 @@ const cueList = css({
   gap: 'var(--space-1)',
   maxHeight: '320px',
   overflowY: 'auto',
+  overscrollBehavior: 'contain',
 })
 const cueStyle = css({
   display: 'block',

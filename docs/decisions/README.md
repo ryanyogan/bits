@@ -28,4 +28,5 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 020 | [Production hardening: client navigation, headers, caching, limits, placement](020-production-hardening.md) |
 | 021 | [Lesson toys: nexttoken, training, attention, compare, rabbithole](021-lesson-toys.md) |
 | 022 | [App shell: one sticky header, lesson sub-bar, sticky outline](022-app-shell.md) |
+| 023 | [Reading comfort and layout stability](023-reading-and-stability.md) |
 | 024 | [Pending forms and navigation feedback, app-wide](024-pending-and-navigation-feedback.md) |

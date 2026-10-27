@@ -3,6 +3,7 @@ import { clientEntry, css, on, ref } from 'remix/component'
 import * as tabs from '@remix-run/ui/tabs'
 
 import { Keycap } from './keycap.tsx'
+import { stackStyle } from './lib/stable.tsx'
 import { ToolButton } from './tool-button.tsx'
 
 export type SyntaxKind = 'keyword' | 'string' | 'type' | 'function' | 'plain' | 'comment' | 'number' | 'punct'
@@ -142,47 +143,50 @@ export const CodeEditor = clientEntry(
                   <span mix={bannerStats}>{`${typed.length} / ${source.length} chars · ${accuracy}% accurate`}</span>
                 </div>
               ) : null}
-              {files.map((file, fileIndex) => (
-                <div key={file.name} mix={[panelStyle, tabs.panel({ name: file.name })]}>
-                  <div
-                    role="region"
-                    aria-label={file.name}
-                    mix={[codeAreaStyle, typing && fileIndex === 0 ? on('click', () => input?.focus()) : undefined]}
-                  >
-                    <div mix={codeInner}>
-                      {file.lines.map((line, index) => {
-                        let n = index + 1
-                        let state =
-                          fileIndex !== 0 || !highlight
-                            ? 'normal'
-                            : n === focusLine
-                              ? 'focus'
-                              : n >= highlight.from && n <= highlight.to
-                                ? 'range'
-                                : 'normal'
-                        let ghost = typing && fileIndex === 0 && n > cursorLine
-                        return (
-                          <div key={n} data-line={state} data-ghost={ghost ? 'true' : undefined} mix={lineStyle}>
-                            <span aria-hidden="true" mix={markerStyle} />
-                            <span aria-hidden="true" mix={gutterStyle}>
-                              {String(n)}
-                            </span>
-                            <span mix={codeStyle}>
-                              {typing && fileIndex === 0 && n <= cursorLine
-                                ? renderTypedLine(file, index, source, typed)
-                                : line.map(([kind, text], i) => (
-                                    <span key={i} mix={syntax[kind]}>
-                                      {text}
-                                    </span>
-                                  ))}
-                            </span>
-                          </div>
-                        )
-                      })}
+              {/* Panels share one grid cell: the editor is as tall as its longest file, so switching tabs never moves the page (decision 023). */}
+              <div mix={[stackStyle, panelsStyle]}>
+                {files.map((file, fileIndex) => (
+                  <div key={file.name} mix={[panelStyle, tabs.panel({ name: file.name })]}>
+                    <div
+                      role="region"
+                      aria-label={file.name}
+                      mix={[codeAreaStyle, typing && fileIndex === 0 ? on('click', () => input?.focus()) : undefined]}
+                    >
+                      <div mix={codeInner}>
+                        {file.lines.map((line, index) => {
+                          let n = index + 1
+                          let state =
+                            fileIndex !== 0 || !highlight
+                              ? 'normal'
+                              : n === focusLine
+                                ? 'focus'
+                                : n >= highlight.from && n <= highlight.to
+                                  ? 'range'
+                                  : 'normal'
+                          let ghost = typing && fileIndex === 0 && n > cursorLine
+                          return (
+                            <div key={n} data-line={state} data-ghost={ghost ? 'true' : undefined} mix={lineStyle}>
+                              <span aria-hidden="true" mix={markerStyle} />
+                              <span aria-hidden="true" mix={gutterStyle}>
+                                {String(n)}
+                              </span>
+                              <span mix={codeStyle}>
+                                {typing && fileIndex === 0 && n <= cursorLine
+                                  ? renderTypedLine(file, index, source, typed)
+                                  : line.map(([kind, text], i) => (
+                                      <span key={i} mix={syntax[kind]}>
+                                        {text}
+                                      </span>
+                                    ))}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
               {typing ? (
                 <textarea
                   aria-label={`Type ${first?.name ?? 'the code'}`}
@@ -313,8 +317,10 @@ const bannerStyle = css({
   animation: 'bits-rise var(--duration-sigil) var(--ease) both',
   '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
 })
-const bannerStats = css({ marginLeft: 'auto', color: 'var(--text)' })
-const panelStyle = css({ flex: 1, minWidth: 0, '&[hidden]': { display: 'none' } })
+const bannerStats = css({ marginLeft: 'auto', color: 'var(--text)', fontVariantNumeric: 'tabular-nums' })
+const panelsStyle = css({ flex: 1 })
+// A hidden panel keeps its box (invisible, out of the a11y tree and tab order).
+const panelStyle = css({ minWidth: 0, '&[hidden]': { display: 'block', visibility: 'hidden' } })
 const codeAreaStyle = css({ overflowX: 'auto', padding: 'var(--space-3_5) 0 var(--space-4_5)' })
 const codeInner = css({
   minWidth: '560px',

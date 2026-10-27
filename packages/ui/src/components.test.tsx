@@ -1,3 +1,4 @@
+import * as fs from 'node:fs'
 import * as assert from 'remix/assert'
 import { renderToString } from 'remix/component/server'
 import { describe, it } from 'remix/test'
@@ -12,16 +13,17 @@ import { FilterPill } from './filter-pill.tsx'
 import { Keycap } from './keycap.tsx'
 import { LessonNode, LessonNodeRow } from './lesson-node.tsx'
 import { NextTokenPlayer, stepRows } from './next-token.tsx'
-import { oddsAt, temperatureNote } from './odds-bars.tsx'
+import { OddsBars, oddsAt, temperatureNote } from './odds-bars.tsx'
 import { ProgressBar } from './progress-bar.tsx'
 import { ProgressRing } from './progress-ring.tsx'
 import { RabbitHole } from './rabbit-hole.tsx'
-import { checkPasses, draftTokens } from './prompt-composer.tsx'
+import { checkPasses, draftTokens, PromptComposer } from './prompt-composer.tsx'
 import { SegmentedTabs } from './segmented-tabs.tsx'
 import { TextField } from './text-field.tsx'
 import { CodeInput } from './code-input.tsx'
 import { QuizChoice } from './quiz-choice.tsx'
 import { SearchField } from './search-field.tsx'
+import { OutputPanel } from './terminal.tsx'
 import { sparkPoints, TrainingScrubber } from './training-scrubber.tsx'
 import { formatTime } from './video-player.tsx'
 
@@ -374,5 +376,68 @@ describe('lesson toys (server render = the interactive first state, plus <noscri
     assert.match(html, /<a href="https:\/\/example.com\/v" target="_blank" rel="noopener noreferrer" data-rmx-document=""/)
     assert.match(html, /3Blue1Brown · video · 27 min · deep dive/)
     assert.match(html, /opens in a new tab/)
+  })
+})
+
+// Decision 023: what fills in has a reserved size, so nothing below it moves.
+describe('layout stability', () => {
+  const outsideNoscript = (html: string) => html.replace(/<noscript>.*?<\/noscript>/gs, '')
+
+  it('PromptComposer renders its fixed runs window and the hint line before any run', async () => {
+    let html = await renderToString(<PromptComposer id="p" task="Say hi" checks={[{ label: 'Says hi', patterns: [{ source: 'hi' }] }]} />)
+    assert.match(html, /<section[^>]*aria-label="Your runs"[^>]*tabindex="0"[^>]*data-empty=""/)
+    assert.match(html, /<ol aria-live="polite"/)
+    assert.match(html, /role="status"/)
+    // The no-JS note holds the line the keyboard hint takes once hydrated.
+    assert.match(html, /Turn on JavaScript to run prompts\./)
+  })
+
+  it('NextTokenPlayer reserves the finished sentence, the tallest odds and the done note', async () => {
+    let html = outsideNoscript(
+      await renderToString(
+        <NextTokenPlayer
+          prompt="The capital of France is"
+          steps={[
+            { token: ' Paris', p: 0.92, alternatives: [[' the', 0.03]] },
+            { token: '.', p: 0.7, alternatives: [[',', 0.2], ['!', 0.05]] },
+          ]}
+        />,
+      ),
+    )
+    assert.match(html, /aria-hidden="true"[^>]*>(?:<[^>]+>)*The capital of France is Paris\.▍/)
+    assert.match(html, /aria-hidden="true"[^>]*>(?:<[^>]+>)*step 2\/2 · candidates/)
+    assert.match(html, /aria-hidden="true"[^>]*>(?:<[^>]+>)*That’s the whole trick/)
+  })
+
+  it('OddsBars reserves every temperature note', async () => {
+    let html = await renderToString(<OddsBars context="Tagline:" candidates={[['Moon', 2], ['Star', 1]]} />)
+    for (let t of [0, 0.3, 0.8, 1.2]) assert.ok(html.includes(temperatureNote(t)), `note for T=${t}`)
+  })
+
+  it('TrainingScrubber reserves every snapshot', async () => {
+    let html = await renderToString(
+      <TrainingScrubber id="t" prompt="Once" snapshots={[{ step: 0, loss: 9, text: 'qz' }, { step: 9, loss: 2, text: 'upon a time there lived' }]} />,
+    )
+    assert.match(outsideNoscript(html), /aria-hidden="true"[^>]*>(?:<[^>]+>)*Once<\/span>upon a time there lived/)
+  })
+
+  it('OutputPanel is a scrolling region with the full output on the server', async () => {
+    let html = await renderToString(<OutputPanel command="node run.js" lines={[[['text', 'one']], [['muted', 'two']]]} />)
+    assert.match(html, /role="region"[^>]*aria-label="Output of node run\.js"|aria-label="Output of node run\.js"[^>]*role="region"/)
+    assert.match(html, /one.*two/s)
+    assert.doesNotMatch(html, /<div aria-hidden="true"/, 'no Ghost until a replay starts')
+  })
+
+  it('every font stack names its metric-matched fallback, and fonts.css defines it', () => {
+    let fonts = fs.readFileSync(new URL('./styles/fonts.css', import.meta.url), 'utf8')
+    let tokens = fs.readFileSync(new URL('./styles/tokens.css', import.meta.url), 'utf8')
+    for (let family of ['Unbounded', 'Geist', 'Geist Mono']) {
+      assert.match(tokens, new RegExp(`'${family}', '${family} Fallback'`))
+      let face = fonts.match(new RegExp(`font-family: '${family} Fallback';[^}]*`))?.[0] ?? ''
+      assert.match(face, /src: local\(/, `${family} Fallback uses a local font`)
+      assert.match(face, /size-adjust: \d/)
+      assert.match(face, /ascent-override: \d/)
+      assert.match(face, /descent-override: \d/)
+    }
   })
 })
