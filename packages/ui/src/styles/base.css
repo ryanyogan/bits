@@ -36,6 +36,13 @@
     max-width: 100%;
   }
 
+  /* With width/height attributes this keeps the intrinsic aspect ratio, so
+   * the box is reserved before the file arrives (decision 023). */
+  img,
+  video {
+    height: auto;
+  }
+
   input,
   button,
   textarea,
@@ -59,13 +66,46 @@
     font-family: var(--font-sans);
     font-size: var(--type-ui-size);
     line-height: 1.5;
+    /* Light text on a near-black ground: macOS subpixel AA makes it look
+     * heavy and blurry, so use grayscale there (no effect elsewhere). */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* A long URL or token breaks instead of widening the page. */
+    overflow-wrap: break-word;
     overflow-x: clip;
+  }
+
+  /* Reading (decision 023): balanced headings, no lone last words in
+   * paragraphs. Both are progressive: older browsers just wrap greedily. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+
+  p,
+  li,
+  dd,
+  blockquote,
+  figcaption {
+    text-wrap: pretty;
+  }
+
+  /* Code is never hyphenated or ligatured: what you see is what you type.
+   * (Geist Mono ships no liga/calt today; this keeps it so if it does.) */
+  code,
+  kbd,
+  samp,
+  pre {
+    hyphens: manual;
+    font-variant-ligatures: none;
   }
 
   a {
     color: var(--volt);
+    text-underline-offset: var(--link-underline-offset);
+    text-decoration-thickness: var(--link-underline-thickness);
   }
 
   a:hover {

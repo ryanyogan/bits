@@ -95,7 +95,8 @@ export interface RewardRegionProps {
 /**
  * A polite live region that shows a RewardToast whenever an island fires
  * `bits:reward` (components §10.13: the `role="status"` container is in the
- * page before anything is inserted, so it is announced). Client entry.
+ * page before anything is inserted, so it is announced). It floats over the
+ * page's bottom edge rather than taking space in the flow. Client entry.
  */
 export const RewardRegion = clientEntry(
   import.meta.url,
@@ -134,4 +135,16 @@ export const RewardRegion = clientEntry(
   },
 )
 
-const regionStyle = css({ '&:empty': { display: 'none' } })
+// An overlay, not a block in the flow: a reward arriving (or leaving)
+// never moves the lesson under the reader (decision 023).
+const regionStyle = css({
+  position: 'fixed',
+  insetInline: 'var(--page-gutter)',
+  bottom: 'var(--space-6)',
+  zIndex: 'var(--z-toast)',
+  display: 'flex',
+  justifyContent: 'flex-end',
+  pointerEvents: 'none',
+  '& > *': { pointerEvents: 'auto', width: '100%', maxWidth: 'var(--toast-width)' },
+  '&:empty': { display: 'none' },
+})

@@ -4,6 +4,7 @@ import { clientEntry, css, on, ref } from 'remix/component'
 import { CheckChip, checkListStyle } from './check-chip.tsx'
 import { Keycap } from './keycap.tsx'
 import { runNote, streamRun, type RunEndpoint } from './lib/run-stream.ts'
+import { createFollower, scrollWindowStyle } from './lib/stable.tsx'
 import { FOCUS_WITHIN } from './lib/states.ts'
 import { TEMPERATURE_EVENT } from './odds-bars.tsx'
 import { announceReward, RewardToast, type RewardNext } from './reward-toast.tsx'
@@ -111,10 +112,13 @@ const DEFAULT_TEMPS: TemperatureOption[] = [
  * "run at" temperature radiogroup, a token estimate and the Run key. Enter
  * runs, Shift+Enter adds a newline. Runs append a LearnerBubble + ModelOutput
  * (last four kept): streamed from `run` (/api/run; a rerun aborts the one in
- * flight), or the canned `examples` without it. When every check passes a RewardToast pops
- * above the composer and `bits:reward` fires. The draft is kept in
+ * flight), or the canned `examples` without it. Runs land in a fixed-height
+ * window above the composer that scrolls inside and follows the newest
+ * reply while you're at its bottom (decision 023), so a streaming reply
+ * never pushes the page. When every check passes a RewardToast joins the
+ * end of that window and `bits:reward` fires. The draft is kept in
  * localStorage. With JS off the composer renders with Run disabled and a
- * note. Client entry.
+ * note in the same slot as the keyboard hint. Client entry.
  */
 export const PromptComposer = clientEntry(
   import.meta.url,
@@ -128,6 +132,7 @@ export const PromptComposer = clientEntry(
     let rewarded = false
     let runCount = 0
     let textarea: HTMLTextAreaElement | undefined
+    let follower = createFollower()
 
     let storageKey = () => `bits:draft:${handle.props.id}`
 
@@ -192,6 +197,7 @@ export const PromptComposer = clientEntry(
       let id = ++runCount
       let entry: Run = { id, prompt, temperature, output: '', state: 'streaming', tokens: 0 }
       runs = [...runs, entry].slice(-(handle.props.keepRuns ?? 4))
+      follower.pin()
       await handle.update()
       let counted: boolean
       if (endpoint) {
@@ -232,8 +238,14 @@ export const PromptComposer = clientEntry(
       let locked = running && !handle.props.run
       return (
         <div mix={wrapStyle}>
-          {runs.length ? (
-            <ol aria-label="Your runs" aria-live="polite" mix={runsStyle}>
+          <section
+            aria-label="Your runs"
+            tabIndex={0}
+            data-empty={runs.length ? undefined : ''}
+            mix={[runWindowStyle, scrollWindowStyle, follower.mixin]}
+          >
+            {runs.length ? null : <p mix={emptyStyle}>Run your prompt and the replies land here.</p>}
+            <ol aria-live="polite" mix={runsStyle}>
               {runs.map((entry) => (
                 <li key={entry.id} mix={runStyle}>
                   <LearnerBubble>{entry.prompt}</LearnerBubble>
@@ -248,10 +260,10 @@ export const PromptComposer = clientEntry(
                 </li>
               ))}
             </ol>
-          ) : null}
-          <div role="status" mix={toastSlot}>
-            {rewarded && reward ? <RewardToast xp={reward.xp} message={reward.message} next={reward.next} animate /> : null}
-          </div>
+            <div role="status" mix={toastSlot}>
+              {rewarded && reward ? <RewardToast xp={reward.xp} message={reward.message} next={reward.next} animate /> : null}
+            </div>
+          </section>
           <form
             data-force={forceFocus ? 'focus' : undefined}
             mix={[
@@ -334,7 +346,7 @@ export const PromptComposer = clientEntry(
                 {locked ? 'Running…' : running ? 'Run again ↵' : 'Run ↵'}
               </Keycap>
             </div>
-            {hydrated ? null : <p mix={noJsStyle}>Turn on JavaScript to run prompts.</p>}
+            <p mix={hintStyle}>{hydrated ? 'Enter runs · Shift+Enter adds a line' : 'Turn on JavaScript to run prompts.'}</p>
             {submitFieldInputs(handle.props.submit, draft)}
           </form>
         </div>
@@ -344,7 +356,37 @@ export const PromptComposer = clientEntry(
 )
 
 const wrapStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', minWidth: 0 })
-const runsStyle = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' })
+// Fixed height whatever arrives: the window scrolls, the page doesn't.
+const runWindowStyle = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'var(--space-4)',
+  height: 'var(--run-log-height)',
+  padding: 'var(--space-1) var(--space-1) var(--space-2) 0',
+  borderRadius: 'var(--radius-xl)',
+  // Always 1px, only coloured while empty, so the first run doesn't resize it.
+  border: '1px dashed transparent',
+  '&[data-empty]': { borderColor: 'var(--line-dashed)' },
+  '&:focus-visible': { outlineOffset: '4px' },
+})
+const emptyStyle = css({
+  margin: 'auto',
+  maxWidth: '32ch',
+  textAlign: 'center',
+  fontSize: 'var(--fs-14)',
+  color: 'var(--dim)',
+})
+// Runs stack from the window's top. Anchoring them to the floor (chat-style)
+// would move every earlier run up as a reply streams in: a layout shift.
+const runsStyle = css({
+  listStyle: 'none',
+  margin: 0,
+  padding: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'var(--space-4)',
+  '&:empty': { display: 'none' },
+})
 const runStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', animation: 'bits-rise var(--duration-sigil) var(--ease) both', '@media (prefers-reduced-motion: reduce)': { animation: 'none' } })
 const toastSlot = css({ '&:empty': { display: 'none' } })
 
@@ -407,7 +449,18 @@ const tempStyle = css({
   '&:has(:checked)': { background: 'var(--ion)', borderColor: 'var(--ion)', color: 'var(--ink)' },
   '&:has(:focus-visible)': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
 })
-const tokensStyle = css({ marginLeft: 'auto', paddingTop: 'var(--space-2_5)', fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--dim)' })
-const runKeyStyle = css({ marginTop: 'var(--space-2_5)', '@media (max-width: 360px)': { width: '100%' } })
+// Tabular digits and a min width: the estimate changing doesn't nudge the Run key.
+const tokensStyle = css({
+  marginLeft: 'auto',
+  minWidth: '11ch',
+  paddingTop: 'var(--space-2_5)',
+  textAlign: 'right',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-12)',
+  fontVariantNumeric: 'tabular-nums',
+  color: 'var(--dim)',
+})
+// Wide enough for "Run again ↵" so the label swap keeps the row still.
+const runKeyStyle = css({ marginTop: 'var(--space-2_5)', minWidth: '9.5em', '@media (max-width: 360px)': { width: '100%' } })
 const emptyKeyStyle = css({ cursor: 'default' })
-const noJsStyle = css({ margin: 0, fontSize: 'var(--fs-13)', color: 'var(--muted)' })
+const hintStyle = css({ margin: 0, fontSize: 'var(--fs-13)', color: 'var(--muted)' })

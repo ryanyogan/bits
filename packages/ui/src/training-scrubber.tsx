@@ -1,6 +1,7 @@
 import type { Handle } from 'remix/component'
 import { clientEntry, css, on } from 'remix/component'
 
+import { Ghost, stackStyle } from './lib/stable.tsx'
 import { needsScriptStyle, NoScript, toyNoteStyle, ToyPanel } from './toy-panel.tsx'
 
 export interface TrainingSnapshot {
@@ -41,7 +42,9 @@ const formatLoss = (loss: number) => loss.toFixed(loss < 10 ? 2 : 1)
  * shows what the model wrote for the prompt at that step, with a loss
  * sparkline (SVG) and the current point marked. The server renders the
  * same first snapshot, sparkline and slider the client starts with, so
- * hydration doesn't shift the page. Without JS the slider hides and a
+ * hydration doesn't shift the page; the output box is as tall as the longest
+ * snapshot (each sits on a `Ghost`), so dragging never moves the page
+ * either (decision 023). Without JS the slider hides and a
  * `<noscript>` ordered list holds every snapshot. Client entry.
  */
 export const TrainingScrubber = clientEntry(
@@ -63,10 +66,20 @@ export const TrainingScrubber = clientEntry(
         <ToyPanel {...header}>
           <div mix={outputBox}>
             <p mix={metaStyle}>{`model output at step ${formatStep(snap.step)}`}</p>
-            <p aria-live="polite" mix={outputStyle}>
-              <span mix={promptStyle}>{prompt}</span>
-              {snap.text}
-            </p>
+            <div mix={stackStyle}>
+              <p aria-live="polite" mix={outputStyle}>
+                <span mix={promptStyle}>{prompt}</span>
+                {snap.text}
+              </p>
+              {snapshots.map((s) => (
+                <Ghost key={s.step}>
+                  <p mix={outputStyle}>
+                    <span mix={promptStyle}>{prompt}</span>
+                    {s.text}
+                  </p>
+                </Ghost>
+              ))}
+            </div>
           </div>
           <div mix={chartRow}>
             <svg
@@ -146,7 +159,6 @@ const outputBox = css({
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--space-2)',
-  minHeight: '6.5em',
   padding: 'var(--space-3_5) var(--space-4)',
   borderRadius: 'var(--radius-lg)',
   background: 'var(--well)',
@@ -171,6 +183,9 @@ const lossStyle = css({
   alignItems: 'flex-end',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-20)',
+  fontVariantNumeric: 'tabular-nums',
+  // Room for "10.0": the sparkline beside it keeps its width as the loss changes.
+  minWidth: '4ch',
   color: 'var(--volt)',
 })
 const lossLabel = css({ fontSize: 'var(--fs-11)', color: 'var(--muted)' })

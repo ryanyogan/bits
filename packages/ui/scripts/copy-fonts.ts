@@ -21,13 +21,67 @@ interface Family {
   /** File prefix inside the package's files/ directory. */
   prefix: string
   weights: number[]
+  /** Metric-matched local fallbacks, emitted as `<family> Fallback` (decision 023). */
+  fallbacks: Fallback[]
 }
 
+/**
+ * A local font scaled to stand in for the web font until it loads, so the
+ * swap doesn't reflow text (decision 023). `sizeAdjust` makes the average
+ * advance width match: measured in Chrome as the canvas width of an English
+ * sample in the web font over the same sample in Liberation Sans/Mono
+ * (metric clones of Arial and Courier New). The overrides are the web font's
+ * own hhea ascent/descent (units/1000), divided by `sizeAdjust`, because
+ * the browser scales the overrides by size-adjust too.
+ */
+interface Fallback {
+  /** `font-weight` range this face covers. */
+  weight: string
+  /** local() names, most common first (Windows/macOS name, PostScript name, Linux clone). */
+  local: string[]
+  sizeAdjust: number
+  ascent: number
+  descent: number
+}
+
+const ARIAL = ['Arial', 'ArialMT', 'Liberation Sans', 'Helvetica']
+const ARIAL_BOLD = ['Arial Bold', 'Arial-BoldMT', 'Liberation Sans Bold', 'Helvetica Bold']
+const COURIER = ['Courier New', 'CourierNewPSMT', 'Liberation Mono', 'Courier']
+
 const families: Family[] = [
-  { family: 'Unbounded', pkg: '@fontsource/unbounded', prefix: 'unbounded', weights: [500, 700, 800] },
-  { family: 'Geist', pkg: '@fontsource/geist', prefix: 'geist', weights: [400, 500, 600] },
-  { family: 'Geist Mono', pkg: '@fontsource/geist-mono', prefix: 'geist-mono', weights: [400, 500] },
+  {
+    family: 'Unbounded',
+    pkg: '@fontsource/unbounded',
+    prefix: 'unbounded',
+    weights: [500, 700, 800],
+    // Unbounded is wide: 127% (500) to 132% (800) of Arial Bold, so one face per weight.
+    fallbacks: [
+      { weight: '100 599', local: ARIAL_BOLD, sizeAdjust: 1.27, ascent: 0.995, descent: 0.245 },
+      { weight: '600 749', local: ARIAL_BOLD, sizeAdjust: 1.302, ascent: 0.995, descent: 0.245 },
+      { weight: '750 900', local: ARIAL_BOLD, sizeAdjust: 1.324, ascent: 0.995, descent: 0.245 },
+    ],
+  },
+  {
+    family: 'Geist',
+    pkg: '@fontsource/geist',
+    prefix: 'geist',
+    weights: [400, 500, 600],
+    fallbacks: [
+      { weight: '100 549', local: ARIAL, sizeAdjust: 1.024, ascent: 1.005, descent: 0.295 },
+      { weight: '550 900', local: ARIAL_BOLD, sizeAdjust: 0.996, ascent: 1.005, descent: 0.295 },
+    ],
+  },
+  {
+    family: 'Geist Mono',
+    pkg: '@fontsource/geist-mono',
+    prefix: 'geist-mono',
+    weights: [400, 500],
+    // Both are 0.6em a cell; the vertical metrics are what differ.
+    fallbacks: [{ weight: '100 900', local: COURIER, sizeAdjust: 0.997, ascent: 1.005, descent: 0.295 }],
+  },
 ]
+
+const pct = (n: number) => `${(n * 100).toFixed(2).replace(/\.?0+$/, '')}%`
 
 // latin-ext first so latin (the common case) wins for overlapping code points.
 const subsets = ['latin-ext', 'latin'] as const
@@ -41,7 +95,7 @@ let css = [
   '',
 ]
 
-for (let { family, pkg, prefix, weights } of families) {
+for (let { family, pkg, prefix, weights, fallbacks } of families) {
   let pkgDir = path.dirname(require.resolve(`${pkg}/package.json`))
   let unicode: Record<string, string> = JSON.parse(
     await fs.readFile(path.join(pkgDir, 'unicode.json'), 'utf8'),
@@ -56,6 +110,9 @@ for (let { family, pkg, prefix, weights } of families) {
         '@font-face {',
         `  font-family: '${family}';`,
         '  font-style: normal;',
+        // swap, not optional: the fallback below is metric-matched, so the
+        // swap is a repaint rather than a reflow, and first-time visitors
+        // still get the brand faces (decision 023).
         '  font-display: swap;',
         `  font-weight: ${weight};`,
         `  src: url('../fonts/${file}') format('woff2');`,
@@ -64,6 +121,21 @@ for (let { family, pkg, prefix, weights } of families) {
         '',
       )
     }
+  }
+
+  for (let fallback of fallbacks) {
+    css.push(
+      '@font-face {',
+      `  font-family: '${family} Fallback';`,
+      `  font-weight: ${fallback.weight};`,
+      `  src: ${fallback.local.map((name) => `local('${name}')`).join(', ')};`,
+      `  size-adjust: ${pct(fallback.sizeAdjust)};`,
+      `  ascent-override: ${pct(fallback.ascent / fallback.sizeAdjust)};`,
+      `  descent-override: ${pct(fallback.descent / fallback.sizeAdjust)};`,
+      '  line-gap-override: 0%;',
+      '}',
+      '',
+    )
   }
 }
 

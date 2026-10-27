@@ -2,6 +2,7 @@ import type { Handle } from 'remix/component'
 import { clientEntry, css, on, ref } from 'remix/component'
 
 import { Icon } from './icon.tsx'
+import { Ghost, stackStyle } from './lib/stable.tsx'
 import { formatOdds, OddsList, type OddsRow, showToken } from './odds-list.tsx'
 import { ToolButton } from './tool-button.tsx'
 import { needsScriptStyle, NoScript, toyNoteStyle, ToyPanel, toyTableStyle } from './toy-panel.tsx'
@@ -47,7 +48,10 @@ const PICK_MS = 650
  * it starts playing when it scrolls into view, except under
  * `prefers-reduced-motion`, where there is no play button (hidden in CSS)
  * and no autoplay. The server renders the same first step the client starts
- * on (prompt, caret, step 1's odds), so hydration doesn't shift the page.
+ * on (prompt, caret, step 1's odds), so hydration doesn't shift the page,
+ * and every part that changes while it plays (the sentence, the odds, the
+ * status line) sits on a `Ghost` of its largest state, so playing never
+ * moves the page either (decision 023).
  * Without JS the controls hide and a `<noscript>` holds the final sentence
  * and a table of every step. Client entry.
  */
@@ -133,34 +137,58 @@ export const NextTokenPlayer = clientEntry(
       let done = pos >= total
       let step = steps[Math.min(pos, total - 1)]!
       let rows = stepRows(step).map((row) => (row.picked && !shown ? { ...row, picked: false } : row))
-      let status = done
-        ? `Done: ${total} tokens, picked one at a time.`
-        : `Step ${pos + 1} of ${total}: picks “${showToken(step.token)}” at ${formatOdds(step.p)}.`
+      let statusAt = (at: number) =>
+        at >= total
+          ? `Done: ${total} tokens, picked one at a time.`
+          : `Step ${at + 1} of ${total}: picks “${showToken(steps[at]!.token)}” at ${formatOdds(steps[at]!.p)}.`
+      let status = statusAt(pos)
+      let longestStatus = steps.map((_, i) => statusAt(i)).concat(statusAt(total)).reduce((a, b) => (b.length > a.length ? b : a))
+      // The step with the most candidates sets the height of the odds area.
+      let tallest = steps.reduce((a, b) => (b.alternatives.length > a.alternatives.length ? b : a), steps[0]!)
+      let doneNote = (
+        <p mix={toyNoteStyle}>That’s the whole trick: score every possible next token, pick one, append it, repeat.</p>
+      )
       return (
         <ToyPanel context="the reply, one token at a time" label="next-token prediction" illustrative={illustrative} mix={watch}>
-          <p mix={sentenceStyle}>
-            <span mix={promptStyle}>{promptText(prompt, steps)}</span>
-            {steps.slice(0, pos).map((s, i) => (
-              <span key={i} data-new={i === pos - 1 ? 'true' : undefined} mix={landedStyle}>
-                {s.token}
-              </span>
-            ))}
-            {done ? null : (
-              <span aria-hidden="true" mix={caretStyle}>
-                ▍
-              </span>
-            )}
-          </p>
-          {done ? (
-            <p mix={toyNoteStyle}>
-              That’s the whole trick: score every possible next token, pick one, append it, repeat.
+          <div mix={stackStyle}>
+            <p mix={sentenceStyle}>
+              <span mix={promptStyle}>{promptText(prompt, steps)}</span>
+              {steps.slice(0, pos).map((s, i) => (
+                <span key={i} data-new={i === pos - 1 ? 'true' : undefined} mix={landedStyle}>
+                  {s.token}
+                </span>
+              ))}
+              {/* A fresh caret per step: a new node isn't a layout shift, a moved one is. */}
+              {done ? null : (
+                <span key={`caret-${pos}`} aria-hidden="true" mix={caretStyle}>
+                  ▍
+                </span>
+              )}
             </p>
-          ) : (
-            <div mix={oddsBlock}>
-              <p mix={stepLabel}>{`step ${pos + 1}/${total} · candidates for the next token`}</p>
-              <OddsList rows={rows} label={`Candidates for step ${pos + 1}`} top={false} />
-            </div>
-          )}
+            <Ghost>
+              <p mix={sentenceStyle}>
+                {promptText(prompt, steps)}
+                {reply}▍
+              </p>
+            </Ghost>
+          </div>
+          <div mix={stackStyle}>
+            {done ? (
+              doneNote
+            ) : (
+              <div mix={oddsBlock}>
+                <p mix={stepLabel}>{`step ${pos + 1}/${total} · candidates for the next token`}</p>
+                <OddsList rows={rows} label={`Candidates for step ${pos + 1}`} top={false} />
+              </div>
+            )}
+            <Ghost>
+              <div mix={oddsBlock}>
+                <p mix={stepLabel}>{`step ${total}/${total} · candidates for the next token`}</p>
+                <OddsList rows={stepRows(tallest)} top={false} />
+              </div>
+            </Ghost>
+            {done ? null : <Ghost>{doneNote}</Ghost>}
+          </div>
           <NoScript>
             <p mix={sentenceStyle}>
               <span mix={promptStyle}>{promptText(prompt, steps)}</span>
@@ -201,9 +229,14 @@ export const NextTokenPlayer = clientEntry(
             <ToolButton variant="video" square label="Next token" disabled={done} mix={on('click', () => go(pos + 1))}>
               <span aria-hidden="true">›</span>
             </ToolButton>
-            <p aria-live={playing ? 'off' : 'polite'} mix={statusStyle}>
-              {status}
-            </p>
+            <div mix={[stackStyle, statusSlot]}>
+              <p aria-live={playing ? 'off' : 'polite'} mix={statusStyle}>
+                {status}
+              </p>
+              <Ghost>
+                <p mix={statusStyle}>{longestStatus}</p>
+              </Ghost>
+            </div>
           </div>
         </ToyPanel>
       )
@@ -213,7 +246,6 @@ export const NextTokenPlayer = clientEntry(
 
 const sentenceStyle = css({
   margin: 0,
-  minHeight: '3.2em',
   padding: 'var(--space-3_5) var(--space-4)',
   borderRadius: 'var(--radius-lg)',
   background: 'var(--well)',
@@ -223,6 +255,9 @@ const sentenceStyle = css({
   color: 'var(--text)',
   whiteSpace: 'pre-wrap',
   overflowWrap: 'anywhere',
+  // Greedy wrapping while it grows: `pretty` would re-break earlier lines
+  // as each token lands and move words the reader has already seen.
+  textWrap: 'wrap',
 })
 const promptStyle = css({ color: 'var(--muted)' })
 const landedStyle = css({
@@ -250,8 +285,8 @@ const controlsStyle = css({
 })
 // Under reduced motion there is no Play: only the step buttons.
 const playStyle = css({ '@media (prefers-reduced-motion: reduce)': { display: 'none' } })
+const statusSlot = css({ flex: '1 1 200px' })
 const statusStyle = css({
-  flex: '1 1 200px',
   margin: 0,
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',

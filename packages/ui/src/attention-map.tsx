@@ -1,6 +1,7 @@
 import type { Handle } from 'remix/component'
 import { clientEntry, css, on, ref } from 'remix/component'
 
+import { Ghost, stackStyle } from './lib/stable.tsx'
 import { formatOdds, showToken } from './odds-list.tsx'
 import { NoScript, toyNoteStyle, ToyPanel, toyTableStyle } from './toy-panel.tsx'
 
@@ -79,12 +80,19 @@ export const AttentionMap = clientEntry(
       let targets = attendsTo(links, selected)
       let weightOf = new Map(targets.map((link) => [link.to, link.weight]))
       let name = (index: number) => `“${(tokens[index] ?? '').trim() || 'space'}”`
-      let summary = targets.length
-        ? `${name(selected)} looks most at ${targets
-            .slice(0, 3)
-            .map((link) => `${name(link.to)} (${formatOdds(link.weight)})`)
-            .join(', ')}.`
-        : `${name(selected)}: no links in this example. Pick another token.`
+      let summaryOf = (from: number) => {
+        let to = attendsTo(links, from)
+        return to.length
+          ? `${name(from)} looks most at ${to
+              .slice(0, 3)
+              .map((link) => `${name(link.to)} (${formatOdds(link.weight)})`)
+              .join(', ')}.`
+          : `${name(from)}: no links in this example. Pick another token.`
+      }
+      let summary = summaryOf(selected)
+      // Every token's summary sits under the live one as a Ghost, so the note
+      // is as tall as the tallest and picking never moves the page (decision 023).
+      let summaries = [...new Set(tokens.map((_, i) => summaryOf(i)))]
       return (
         <ToyPanel {...header}>
           <div role="toolbar" aria-label="Tokens: pick one to see what it attends to" mix={[chipRow, ref((node, signal) => node.addEventListener('keydown', onKey as EventListener, { signal }))]}>
@@ -121,9 +129,16 @@ export const AttentionMap = clientEntry(
               )
             })}
           </div>
-          <p aria-live="polite" mix={toyNoteStyle}>
-            {summary}
-          </p>
+          <div mix={stackStyle}>
+            <p aria-live="polite" mix={toyNoteStyle}>
+              {summary}
+            </p>
+            {summaries.map((text) => (
+              <Ghost key={text}>
+                <p mix={toyNoteStyle}>{text}</p>
+              </Ghost>
+            ))}
+          </div>
           <NoScript>
             <table mix={toyTableStyle}>
               <caption>Attention: how much each token looks at an earlier one.</caption>
