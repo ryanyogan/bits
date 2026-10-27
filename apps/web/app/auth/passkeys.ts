@@ -19,23 +19,30 @@ import {
   type D1DataTableDatabase,
   type User,
 } from '@bits/db'
-import {
-  generateAuthenticationOptions,
-  generateRegistrationOptions,
-  verifyAuthenticationResponse,
-  verifyRegistrationResponse,
-  type AuthenticationResponseJSON,
-  type PublicKeyCredentialCreationOptionsJSON,
-  type PublicKeyCredentialRequestOptionsJSON,
-  type RegistrationResponseJSON,
+import type {
+  AuthenticationResponseJSON,
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+  RegistrationResponseJSON,
 } from '@simplewebauthn/server'
-import { isoBase64URL } from '@simplewebauthn/server/helpers'
 
 import { platform } from '#platform'
 
 import { APP_TITLE } from '../config.ts'
 import { log } from '../log.ts'
 import { isProduction } from './config.ts'
+
+// The WebAuthn library loads on first use, so it stays out of the startup
+// bundle (decision 026).
+let webauthnModules:
+  | Promise<[typeof import('@simplewebauthn/server'), typeof import('@simplewebauthn/server/helpers')]>
+  | undefined
+
+async function webauthn() {
+  webauthnModules ??= Promise.all([import('@simplewebauthn/server'), import('@simplewebauthn/server/helpers')])
+  let [server, helpers] = await webauthnModules
+  return { ...server, isoBase64URL: helpers.isoBase64URL }
+}
 
 export const CHALLENGE_TTL_MS = 10 * 60 * 1000
 /** How long the browser waits for the authenticator (WebAuthn `timeout`). */
@@ -91,6 +98,7 @@ export async function registrationOptions(
   user: User,
   rp: RelyingParty,
 ): Promise<RegistrationOptionsResult> {
+  let { generateRegistrationOptions } = await webauthn()
   let existing = await listPasskeys(db, user.id)
   if (existing.length >= MAX_PASSKEYS) return { ok: false, reason: 'too-many' }
   let options = await generateRegistrationOptions({
@@ -127,6 +135,7 @@ export async function registerPasskey(
   db: D1DataTableDatabase,
   input: { user: User; rp: RelyingParty; response: string; name: string },
 ): Promise<RegisterResult> {
+  let { verifyRegistrationResponse, isoBase64URL } = await webauthn()
   let response = parseResponse<RegistrationResponseJSON>(input.response)
   if (!response) return { ok: false, reason: 'invalid' }
   let now = Date.now()
@@ -168,6 +177,7 @@ export async function registerPasskey(
 
 /** Options for `navigator.credentials.get()`: discoverable, so no email and no allow-list. */
 export async function signInOptions(db: D1DataTableDatabase, rp: RelyingParty): Promise<PublicKeyCredentialRequestOptionsJSON> {
+  let { generateAuthenticationOptions } = await webauthn()
   let options = await generateAuthenticationOptions({
     rpID: rp.id,
     timeout: CEREMONY_TIMEOUT_MS,
@@ -200,6 +210,7 @@ export async function verifyPasskeySignIn(
   db: D1DataTableDatabase,
   input: { rp: RelyingParty; response: string },
 ): Promise<SignInResult> {
+  let { verifyAuthenticationResponse, isoBase64URL } = await webauthn()
   let response = parseResponse<AuthenticationResponseJSON>(input.response)
   if (!response || typeof response.id !== 'string') return { ok: false, reason: 'invalid' }
   let passkey = await findPasskey(db, response.id)
