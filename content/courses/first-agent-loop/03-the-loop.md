@@ -3,7 +3,7 @@
 # - Anthropic docs, Handle tool calls / How tool use works (append the assistant content,
 #   answer every tool_use with a tool_result, loop while stop_reason is "tool_use")
 #   https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls
-# - Anthropic docs, Stop reasons (tool_use vs end_turn; the rest in lesson 5)
+# - Anthropic docs, Stop reasons (tool_use vs end_turn; the rest in lesson 4)
 #   https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons
 # - Anthropic docs, Models overview (claude-sonnet-5-5); max_tokens counts thinking too, so
 #   16000 leaves room (Claude API skill guidance for non-streaming requests)
@@ -12,7 +12,7 @@
 # - Code typechecked against @anthropic-ai/sdk 1.3.0 (2026-10-27). Terminal output is example
 #   output, not a recorded run.
 title: The loop
-order: 4
+order: 3
 minutes: 8
 xp: 60
 module: Building the loop
@@ -69,7 +69,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 
 export const tools: Anthropic.Tool[] = [{
   name: "get_weather",
-  description: "Current weather for a city",
+  description: "Current weather for one city. Use it when the user asks about the weather right now.",
   input_schema: {
     type: "object",
     properties: { city: { type: "string" } },

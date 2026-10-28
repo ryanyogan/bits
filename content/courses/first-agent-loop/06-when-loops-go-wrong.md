@@ -13,7 +13,7 @@
 # - Code typechecked against @anthropic-ai/sdk 1.3.0 (2026-10-27). The stuck-loop trace and
 #   the compare rows are illustrative.
 title: "When loops go wrong"
-order: 7
+order: 6
 minutes: 8
 xp: 40
 module: Building the loop
@@ -40,8 +40,10 @@ are dozens of Springfields), and the loop had **no limit**.
 
 ---
 
-**Fix the result first.** The tool result is the model's only view of what
-happened, so write errors for it. Say what went wrong and what to try next.
+**Fix the result first.** You learned to write errors that say what went
+wrong and what to try next (`/courses/give-your-model-tools/many-calls-some-fail`).
+In a loop the price of skipping that goes up: a vague error doesn't cost one
+bad answer, it costs every turn until something stops the run.
 
 :::compare{left="Unhelpful result" right="Helpful result" illustrative}
 - prompt "geocode(\"Springfield\") failed"
@@ -61,7 +63,7 @@ by default. Return the few fields the model needs.
 ---
 
 **Then guard the loop.** Even with good errors, a model can circle. Two cheap
-guards catch it: a turn limit (more in lesson 9), and a check for the same
+guards catch it: a turn limit (more in lesson 8), and a check for the same
 call with the same input, again and again.
 
 :::code{file="guards.ts" lang="ts" copy highlight="6-10" label="same call, same input"}
@@ -100,24 +102,24 @@ Your agent calls search_docs 40 times with slightly different queries, and every
 
 ---
 
-Your turn. Ask Claude to rewrite an unhelpful tool error into one an agent
-could act on. Paste the bad error, say what the tool does, and set a length
-limit.
+Your turn. Hand Claude a stuck agent's log and ask it to debug the loop:
+why does the agent keep going, and what should the tool have returned
+instead? Paste a few turns, and set a length limit.
 
-:::prompt{id="actionable-error" xp=25}
-Ask Claude to turn a useless tool error into an actionable one
+:::prompt{id="debug-a-stuck-loop" xp=25}
+Ask Claude why an agent is stuck, and what result would get it moving
 
-- placeholder "My tool get_forecast returns the error \"…\". Rewrite it so an AI agent knows what went wrong and what to try next, in under … words."
-- draft "Rewrite this error: \"Error 400\"."
-- check "Includes the bad error"         /error|failed|invalid|\b4\d\d\b|\b5\d\d\b/i
-- check "Says what the tool does"        /\btool\b|forecast|geocode|search|lookup|look up/i
-- check "Asks for a next step"           /next|instead|try|fix|suggest|what to do/i
+- placeholder "My agent's log: turn 1 → geocode(\"Springfield\") ← Error. turn 2 → geocode(\"Springfield\") ← Error. … Why does it keep retrying, and what should the tool return instead? Answer in under … words."
+- draft "Why is my agent stuck?"
+- check "Pastes the repeated call"       /geocode|forecast|search|lookup|tool/i
+- check "Shows it repeating"             /\bturn\b|again|repeat|retr|times|loop/i
+- check "Asks what to return instead"    /instead|should (it|the tool) return|better (error|result)|what to return|fix/i
 - check "Sets a length limit"            /\bwords?\b|\bsentences?\b|\bunder\b|\bshort\b|\bbrief\b|\bmax/i
 - run temperature=[1.0]
-- example T=1.0 "\"days must be between 1 and 7 (you sent 14). Day 1 is today. Call get_forecast again with days=7, and tell the user the forecast only covers a week.\""
-- example T=1.0 "\"Invalid request: 'days' was 14, but the forecast covers at most 7 days. Retry with days set to 7 or less.\""
-- example T=1.0 "\"get_forecast couldn't run: latitude must be a number, but got 'Chicago'. Call geocode first to get coordinates, then pass those.\""
-- success "Every one of those tells the agent its next move. That's what ends loops." next="Next: memory →"
+- example T=1.0 "\"Error\" gives the agent nothing to change, so retrying is its only move. Return something like: \"Found 30+ places called Springfield. Ask the user which state they mean, or pass e.g. Springfield, Illinois.\""
+- example T=1.0 "The tool fails the same way every time and never says why, so the agent keeps guessing. Say the name is ambiguous and list two or three matches. Also cap the loop's turns."
+- example T=1.0 "It's stuck because the result is identical whatever it tries. A useful error names the problem (too many matches) and the next move (ask the user, or add the state)."
+- success "The fix is almost never the loop. It's what the tool says back." next="Next: memory →"
 :::
 
 :::rabbithole

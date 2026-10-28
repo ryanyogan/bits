@@ -88,7 +88,7 @@ Ask Claude to plan the tool calls for a weather question
 - example T=1.0 "1. geocode(\"Chicago\") to get its latitude and longitude. 2. get_forecast(lat, lon, days=2), since day 1 is today and I need tomorrow. 3. Check tomorrow's rain chance and wind. If rain is likely or it's very windy, suggest the train; otherwise, bike."
 - example T=1.0 "First I'd call geocode with \"Chicago\". With those coordinates I'd call get_forecast for 2 days and read tomorrow's entry. Then I'd answer based on the rain and wind. I can't know the forecast until those calls return."
 - example T=1.0 "Plan: geocode(\"Chicago\") → coordinates. get_forecast(coordinates, days=2) → tomorrow's high, low, rain and wind. Decide: dry and calm means bike."
-- success "That's the plan step. Next you'll give the model real tools to act with." next="Next: describing a tool →"
+- success "That's the plan step. Next you'll give the model real tools to act with." next="Next: tools, seen from the loop →"
 :::
 
 Notice that a good plan says what it **can't know yet**. That gap is what the

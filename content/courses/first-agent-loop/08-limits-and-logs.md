@@ -16,7 +16,7 @@
 # - Code typechecked against @anthropic-ai/sdk 1.3.0 (2026-10-27). Token counts and the log
 #   lines are illustrative.
 title: "Limits and logs"
-order: 9
+order: 8
 minutes: 8
 xp: 40
 module: Shipping it

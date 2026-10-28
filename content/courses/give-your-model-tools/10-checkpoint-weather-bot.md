@@ -127,7 +127,7 @@ messages.push({ role: "assistant", content: first.content }, { role: "user", con
 const second = await ask();
 printText(second);
 if (second.stop_reason === "tool_use") {
-  console.error("(Claude wants another call. Looping is the next course.)");
+  console.error("(Claude wants another call. Looping comes in Your first agent loop.)");
 }
 :::
 
@@ -208,7 +208,7 @@ That's a working tool-using bot. It answers one question with at most one
 round of tool calls. If Claude wants a second round (look up the city,
 **then** the weather, **then** a packing list), the bot stops and says so.
 
-Handling that is the next course, **Your first agent loop**. You'll wrap
+Handling that is a later course, **Your first agent loop**. You'll wrap
 this round trip in a loop that keeps going until Claude has what it needs,
 and learn how to stop it when it doesn't.
 

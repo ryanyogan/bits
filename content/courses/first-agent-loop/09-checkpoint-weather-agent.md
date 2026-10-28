@@ -13,7 +13,7 @@
 #   (Wed: high 75.7, low 50.1, rain 2%, wind 11 mph; Thu: high 67.1, low 57.1, rain 18%,
 #   wind 11.1 mph); Claude's wording is illustrative.
 title: "Checkpoint: a weather agent"
-order: 10
+order: 9
 minutes: 10
 xp: 80
 module: Shipping it
@@ -25,9 +25,9 @@ with. It finds the city, fetches a real forecast, remembers the conversation,
 stops itself when something goes wrong, and logs every turn.
 
 It gets the weather from Open-Meteo: free for non-commercial use, no key
-needed. There are three files. `tools.ts` holds the two tools from lesson 6,
-`agent.ts` is the loop with lesson 9's limits and logs, and `chat.ts` keeps
-lesson 8's memory.
+needed. There are three files. `tools.ts` holds the two tools from lesson 5,
+`agent.ts` is the loop with lesson 8's limits and logs, and `chat.ts` keeps
+lesson 7's memory.
 
 :::code{file="agent.ts" lang="ts" copy highlight="20-41" label="the loop, with limits"}
 import Anthropic from "@anthropic-ai/sdk";

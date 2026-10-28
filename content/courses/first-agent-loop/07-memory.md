@@ -20,7 +20,7 @@
 #   https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents
 # - Code typechecked against @anthropic-ai/sdk 1.3.0 (2026-10-27).
 title: "Memory"
-order: 8
+order: 7
 minutes: 8
 xp: 40
 module: Shipping it
