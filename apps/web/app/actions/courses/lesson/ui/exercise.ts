@@ -5,6 +5,7 @@ import type { CodeFile } from '@bits/ui/code-editor'
 import type { DraftPersist } from '@bits/ui/lib/drafts'
 import type { PromptCheck, RunEndpoint, SubmitFields, TemperatureOption } from '@bits/ui/prompt-composer'
 import type { RewardNext } from '@bits/ui/reward-toast'
+import type { TerminalPart } from '@bits/ui/terminal'
 
 import { draftKey } from '../../../../progress/draft-keys.ts'
 import { routes } from '../../../../routes.ts'
@@ -92,6 +93,11 @@ export function exerciseProps(view: LessonView, block: PromptBlock): ExercisePro
   }
 }
 
+/** A run's output lines, with its summary (if any) as a last muted line. */
+export function runLines(run: { lines: TerminalPart[][]; summary?: string }): TerminalPart[][] {
+  return run.summary ? [...run.lines, [['muted', run.summary]]] : run.lines
+}
+
 export function codeEditorProps(view: LessonView, block: CodeBlock) {
   let first = block.files[0]!
   let files: CodeFile[] = block.files.map((file) => ({
@@ -103,7 +109,9 @@ export function codeEditorProps(view: LessonView, block: CodeBlock) {
   }))
   return {
     files,
-    highlight: first.highlight,
+    // The editor's footer reads "lines X–Y: <label>"; without an authored
+    // label it says what the range is rather than repeating it.
+    highlight: first.highlight && { ...first.highlight, label: first.highlight.label ?? 'highlighted' },
     focusLine: first.focusLine,
     typeMode: first.typeMode,
     // What was retyped is a draft too, shared by Read and Terminal mode.

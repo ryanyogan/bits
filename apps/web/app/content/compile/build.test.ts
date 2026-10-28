@@ -108,7 +108,7 @@ describe('content build', () => {
   it('groups adjacent :::code blocks and takes the next :::terminal as Run output', () => {
     let result = build({
       '01-one.md': lesson(
-        ':::code{file="a.ts" lang="ts"}\nconst a = 1 // one\n:::\n\n:::code{file="b.sh" lang="sh"}\necho hi\n:::\n\n:::terminal{cmd="run"}\n[ion]ok[quiet] done\n:::',
+        ':::code{file="a.ts" lang="ts" highlight="1"}\nconst a = 1 // one\n:::\n\n:::code{file="b.sh" lang="sh"}\necho hi\n:::\n\n:::terminal{cmd="run" ask="run it" summary="✓ 1 turn"}\n[ion]ok[quiet] done\n:::',
       ),
     })
     assert.deepEqual(errors(result), [])
@@ -117,7 +117,85 @@ describe('content build', () => {
     if (code?.type !== 'code') return
     assert.deepEqual(code.files.map((f) => f.file), ['a.ts', 'b.sh'])
     assert.deepEqual(code.files[0]?.lines[0], [['keyword', 'const'], ['plain', ' a = '], ['number', '1'], ['plain', ' '], ['comment', '// one']])
-    assert.deepEqual(code.run, { cmd: 'run', lines: [[['ion', 'ok'], ['quiet', ' done']]] })
+    // The terminal's ask and summary come along with its output.
+    assert.deepEqual(code.run, { cmd: 'run', lines: [[['ion', 'ok'], ['quiet', ' done']]], ask: 'run it', summary: '✓ 1 turn' })
+    // No label: the footer already shows the range, so none is invented.
+    assert.deepEqual(code.files[0]?.highlight, { from: 1, to: 1 })
+  })
+
+  it('reports an unclosed :::code at its line instead of swallowing the next block', () => {
+    let result = build({
+      '01-one.md': lesson(':::code{file="a.ts" lang="ts"}\n```ts\nconst a = 1\n```\n\n:::terminal{cmd="run"}\nok\n:::\n\nAfter.'),
+    })
+    assert.deepEqual(errors(result), ['01-one.md:8 → :::code is never closed: add a ::: line before :::terminal on line 13'])
+  })
+
+  it('turns prose links into links: site paths and https only', () => {
+    let ok = build({
+      '01-one.md': lesson('See [the loop](/courses/first-agent-loop/the-loop) and [the docs](https://docs.anthropic.com/en/docs).'),
+    })
+    assert.deepEqual(errors(ok), [])
+    assert.deepEqual(ok.lessons?.get('one')?.blocks, [
+      {
+        type: 'markdown',
+        paragraphs: [
+          [
+            'See ',
+            { link: 'the loop', href: '/courses/first-agent-loop/the-loop' },
+            ' and ',
+            { link: 'the docs', href: 'https://docs.anthropic.com/en/docs' },
+            '.',
+          ],
+        ],
+      },
+    ])
+
+    let bad = build({
+      '01-one.md': lesson(
+        [
+          '[a](javascript:alert(1))',
+          '',
+          '[b](data:text/html,hi)',
+          '',
+          '[c](http://example.com)',
+          '',
+          '[d](//evil.example)',
+          '',
+          '[e](mailto:x@example.com)',
+          '',
+          '[f](JavaScript:alert(1))',
+        ].join('\n'),
+      ),
+    })
+    assert.deepEqual(errors(bad), [
+      '01-one.md:8 → link “a” points at “javascript:alert(1)”: links must be a path on this site (/courses/…) or an https:// URL',
+      '01-one.md:10 → link “b” points at “data:text/html,hi”: links must be a path on this site (/courses/…) or an https:// URL',
+      '01-one.md:12 → link “c” points at “http://example.com”: links must be a path on this site (/courses/…) or an https:// URL',
+      '01-one.md:14 → link “d” points at “//evil.example”, which leaves the site: write https://… for other sites',
+      '01-one.md:16 → link “e” points at “mailto:x@example.com”: links must be a path on this site (/courses/…) or an https:// URL',
+      '01-one.md:18 → link “f” points at “JavaScript:alert(1)”: links must be a path on this site (/courses/…) or an https:// URL',
+    ])
+  })
+
+  it('reads \\n in :::prompt draft, placeholder and example strings as a line break', () => {
+    let result = build({
+      '01-one.md': lesson(
+        [
+          ':::prompt{id="p"}',
+          'Write a system prompt.',
+          '- check "Has a role" /you are/i',
+          '- draft "You are a tutor.\\nRules:\\n- be brief"',
+          '- placeholder "Role\\nRules"',
+          '- example T=0 "Line one.\\nLine \\"two\\"."',
+          ':::',
+        ].join('\n'),
+      ),
+    })
+    assert.deepEqual(errors(result), [])
+    let [exercise] = exercisesOf(result.lessons!.get('one')!)
+    assert.equal(exercise?.draft, 'You are a tutor.\nRules:\n- be brief')
+    assert.equal(exercise?.placeholder, 'Role\nRules')
+    assert.deepEqual(exercise?.examples, [{ temperature: 0, text: 'Line one.\nLine "two".' }])
   })
 
   it('reports problems with file and line', () => {

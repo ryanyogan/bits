@@ -6,8 +6,12 @@
 import type { CodeSegment } from '@bits/ui/code-editor'
 import type { TerminalPart } from '@bits/ui/terminal'
 
-/** Inline markdown: text, **strong**, `code`, ==mark== (a highlighted span). */
-export type Inline = string | { strong: string } | { code: string } | { mark: string }
+/**
+ * Inline markdown: text, **strong**, `code`, ==mark== (a highlighted span) and
+ * [links](/courses/…). A link's href is a same-origin path or an https URL;
+ * the build rejects anything else.
+ */
+export type Inline = string | { strong: string } | { code: string } | { mark: string } | { link: string; href: string }
 
 /** One markdown paragraph. */
 export type Paragraph = Inline[]
@@ -63,7 +67,8 @@ export interface CodeBlockFile {
   language: string
   copy: boolean
   typeMode: boolean
-  highlight?: { from: number; to: number; label: string }
+  /** `highlight="12-32"`; `label` only when the author gave one (the footer already shows the range). */
+  highlight?: { from: number; to: number; label?: string }
   focusLine?: number
   /** Highlighted at build time. */
   lines: CodeSegment[][]
@@ -72,8 +77,8 @@ export interface CodeBlockFile {
 export interface CodeBlock {
   type: 'code'
   files: CodeBlockFile[]
-  /** A `:::terminal` directly after the code group: its Run output panel. */
-  run?: { cmd: string; lines: TerminalPart[][] }
+  /** A `:::terminal` directly after the code group: its Run output panel (with its ask and summary). */
+  run?: { cmd: string; lines: TerminalPart[][]; ask?: string; summary?: string }
 }
 
 export interface QuizBlock {
