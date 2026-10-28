@@ -111,7 +111,7 @@ const heroStyle = css({
   // Spec: 104px top, 820px tall. The height is capped by the viewport so
   // the scroll cue and pause control stay above the fold on a laptop.
   padding: 'var(--space-24) var(--page-gutter) var(--space-18)',
-  minHeight: 'min(820px, calc(100svh - var(--appbar-h)))',
+  minHeight: 'min(var(--hero-min-height), calc(100svh - var(--appbar-h)))',
   boxSizing: 'border-box',
   display: 'flex',
   flexDirection: 'column',
@@ -167,7 +167,7 @@ const pulseDot = css({
 
 const h1Style = css({
   margin: 0,
-  maxWidth: '1100px',
+  maxWidth: 'var(--type-display-xl-measure)',
   fontFamily: 'var(--font-display)',
   fontWeight: 800,
   fontSize: 'var(--type-display-xl-size)',

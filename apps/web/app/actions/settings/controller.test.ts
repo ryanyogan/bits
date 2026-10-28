@@ -41,6 +41,15 @@ describe('/settings', () => {
     assert.match(html, /<legend[^>]*>Profile visibility<\/legend>/)
   })
 
+  it('reads the page in two round trips: the session, then one settings batch (decision 045)', async () => {
+    let response = await fetchAs(cookie, routes.settings.index.href())
+    assert.equal(response.status, 200)
+    // The session read (user + session), then identities, sessions, passkeys
+    // and the open email change in one db.batch.
+    assert.match(response.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="5 queries, 2 round trips"$/)
+    await response.text()
+  })
+
   it('sends signed-out visitors to /login?next=/settings', async () => {
     let response = await fetchAs(null, routes.settings.index.href())
     assert.equal(response.status, 303)

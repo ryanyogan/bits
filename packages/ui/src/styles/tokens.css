@@ -229,6 +229,11 @@
     --type-display-xl-size: clamp(46px, 8.4vw, 124px);
     --type-display-xl-leading: 0.94;
     --type-display-xl-tracking: var(--tracking-display);
+    --type-display-xl-measure: 1100px; /* Main hero h1 max-width */
+    /* display-cta: Main's closing CTA h2 (tokens.md "Type"). */
+    --type-display-cta-size: clamp(42px, 7vw, 104px);
+    --type-display-cta-leading: 0.96;
+    --type-display-cta-measure: 1000px;
     --type-h2-size: clamp(36px, 4.6vw, 64px);
     --type-h2-leading: 1.02;
     --type-h2-tracking: var(--tracking-h2);
@@ -307,6 +312,7 @@
     --form-width: 420px;
     --measure: 68ch;
     --touch-target: 44px; /* minimum hit area */
+    --hero-min-height: 820px; /* Main hero (tokens.md "Layout"); capped by the viewport where used */
 
     /* Strokes and control sizes (decision 042). Every border, divider and
      * underline uses one of the two widths; colour comes from the --line-*

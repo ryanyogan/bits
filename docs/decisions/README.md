@@ -48,3 +48,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 042 | [Design-system consistency and link prefetch](042-design-system-consistency-and-prefetch.md) |
 | 043 | [Streaming, loading states and optimistic UI](043-streaming-loading-and-optimistic-ui.md) |
 | 044 | [Sign-in polish: steady tabs, one logo, deferred brain](044-login-polish.md) |
+| 045 | [No ETag on HTML; polish-wave leftovers](045-no-etag-on-html.md) |

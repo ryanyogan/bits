@@ -44,11 +44,11 @@ const ctaStyle = css({
 
 const titleStyle = css({
   margin: 0,
-  maxWidth: '1000px',
+  maxWidth: 'var(--type-display-cta-measure)',
   fontFamily: 'var(--font-display)',
   fontWeight: 800,
-  fontSize: 'clamp(42px, 7vw, 104px)',
-  lineHeight: 0.96,
+  fontSize: 'var(--type-display-cta-size)',
+  lineHeight: 'var(--type-display-cta-leading)',
   letterSpacing: 'var(--tracking-display)',
   textWrap: 'balance',
 })
