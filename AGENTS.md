@@ -439,6 +439,15 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   purpose-tagged `email_tokens`. Links never start a session. The old
   address gets a 7-day revert link, and while one is open, further changes
   are refused. Sign-in queries must filter `purpose = 'sign-in'`.
+- Roles (decision 037): `learner`, `author`, `admin` on `users.role`.
+  Admin pages take `middleware: [requireUser(), requireAdmin()]`
+  (`app/auth/require-admin.tsx`), and admin writes re-check the role in
+  their SQL (`packages/db/src/queries/authors.ts`). Admins make authors
+  at `/admin/authors`: an emailed invite (`author_invites`, hashed token,
+  7 days, single use, under the mail cap) accepted at `/admin/invite` by
+  a session signed in as that address; accepting never downgrades an
+  admin. Roles step down one at a time, never your own. Making an admin
+  is still a manual D1 change.
 - Passkey tests: `createSoftAuthenticator()` (`app/test/webauthn.ts`),
   `ageSessions(userId)` to make a session stale. E2E uses a CDP virtual
   authenticator on `localhost` (`app/passkeys.test.e2e.ts`).

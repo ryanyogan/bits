@@ -42,6 +42,15 @@ export function AuthorPage(handle: Handle<AuthorPageProps>) {
               </>
             }
           />
+          {viewer?.role === 'admin' ? (
+            <a
+              href={routes.admin.authors.index.href()}
+              data-rmx-prefetch={prefetchFor(routes.admin.authors.index.href())}
+              mix={adminLinkStyle}
+            >
+              Manage authors and invites →
+            </a>
+          ) : null}
 
           <section aria-label="Upload or sync" mix={uploadGrid}>
             <DropZone action={routes.api.authorUpload.href()} />
@@ -115,6 +124,20 @@ function AuthorCourseRow(handle: Handle<{ item: AuthorCourse }>) {
     )
   }
 }
+
+// Admins only (decision 037): a mono volt link, like Settings' secondary links.
+const adminLinkStyle = css({
+  alignSelf: 'flex-start',
+  display: 'inline-flex',
+  alignItems: 'center',
+  minHeight: 'var(--touch-target)',
+  marginTop: 'calc(var(--space-6) * -1)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-13)',
+  color: 'var(--volt)',
+  textDecoration: 'none',
+  '&:hover': { color: 'var(--volt-link-hover)' },
+})
 
 const uploadGrid = css({
   display: 'grid',

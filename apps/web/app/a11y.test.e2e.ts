@@ -19,6 +19,7 @@ import { after, describe, it } from 'remix/test'
 
 import { disposePlatform } from '#platform'
 
+import { outbox } from './auth/mailer.ts'
 import { router } from './router.ts'
 import { routes } from './routes.ts'
 import { ageSessions, completeLesson, requestCode, signIn, testDb } from './test/auth.ts'
@@ -286,5 +287,32 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
       await settled(page)
       await expectClean(page, label)
     }
+  })
+
+  it('admin: /admin/authors with an open invite and an error, then the invite page', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    let user = await signInBrowser(page, uniqueEmail('admin'))
+    await testDb.update(users, user.id, { role: 'admin' })
+    await page.goto(routes.admin.authors.index.href())
+    await settled(page)
+    await expectClean(page, '/admin/authors')
+
+    let invitee = uniqueEmail('invitee')
+    await page.getByLabel('Email address').fill(invitee)
+    await page.getByRole('button', { name: /Send invite/ }).click()
+    await page.getByText(invitee, { exact: true }).waitFor()
+    await settled(page)
+    await expectClean(page, '/admin/authors open invite')
+
+    await page.getByLabel('Email address').fill('not-an-email')
+    await page.getByRole('button', { name: /Send invite/ }).click()
+    await page.locator('[aria-invalid="true"]').first().waitFor()
+    await expectClean(page, '/admin/authors error')
+
+    // The invitee's page, seen from the wrong account.
+    let token = /token=([A-Za-z0-9_-]+)/.exec(outbox.findLast((m) => m.to === invitee)!.text)![1]!
+    await page.goto(routes.admin.invite.index.href(undefined, { searchParams: { token } }))
+    await settled(page)
+    await expectClean(page, '/admin/invite')
   })
 })
