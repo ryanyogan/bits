@@ -58,15 +58,15 @@ async function start(canvas: HTMLCanvasElement, signal: AbortSignal) {
   await afterLoadAndIdle()
   if (signal.aborted) return
 
-  let T: typeof import('three')
+  let T: typeof import('../../public/three.ts')
   try {
-    T = await import('three')
+    T = await import('../../public/three.ts')
   } catch {
     return
   }
   if (signal.aborted) return
 
-  let renderer: import('three').WebGLRenderer
+  let renderer: InstanceType<typeof T.WebGLRenderer>
   try {
     renderer = new T.WebGLRenderer({ canvas, antialias: true, alpha: true })
   } catch {

@@ -244,6 +244,12 @@ the new page into the old DOM. Write for that:
   Keep the dashboard's automatic injection off; its copy has no nonce.
 - Browser-only packages go in `BROWSER_ONLY` in `scripts/build.ts`, so
   they never reach the Worker bundle.
+- three.js (decision 046): islands import it only through
+  `app/actions/public/three.ts`; add a class there before using it. The
+  build bundles that module tree-shaken; never `import('three')` directly.
+- A `<link>` or `<script>` in `<head>` takes a `data-rmx-key` (decision
+  046): client navigation pairs unkeyed head siblings by position and
+  rewrites them in place.
 - The Worker is code-split (decision 026): wrangler uploads `build/worker`
   as built (`no_bundle`), one module per chunk. Code that only a rare route
   or action needs (the content compiler, the Anthropic SDK, the

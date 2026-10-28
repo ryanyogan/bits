@@ -6,7 +6,7 @@
 //
 // `three` is passed in by the island after a dynamic import, so this module
 // only needs its types and never pulls three into the initial page load.
-import type * as THREE_NS from 'three'
+import type * as THREE_NS from '../../public/three.ts'
 
 type Three = typeof THREE_NS
 

@@ -15,6 +15,7 @@
 //    runtime loads only when first imported (decision 026).
 //
 // See docs/decisions/002-workers-asset-strategy.md.
+import { createHash } from 'node:crypto'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 
@@ -91,9 +92,10 @@ async function buildClient(): Promise<AssetManifest> {
     }
 
     // Fetch everything reachable; CSS adds what its url()s reference (fonts).
+    // three's own files are skipped: its slim module is bundled below.
     let fetched = new Map<string, { body: Uint8Array; contentType: string }>()
     for (let url of queue) {
-      if (!url.startsWith(`${assetAccess.basePath}/`) || fetched.has(url)) continue
+      if (!url.startsWith(`${assetAccess.basePath}/`) || fetched.has(url) || isThreePackage(url)) continue
       let response = await assetServer.fetch(new Request(origin + url))
       if (!response || !response.ok) {
         throw new Error(`Asset crawl failed: ${url} -> ${response?.status ?? 'not served'}`)
@@ -109,6 +111,11 @@ async function buildClient(): Promise<AssetManifest> {
     // Write each file at its published URL and point every reference the
     // browser receives (manifest, import maps, CSS url()) at that URL.
     let published = new Map([...fetched.keys()].map((url) => [url, publishedUrl(url)]))
+    let threeHref = await assetServer.getHref(threeModule)
+    if (!fetched.has(threeHref)) throw new Error(`${threeModule} was not reached by the asset crawl`)
+    let three = await bundleThree()
+    fetched.set(threeHref, three)
+    published.set(threeHref, publishedUrl(threeHref).replace(/[^/]+$/, `three.%40${three.hash}.js`))
     let rename = (url: string) => published.get(url) ?? url
     let bytes = 0
     for (let [url, file] of fetched) {
@@ -134,12 +141,12 @@ async function buildClient(): Promise<AssetManifest> {
       preloads: scriptEntry.preloads.map(rename),
       importMap: {
         ...scriptEntry.importMap,
-        imports: mapValues(scriptEntry.importMap.imports, rename) ?? {},
+        imports: mapValues(withoutThree(scriptEntry.importMap.imports), rename) ?? {},
         scopes: scriptEntry.importMap.scopes
           ? Object.fromEntries(
               Object.entries(scriptEntry.importMap.scopes).map(([scope, map]) => [
                 scope,
-                mapValues(map, rename) ?? {},
+                mapValues(withoutThree(map), rename) ?? {},
               ]),
             )
           : undefined,
@@ -163,6 +170,38 @@ async function buildClient(): Promise<AssetManifest> {
   } finally {
     await assetServer.close()
   }
+}
+
+/**
+ * The islands' slim three.js module (`app/actions/public/three.ts`). remix/assets
+ * serves packages file by file, so `three` would ship whole (two files, ~750
+ * KB minified). Here it is bundled with esbuild instead: one file holding
+ * only what the module re-exports, published at a hash of its own bytes (the
+ * remix/assets fingerprint covers the module's source, not three's version).
+ */
+const threeModule = 'apps/web/app/actions/public/three.ts'
+
+async function bundleThree(): Promise<{ body: Uint8Array; contentType: string; hash: string }> {
+  let result = await esbuild.build({
+    entryPoints: [path.join(repoRoot, threeModule)],
+    bundle: true,
+    format: 'esm',
+    platform: 'browser',
+    minify: true,
+    write: false,
+  })
+  let body = result.outputFiles[0]!.contents
+  let hash = createHash('sha256').update(body).digest('base64url').slice(0, 6)
+  return { body, contentType: 'text/javascript', hash }
+}
+
+function isThreePackage(url: string): boolean {
+  return /\/node_modules\/three\//.test(decodeURIComponent(url))
+}
+
+/** An import map without three's own entries (the bundle needs none). */
+function withoutThree(map: Record<string, string> | undefined): Record<string, string> | undefined {
+  return map && Object.fromEntries(Object.entries(map).filter(([from, to]) => from !== 'three' && !isThreePackage(to)))
 }
 
 const cssUrlPattern = /url\(\s*["']?([^"')]+)["']?\s*\)/g
@@ -268,6 +307,8 @@ const browserOnly: esbuild.Plugin = {
   setup(build) {
     let filter = new RegExp(`^(${BROWSER_ONLY.join('|')})(/|$)`)
     build.onResolve({ filter }, (args) => ({ path: args.path, namespace: 'browser-only' }))
+    // The islands' slim three module only re-exports three: stub it whole.
+    build.onResolve({ filter: /\/public\/three\.ts$/ }, () => ({ path: 'three', namespace: 'browser-only' }))
     build.onLoad({ filter: /.*/, namespace: 'browser-only' }, (args) => ({
       contents: `throw new Error(${JSON.stringify(`${args.path} is browser-only and isn't in the Worker bundle`)})`,
       loader: 'js',

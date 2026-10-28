@@ -43,9 +43,9 @@ export const NeuralField = clientEntry(import.meta.url, function NeuralField(han
     await afterLoadAndIdle()
     if (signal.aborted || !canvas || !layer || !hasWebGL2()) return
 
-    let THREE: typeof import('three')
+    let THREE: typeof import('../../public/three.ts')
     try {
-      THREE = await import('three')
+      THREE = await import('../../public/three.ts')
     } catch {
       return
     }
