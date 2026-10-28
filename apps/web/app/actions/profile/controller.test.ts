@@ -1,10 +1,12 @@
 import * as assert from 'remix/assert'
 import { after, describe, it } from 'remix/test'
 
-import { disposePlatform } from '#platform'
+import { disposePlatform, platform } from '#platform'
 
 import { routes } from '../../routes.ts'
-import { completeLesson, fetchAs, runAt, signIn } from '../../test/auth.ts'
+import { loadCatalog } from '../../content/store.ts'
+import { badgeDefinitions } from '../../progress/badges.ts'
+import { completeLesson, fetchAs, runAt, signIn, testDb } from '../../test/auth.ts'
 
 function get(path: string) {
   return fetchAs(null, path)
@@ -48,7 +50,9 @@ describe('/me and /u/:handle', () => {
     assert.match(html, /LEVEL 2 · FIRST WORDS/)
     assert.match(html, /aria-label="70 neurons"|>70</)
     assert.match(html, /aria-label="First token"/)
-    assert.match(html, /BADGES · 1 OF 12/)
+    // Four general badges plus one per published course (the test-only fixture included).
+    let badges = badgeDefinitions(await loadCatalog(testDb, platform.env.CONTENT)).length
+    assert.match(html, new RegExp(`BADGES · 1 OF ${badges}`))
     assert.match(html, /Loop Closer — locked/)
     assert.match(html, /Write a tagline for a coffee shop on the moon, under 8 words\./)
     assert.match(html, /Tokens &amp; temperature · L6/)

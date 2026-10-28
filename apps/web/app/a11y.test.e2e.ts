@@ -23,6 +23,7 @@ import { outbox } from './auth/mailer.ts'
 import { router } from './router.ts'
 import { routes } from './routes.ts'
 import { ageSessions, completeLesson, requestCode, signIn, testDb } from './test/auth.ts'
+import { plainCourse } from './test/plain-course.ts'
 
 const axeSource = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8')
 
@@ -201,7 +202,7 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await page.goto(routes.auth.verify.index.href(undefined, { searchParams: { token } }))
     await page.getByRole('button', { name: 'Continue to Bits →' }).click()
     await page.waitForURL((url) => !url.pathname.startsWith('/auth'))
-    await page.goto(routes.courses.lesson.index.href({ course: 'context-is-everything', lesson: 'lesson-1' }))
+    await page.goto(routes.courses.lesson.index.href({ course: plainCourse.slug, lesson: plainCourse.lessons[0] }))
     await settled(page)
     await page.locator('form#lesson-complete button[type="submit"]').click()
     // The server-rendered badge moves into the (already present, empty) live region, so it is announced.
@@ -241,9 +242,9 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
 
   it('certificate', async (t) => {
     let { cookie, user } = await signIn(uniqueEmail('cert'), { displayName: 'Cert Holder' })
-    for (let n = 1; n <= 7; n++) await completeLesson(cookie, 'context-is-everything', `lesson-${n}`)
+    for (let lesson of plainCourse.lessons) await completeLesson(cookie, plainCourse.slug, lesson)
     let page = await t.serve(await createTestServer(router.fetch))
-    await page.goto(routes.certificates.show.href({ handle: user.handle, course: 'context-is-everything' }))
+    await page.goto(routes.certificates.show.href({ handle: user.handle, course: plainCourse.slug }))
     await page.getByText('Certificate of completion').first().waitFor()
     await expectClean(page, 'certificate')
   })
