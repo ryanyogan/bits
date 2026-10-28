@@ -6,11 +6,12 @@ import { disposePlatform } from '#platform'
 
 import { routes } from '../../routes.ts'
 import { completeLesson, fetchAs, signIn, testDb } from '../../test/auth.ts'
+import { plainCourse } from '../../test/plain-course.ts'
 
-// context-is-everything has seven lessons and no gated blocks, so a plain
+// The test-only fixture course: three lessons, no gated blocks, so a plain
 // POST completes each one.
-const COURSE = 'context-is-everything'
-const LESSONS = Array.from({ length: 7 }, (_, i) => `lesson-${i + 1}`)
+const COURSE = plainCourse.slug
+const LESSONS = [...plainCourse.lessons]
 
 async function page(cookie: string | null, path: string) {
   let response = await fetchAs(cookie, path)
@@ -32,21 +33,23 @@ describe('certificates and the badge toast', () => {
     let { cookie, user } = await signIn('cert-public@example.com', { displayName: 'Cert Holder' })
     let href = routes.certificates.show.href({ handle: user.handle, course: COURSE })
 
-    await finish(cookie, LESSONS.slice(0, 6))
-    assert.equal((await page(null, href)).status, 404, 'six of seven lessons: no certificate')
+    await finish(cookie, LESSONS.slice(0, -1))
+    assert.equal((await page(null, href)).status, 404, 'all but one lesson: no certificate')
 
-    await finish(cookie, LESSONS.slice(6))
+    await finish(cookie, LESSONS.slice(-1))
     let { status, html } = await page(null, href)
     assert.equal(status, 200)
     assert.match(html, /Certificate of completion/)
-    assert.match(html, /<h1[^>]*>.*Context is everything<\/h1>/)
+    assert.match(html, /<h1[^>]*>.*Plain course<\/h1>/)
     assert.match(html, /Cert Holder/)
     assert.match(html, new RegExp(`@${user.handle}`))
-    assert.match(html, /7 of 7/)
+    assert.match(html, /3 of 3/)
     assert.doesNotMatch(html, /cert-public@example\.com/)
     assert.doesNotMatch(html, /journal/i)
-    // Shareable: canonical-worthy page with its own preview card.
-    assert.match(html, /<meta property="og:image" content="[^"]*\/og\/certificate-context-is-everything\.png\?v=/)
+    // Shareable: a canonical-worthy page with a large preview card. The fixture
+    // course has no card of its own (`pnpm og` never sees it), so it falls
+    // back to the landing card, as any course without one does.
+    assert.match(html, /<meta property="og:image" content="[^"]*\/og\/home\.png\?v=/)
     assert.match(html, /<meta name="twitter:card" content="summary_large_image"/)
     assert.doesNotMatch(html, /name="robots" content="noindex"/)
     // The holder and their progress come back in one batch (decision 035).
@@ -93,10 +96,10 @@ describe('certificates and the badge toast', () => {
 
   it('flashes newly earned badges once, on the page the completion lands on', async () => {
     let { cookie, user } = await signIn('toast@example.com')
-    let first = await completeLesson(cookie, COURSE, 'lesson-1')
+    let first = await completeLesson(cookie, COURSE, LESSONS[0]!)
     assert.equal(first.status, 303)
     let next = first.headers.get('Location')!
-    assert.equal(next, routes.courses.lesson.index.href({ course: COURSE, lesson: 'lesson-2' }))
+    assert.equal(next, routes.courses.lesson.index.href({ course: COURSE, lesson: LESSONS[1]! }))
 
     let landed = await page(cookie, next)
     assert.match(landed.html, /data-badge-notice/)
@@ -109,17 +112,17 @@ describe('certificates and the badge toast', () => {
     assert.doesNotMatch(again.html, /data-badge-notice/)
 
     // Completing a lesson that earns nothing new shows nothing.
-    await completeLesson(cookie, COURSE, 'lesson-2')
-    let quiet = await page(cookie, routes.courses.lesson.index.href({ course: COURSE, lesson: 'lesson-3' }))
+    await completeLesson(cookie, COURSE, LESSONS[1]!)
+    let quiet = await page(cookie, routes.courses.lesson.index.href({ course: COURSE, lesson: LESSONS[2]! }))
     assert.doesNotMatch(quiet.html, /data-badge-notice/)
 
     // The last lesson finishes the course: the toast lands on the course page
     // and links to the certificate.
-    for (let lesson of LESSONS.slice(2, 6)) await completeLesson(cookie, COURSE, lesson)
-    let last = await completeLesson(cookie, COURSE, 'lesson-7')
+    for (let lesson of LESSONS.slice(2, -1)) await completeLesson(cookie, COURSE, lesson)
+    let last = await completeLesson(cookie, COURSE, LESSONS.at(-1)!)
     assert.equal(last.headers.get('Location'), routes.courses.course.index.href({ course: COURSE }))
     let course = await page(cookie, routes.courses.course.index.href({ course: COURSE }))
-    assert.match(course.html, /Badge earned: Context is everything/)
+    assert.match(course.html, new RegExp(`Badge earned: ${plainCourse.badge}`))
     assert.match(course.html, /Your certificate is ready\./)
     assert.match(
       course.html,
@@ -128,7 +131,7 @@ describe('certificates and the badge toast', () => {
   })
 
   it('shows no badge toast to signed-out learners (no badges without an account)', async () => {
-    let response = await completeLesson(null, COURSE, 'lesson-1')
+    let response = await completeLesson(null, COURSE, LESSONS[0]!)
     assert.equal(response.status, 303)
     let cookie = response.headers.getSetCookie().find((c) => c.startsWith('__Host-session='))?.split(';')[0] ?? null
     let landed = await page(cookie, response.headers.get('Location')!)

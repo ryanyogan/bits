@@ -11,8 +11,10 @@ import { disposePlatform } from '#platform'
 import { router } from './router.ts'
 import { routes } from './routes.ts'
 import { requestCode } from './test/auth.ts'
+import { plainCourse } from './test/plain-course.ts'
 
-const course = 'context-is-everything'
+// The test-only fixture course: its lessons have no gated blocks.
+const course = plainCourse.slug
 
 // One flat suite: remix test runs after() around every describe.
 describe('badge toast', () => {
@@ -26,7 +28,7 @@ describe('badge toast', () => {
     await page.getByRole('button', { name: 'Continue to Bits →' }).click()
     await page.waitForURL((url) => !url.pathname.startsWith('/auth'))
 
-    await page.goto(routes.courses.lesson.index.href({ course, lesson: 'lesson-1' }))
+    await page.goto(routes.courses.lesson.index.href({ course, lesson: plainCourse.lessons[0] }))
     await page.getByRole('heading', { level: 1, name: 'Lesson 1' }).waitFor()
 
     await page.evaluate(() => ((window as { navMarker?: number }).navMarker = 1))

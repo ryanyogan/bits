@@ -56,15 +56,20 @@ if (isTest) {
   let { applyMigrations } = await import('@bits/db/test/migrations')
   await applyMigrations(proxy.env.DB)
   let { createD1Database } = await import('@bits/db')
-  let { listCourseFolders } = await import('../../scripts/lib/content-folder.ts')
+  let { coursesDir, listCourseFolders } = await import('../../scripts/lib/content-folder.ts')
   let { uploadCourseFolder } = await import('../../scripts/lib/upload.ts')
   let db = createD1Database(proxy.env.DB)
   // A ready upload for the Temperature lesson's video, so builds link it (decision 029).
   let { seedTestVideo } = await import('../test/videos.ts')
   await seedTestVideo(db, proxy.env.CONTENT)
-  for (let dir of await listCourseFolders()) {
+  // Plus the test-only fixture course (content/fixtures/plain-course/): a few
+  // lessons with no gated blocks, so badge and certificate tests can finish a
+  // course with plain POSTs without depending on any real course's content.
+  // Only tests publish it; dev, seed, CI and production never see it.
+  let plainCourseDir = path.resolve(coursesDir, '../fixtures/plain-course')
+  for (let dir of [...(await listCourseFolders()), plainCourseDir]) {
     let result = await uploadCourseFolder(db, proxy.env.CONTENT, dir, { source: 'test', publish: true })
-    if (!result.published) throw new Error(`content/courses/${result.build.slug} didn't build: ${JSON.stringify(result.build.report)}`)
+    if (!result.published) throw new Error(`${dir} didn't build: ${JSON.stringify(result.build.report)}`)
   }
 }
 
