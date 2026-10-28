@@ -215,6 +215,25 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     }
   })
 
+  it('code and terminal blocks never widen a 360px page (tabs, long lines, type mode)', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    await page.setViewportSize({ width: 360, height: 800 })
+    let overflow = () => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    for (let href of [lesson('first-agent-loop', 'the-loop'), lesson('first-agent-loop', 'the-loop', 'terminal')]) {
+      await page.goto(href)
+      await settled(page)
+      assert.equal(await overflow(), 0, `${href}: no sideways page scroll`)
+    }
+
+    // Type mode: a long typed line scrolls inside the editor, not the page.
+    await page.goto(lesson('first-agent-loop', 'the-loop'))
+    await settled(page)
+    await page.getByRole('button', { name: /Type it/ }).first().click()
+    await page.getByRole('textbox', { name: /^Type / }).fill(`import Anthropic from "@anthropic-ai/sdk"\n\n${'x'.repeat(200)}`)
+    assert.equal(await overflow(), 0, 'type mode: no sideways page scroll')
+    await expectClean(page, 'code editor in type mode', 360)
+  })
+
   it('reward toasts: a composer reward and a badge after completing a lesson', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.goto(lesson('tokens-and-temperature', 'temperature'))

@@ -272,7 +272,12 @@ function renderTypedLine(file: CodeFile, index: number, source: string, typed: s
 const editorStyle = css({
   display: 'flex',
   flexDirection: 'column',
+  // As wide as its column, never wider: inline-size containment keeps the
+  // tab row and long lines out of the column's min-content, so on a phone
+  // they scroll inside the editor instead of widening the page.
+  width: '100%',
   minWidth: 0,
+  contain: 'inline-size',
   borderRadius: 'var(--radius-xl)',
   background: 'var(--well)',
   border: 'var(--border-w) solid var(--line-glass)',
@@ -287,7 +292,17 @@ const toolbarStyle = css({
   borderBottom: 'var(--border-w) solid var(--line-bar)',
   background: 'var(--ink)',
 })
-const fileTabsStyle = css({ display: 'flex', fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', overflowX: 'auto' })
+// The tab row shrinks and scrolls sideways when the names don't fit (the tabs
+// are buttons, so keyboard focus scrolls them into view).
+const fileTabsStyle = css({
+  display: 'flex',
+  flex: '0 1 auto',
+  minWidth: 0,
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-13)',
+  overflowX: 'auto',
+  scrollbarWidth: 'thin',
+})
 const fileTabStyle = css({
   display: 'flex',
   alignItems: 'center',
@@ -353,7 +368,8 @@ const lineStyle = css({
 })
 // Lines still to type: plain --dim instead of faded syntax colours, so the
 // reference stays readable (4.5:1; decision 031) while it reads as "not yet".
-const ghostText = css({ color: 'var(--dim)' })
+// On the focus line's volt tint --dim drops to 4.07:1, so it steps up to --muted there.
+const ghostText = css({ color: 'var(--dim)', '[data-line="focus"] &': { color: 'var(--muted)' } })
 const markerStyle = css({
   flex: 'none',
   width: '4px',

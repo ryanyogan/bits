@@ -104,7 +104,20 @@ files. Revisit with a measurement that shows the gap matters (for example
   one round trip. That step needs `readSessionWithUser`, `loadSession`
   (`app/auth/session.ts`) and `router.ts`, which this pass didn't own; the
   controller test pins the count, so the change will show up there.
-- **Tests**: a unit test that `SegmentedTabs keepPlace` puts
+- **Code and terminal blocks on phones.** At 360px the CodeEditor's tab
+  row (three files), its long lines in type mode, and long `:::terminal`
+  commands widened `/courses/first-agent-loop/the-loop` to ~397px. Each
+  box already scrolled sideways inside, but its content still counted in
+  the lesson column's min-content, and the column's flex ancestors grew to
+  fit it. CodeEditor, `OutputPanel` and `TerminalOutput` now set
+  `contain: inline-size` (and `min-width: 0`; the editor also `width:
+  100%`), so they take their column's width and scroll inside. The file
+  tab list shrinks and scrolls (`min-width: 0`); its tabs are buttons, so
+  focus scrolls them into view. The new axe case in type mode also found
+  `--dim` ghost text at 4.07:1 on the focus line's volt tint; it is
+  `--muted` there now.
+- **Tests**: a 360px no-sideways-scroll case for that lesson in read and
+  terminal mode and in type mode (with axe), a unit test that `SegmentedTabs keepPlace` puts
   `data-rmx-reset-focus/scroll="manual"` on every tab and nothing without
   it (044's e2e already checks focus stays on the tab); axe cases for the
   landing's phone menu sheet and its scrolled, frosted header at 360 and

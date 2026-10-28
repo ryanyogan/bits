@@ -616,6 +616,10 @@ const outputBox = css({
   gap: 'var(--space-0_5)',
   fontSize: 'var(--fs-13)',
   overflowX: 'auto',
+  // Long lines scroll inside the box: containment keeps them out of the
+  // column's min-content, so they never widen the page on a phone.
+  minWidth: 0,
+  contain: 'inline-size',
   '&:focus-visible': { outlineOffset: 'var(--focus-offset-inset)' },
   '@media (max-width: 480px)': { marginLeft: 0 },
 })
@@ -700,6 +704,10 @@ const panelStyle = css({
   background: 'var(--terminal)',
   border: 'var(--border-w) solid var(--line-glass)',
   overflow: 'hidden',
+  // As wide as its column, never wider: long commands and output lines
+  // scroll inside the body instead of widening the page (see outputBox).
+  minWidth: 0,
+  contain: 'inline-size',
 })
 const panelHeader = css({
   display: 'flex',
