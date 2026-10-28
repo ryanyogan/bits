@@ -91,6 +91,13 @@ describe('mail quota and housekeeping (decision 039)', () => {
         )
         .bind(id, status, `videos/${id}.mp4`, id, createdAt, createdAt)
     let quota = (day: string) => d1.prepare('insert into mail_quota (day, sent) values (?, 1)').bind(day)
+    let invite = (id: string, expiresAt: number, acceptedAt: number | null = null) =>
+      d1
+        .prepare(
+          `insert into author_invites (id, token_hash, email, courses, invited_by, expires_at, accepted_at, created_at)
+           values (?1, 'h-' || ?1, 'invitee@example.com', '[]', null, ?2, ?3, ?2 - 7 * 86400000)`,
+        )
+        .bind(id, expiresAt, acceptedAt)
 
     await db.batch([
       session('s-old', now - 1),
@@ -110,6 +117,10 @@ describe('mail quota and housekeeping (decision 039)', () => {
       video('v-ready', 'ready', now - 30 * DAY),
       quota(mailDay(now - 31 * DAY)),
       quota(mailDay(now - 29 * DAY)),
+      invite('i-expired-long-ago', now - 31 * DAY),
+      invite('i-accepted-long-ago', now - 31 * DAY, now - 35 * DAY),
+      invite('i-expired-recently', now - 29 * DAY),
+      invite('i-open', now + 6 * DAY),
     ])
 
     let stale = await listStaleUploads(db, now - retention.staleUploadMs)
@@ -125,6 +136,7 @@ describe('mail quota and housekeeping (decision 039)', () => {
       webauthnChallenges: 1,
       anonymousRuns: 1,
       mailQuota: 1,
+      authorInvites: 2,
       staleUploads: 1,
     })
 
@@ -145,6 +157,7 @@ describe('mail quota and housekeeping (decision 039)', () => {
     ])
     assert.equal(await readMailQuota(db, now - 31 * DAY), null)
     assert.notEqual(await readMailQuota(db, now - 29 * DAY), null)
+    assert.deepEqual(await ids('select id from author_invites'), ['i-expired-recently', 'i-open'])
 
     // A second run finds nothing left to do.
     let again = await deleteExpiredRows(db, now)

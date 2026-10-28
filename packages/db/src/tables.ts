@@ -409,3 +409,28 @@ export interface UploadedPart {
 }
 
 export type Video = Omit<TableRow<typeof videos>, 'parts'> & { parts: UploadedPart[] }
+
+/** An admin's invitation for an email address to become an author (migration 0010, decision 037). */
+export const authorInvites = table({
+  name: 'author_invites',
+  columns: {
+    id: c.text(),
+    /** SHA-256 hex of the link's token. */
+    token_hash: c.text(),
+    email: c.text(),
+    /** Course slugs to join on accept. */
+    courses: c.json(),
+    invited_by: c.text().nullable(),
+    expires_at: c.integer(),
+    accepted_at: c.integer().nullable(),
+    accepted_by: c.text().nullable(),
+    revoked_at: c.integer().nullable(),
+    created_at: c.integer(),
+  },
+  afterRead({ value }) {
+    if (!('courses' in value)) return { value }
+    return { value: { ...value, courses: decodeJsonArray(value.courses) } }
+  },
+})
+
+export type AuthorInvite = Omit<TableRow<typeof authorInvites>, 'courses'> & { courses: string[] }

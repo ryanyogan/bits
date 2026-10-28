@@ -8,6 +8,8 @@ import { createRouter, type RouterContext } from 'remix/router'
 import { platform } from '#platform'
 
 import controller from './actions/controller.tsx'
+import adminAuthorsController from './actions/admin/authors/controller.tsx'
+import adminInviteController from './actions/admin/invite/controller.tsx'
 import apiController from './actions/api/controller.tsx'
 import authEmailController from './actions/auth/email/controller.tsx'
 import authEmailRevertController from './actions/auth/email-revert/controller.tsx'
@@ -122,3 +124,5 @@ router.map(routes.legal, legalController)
 router.map(routes.certificates, certificatesController)
 router.map(routes.cards, cardsController)
 router.map(routes.media, mediaController)
+router.map(routes.admin.authors, adminAuthorsController)
+router.map(routes.admin.invite, adminInviteController)
