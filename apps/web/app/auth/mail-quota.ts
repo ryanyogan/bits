@@ -1,7 +1,8 @@
 // The global daily cap on the mail people can ask for (decision 039): sign-in
-// and step-up codes, and confirm-new-address codes. Each request reserves a
-// slot before its token is stored and its email sent, after the
-// per-address and per-IP limits pass, so a refused request costs nothing.
+// and step-up codes, confirm-new-address codes, and author invites (decision
+// 037). Each request reserves a slot before its token is stored and its email
+// sent, after the per-address and per-IP limits (or, for invites, the admin
+// check) pass, so a refused request costs nothing.
 // The security notice to the old address after an email change is not
 // capped: it only follows a confirmed code, which was.
 import { reserveMailSend, type D1DataTableDatabase } from '@bits/db'
@@ -29,7 +30,7 @@ export function mailDailyCap(): number {
  * refusal of the day logs an error (once per crossing), so an alert on error
  * logs or Workers Issues picks it up.
  */
-export async function reserveMail(db: D1DataTableDatabase, purpose: 'sign-in' | 'email-change'): Promise<boolean> {
+export async function reserveMail(db: D1DataTableDatabase, purpose: 'sign-in' | 'email-change' | 'author-invite'): Promise<boolean> {
   let cap = mailDailyCap()
   let result = await reserveMailSend(db, { now: Date.now(), cap })
   if (result.ok) return true

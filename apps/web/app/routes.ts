@@ -88,6 +88,21 @@ export const routes = route({
     }),
   }),
 
+  // Who may write courses (decision 037).
+  admin: {
+    // Admin only: authors, admins, open invites and course authors. actions/admin/authors/controller.tsx
+    authors: route('/admin/authors', {
+      index: get('/'),
+      invite: post('/invite'), // mail an email address an invite link
+      revoke: post('/revoke'), // withdraw an open invite
+      role: post('/role'), // admin → author, author → learner
+      course: post('/course'), // add or remove an author on a course
+    }),
+    // The invitee's link: GET ?token= shows it, POST accepts (signed in as the
+    // invited address). actions/admin/invite/controller.tsx
+    invite: form('/admin/invite'),
+  },
+
   // JSON endpoints: actions/api/controller.tsx
   api: route('/api', {
     run: post('/run'),

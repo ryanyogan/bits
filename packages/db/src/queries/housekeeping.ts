@@ -15,6 +15,8 @@ export const retention = {
   anonymousRunsMs: 7 * DAY,
   /** Daily mail counters (decision 039). */
   mailQuotaDays: 30,
+  /** Author invites stay 30 days past expiry, accepted or not, for the admin page (decision 037). */
+  authorInvitesMs: 30 * DAY,
   /** R2 aborts an unfinished multipart upload 7 days after it starts; the row is closed then too. */
   staleUploadMs: 7 * DAY,
 }
@@ -45,6 +47,7 @@ export interface HousekeepingCounts {
   webauthnChallenges: number
   anonymousRuns: number
   mailQuota: number
+  authorInvites: number
   staleUploads: number
 }
 
@@ -56,6 +59,7 @@ export interface HousekeepingCounts {
  * - WebAuthn challenges past `expires_at`;
  * - signed-out prompt runs older than 7 days;
  * - mail counters older than 30 days;
+ * - author invites 30 days after they expired, accepted or not;
  * - and marks `uploading` videos older than R2's 7-day abort window
  *   `failed` (the row stays: its r2_key is never reused).
  */
@@ -71,6 +75,7 @@ export async function deleteExpiredRows(db: D1DataTableDatabase, now: number): P
       .prepare('delete from exercise_attempts where user_id is null and created_at < ?')
       .bind(now - retention.anonymousRunsMs),
     d1.prepare('delete from mail_quota where day < ?').bind(mailDay(now - retention.mailQuotaDays * DAY)),
+    d1.prepare('delete from author_invites where expires_at <= ?').bind(now - retention.authorInvitesMs),
     d1
       .prepare(
         `update videos set status = 'failed', upload_id = null, updated_at = ?1
@@ -85,6 +90,7 @@ export async function deleteExpiredRows(db: D1DataTableDatabase, now: number): P
     webauthnChallenges: changes[2] ?? 0,
     anonymousRuns: changes[3] ?? 0,
     mailQuota: changes[4] ?? 0,
-    staleUploads: changes[5] ?? 0,
+    authorInvites: changes[5] ?? 0,
+    staleUploads: changes[6] ?? 0,
   }
 }

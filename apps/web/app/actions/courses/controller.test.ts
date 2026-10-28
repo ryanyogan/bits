@@ -97,9 +97,12 @@ describe('catalog and course pages', () => {
   it('counts each track within the current search', () => {
     let all = filterCourses({ q: '' })
     assert.equal(all.counts.all, courses.length)
-    assert.equal(all.counts.foundations, 2)
+    // Counted from the published catalog (which includes the test-only
+    // fixture course), so adding a course doesn't break this.
+    assert.equal(all.counts.foundations, courses.filter((c) => c.track === 'Foundations').length)
     let agents = filterCourses({ track: 'agents', q: '' })
-    assert.equal(agents.results.length, 2)
+    assert.equal(agents.results.length, courses.filter((c) => c.track === 'Agents').length)
+    assert.ok(agents.results.length > 0)
     assert.equal(agents.counts.all, courses.length)
   })
 
@@ -119,7 +122,7 @@ describe('catalog and course pages', () => {
     assert.match(html, /role="search"/)
     assert.match(html, /<nav aria-label="Filter by track"/)
     assert.match(html, /aria-current="true"[^>]*>(?:(?!<\/a>).)*All/s)
-    assert.match(html, /8 courses · all free/)
+    assert.ok(html.includes(resultLabel(courses.length)), resultLabel(courses.length))
     assert.match(html, /aria-live="polite"/)
     for (let course of courses) assert.ok(html.includes(`href="/courses/${course.slug}"`), course.slug)
     assert.match(html, /Write a course/)

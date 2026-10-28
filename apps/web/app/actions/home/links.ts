@@ -1,7 +1,7 @@
 // Where the landing and sign-in pages' calls to action go. Fixed lesson
 // URLs, so these pages render without loading the catalog; the lessons are
 // content/courses/what-is-an-llm/01-say-hi-to-claude.md and
-// content/courses/first-agent-loop/04-the-loop.md.
+// content/courses/first-agent-loop/03-the-loop.md.
 import { routes } from '../../routes.ts'
 
 /** "Lesson 1" everywhere: the first lesson of the first course. */
