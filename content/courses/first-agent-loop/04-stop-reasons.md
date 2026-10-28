@@ -11,7 +11,7 @@
 #   'tool_use' | 'pause_turn' | 'refusal' | 'model_context_window_exceeded'
 # - Code typechecked against @anthropic-ai/sdk 1.3.0 (2026-10-27).
 title: "Stop reasons"
-order: 5
+order: 4
 minutes: 7
 xp: 40
 module: Building the loop

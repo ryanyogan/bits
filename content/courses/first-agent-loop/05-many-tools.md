@@ -15,7 +15,7 @@
 # - Code typechecked against @anthropic-ai/sdk 1.3.0 and run against Open-Meteo (2026-10-27).
 #   Terminal output is example output, not a recorded run.
 title: "Many tools at once"
-order: 6
+order: 5
 minutes: 8
 xp: 40
 module: Building the loop
@@ -29,7 +29,7 @@ own: it can't ask for a forecast until it knows where the city is.
 You don't write that order anywhere. The descriptions say what each tool
 needs and returns, and the model plans the chain from them. Your loop doesn't
 change at all. You just keep a list of tools and a way to find each one by
-name.
+name: lesson 2's `runTool`, with the handler map swapped for a registry.
 
 :::code{file="tools.ts" lang="ts" copy highlight="5-7" label="the registry"}
 import type Anthropic from "@anthropic-ai/sdk";
@@ -57,14 +57,12 @@ declare const geocode: Tool, getForecast: Tool; // defined in the checkpoint
 
 ---
 
-Ask about **two** cities and something else happens. The two geocode calls
-don't depend on each other, so Claude asks for both **in the same turn**:
-two `tool_use` blocks in one response. That's parallel tool use, and it's on
-by default.
-
-Your loop already handles it. `Promise.all(calls.map(runTool))` runs every
-call at once and sends all the results back in one user message. Each result
-carries its `tool_use_id`, so the order they finish in doesn't matter.
+Ask about **two** cities and Claude asks for both geocodes **in the same
+turn**. You met parallel tool use in the tools course
+(`/courses/give-your-model-tools/many-calls-some-fail`), and your loop
+already follows its rules: `Promise.all(calls.map(runTool))` runs every call
+and sends all the results back in one user message. What's new in a loop is
+what parallel calls save: **turns**.
 
 :::terminal{cmd='npx tsx agent.ts "Is it warmer in Lyon or Leeds this weekend?"' summary="example output · 3 turns · 4 tool calls"}
 [ion]turn 1[quiet] stop_reason=[volt]"tool_use"[quiet] → geocode(Lyon), geocode(Leeds)
@@ -84,25 +82,25 @@ line in the system prompt, “Only batch tool calls that are independent of
 each other.” If one slips through, return an `is_error` result for it, and
 Claude asks again next turn.
 
-:::quiz{id="parallel-results" xp=15}
-Claude asked for geocode(Lyon) and geocode(Leeds) in one turn. Leeds came back first. How do you send the results?
+:::quiz{id="dependent-batch" xp=15}
+In one turn, Claude asks for geocode(Lyon) and, alongside it, get_forecast with coordinates it guessed. What should your loop do?
 
-- [x] Both in one user message, in any order, each with its own tool_use_id
-  Right. The ids tie each result to its call, so the order doesn't matter. One message keeps Claude happy to batch calls next time.
-- [ ] Leeds now, then Lyon in a second message when it arrives
-  Not quite. Results for one turn go back together, in a single user message.
-- [ ] Both in one message, but they must be sorted into the order Claude asked
-  Not quite. Sorting does no harm, but the tool_use_id is what matches each result to its call.
+- [ ] Run both. Claude knows what it's doing.
+  Not quite. The forecast would be for wherever the guessed coordinates land, and Claude would build its answer on it.
+- [x] Run geocode, answer the forecast call with an is_error result, and add “Only batch tool calls that are independent of each other” to the system prompt
+  Right. Every call still gets an answer, Claude reissues the forecast next turn with real coordinates, and the prompt line makes it rarer.
+- [ ] Drop the forecast call and send only the geocode result
+  Not quite. Every tool_use needs a tool_result, or the API rejects the next request.
 :::
 
 ---
 
-So should you hand an agent fifty tools? Anthropic's advice runs the other
-way: **fewer, sharper tools**. Overlapping tools make the model hesitate
-between them, and every definition costs input tokens on every turn.
-Merge related actions into one tool with an `action` input, and when you
-have many, prefix names by service, like `weather_forecast` and
-`calendar_create`.
+So should you hand an agent fifty tools? The tools course's advice holds
+(`/courses/give-your-model-tools/descriptions-that-work`): **fewer, sharper
+tools**, with names prefixed by service when you have many. A loop raises
+the stakes. Overlapping tools make the model hesitate at every step, not
+once, and every definition is re-sent on every turn, so a long tool list
+costs you once per turn, for the whole run.
 
 :::quiz{id="tool-count" xp=10}
 Your agent has get_weather, get_forecast and weather_lookup, which all do roughly the same thing. It often picks the wrong one. What's the best fix?
