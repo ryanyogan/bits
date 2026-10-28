@@ -7,8 +7,7 @@ summary: Plan, act, observe, repeat. Write the 30 lines of code every agent is b
 outcomes:
   - Explain the plan → act → observe loop in your own words.
   - Write a working tool-calling loop in about 30 lines.
-  - Debug a loop that never ends.
-  - Give an agent memory, limits and logs before it ships.
+  - Debug a loop that never ends, and put limits and logs on it.
 cover:
   pattern: rays
   sigil: loop

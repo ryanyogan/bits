@@ -84,11 +84,6 @@ export async function runTool(block: Anthropic.ToolUseBlock) {
 }
 :::
 
-:::code{file=".env.example" lang="env" copy}
-# Get a key at console.anthropic.com
-ANTHROPIC_API_KEY=sk-ant-…
-:::
-
 :::terminal{cmd='npx tsx agent.ts "Weather in Chicago?"'}
 [ion]turn 1[quiet] stop_reason=[volt]"tool_use"[quiet] → get_weather
 [ion]turn 2[quiet] stop_reason=[volt]"end_turn"
@@ -102,9 +97,16 @@ ANTHROPIC_API_KEY=sk-ant-…
 :::
 
 The traces above are example output, with a log line added per turn; your
-run's wording will differ, and the weather is the stub in `tools.ts`. Two
-turns: one to ask for the weather, one to answer. Now break it on purpose.
-Delete ==line 31== and run it again.
+run's wording will differ, and the weather is the stub in `tools.ts`. To run
+it yourself, you need an API key in your environment:
+
+:::code{file=".env.example" lang="env" copy}
+# Get a key at platform.claude.com
+ANTHROPIC_API_KEY=sk-ant-…
+:::
+
+Two turns: one to ask for the weather, one to answer. Now break it on
+purpose. Delete ==line 31== and run it again.
 
 :::quiz{id="break-the-loop" xp=10}
 Predict first — does it loop forever, or crash?

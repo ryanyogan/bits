@@ -185,6 +185,9 @@ export async function runTool(
 }
 :::
 
+The last file is the chat. `history` outlives each question, so every
+follow-up sees the whole conversation so far.
+
 :::code{file="chat.ts" lang="ts" copy}
 import * as readline from "node:readline/promises";
 import type Anthropic from "@anthropic-ai/sdk";
@@ -202,10 +205,16 @@ rl.close();
 :::
 
 :::terminal{cmd="npx tsx chat.ts 2> run.log"}
-[quiet]you › [text]Should I bike to work in Chicago tomorrow? I leave at 8.
-Tomorrow looks dry in Chicago (2% chance of rain) with wind up to 11 mph and a low near 50°F, so it'll be cool at 8. Bike, and bring a layer.
+[quiet]you › [text]Should I bike to work in Chicago
+[text]tomorrow? I leave at 8.
+Tomorrow looks dry in Chicago (2% chance of
+rain) with wind up to 11 mph and a low near
+50°F, so it'll be cool at 8. Bike, and bring
+a layer.
 [quiet]you › [text]And the day after?
-Thursday's low is milder at 57°F, but the chance of rain rises to 18%. Still a fine day to bike; pack a light jacket.
+Thursday's low is milder at 57°F, but the
+chance of rain rises to 18%. Still a fine day
+to bike; pack a light jacket.
 [quiet]you ›
 :::
 

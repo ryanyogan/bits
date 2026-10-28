@@ -43,7 +43,7 @@ are dozens of Springfields), and the loop had **no limit**.
 **Fix the result first.** The tool result is the model's only view of what
 happened, so write errors for it. Say what went wrong and what to try next.
 
-:::compare{left="Opaque result" right="Actionable result" illustrative}
+:::compare{left="Unhelpful result" right="Helpful result" illustrative}
 - prompt "geocode(\"Springfield\") failed"
 - left "Error"
 - right "Found 30+ places called Springfield. Ask the user which state or country they mean, or pass e.g. \"Springfield, Illinois\"."
