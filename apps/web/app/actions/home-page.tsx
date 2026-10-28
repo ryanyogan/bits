@@ -68,7 +68,7 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
           <>
             {/* The hero h1 (the LCP element) is Unbounded 800, outside the global preloads. */}
             {displayFont ? (
-              <link rel="preload" as="font" type="font/woff2" href={displayFont} crossOrigin="anonymous" />
+              <link data-rmx-key={`preload:${displayFont}`} rel="preload" as="font" type="font/woff2" href={displayFont} crossOrigin="anonymous" />
             ) : null}
             <style>{pageCss}</style>
           </>

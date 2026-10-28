@@ -176,12 +176,12 @@ describe('router smoke test', () => {
     assert.equal(script.status, 200)
     assert.match(script.headers.get('Content-Type') ?? '', /javascript/)
 
-    let stylesheet = html.match(/<link rel="stylesheet" href="([^"]+tokens[^"]*)"/)![1]!
+    let stylesheet = html.match(/<link data-rmx-key="[^"]+" rel="stylesheet" href="([^"]+tokens[^"]*)"/)![1]!
     let css = await request(stylesheet)
     assert.equal(css.status, 200)
     assert.match(await css.text(), /--volt/)
 
-    let font = html.match(/<link rel="preload" as="font" type="font\/woff2" href="([^"]+)"/)![1]!
+    let font = html.match(/<link data-rmx-key="[^"]+" rel="preload" as="font" type="font\/woff2" href="([^"]+)"/)![1]!
     assert.equal((await request(font)).status, 200)
   })
 })

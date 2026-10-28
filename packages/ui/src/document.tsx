@@ -65,6 +65,15 @@ const LAYER_ORDER = '@layer reset, tokens, base, rmx-reset, rmx, app;'
  * Inline styles need no nonce: the policy allows them (`style-src
  * 'unsafe-inline'`), since Remix's `<style data-rmx-style>` tags carry none.
  *
+ * Every `<link>` and `<script>` here takes a `data-rmx-key` (rel + href).
+ * Client navigation diffs `<head>` and pairs unkeyed siblings by position,
+ * so a page with one extra preload shifts every later link onto its
+ * neighbour: each gets its `rel`/`href` rewritten in place and refetched
+ * (a modulepreload briefly a stylesheet of JS, a font a module). Keyed, a
+ * link is kept when the next page has it and replaced when it doesn't.
+ * Nonced ones keep their `nonce` (`data-rmx-preserve-attrs`): browsers hide
+ * it after load, so the diff would otherwise rewrite it every navigation.
+ *
  * Inside `WebAnalytics` it adds Cloudflare's Web Analytics beacon (decision
  * 033), as Cloudflare documents it for manual setup: a module script
  * (deferred, fetched with CORS) with the site token in `data-cf-beacon`. It
@@ -89,7 +98,7 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta name="theme-color" content="#07080D" />
           <title>{title}</title>
           {description ? <meta name="description" content={description} /> : null}
-          {url ? <link rel="canonical" href={url} /> : null}
+          {url ? <link data-rmx-key="canonical" rel="canonical" href={url} /> : null}
           {/* Link previews (Open Graph; X reads these too). */}
           <meta property="og:type" content="website" />
           <meta property="og:title" content={title} />
@@ -106,22 +115,24 @@ export function Document(handle: Handle<DocumentProps>) {
             </>
           ) : null}
           <meta name="twitter:card" content={image ? 'summary_large_image' : 'summary'} />
-          <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+          <link data-rmx-key="icon" rel="icon" type="image/svg+xml" href="/favicon.svg" />
           <style>{LAYER_ORDER}</style>
           {fontPreloads.map((href) => (
-            <link key={href} rel="preload" as="font" type="font/woff2" href={href} crossOrigin="anonymous" />
+            <link key={href} data-rmx-key={`preload:${href}`} rel="preload" as="font" type="font/woff2" href={href} crossOrigin="anonymous" />
           ))}
           {stylesheets.map((href) => (
-            <link key={href} rel="stylesheet" href={href} />
+            <link key={href} data-rmx-key={`stylesheet:${href}`} rel="stylesheet" href={href} />
           ))}
           {head}
           <ImportMap value={entry.importMap} nonce={nonce} />
           {entry.preloads.map((href) => (
-            <link key={href} rel="modulepreload" href={href} nonce={nonce} />
+            <link key={href} data-rmx-key={`modulepreload:${href}`} rel="modulepreload" href={href} nonce={nonce} data-rmx-preserve-attrs="nonce" />
           ))}
-          <script type="module" src={entry.href} nonce={nonce}></script>
+          <script data-rmx-key="entry" data-rmx-preserve-attrs="nonce" type="module" src={entry.href} nonce={nonce}></script>
           {analyticsToken ? (
             <script
+              data-rmx-key="web-analytics"
+              data-rmx-preserve-attrs="nonce"
               type="module"
               src={WEB_ANALYTICS_BEACON_SRC}
               data-cf-beacon={JSON.stringify({ token: analyticsToken })}

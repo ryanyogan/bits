@@ -53,7 +53,7 @@ describe('lesson page and author preview', () => {
     // Narrow screens get the mode tabs at the top of the lesson.
     assert.equal(count(html, /aria-label="Lesson format"/), 2)
     // The sub-bar title's face is preloaded with the two every page gets (decision 023).
-    assert.match(html, /<link rel="preload" as="font" type="font\/woff2" href="[^"]*unbounded-latin-500-normal\.woff2"/)
+    assert.match(html, /<link data-rmx-key="[^"]+" rel="preload" as="font" type="font\/woff2" href="[^"]*unbounded-latin-500-normal\.woff2"/)
 
     let user = await signIn('shell@example.com')
     let signedIn = await page(lessonHref(temperature), user.cookie)

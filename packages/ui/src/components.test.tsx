@@ -297,7 +297,7 @@ describe('Document', () => {
     let html = await renderToString(
       <Document assets={assets} title="Tokens · Bits" description="Learn tokens." url="https://bits.example/courses/tokens" siteName="Bits" />,
     )
-    assert.match(html, /<link rel="canonical" href="https:\/\/bits.example\/courses\/tokens"/)
+    assert.match(html, /<link data-rmx-key="canonical" rel="canonical" href="https:\/\/bits.example\/courses\/tokens"/)
     assert.match(html, /<meta property="og:title" content="Tokens · Bits"/)
     assert.match(html, /<meta property="og:description" content="Learn tokens."/)
     assert.match(html, /<meta property="og:url" content="https:\/\/bits.example\/courses\/tokens"/)

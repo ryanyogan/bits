@@ -111,7 +111,7 @@ export function Layout(handle: Handle<LayoutProps>) {
             {preloadFonts.map((name) => {
               let href = platform.assets.fonts[name]
               return href ? (
-                <link key={name} rel="preload" as="font" type="font/woff2" href={href} crossOrigin="anonymous" />
+                <link key={name} data-rmx-key={`preload:${href}`} rel="preload" as="font" type="font/woff2" href={href} crossOrigin="anonymous" />
               ) : null
             })}
             {head}

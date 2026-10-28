@@ -49,6 +49,31 @@ describe('client navigation', () => {
     assert.equal(await complete.isDisabled(), true, 'the gated key is locked again')
   })
 
+  it('keeps head links in place across pages with different preloads', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    // Home preloads one more font than /courses, which used to shift every
+    // later link onto its neighbour and rewrite its rel/href (refetching it).
+    await page.goto(routes.home.href())
+    await page.evaluate(() => {
+      let w = window as { headRewrites?: string[]; navMarker?: number }
+      w.navMarker = 1
+      w.headRewrites = []
+      new MutationObserver((records) => {
+        for (let r of records) {
+          if (r.target instanceof HTMLLinkElement && ['rel', 'href', 'as'].includes(r.attributeName ?? '')) {
+            w.headRewrites!.push(`${r.attributeName} ${r.oldValue} → ${r.target.getAttribute(r.attributeName!)}`)
+          }
+        }
+      }).observe(document.head, { attributes: true, attributeOldValue: true, subtree: true })
+    })
+    await page.locator(`a[href="${routes.courses.index.href()}"]`).first().click()
+    await page.waitForURL(`**${routes.courses.index.href()}`)
+    await page.getByRole('heading', { level: 1 }).first().waitFor()
+
+    assert.equal(await page.evaluate(() => (window as { navMarker?: number }).navMarker), 1, 'navigated on the client')
+    assert.deepEqual(await page.evaluate(() => (window as { headRewrites?: string[] }).headRewrites), [])
+  })
+
   it('resets the pending submit key after a 422 re-render', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.goto(routes.login.index.href())
