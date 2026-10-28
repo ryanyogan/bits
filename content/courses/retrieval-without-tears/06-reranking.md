@@ -51,7 +51,7 @@ read the question, saw it was about **age and eligibility**, and moved the
 As of October 2026, Voyage's current rerankers are `rerank-3` (most
 accurate) and `rerank-3-lite` (faster and cheaper). It's one HTTP call:
 
-:::code{file="rerank.ts" lang="ts" copy highlight="9-10"}
+:::code{file="rerank.ts" lang="ts" copy highlight="9" label="the request"}
 // Rerank candidate chunks against the question. Needs VOYAGE_API_KEY.
 export async function rerank(query: string, documents: string[], topK = 20) {
   const res = await fetch("https://ai.mongodb.com/v1/rerank", {

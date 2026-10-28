@@ -35,7 +35,7 @@ Here's a toy you can run. Real vectors have about a thousand numbers; these
 have three, **made up by hand** so the idea is easy to see. Think
 of the three numbers as “about money”, “about delivery” and “about pets”.
 
-:::code{file="toy.ts" lang="ts" copy highlight="8-14"}
+:::code{file="toy.ts" lang="ts" copy highlight="9-15" label="cosine similarity"}
 // Hand-made 3-number "embeddings", for illustration only.
 const chunks: Record<string, number[]> = {
   "Refund policy": [0.9, 0.1, 0.0],

@@ -61,7 +61,40 @@ async function main() {
 main();
 :::
 
-:::code{file="search.ts" lang="ts" copy highlight="12-18"}
+:::code{file="voyage.ts" lang="ts" copy}
+const BASE = "https://ai.mongodb.com/v1"; // Voyage via MongoDB Atlas
+
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(BASE + path, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${process.env.VOYAGE_API_KEY}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Voyage ${path}: ${res.status} ${await res.text()}`);
+  return (await res.json()) as T;
+}
+
+export async function embed(texts: string[], inputType: "query" | "document") {
+  const json = await post<{ data: { embedding: number[] }[] }>("/embeddings", {
+    input: texts, model: "voyage-4", input_type: inputType,
+  });
+  return json.data.map((d) => d.embedding);
+}
+
+export async function rerank(query: string, documents: string[], topK: number) {
+  const json = await post<{ data: { index: number; relevance_score: number }[] }>("/rerank", {
+    query, documents, model: "rerank-3", top_k: topK,
+  });
+  return json.data; // best first
+}
+:::
+
+The ask step searches, then answers. `answer.ts` is the one from lesson 7.
+
+:::code{file="search.ts" lang="ts" copy highlight="12-20" label="retrieve wide, rerank narrow"}
 import { readFile } from "node:fs/promises";
 import type { Chunk } from "./chunk";
 import { embed, rerank } from "./voyage";
@@ -99,36 +132,8 @@ async function main() {
 main();
 :::
 
-:::code{file="voyage.ts" lang="ts" copy}
-const BASE = "https://ai.mongodb.com/v1"; // Voyage via MongoDB Atlas
-
-async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(BASE + path, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${process.env.VOYAGE_API_KEY}`,
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`Voyage ${path}: ${res.status} ${await res.text()}`);
-  return (await res.json()) as T;
-}
-
-export async function embed(texts: string[], inputType: "query" | "document") {
-  const json = await post<{ data: { embedding: number[] }[] }>("/embeddings", {
-    input: texts, model: "voyage-4", input_type: inputType,
-  });
-  return json.data.map((d) => d.embedding);
-}
-
-export async function rerank(query: string, documents: string[], topK: number) {
-  const json = await post<{ data: { index: number; relevance_score: number }[] }>("/rerank", {
-    query, documents, model: "rerank-3", top_k: topK,
-  });
-  return json.data; // best first
-}
-:::
+You need two keys: one for Claude and a Voyage model API key from MongoDB
+Atlas.
 
 :::code{file=".env.example" lang="env" copy}
 # Claude: console.anthropic.com · Voyage: a model API key from MongoDB Atlas
@@ -151,8 +156,13 @@ E-bike batteries have a 2-year warranty from delivery, covering capacity that dr
 **Taking it to production on Cloudflare.** `index.json` is fine for a few
 thousand chunks. Past that, swap it for **Vectorize**, Cloudflare's vector
 database. Create the index with the same shape as your vectors, because
-dimensions and metric can't change later:
-`npx wrangler vectorize create docs --dimensions=1024 --metric=cosine`.
+dimensions and metric can't change later.
+
+:::code{file="vectorize.sh" lang="sh" copy}
+npx wrangler vectorize create docs \
+  --dimensions=1024 --metric=cosine
+:::
+
 Upsert each chunk with its id, vector and a little metadata (source, text),
 then query it with `topK`. Limits to plan for (as of October 2026): 1,536
 dimensions at most, 10 KiB of metadata per vector, ids up to 64 bytes, and

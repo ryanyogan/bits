@@ -53,7 +53,7 @@ in lesson 7.
 Here's a paragraph chunker with one paragraph of overlap. It measures size in
 characters, which is close enough for chunking:
 
-:::code{file="chunk.ts" lang="ts" copy highlight="10-17"}
+:::code{file="chunk.ts" lang="ts" copy highlight="10-17" label="the packing loop"}
 export type Chunk = { id: string; source: string; text: string };
 
 // Pack paragraphs into chunks of up to maxChars, repeating the last

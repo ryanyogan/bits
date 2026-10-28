@@ -34,7 +34,7 @@ Twenty questions, right chunk in the top 5 for seventeen of them: recall@5
 is 17 ÷ 20 = **0.85**. Anthropic's contextual retrieval tests used exactly
 this, at k = 20, and reported the misses (1 − recall@20).
 
-:::code{file="eval.ts" lang="ts" copy highlight="9-13"}
+:::code{file="eval.ts" lang="ts" copy highlight="9-13" label="hit if the chunk is in the top k"}
 type Case = { question: string; answerId: string }; // the chunk that answers it
 
 export async function recallAt(

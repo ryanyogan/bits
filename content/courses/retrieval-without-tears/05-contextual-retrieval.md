@@ -53,7 +53,7 @@ keeps that cheap: the whole document goes first and is cached, so each
 chunk's call re-reads it from the cache at a tenth of the input price.
 (Caching only kicks in above a minimum length, 512 tokens on Haiku 5.5.)
 
-:::code{file="contextualize.ts" lang="ts" copy highlight="12-16"}
+:::code{file="contextualize.ts" lang="ts" copy highlight="15-16" label="document first, cached"}
 import Anthropic from "@anthropic-ai/sdk";
 
 const client = new Anthropic();

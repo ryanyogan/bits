@@ -54,7 +54,7 @@ The usual method is **reciprocal rank fusion** (RRF). Each chunk gets
 chunk that's high in both lists beats one that tops only one. The 60 comes
 from the paper that introduced it; it stops the top spot from dominating.
 
-:::code{file="fuse.ts" lang="ts" copy highlight="5-7"}
+:::code{file="fuse.ts" lang="ts" copy highlight="5-7" label="1 ÷ (60 + rank)"}
 // Merge ranked lists of chunk ids (best first) with reciprocal rank fusion.
 export function fuse(lists: string[][], k = 60): string[] {
   const scores = new Map<string, number>();

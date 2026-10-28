@@ -31,7 +31,7 @@ carries a `source` (a URL or any id), a `title` and the text. Turn on
 `citations`, and Claude's reply comes back split into pieces, each pointing at
 the result it used. No special prompting needed.
 
-:::code{file="answer.ts" lang="ts" copy highlight="14-20"}
+:::code{file="answer.ts" lang="ts" copy highlight="14-20" label="one search result per hit"}
 import Anthropic from "@anthropic-ai/sdk";
 
 const client = new Anthropic();
