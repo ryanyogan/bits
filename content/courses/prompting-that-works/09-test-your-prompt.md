@@ -52,7 +52,8 @@ code-graded eval. They're regex patterns run on your prompt, on the server.
 ---
 
 Here's a whole eval in a few lines. It runs four test messages through a
-labelling prompt and counts exact matches.
+labelling prompt and counts exact matches. The output panel replays an
+example run: it's recorded output, not a live call to Claude.
 
 :::code{file="eval.ts" lang="ts" copy highlight="3-8"}
 import { label } from "./label"; // your prompt, wrapped in one Claude call

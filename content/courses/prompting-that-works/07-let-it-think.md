@@ -100,7 +100,7 @@ the problem **in its reply** before answering, and to put the final answer in
 `<answer>` tags so your code can find it. (On models where thinking is always
 on, skip this and rely on thinking.)
 
-Here's a puzzle that trips up a one-pass answer. Meeting A runs **9:40 to
+Here's a small puzzle with a trap in it. Meeting A runs **9:40 to
 10:25**, B runs **10:15 to 11:00**, and C runs **11:00 to 11:30**. Which ones
 overlap? Ask Claude to reason first, and to give the answer in tags.
 
@@ -120,8 +120,10 @@ Ask Claude to reason it through, then answer in <answer> tags
 :::
 
 Check the answer yourself: A and B overlap from 10:15 to 10:25, and B and C
-only **touch** at 11:00. If Claude says B and C overlap, that's the one-pass
-slip this lesson is about.
+only **touch** at 11:00. Claude Haiku 5.5 often gets this one right even
+without the reasoning, so don't expect a dramatic difference on a puzzle this
+small. The habit pays off on harder problems, and the `<answer>` tags pay off
+every time: your code can read the answer and skip the working.
 
 :::rabbithole
 - read "Thinking" by="Anthropic" url="https://platform.claude.com/docs/en/build-with-claude/thinking"
