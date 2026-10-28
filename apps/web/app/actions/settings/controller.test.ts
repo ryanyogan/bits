@@ -127,12 +127,19 @@ describe('/settings', () => {
 
   it('deletes the account only when the handle is typed', async () => {
     let { cookie: doomed } = await signIn('doomed@example.com', { displayName: 'Doomed' })
+    // An open author invite to the address goes with the account (decision 037).
+    await testDb.d1
+      .prepare(`insert into author_invites (id, token_hash, email, courses, expires_at, created_at) values ('inv-doomed', 'hash-doomed', 'doomed@example.com', '[]', ?1, ?1)`)
+      .bind(Date.now() + 60_000)
+      .run()
     let wrong = await fetchAs(doomed, routes.settings.deleteAccount.href(), post({ confirm: 'nope' }))
     assert.equal(wrong.status, 422)
     assert.match(await wrong.text(), /Type doomed exactly to confirm\./)
     let right = await fetchAs(doomed, routes.settings.deleteAccount.href(), post({ confirm: '@Doomed' }))
     assert.equal(right.status, 303)
     assert.equal(await findUserByEmail(testDb, 'doomed@example.com'), null)
+    let invites = await testDb.d1.prepare(`select count(*) as n from author_invites where email = 'doomed@example.com'`).first<{ n: number }>()
+    assert.equal(invites?.n, 0)
     assert.equal((await fetchAs(doomed, routes.settings.index.href())).status, 303)
   })
 })

@@ -95,8 +95,8 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null; analytics: b
           If an admin invites you to write courses, we store your email, a hash of the invite link, the courses it
           offers, which admin sent it, and when it was accepted or withdrawn. The invite is sent through Cloudflare's
           email service and counts towards the same daily email limit as sign-in codes. The record is deleted 30 days
-          after the invite expires (invites last 7 days), accepted or not, and deleting your account doesn't shorten
-          that. {APP_TITLE} admins can see the email addresses of authors, admins and anyone with an open invite.
+          after the invite expires (invites last 7 days), accepted or not, or straight away when you delete your
+          account. {APP_TITLE} admins can see the email addresses of authors, admins and anyone with an open invite.
         </p>
 
         <h2>Cookies and your browser</h2>

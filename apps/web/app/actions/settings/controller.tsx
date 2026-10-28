@@ -1,5 +1,6 @@
 import {
   deletePasskey,
+  deleteUserAndInvites,
   deleteUserSessions,
   findUserByHandle,
   listAttempts,
@@ -283,8 +284,9 @@ export default createController(routes.settings, {
       if (!parsed.success || parsed.value.confirm !== user.handle.toLowerCase()) {
         return invalid(context, user, 'danger', { confirm: `Type ${user.handle} exactly to confirm.` }, ['confirm'])
       }
-      // Identities, passkeys and sessions cascade from the user row (decision 008).
-      await context.db.delete(users, user.id)
+      // Identities, passkeys and sessions cascade from the user row (decision
+      // 008); author invites to the address go with it (decision 037).
+      await deleteUserAndInvites(context.db, user.id, user.email)
       context.session.destroy()
       return redirect(routes.home.href(), 303)
     },

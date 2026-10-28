@@ -79,8 +79,8 @@ make someone an author, put authors on courses and take both away again.
 - **Retention:** `deleteExpiredRows` (the daily housekeeping batch,
   decision 039) deletes invites 30 days after they expire, accepted or
   not (`retention.authorInvitesMs`). Deleting an account sets the
-  invite's `invited_by`/`accepted_by` to null but doesn't delete invites
-  addressed to that email; they go on the same schedule. The privacy page
+  invite's `invited_by`/`accepted_by` to null and deletes every invite
+  addressed to that email in the same batch (`deleteUserAndInvites`). The privacy page
   says this, and that admins see authors' and invitees' addresses.
 
 ## Consequences

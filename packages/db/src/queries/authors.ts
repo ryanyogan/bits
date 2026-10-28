@@ -270,3 +270,15 @@ export async function removeCourseAuthor(
     .run()
   return result.meta.changes > 0
 }
+
+/**
+ * Deletes a user and every author invite sent to their address, in one
+ * batch. Identities, passkeys and sessions cascade from the user row.
+ */
+export async function deleteUserAndInvites(db: D1DataTableDatabase, userId: string, email: string): Promise<void> {
+  let d1 = db.d1
+  await db.batch([
+    d1.prepare(`delete from author_invites where lower(email) = lower(?1)`).bind(email),
+    d1.prepare(`delete from users where id = ?1`).bind(userId),
+  ])
+}
