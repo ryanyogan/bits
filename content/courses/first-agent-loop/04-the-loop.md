@@ -1,7 +1,19 @@
 ---
+# sources (checked 2026-10-27):
+# - Anthropic docs, Handle tool calls / How tool use works (append the assistant content,
+#   answer every tool_use with a tool_result, loop while stop_reason is "tool_use")
+#   https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls
+# - Anthropic docs, Stop reasons (tool_use vs end_turn; the rest in lesson 5)
+#   https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons
+# - Anthropic docs, Models overview (claude-sonnet-5-5); max_tokens counts thinking too, so
+#   16000 leaves room (Claude API skill guidance for non-streaming requests)
+# - Prefill is rejected on current models, and an unanswered tool_use is a 400: either way
+#   the request without line 31 fails.
+# - Code typechecked against @anthropic-ai/sdk 1.3.0 (2026-10-27). Terminal output is example
+#   output, not a recorded run.
 title: The loop
 order: 4
-minutes: 10
+minutes: 8
 xp: 60
 module: Building the loop
 replies:
@@ -12,8 +24,9 @@ replies:
 ::ask[why does the loop check stop_reason?]{points-at="agent.ts"}
 
 Every reply comes with a reason the model stopped talking. If it’s
-`"tool_use"`, it wants you to run a tool and hand back the result. Anything
-else means it’s finished.
+`"tool_use"`, it wants you to run a tool and hand back the result. For now,
+treat anything else as finished. The next lesson shows the traps hiding in
+“anything else”.
 
 :::code{file="agent.ts" lang="ts" copy type-mode highlight="12-32" label="the loop" focus=31}
 import Anthropic from "@anthropic-ai/sdk";
@@ -26,11 +39,11 @@ type Msg = Anthropic.MessageParam;
 export async function agent(task: string) {
   const messages: Msg[] = [{ role: "user", content: task }];
 
-  // the loop: think → act → observe → repeat
+  // the loop: plan → act → observe → repeat
   while (true) {
     const res = await client.messages.create({
       model: "claude-sonnet-5-5",
-      max_tokens: 1024,
+      max_tokens: 16000,
       tools,
       messages,
     });
@@ -71,11 +84,6 @@ export async function runTool(block: Anthropic.ToolUseBlock) {
 }
 :::
 
-:::code{file=".env.example" lang="env" copy}
-# Get a key at console.anthropic.com
-ANTHROPIC_API_KEY=sk-ant-…
-:::
-
 :::terminal{cmd='npx tsx agent.ts "Weather in Chicago?"'}
 [ion]turn 1[quiet] stop_reason=[volt]"tool_use"[quiet] → get_weather
 [ion]turn 2[quiet] stop_reason=[volt]"end_turn"
@@ -88,8 +96,17 @@ ANTHROPIC_API_KEY=sk-ant-…
 [ion]→ end_turn    [quiet]"41°F and overcast in Chicago."
 :::
 
-Two turns: one to ask for the weather, one to answer. Now break it on purpose.
-Delete ==line 31== and run it again.
+The traces above are example output, with a log line added per turn; your
+run's wording will differ, and the weather is the stub in `tools.ts`. To run
+it yourself, you need an API key in your environment:
+
+:::code{file=".env.example" lang="env" copy}
+# Get a key at platform.claude.com
+ANTHROPIC_API_KEY=sk-ant-…
+:::
+
+Two turns: one to ask for the weather, one to answer. Now break it on
+purpose. Delete ==line 31== and run it again.
 
 :::quiz{id="break-the-loop" xp=10}
 Predict first — does it loop forever, or crash?
