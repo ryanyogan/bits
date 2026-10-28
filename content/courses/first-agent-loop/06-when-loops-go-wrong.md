@@ -41,7 +41,7 @@ are dozens of Springfields), and the loop had **no limit**.
 ---
 
 **Fix the result first.** You learned to write errors that say what went
-wrong and what to try next (`/courses/give-your-model-tools/many-calls-some-fail`).
+wrong and what to try next ([Many calls, some fail](/courses/give-your-model-tools/many-calls-some-fail)).
 In a loop the price of skipping that goes up: a vague error doesn't cost one
 bad answer, it costs every turn until something stops the run.
 

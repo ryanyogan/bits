@@ -28,17 +28,17 @@ are in thirty seconds, with the lesson to revisit if one feels shaky.
 
 **Describe it.** Claude sees a tool's `name`, `description` and
 `input_schema`, never your code, and the description does most of the work.
-Revisit `/courses/give-your-model-tools/describing-a-tool` and
-`/courses/give-your-model-tools/descriptions-that-work`.
+Revisit [Describing a tool](/courses/give-your-model-tools/describing-a-tool) and
+[Descriptions Claude follows](/courses/give-your-model-tools/descriptions-that-work).
 
 **Run it.** A reply with `stop_reason: "tool_use"` holds `tool_use` blocks.
 You push Claude's whole reply back unchanged, then one user message with a
 `tool_result` per call, matched by `tool_use_id`. Revisit
-`/courses/give-your-model-tools/one-round-trip`.
+[One round trip](/courses/give-your-model-tools/one-round-trip).
 
 **Fail politely.** A failed call still gets a result, marked `is_error: true`,
 with a message that says what to try next. Revisit
-`/courses/give-your-model-tools/many-calls-some-fail`.
+[Many calls, some fail](/courses/give-your-model-tools/many-calls-some-fail).
 
 ---
 

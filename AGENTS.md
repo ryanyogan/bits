@@ -207,6 +207,8 @@ the new page into the old DOM. Write for that:
 
 ## Responses (decisions 020, 027)
 
+- HTML never gets an `ETag` or `Last-Modified` (decision 045: the
+  per-response CSP nonce makes a 304 unsafe).
 - `app/middleware/headers.ts` adds the security headers and the HTML
   Cache-Control default (`private, no-cache`; `no-store` under `/settings`,
   `/me`, `/login`, `/auth` and `/logout`). Set your own Cache-Control on a
@@ -528,8 +530,14 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   `app/content/limits.ts` (100 per block, 500 per lesson; `check.ts`
   clamps again). Ownership is claimed atomically in `recordCourseBuild`;
   don't add read-then-write ownership checks around it.
+- Lesson prose links: `[text](/courses/...)` or `https` only (anything
+  else is a build error). Prompt `draft`/`placeholder`/`example` strings
+  take `\n` for line breaks.
 - Tests: the test platform uploads and publishes every folder in
   `content/courses/` at startup, so a broken course fails every test run.
+  It also publishes `content/fixtures/plain-course/` (tests only): tests
+  that need ungated lessons use it (`app/test/plain-course.ts`), never a
+  real course's lessons.
 
 ## Live prompts (decision 019)
 

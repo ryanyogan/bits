@@ -59,7 +59,7 @@ declare const geocode: Tool, getForecast: Tool; // defined in the checkpoint
 
 Ask about **two** cities and Claude asks for both geocodes **in the same
 turn**. You met parallel tool use in the tools course
-(`/courses/give-your-model-tools/many-calls-some-fail`), and your loop
+([Many calls, some fail](/courses/give-your-model-tools/many-calls-some-fail)), and your loop
 already follows its rules: `Promise.all(calls.map(runTool))` runs every call
 and sends all the results back in one user message. What's new in a loop is
 what parallel calls save: **turns**.
@@ -96,7 +96,7 @@ In one turn, Claude asks for geocode(Lyon) and, alongside it, get_forecast with 
 ---
 
 So should you hand an agent fifty tools? The tools course's advice holds
-(`/courses/give-your-model-tools/descriptions-that-work`): **fewer, sharper
+([Descriptions Claude follows](/courses/give-your-model-tools/descriptions-that-work)): **fewer, sharper
 tools**, with names prefixed by service when you have many. A loop raises
 the stakes. Overlapping tools make the model hesitate at every step, not
 once, and every definition is re-sent on every turn, so a long tool list
