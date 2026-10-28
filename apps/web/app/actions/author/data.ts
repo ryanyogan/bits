@@ -202,12 +202,12 @@ export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' :
 
 /** Block reference rows (artboard lines 213–221), with the attrs the build accepts. */
 export const blocks = [
-  { name: 'plain markdown', attrs: '—', what: 'A tutor message in chat mode, a comment block in terminal mode. --- starts a new message; ::ask[…] adds the learner’s line.' },
-  { name: ':::prompt', attrs: 'id, xp, model?, temperature?', what: 'The “Your turn” composer. Each “- check” line is a live goal; “- run” requires specific runs before it passes.' },
-  { name: ':::code', attrs: 'file, lang, copy, type-mode, highlight="12-32"', what: 'The editor: tabs, syntax highlighting, copy button, optional retype-it mode.' },
+  { name: 'plain markdown', attrs: '—', what: 'A tutor message in chat mode, a comment block in terminal mode. --- starts a new message; ::ask[…] adds the learner’s line. **strong**, `code`, ==mark== and [links](/courses/…) work inline; links are site paths or https:// URLs.' },
+  { name: ':::prompt', attrs: 'id, xp, model?, temperature?', what: 'The “Your turn” composer. Each “- check” line is a live goal; “- run” requires specific runs before it passes. In “- draft”, “- placeholder” and “- example” strings, \\n is a line break.' },
+  { name: ':::code', attrs: 'file, lang, copy, type-mode, highlight="12-32", label?, focus?', what: 'The editor: tabs, syntax highlighting, copy button, optional retype-it mode. Adjacent blocks become tabs; close each with its own ::: line.' },
   { name: ':::quiz', attrs: 'id, xp, multiple?', what: 'Single or multiple choice, marked with [x]. Explanations go under each option.' },
   { name: ':::odds / :::tokenizer', attrs: 'prompt, slider / sample?, illustrative?', what: 'Built-in toys: next-token probability bars, live tokenizer.' },
-  { name: ':::terminal', attrs: 'cmd', what: 'A scripted run log shown in the output panel.' },
+  { name: ':::terminal', attrs: 'cmd, ask?, summary?', what: 'A scripted run log shown in the output panel. Right after :::code it becomes that editor’s Run output, ask and summary included.' },
   { name: ':::nexttoken', attrs: 'prompt, illustrative?', what: 'A reply forming token by token. One line per step: " Paris" 0.92 | " the":0.03 " a":0.02' },
   { name: ':::training', attrs: 'prompt, illustrative?', what: 'A scrubber over training snapshots with a loss sparkline. Lines: - step 500 loss=6.1 "output"' },
   { name: ':::attention', attrs: 'caption?, illustrative?', what: 'Click a token to see what it attends to. A tokens "The" " cat" … line, then - from=7 to=1 w=0.62 (0-based).' },

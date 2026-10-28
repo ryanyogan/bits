@@ -21,7 +21,7 @@ import type {
   TrainingBlock,
 } from '../content.ts'
 import type { LessonView } from '../lesson-view.ts'
-import { codeEditorProps, exerciseProps } from './exercise.ts'
+import { codeEditorProps, exerciseProps, runLines } from './exercise.ts'
 import { inlineNodes } from './inline.tsx'
 
 /**
@@ -60,7 +60,7 @@ export function TerminalMode(handle: Handle<{ view: LessonView }>) {
           <div mix={editorFill}>
             <CodeEditor {...editor} />
           </div>
-          {code.run ? <OutputPanel command={code.run.cmd} lines={code.run.lines} /> : null}
+          {code.run ? <OutputPanel command={code.run.cmd} lines={runLines(code.run)} /> : null}
         </section>
       </div>
     )
@@ -156,7 +156,13 @@ export function terminalEntries(blocks: Block[]): TerminalEntry[] {
         })
         break
       case 'code':
-        // Shown in the editor pane.
+        // Shown in the editor pane, Run output included. A run with an ask
+        // or a summary also gets its command line in the session (the
+        // output stays in the pane).
+        if (block.run && (block.run.ask || block.run.summary)) {
+          if (block.run.ask) entries.push({ kind: 'learner', text: block.run.ask })
+          entries.push({ kind: 'command', command: block.run.cmd, output: [], summary: block.run.summary })
+        }
         break
     }
   }

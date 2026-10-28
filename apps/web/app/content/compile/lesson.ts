@@ -267,6 +267,8 @@ function compileBlocks(
           let previous = blocks[blocks.length - 1]
           if (previous?.type === 'code' && !previous.run) {
             previous.run = { cmd: block.cmd, lines: block.lines }
+            if (block.ask) previous.run.ask = block.ask
+            if (block.summary) previous.run.summary = block.summary
             break
           }
         }
@@ -363,6 +365,18 @@ interface RawBody {
 function rawBody(node: ContainerDirective, lines: string[], report: FileReport): RawBody {
   let start = node.position?.start.line ?? 1
   let end = node.position?.end.line ?? lines.length
+  // A block inside a raw body means this one was never closed: its `:::`
+  // went missing and the next block's closing line ended both.
+  let nested = node.children.find(
+    (child): child is Directive =>
+      (child.type === 'containerDirective' || child.type === 'leafDirective') &&
+      ((BLOCK_NAMES as readonly string[]).includes(child.name) || child.name === 'ask'),
+  )
+  if (nested) {
+    let at = nested.position?.start.line ?? start
+    report.error(`:::${node.name} is never closed: add a ::: line before ${fence(nested)}${nested.name} on line ${at}`, start)
+    return { lines: lines.slice(start, at - 1), first: start + 1 }
+  }
   let closing = lines[end - 1]?.trim() ?? ''
   if (end === start || !/^:{3,}$/.test(closing)) {
     report.error(`:::${node.name} is never closed: add a ::: line after it`, start)
@@ -435,6 +449,8 @@ function blockXp(xp: number, report: FileReport, line: number): number {
 
 const QUOTED = String.raw`"((?:[^"\\]|\\.)*)"`
 const unquote = (text: string) => text.replace(/\\(.)/g, '$1')
+// draft, placeholder and example strings take \n for a line break, like the
+// toys' strings (decisions 018, 021); labels and messages stay one line.
 
 function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats: CompiledLesson['stats']): PromptBlock | undefined {
   let line = node.position?.start.line ?? 1
@@ -505,7 +521,7 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
           report.error('example lines look like: - example T=0 "Brewed beyond gravity."', at)
           return
         }
-        examples.push({ temperature, text: unquote(match[2]!) })
+        examples.push({ temperature, text: unescapeText(match[2]!) })
         return
       }
       case 'draft':
@@ -515,8 +531,8 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
           report.error(`${keyword} lines look like: - ${keyword} "Write a tagline for…"`, at)
           return
         }
-        if (keyword === 'draft') draft = unquote(match[1]!)
-        else placeholder = unquote(match[1]!)
+        if (keyword === 'draft') draft = unescapeText(match[1]!)
+        else placeholder = unescapeText(match[1]!)
         return
       }
       case 'success': {
@@ -628,7 +644,9 @@ function compileCode(node: Directive, raw: RawBody, report: FileReport): CodeBlo
     if (!match || from < 1 || to < from || to > body.lines.length) {
       report.error(`highlight="${range}" should be a line range inside the ${body.lines.length} lines, like "12-32"`, line)
     } else {
-      codeFile.highlight = { from, to, label: attrs.string('label') ?? `lines ${from}–${to}` }
+      // The editor footer already says "lines X–Y"; the label is what they are.
+      let label = attrs.string('label')
+      codeFile.highlight = label ? { from, to, label } : { from, to }
     }
   }
   let focus = attrs.number('focus')
@@ -1135,10 +1153,15 @@ function inline(nodes: PhrasingContent[], report: FileReport, line: number): Par
       case 'delete':
         pushText(plainText(node.children))
         break
-      case 'link':
-        report.warning('links show as plain text for now', at)
-        pushText(plainText(node.children))
+      case 'link': {
+        let text = plainText(node.children).replace(/\s*\n\s*/g, ' ').trim()
+        let problem = linkProblem(node.url)
+        if (problem) report.error(`link “${text || node.url}” ${problem}`, at)
+        else if (!text) report.error(`link to ${node.url} has no text: write [text](${node.url})`, at)
+        else out.push({ link: text, href: node.url })
+        if (problem && text) pushText(text)
         break
+      }
       case 'textDirective':
         // `word:thing` in prose parses as a directive; put the text back.
         pushText(`:${node.name}${node.children.length ? plainText(node.children) : ''}`)
@@ -1155,6 +1178,20 @@ function inline(nodes: PhrasingContent[], report: FileReport, line: number): Par
   let end = out.length - 1
   if (typeof out[end] === 'string') out[end] = (out[end] as string).trimEnd()
   return out.filter((part) => part !== '')
+}
+
+/**
+ * Why a prose link's URL isn't allowed, or undefined when it is: a path on
+ * this site (`/courses/…`) or an https URL. Not `//host` or `/\\host` (both
+ * leave the origin), and no other scheme (javascript:, data:, http:, mailto:).
+ */
+export function linkProblem(url: string): string | undefined {
+  if (/[\s\\]/.test(url) || /[\u0000-\u001f\u007f]/.test(url)) return `has a URL with spaces, control characters or a backslash`
+  if (url.startsWith('/')) {
+    return url.startsWith('//') ? `points at “${url}”, which leaves the site: write https://… for other sites` : undefined
+  }
+  if (isHttpsUrl(url)) return undefined
+  return `points at “${url}”: links must be a path on this site (/courses/…) or an https:// URL`
 }
 
 function plainText(nodes: readonly (PhrasingContent | MdParagraph)[]): string {

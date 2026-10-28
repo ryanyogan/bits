@@ -29,6 +29,8 @@ Shared rules:
 
 - **Quoted strings** take `\"`, `\\` and `\n` (a line break). In
   `:::compare` a quoted string may also run over several source lines.
+  The same `\n` escape works in `:::prompt` `- draft`, `- placeholder` and
+  `- example` strings (018).
 - **`illustrative`**: a bare attribute on `nexttoken`, `training`,
   `attention`, `compare` and `tokenizer`, or `illustrative: true` in the
   lesson frontmatter for every toy in the lesson (a block can opt out with

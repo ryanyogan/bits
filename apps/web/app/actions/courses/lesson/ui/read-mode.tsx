@@ -16,7 +16,7 @@ import { attachedBlock, LearnerBubble, TutorMessage } from '@bits/ui/tutor'
 import type { Block, QuizBlock } from '../content.ts'
 import type { LessonView } from '../lesson-view.ts'
 import { TokenizerToy } from '../public/tokenizer-toy.tsx'
-import { codeEditorProps, exerciseProps } from './exercise.ts'
+import { codeEditorProps, exerciseProps, runLines } from './exercise.ts'
 import { inlineNodes } from './inline.tsx'
 
 /**
@@ -77,7 +77,8 @@ function ReadBlock(handle: Handle<{ view: LessonView; block: Block; index: numbe
         return (
           <div mix={codeStyle}>
             <CodeEditor {...editor} />
-            {block.run ? <OutputPanel command={block.run.cmd} lines={block.run.lines} /> : null}
+            {block.run?.ask ? <LearnerBubble variant="plain">{block.run.ask}</LearnerBubble> : null}
+            {block.run ? <OutputPanel command={block.run.cmd} lines={runLines(block.run)} /> : null}
           </div>
         )
       }
@@ -88,7 +89,7 @@ function ReadBlock(handle: Handle<{ view: LessonView; block: Block; index: numbe
             <div mix={attachedBlock}>
               <OutputPanel
                 command={block.cmd}
-                lines={block.summary ? [...block.lines, [['muted', block.summary]]] : block.lines}
+                lines={runLines(block)}
               />
             </div>
           </>

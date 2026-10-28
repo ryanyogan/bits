@@ -26,7 +26,12 @@ Constraints:
   - Each `NN-*.md` file is one lesson, with frontmatter for title, order,
     minutes, xp, module, video and chapters.
   - Lesson bodies are plain paragraphs, which become tutor turns. `---`
-    splits turns.
+    splits turns. Inline: `**strong**`, `` `code` ``, `==mark==` and
+    `[text](url)` links. A link is a site path (`/courses/…`: a normal
+    client-routed link that prefetches on intent, decision 042) or an
+    `https://` URL (`rel="noopener noreferrer"`); any other URL
+    (`javascript:`, `data:`, `http:`, `mailto:`, `//host`, a backslash) is
+    a build error at its line.
   - Remark directives add the interactive blocks: `::ask[…]`,
     `:::prompt`, `:::code`, `:::terminal`, `:::quiz`, `:::odds` and
     `:::tokenizer` (and, since 021, the lesson toys `:::nexttoken`,
@@ -34,7 +39,13 @@ Constraints:
     `:::terminal`, the body is read as plain lines (`- check "label" /re/i`,
     `- [x] answer`), not as markdown.
   - Adjacent `:::code` blocks form one tabbed editor. A `:::terminal` right
-    after them is its Run output.
+    after them is its Run output, and keeps its `ask` and `summary`.
+    A raw-body block (`:::code`, `:::terminal`, `:::prompt`, …) that holds
+    another block was never closed, and is reported at its line.
+  - In `:::prompt`, `- draft`, `- placeholder` and `- example` strings take
+    `\n` for a line break, like the toys' strings (021). Check labels and
+    `- success` messages stay one line. A `:::code` `highlight` without a
+    `label` stores none (the editor footer already shows the range).
   - Captions are `assets/<lesson>.vtt`.
   - The source line numbers come straight from the file, so errors point
     at the right line.
