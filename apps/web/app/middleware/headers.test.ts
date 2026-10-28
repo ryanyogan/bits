@@ -19,6 +19,9 @@ describe('response headers', () => {
       assert.equal(response.headers.get('Referrer-Policy'), 'strict-origin-when-cross-origin', path)
       assert.match(response.headers.get('Permissions-Policy') ?? '', /camera=\(\)/, path)
       assert.equal(response.headers.get('Cache-Control'), 'private, no-cache', path)
+      // No validator: a 304 can't pair a cached body with a fresh nonce (decision 045).
+      assert.equal(response.headers.get('ETag'), null, path)
+      assert.equal(response.headers.get('Last-Modified'), null, path)
       let csp = response.headers.get('Content-Security-Policy') ?? ''
       let html = await response.text()
       let nonce = /'nonce-([A-Za-z0-9+/=]+)'/.exec(csp)?.[1]

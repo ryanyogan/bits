@@ -189,6 +189,53 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await expectClean(page, 'training scrubber at the end')
   })
 
+  it('landing: the phone menu sheet, and the frosted header after a scroll (decision 040)', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    await page.setViewportSize({ width: 360, height: 800 })
+    await page.goto(routes.home.href())
+    await settled(page)
+    let header = page.locator('header').first()
+    await header.getByRole('button', { name: 'Menu' }).click()
+    let sheet = page.locator('#landing-nav-sheet:popover-open')
+    await sheet.waitFor()
+    // The sheet lists the page's links and Sign in.
+    assert.ok(await sheet.getByRole('link', { name: 'Sign in' }).isVisible(), 'Sign in is in the sheet')
+    await expectClean(page, 'landing menu sheet open', 360)
+    await page.keyboard.press('Escape')
+    await page.locator('#landing-nav-sheet:popover-open').waitFor({ state: 'detached' })
+
+    // Past the 120px frost range the header is sticky, opaque and blurred
+    // (a scroll-driven animation, so it follows the scroll position).
+    for (let width of [360, 1440]) {
+      await page.setViewportSize({ width, height: width === 360 ? 800 : 900 })
+      await page.evaluate(() => window.scrollTo(0, 600))
+      await page.waitForFunction(() => {
+        let bar = document.querySelector('header')
+        return bar != null && bar.getBoundingClientRect().top === 0 && getComputedStyle(bar).backgroundColor !== 'rgba(0, 0, 0, 0)'
+      })
+      await expectClean(page, `landing header scrolled @ ${width}`, width)
+    }
+  })
+
+  it('code and terminal blocks never widen a 360px page (tabs, long lines, type mode)', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    await page.setViewportSize({ width: 360, height: 800 })
+    let overflow = () => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    for (let href of [lesson('first-agent-loop', 'the-loop'), lesson('first-agent-loop', 'the-loop', 'terminal')]) {
+      await page.goto(href)
+      await settled(page)
+      assert.equal(await overflow(), 0, `${href}: no sideways page scroll`)
+    }
+
+    // Type mode: a long typed line scrolls inside the editor, not the page.
+    await page.goto(lesson('first-agent-loop', 'the-loop'))
+    await settled(page)
+    await page.getByRole('button', { name: /Type it/ }).first().click()
+    await page.getByRole('textbox', { name: /^Type / }).fill(`import Anthropic from "@anthropic-ai/sdk"\n\n${'x'.repeat(200)}`)
+    assert.equal(await overflow(), 0, 'type mode: no sideways page scroll')
+    await expectClean(page, 'code editor in type mode', 360)
+  })
+
   it('reward toasts: a composer reward and a badge after completing a lesson', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.goto(lesson('tokens-and-temperature', 'temperature'))

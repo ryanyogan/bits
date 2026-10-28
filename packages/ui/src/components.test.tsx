@@ -85,6 +85,31 @@ describe('URL-backed selection', () => {
     assert.equal((body.match(/aria-current="page"/g) ?? []).length, 1)
   })
 
+  it('keepPlace leaves focus and scroll alone on every tab (decision 044)', async () => {
+    let items = [
+      { label: 'Sign in', href: '/login', current: true },
+      { label: 'Create account', href: '/login?mode=signup' },
+    ]
+    let kept = (await renderToString(<SegmentedTabs label="Account" flavour="account" keepPlace items={items} />)).replace(
+      /<head>[\s\S]*<\/head>/,
+      '',
+    )
+    let links = kept.match(/<a\b[^>]*>/g) ?? []
+    assert.equal(links.length, 2)
+    for (let link of links) {
+      assert.match(link, /data-rmx-reset-focus="manual"/)
+      assert.match(link, /data-rmx-reset-scroll="manual"/)
+      // Still a plain, prefetchable page link: without JS it is an ordinary load.
+      assert.match(link, /href="\/login/)
+      assert.match(link, /data-rmx-prefetch="intent"/)
+    }
+    assert.match(kept, /<a[^>]*aria-current="page"[^>]*>Sign in</)
+
+    // Without it the runtime's defaults apply (focus and scroll reset per page).
+    let plain = await renderToString(<SegmentedTabs label="Account" flavour="account" items={items} />)
+    assert.doesNotMatch(plain, /data-rmx-reset-(?:focus|scroll)/)
+  })
+
   it('renders a selected filter pill as a link with aria-current', async () => {
     let html = await renderToString(
       <FilterPill href="?track=all" count={8} selected>

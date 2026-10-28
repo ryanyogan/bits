@@ -9,6 +9,7 @@
     "./fonts/*": "./src/fonts/*",
     "./lib/drafts": "./src/lib/drafts.ts",
     "./lib/prefetch": "./src/lib/prefetch.ts",
+    "./lib/states": "./src/lib/states.ts",
     "./*": "./src/*.tsx"
   },
   "scripts": {

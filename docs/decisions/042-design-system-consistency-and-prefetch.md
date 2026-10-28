@@ -68,7 +68,7 @@ An audit of `packages/ui/src` found the following:
   is fetched again on navigation. What the prefetch buys is the page's
   modules, CSS and font preloads, warm in the HTTP cache. That is the main
   cost of an island-heavy page such as a lesson. An `ETag` on HTML would
-  let navigation revalidate the prefetched copy instead (left to the app).
+  let navigation revalidate the prefetched copy instead (decision 045: not done, and why).
 
 ### Tokens for strokes, focus and control sizes (`tokens.css`)
 

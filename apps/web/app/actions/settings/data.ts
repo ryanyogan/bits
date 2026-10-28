@@ -1,14 +1,7 @@
 // Account data for Settings (docs/design/spec/pages/Settings.md), read from
-// D1: linked identities, passkeys, live sessions and an open email change.
-import {
-  findPendingEmailChange,
-  listIdentities,
-  listPasskeys,
-  listUserSessions,
-  type D1DataTableDatabase,
-  type PasskeyRow,
-  type User,
-} from '@bits/db'
+// D1: linked identities, passkeys, live sessions and an open email change,
+// in one batch (`readSettingsRows`; decisions 035 and 045).
+import { readSettingsRows, type D1DataTableDatabase, type PasskeyRow, type User } from '@bits/db'
 
 import { sha256Hex } from '../../auth/crypto.ts'
 
@@ -45,12 +38,9 @@ export async function getAccountSettings(
   currentSessionId: string,
 ): Promise<AccountSettings> {
   let now = Date.now()
-  let [identities, sessions, currentHash, passkeys, pending] = await Promise.all([
-    listIdentities(db, user.id),
-    listUserSessions(db, user.id, now),
+  let [{ identities, sessions, passkeys, pendingEmailChange: pending }, currentHash] = await Promise.all([
+    readSettingsRows(db, user.id, now),
     sha256Hex(currentSessionId),
-    listPasskeys(db, user.id),
-    findPendingEmailChange(db, user.id, now),
   ])
   let provider = (kind: 'github' | 'google', name: string): SignInMethod => {
     let identity = identities.find((row) => row.provider === kind)

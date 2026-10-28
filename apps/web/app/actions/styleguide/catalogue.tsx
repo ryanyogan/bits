@@ -952,11 +952,18 @@ export function Catalogue(handle: Handle) {
           <Specimen caption="OddsBars (island) — drag the slider; follows the composer's temperature">
             <OddsBars id="sg-odds" context="Moon café tagline:" candidates={oddsCandidates} />
           </Specimen>
-          <Specimen caption="RewardToast — lesson · system · RewardRegion (island, listens for bits:reward)">
+          <Specimen caption="RewardToast — lesson · badge (decision 028: the hex replaces the check) · system · RewardRegion (island, listens for bits:reward)">
             <RewardToast
               xp={40}
               message="Same prompt, different answers — and now you know why."
               next={{ href: '#sg-lessons', label: 'Next: Top-p →' }}
+            />
+            <RewardToast
+              xp={0}
+              title="Badge earned: First token"
+              message="It’s on your profile now."
+              badge={{ name: 'First token', glyph: '1st', color: 'var(--volt)' }}
+              next={{ href: '#sg-lessons', label: 'See your badges →' }}
             />
             <RewardToast variant="system" xp={40} message="Prompt passed all 3 checks" />
             <RewardRegion dismissAfter={6000} />
