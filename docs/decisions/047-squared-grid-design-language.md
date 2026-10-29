@@ -210,23 +210,42 @@ section and the footer are bands of that frame:
    `RuledSection` or cell, so the grid stays put while the region updates.
    The landing has no such region.
 
-## Left for phase 2
 
-- The page files of courses, course, lesson, me, profile, settings, login,
-  author, admin, legal and certificates. They inherit the tokens and
-  components, so they are square and calm already, but they are not yet on
-  the grid (cards with gaps, own gutters).
-- Components outside this phase's list that still carry the old geometry:
-  - `tutor.tsx`: the learner bubble's literal `16px 16px 4px 16px` radius;
-  - `lesson-node.tsx`: nodes are squares now, so pick `--radius-round` if
-    they should stay circles;
-  - `video-player.tsx`: the big play button is now square;
-  - `reward-toast.tsx`, `prompt-composer.tsx`, `terminal.tsx` and
-    `code-editor.tsx`: check for `--shadow-*` or blur that went to `none`;
-  - `stat-tile`, `hex-badge`, `tag`: fine by token, but worth a look.
-- `catalog-bg.tsx` (courses) and `brain-canvas.tsx` (login) have literal
-  colours for the old accents, and catalog-bg has round blobs.
-- The styleguide's "System" sheet still describes some old values (type
-  and spacing are unchanged; radius and colour rows were updated).
-- `pnpm og`: the OG cards render from the same tokens. They were
-  regenerated in this change (see the commit).
+## Status
+
+- **Phase 1** (design system and landing) and **phase 2** (every other
+  page: catalog, course, lesson, me, profile, certificates, settings,
+  sign-in, legal, author, admin, status pages) are done. The phase-2 lane
+  decisions are in `047-catalog-notes.md`. The old geometry left in
+  components (tutor bubble, play button, catalog and sign-in canvases) is
+  gone too. The `Layout` main clips the `100vw` rules, so pages no longer
+  clip their own overflow.
+- **Phase 3** (consolidation, 2026-10-29):
+  - **One strip.** `RuledSection` and the new `Panel` share one header
+    strip (`packages/ui/src/lib/strip.ts`). `RuledSection labelAs="h2"`
+    (with `labelId`) makes the strip label the section's heading. `Panel`
+    is a block inside a cell, such as the profile's columns or the course
+    aside. It has the strip with a real heading, then a padded or `flush`
+    body. These replace the profile's local `Panel` and the course page's
+    `stripHeading`.
+  - **The strip draws the hairline under itself.** Content under a strip
+    never draws a top border. A `CellGrid` right under a strip takes
+    `top={false}`, and `panelListStyle` rows draw only the lines between
+    rows. Before this change, a grid under a strip drew a second hairline
+    beside the strip's (landing "How it works" and "You", course outcomes,
+    author list), and the two translucent lines read as one thick line.
+  - **One phone inset.** At 480px and below, every page keeps
+    `--frame-inset` (12px) and its rails, the lesson page included. The
+    lesson page used to drop its gutter and rails there. We checked both
+    at 360px. With the inset, the lesson's rails and `+` marks line up
+    with the AppBar's, as they do on every other page. The prose column
+    goes from about 320px to about 296px, which still holds 30–40
+    characters a line at 17px. The toys still fit without scrolling
+    sideways. Consistent rails matter more than 24px on one page.
+  - **EmptyState** is a flat hairline box on `--well`. It has a mono `∅`
+    and is left-aligned to the cell edge. The `bare` variant stays for a
+    state that fills a cell or band by itself.
+- **Kept on purpose:** the transactional emails (`app/auth/*-mail.ts`)
+  keep their rounded inline styles. They render in mail clients, not on
+  the grid. The live-dot pulse rings in `base.css` are motion on round
+  dots, not depth.
