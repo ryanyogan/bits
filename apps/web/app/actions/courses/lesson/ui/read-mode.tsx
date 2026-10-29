@@ -11,17 +11,21 @@ import { RabbitHole } from '@bits/ui/rabbit-hole'
 import { OutputPanel } from '@bits/ui/terminal'
 import { TrainingScrubber } from '@bits/ui/training-scrubber'
 import { attachedBlock, LearnerBubble, TutorMessage } from '@bits/ui/tutor'
+import { VideoPlayer } from '@bits/ui/video-player'
 
-import { quizAsAsk, type AskBlock, type Block } from '../content.ts'
+import { draftKey } from '../../../../progress/draft-keys.ts'
+import { hasVideo, quizAsAsk, type AskBlock, type Block } from '../content.ts'
 import type { LessonView } from '../lesson-view.ts'
 import { TokenizerToy } from '../public/tokenizer-toy.tsx'
-import { askProps, codeEditorProps, exerciseProps, runLines } from './exercise.ts'
+import { askProps, codeEditorProps, draftPersist, exerciseProps, runLines } from './exercise.ts'
 import { inlineNodes } from './inline.tsx'
 
 /**
- * Read mode (Lesson artboard): the chat-style tutor. Every block renders on
- * the server; only the interactive blocks (odds, prompt, code, terminal,
- * tokenizer, nexttoken, training, attention) hydrate as islands.
+ * The lesson (Lesson artboard): the chat-style tutor, the lesson's one view
+ * (decision 055). A lesson with a video opens with the player. Every block
+ * renders on the server; only the interactive blocks (video, odds, prompt,
+ * code, terminal, tokenizer, nexttoken, training, attention) hydrate as
+ * islands.
  */
 export function ReadMode(handle: Handle<{ view: LessonView }>) {
   return () => {
@@ -37,9 +41,37 @@ export function ReadMode(handle: Handle<{ view: LessonView }>) {
     }
     return (
       <div mix={columnStyle}>
+        {hasVideo(view.content) ? <LessonVideo view={view} /> : null}
         {view.content.blocks.map((block, index) => (
           <ReadBlock key={keyOf(block)} view={view} block={block} index={index} />
         ))}
+      </div>
+    )
+  }
+}
+
+/**
+ * The lesson's video (decision 029), at the top of the lesson: the player
+ * with chapters, captions and the synced transcript, resuming where the
+ * learner stopped (the `video` draft). Optional: everything in it is in the
+ * text below too. The player and the transcript share one hairline
+ * (lesson-page.tsx's app layer).
+ */
+function LessonVideo(handle: Handle<{ view: LessonView }>) {
+  return () => {
+    let { view } = handle.props
+    let video = view.content.video!
+    return (
+      <div data-lesson-video="">
+        <VideoPlayer
+          title={view.content.title}
+          duration={video.duration}
+          chapters={video.chapters.map((chapter) => ({ title: chapter.title, start: chapter.at }))}
+          cues={video.cues}
+          source={{ src: video.src }}
+          initialTime={view.resumeAt}
+          persist={draftPersist(view, draftKey.video)}
+        />
       </div>
     )
   }

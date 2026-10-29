@@ -18,8 +18,8 @@ function count(html: string, pattern: RegExp) {
 let temperature = { course: 'tokens-and-temperature', lesson: 'temperature' }
 let theLoop = { course: 'first-agent-loop', lesson: 'the-loop' }
 
-function lessonHref(params: { course: string; lesson: string }, mode?: string) {
-  return routes.courses.lesson.index.href(params, mode ? { searchParams: { mode } } : undefined)
+function lessonHref(params: { course: string; lesson: string }, query = '') {
+  return routes.courses.lesson.index.href(params) + query
 }
 
 // One flat suite: remix test runs after() around every describe, and D1 must
@@ -27,7 +27,7 @@ function lessonHref(params: { course: string; lesson: string }, mode?: string) {
 describe('lesson page and author preview', () => {
   after(() => disposePlatform())
 
-  it('renders Read mode by default with one h1, landmarks and the lesson text', async () => {
+  it('renders the lesson with one h1, landmarks and the lesson text', async () => {
     let { status, html } = await page(lessonHref(temperature))
     assert.equal(status, 200)
     assert.match(html, /<title>Temperature &amp; randomness · Tokens &amp; temperature · Bits<\/title>/)
@@ -50,8 +50,8 @@ describe('lesson page and author preview', () => {
     assert.match(html, />My learning</)
     // The lesson title is the page's h1, inside the header's sub-bar.
     assert.match(html, /<header[\s\S]*<h1[^>]*>Temperature &amp; randomness<\/h1>[\s\S]*<\/header>/)
-    // Narrow screens get the mode tabs at the top of the lesson.
-    assert.equal(count(html, /aria-label="Lesson format"/), 2)
+    // One view (decision 055): no format tabs anywhere.
+    assert.equal(count(html, /aria-label="Lesson format"/), 0)
     // The sub-bar title's face is preloaded with the two every page gets (decision 023).
     assert.match(html, /<link data-rmx-key="[^"]+" rel="preload" as="font" type="font\/woff2" href="[^"]*unbounded-latin-500-normal\.woff2"/)
 
@@ -64,28 +64,35 @@ describe('lesson page and author preview', () => {
     assert.doesNotMatch(signedIn.html, /-day streak/)
   })
 
-  it('offers Watch only for lessons with video', async () => {
-    let withVideo = await page(lessonHref(temperature))
-    assert.match(withVideo.html, />Watch</)
-    let withoutVideo = await page(lessonHref(theLoop))
-    assert.doesNotMatch(withoutVideo.html, />Watch</)
-    // ?mode=watch falls back to Read when there is no video.
-    let fallback = await page(lessonHref(theLoop, 'watch'))
-    assert.equal(fallback.status, 200)
-    assert.match(fallback.html, /aria-current="page"[^>]*>Read</)
-  })
-
-  it('renders Watch mode with the video chapters and transcript', async () => {
-    let { status, html } = await page(lessonHref(temperature, 'watch'))
+  it('opens a lesson with a video with the player, above the first block (decision 055)', async () => {
+    let { status, html } = await page(lessonHref(temperature))
     assert.equal(status, 200)
+    let video = html.indexOf('data-lesson-video=""')
+    assert.ok(video > 0, 'the player renders')
+    assert.ok(video < html.indexOf('Last lesson you saw'), 'above the first block')
+    assert.match(html, /aria-label="Video: Temperature &amp; randomness"/)
+    // Chapters and the transcript come with it.
     assert.match(html, /Sharpening the odds/)
-    assert.match(html, /Back to the exercise/)
+    assert.match(html, /aria-label="Transcript"/)
+    // Without a video there is no player.
+    assert.doesNotMatch((await page(lessonHref(theLoop))).html, /data-lesson-video=""/)
   })
 
-  it('renders Terminal mode with the code editor for code lessons', async () => {
-    let { status, html } = await page(lessonHref(theLoop, 'terminal'))
+  it('ignores an old ?mode= link: the same lesson, no redirect', async () => {
+    for (let mode of ['terminal', 'watch', 'read', 'nonsense']) {
+      let { status, html } = await page(lessonHref(theLoop, `?mode=${mode}`))
+      assert.equal(status, 200)
+      assert.match(html, /aria-label="Code editor"|agent\.ts/)
+      assert.match(html, /<main id="main"/)
+    }
+    let watch = await page(lessonHref(temperature, '?mode=watch'))
+    assert.equal(watch.status, 200)
+    assert.ok(watch.html.indexOf('data-lesson-video=""') < watch.html.indexOf('Last lesson you saw'))
+  })
+
+  it('renders a code lesson in the one view: the editor and its Run output inline', async () => {
+    let { status, html } = await page(lessonHref(theLoop))
     assert.equal(status, 200)
-    assert.match(html, /aria-label="Code editor"/)
     assert.match(html, /agent\.ts/)
     assert.match(html, /npx tsx agent\.ts/)
   })
@@ -96,10 +103,10 @@ describe('lesson page and author preview', () => {
     assert.match(html, /Complete lesson/)
   })
 
-  it('links modes without extra query params', async () => {
+  it('links nothing with a mode or extra query params', async () => {
     let { status, html } = await page(lessonHref(temperature))
     assert.equal(status, 200)
-    assert.match(html, /href="\/courses\/tokens-and-temperature\/temperature\?mode=terminal"/)
+    assert.doesNotMatch(html, /[?&;]mode=/)
     assert.doesNotMatch(html, /as=anon/)
   })
 
@@ -164,12 +171,15 @@ describe('lesson page and author preview', () => {
   })
 
   it('draws the depth control only on lessons with depth blocks: links, aria-current, no prefetch', async () => {
-    let { html } = await page(plain('lesson-1', '?mode=terminal&depth=engineer'))
+    let { html } = await page(plain('lesson-1', '?q=hi&mode=terminal&depth=engineer'))
 
-    // The sub-bar cell (1024px up), the outline sidebar row (760–1023px) and the phone disclosure.
-    assert.equal(count(html, /aria-label="Lesson depth"/), 3)
-    assert.match(html, /<a href="\/courses\/plain-course\/lesson-1\?mode=terminal&amp;depth=new"[^>]*>New to this<\/a>/)
-    assert.match(html, /<a href="\/courses\/plain-course\/lesson-1\?mode=terminal&amp;depth=engineer" aria-current="page"[^>]*>Engineer<\/a>/)
+    // One control (decision 055): the sub-bar cell (760px up) and the phone
+    // chrome row, never the outline. Other params are kept, an old mode dropped.
+    assert.equal(count(html, /aria-label="Lesson depth"/), 2)
+    assert.match(html, /<header[\s\S]*aria-label="Lesson depth"[\s\S]*<\/header>/)
+    assert.doesNotMatch(html, /Explain it/)
+    assert.match(html, /<a href="\/courses\/plain-course\/lesson-1\?q=hi&amp;depth=new"[^>]*>New to this<\/a>/)
+    assert.match(html, /<a href="\/courses\/plain-course\/lesson-1\?q=hi&amp;depth=engineer" aria-current="page"[^>]*>Engineer<\/a>/)
     // Following one remembers the choice, so a hover must not prefetch it (decision 042).
     assert.doesNotMatch(html, /href="[^"]*depth=[^"]*"[^>]*data-rmx-prefetch/)
     assert.equal(count((await page(lessonHref(temperature))).html, /aria-label="Lesson depth"/), 0)

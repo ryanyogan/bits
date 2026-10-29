@@ -1,7 +1,8 @@
 # 051. One field spec, one row of phone lesson chrome
 
 Status: Accepted (2026-10-29). Builds on 047 (squared grid, flat focus),
-022 (lesson shell) and 023 (layout stability).
+022 (lesson shell) and 023 (layout stability). The phone chrome row holds
+the depth tabs instead of the mode tabs since 055.
 
 ## Context
 

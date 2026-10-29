@@ -119,7 +119,7 @@ export function SystemBoard(handle: Handle) {
               <Chip>Prompting</Chip>
               <Chip>Foundations</Chip>
             </div>
-            <StaticTabs items={['Read', 'Watch', 'Terminal']} />
+            <StaticTabs items={['New to this', 'Engineer']} />
             <ol aria-label="Tokens" mix={tokenListStyle}>
               <TokenPill text="Un" index={0} />
               <TokenPill text="believ" index={1} />

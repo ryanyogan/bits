@@ -14,7 +14,7 @@ import { routes } from '../../../routes.ts'
 import { buildLessonView } from './lesson-view.ts'
 import { LessonNotFoundPage } from './ui/not-found.tsx'
 
-// The lesson page (its islands, the terminal, the editor, the video player)
+// The lesson page (its islands, the editor, the video player)
 // loads on the first lesson request, not at isolate startup (decision 026).
 const lessonPage = () => import('./lesson-page.tsx')
 
@@ -56,12 +56,9 @@ export default createController(routes.courses.lesson, {
         let result = await completeLesson(context, course, lesson, submission)
         if (!result) return new Response('Lesson not found', { status: 404 })
 
-        let mode = context.formData.get('mode')
-        let searchParams: Record<string, string> = typeof mode === 'string' && mode !== 'read' ? { mode } : {}
-
         if (!result.ok) {
           // Same page again, with what failed.
-          let url = new URL(routes.courses.lesson.index.href({ course, lesson }, { searchParams }), context.url)
+          let url = new URL(routes.courses.lesson.index.href({ course, lesson }), context.url)
           let [completed, drafts, depth] = await Promise.all([
             loadCompleted(context),
             loadDrafts(context, course, lesson),
@@ -92,7 +89,7 @@ export default createController(routes.courses.lesson, {
 
         let next = found.next
         let target = next
-          ? routes.courses.lesson.index.href({ course, lesson: next.slug }, { searchParams })
+          ? routes.courses.lesson.index.href({ course, lesson: next.slug })
           : routes.courses.course.index.href({ course })
         // The page we land on shows what the save earned: new badges
         // (decision 028), else the neurons it added (decision 052).

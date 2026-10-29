@@ -1,5 +1,6 @@
 // Builds everything the lesson page renders from the URL: the course and
-// lesson from the catalog, the compiled content, the mode, and every href.
+// lesson from the catalog, the compiled content, the depth, and every href.
+// A lesson has one view, Read (decision 055): an old `?mode=` link is ignored.
 // Shared by /courses/:course/:lesson (the published catalog) and the author
 // preview /author/:course/preview/:lesson (a catalog of the draft build).
 import type { Viewer } from '../../../auth/identity.ts'
@@ -14,13 +15,10 @@ import {
   depthsOf,
   exercisesOf,
   gatingAsksOf,
-  hasVideo,
   isLessonDepth,
   type LessonContent,
   type LessonDepth,
 } from './content.ts'
-
-export type LessonMode = 'read' | 'watch' | 'terminal'
 
 export interface LessonView {
   /** course/lesson (prefixed `preview/` for drafts): keys drafts and passes in the browser. */
@@ -35,13 +33,12 @@ export interface LessonView {
   next?: LessonSummary
   /** The lesson at `depth`: shared blocks plus that depth's (decision 053). */
   content: LessonContent
-  mode: LessonMode
   /** The depth this page renders at. */
   depth: LessonDepth
   /** The depths the lesson's blocks are tagged with; empty when it has none (no depth control). */
   depths: LessonDepth[]
   viewer: Viewer | null
-  /** Watch-mode resume position, seconds (the saved `video` draft; the browser's own copy can be newer). */
+  /** The video's resume position, seconds (the saved `video` draft; the browser's own copy can be newer). */
   resumeAt?: number
   /** The signed-in viewer's saved drafts in this lesson, by key (decision 029). */
   drafts: Record<string, SavedDraft>
@@ -58,11 +55,9 @@ export interface LessonView {
   /** The "complete lesson" form (absent in the draft preview). */
   completeForm?: { id: string; action: string }
   href: {
-    /** This lesson in a mode. */
-    mode(mode: LessonMode): string
     /** This page at a depth: the current URL with `?depth=` set, its other params kept. */
     depth(depth: LessonDepth): string
-    /** Another lesson of the course (its default mode). */
+    /** Another lesson of the course. */
     lesson(slug: string): string
     back: string
     login: string
@@ -91,8 +86,6 @@ export interface LessonViewOptions {
   depth?: LessonDepth
 }
 
-const MODES: LessonMode[] = ['read', 'watch', 'terminal']
-
 /** Resolves undefined when the course or lesson doesn't exist. */
 export async function buildLessonView(
   catalog: Catalog,
@@ -109,16 +102,11 @@ export async function buildLessonView(
   let asked = url.searchParams.get('depth')
   let depth = options.depth ?? (isLessonDepth(asked) ? asked : DEFAULT_DEPTH)
   let content = contentAtDepth(full, depth)
-  let requested = url.searchParams.get('mode') as LessonMode | null
-  let mode: LessonMode = requested && MODES.includes(requested) ? requested : 'read'
-  if (mode === 'watch' && !hasVideo(content)) mode = 'read'
   let preview = Boolean(options.draft)
-  let lessonHref = (slug: string, m?: LessonMode) => {
-    let searchParams = m ? { mode: m } : undefined
-    return preview
-      ? routes.author.course.preview.href({ course: course.slug, lesson: slug }, { searchParams })
-      : routes.courses.lesson.index.href({ course: course.slug, lesson: slug }, { searchParams })
-  }
+  let lessonHref = (slug: string) =>
+    preview
+      ? routes.author.course.preview.href({ course: course.slug, lesson: slug })
+      : routes.courses.lesson.index.href({ course: course.slug, lesson: slug })
 
   let self = lessonHref(lesson.slug)
   let drafts = (!preview && options.drafts) || {}
@@ -133,7 +121,6 @@ export async function buildLessonView(
     prev,
     next,
     content,
-    mode,
     depth,
     depths: depthsOf(full.blocks),
     viewer: options.viewer ?? null,
@@ -151,9 +138,10 @@ export async function buildLessonView(
       ? undefined
       : { id: 'lesson-complete', action: routes.courses.lesson.complete.href({ course: course.slug, lesson: lesson.slug }) },
     href: {
-      mode: (m) => lessonHref(lesson.slug, m),
       depth: (d) => {
         let params = new URLSearchParams(url.search)
+        // `mode` is gone (decision 055); don't carry an old one forward.
+        params.delete('mode')
         params.set('depth', d)
         return `${url.pathname}?${params}`
       },

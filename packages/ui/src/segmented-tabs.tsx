@@ -20,7 +20,7 @@ export interface SegmentedTabsProps {
   /** Accessible name of the group, e.g. "Lesson format". */
   label: string
   items: SegmentedTabItem[]
-  /** `mode` (Read / Watch / Terminal, 38px items), `account` (2-up grid, 44px items). */
+  /** `mode` (the lesson depth tabs, 38px items), `account` (2-up grid, 44px items). */
   flavour?: SegmentedTabsFlavour
   /**
    * Keep focus and scroll where they are when a tab is followed on the client

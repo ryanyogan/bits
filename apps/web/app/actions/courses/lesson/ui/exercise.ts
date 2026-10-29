@@ -110,7 +110,6 @@ export function askProps(view: LessonView, block: AskBlock) {
           course: view.course.slug,
           lesson: view.lesson.slug,
           ask: block.id,
-          ...(view.mode === 'read' ? {} : { mode: view.mode }),
         },
         answerField: fieldNames.ask(block.id),
       }

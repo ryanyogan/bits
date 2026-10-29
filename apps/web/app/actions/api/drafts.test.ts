@@ -11,8 +11,7 @@ import { fetchAs, signIn } from '../../test/auth.ts'
 
 const course = 'tokens-and-temperature'
 const lesson = 'temperature'
-const lessonHref = (mode?: string) =>
-  routes.courses.lesson.index.href({ course, lesson }, mode ? { searchParams: { mode } } : undefined)
+const lessonHref = () => routes.courses.lesson.index.href({ course, lesson })
 
 function save(cookie: string | null, pairs: [string, string][], target = { course, lesson }) {
   let body = new FormData()
@@ -39,13 +38,12 @@ describe('lesson drafts', () => {
     // A later save replaces the earlier one.
     assert.equal((await save(cookie, [['video', '140']])).status, 204)
 
+    // One view (decision 055): the draft and the video's resume position on the same page.
     let read = await (await fetchAs(cookie, lessonHref())).text()
     assert.match(read, /A tagline for a moon café/)
     assert.match(read, /"sync":\{"action":"\/api\/drafts"/)
-
-    let watch = await (await fetchAs(cookie, lessonHref('watch'))).text()
-    assert.match(watch, /"initialTime":140/)
-    assert.match(watch, /"src":"\/media\/videos\/[0-9a-f-]{36}\.mp4"/)
+    assert.match(read, /"initialTime":140/)
+    assert.match(read, /"src":"\/media\/videos\/[0-9a-f-]{36}\.mp4"/)
 
     // Someone else sees none of it.
     let other = await signIn('drafts-other@example.com')

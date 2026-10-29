@@ -2,6 +2,8 @@
 
 Status: Accepted (2026-10-27). Supersedes the video parts of 014 (the
 simulated player) and 018 ("videos found in the folder show as ready").
+Amended 2026-10-29 by 055: there is no Watch mode; the player sits at the
+top of the lesson.
 
 ## Context
 

@@ -211,7 +211,7 @@ describe('catalog and course pages', () => {
     assert.match(html, /How you(?:'|&#39;)ll learn/)
     assert.match(html, /href="\/courses\/tokens-and-temperature\/what-is-a-token"/)
     // Lesson 1's video isn't uploaded, so it is text-only and there is no "watch the intro" key (decision 029).
-    assert.doesNotMatch(html, /href="\/courses\/tokens-and-temperature\/what-is-a-token\?mode=watch"/)
+    assert.doesNotMatch(html, /Watch the 90-second intro/)
   })
 
   it('renders the signed-out variant with nothing started', async () => {

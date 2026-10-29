@@ -2,7 +2,7 @@ import type { Handle } from 'remix/component'
 import { css, unsafeHTML } from 'remix/component'
 import { Crosshair } from '@bits/ui/crosshair'
 import { Keycap } from '@bits/ui/keycap'
-import { LessonBar, LessonModes } from '@bits/ui/lesson-bar'
+import { LessonBar, LessonRow } from '@bits/ui/lesson-bar'
 import type { SegmentState } from '@bits/ui/progress-bar'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
 import { PageFrame } from '@bits/ui/page-frame'
@@ -12,20 +12,17 @@ import { APP_TITLE } from '../../../config.ts'
 import { routes } from '../../../routes.ts'
 import { ogImage } from '../../../ui/og.ts'
 import { Layout } from '../../../ui/layout.tsx'
-import { exercisesOf, hasCode, hasVideo } from './content.ts'
-import { depthTabs, lessonAward, openAsks, type LessonMode, type LessonView } from './lesson-view.ts'
+import { exercisesOf } from './content.ts'
+import { depthTabs, lessonAward, openAsks, type LessonView } from './lesson-view.ts'
 import { LessonComplete } from './public/lesson-complete.tsx'
 import { PASSED_ROOT } from './public/lesson-state.ts'
 import { LessonXp } from './public/lesson-xp.tsx'
-import { DepthRow, OutlineDisclosure, OutlineNav } from './ui/outline.tsx'
+import { OutlineDisclosure, OutlineNav } from './ui/outline.tsx'
 import { ReadMode } from './ui/read-mode.tsx'
-import { TerminalMode } from './ui/terminal-mode.tsx'
-import { WatchMode } from './ui/watch-mode.tsx'
-
-const modeLabels: Record<LessonMode, string> = { read: 'Read', watch: 'Watch', terminal: 'Terminal' }
 
 /**
- * A lesson in Read, Watch or Terminal mode (Lesson + CodeLesson artboards).
+ * A lesson (Lesson artboard). It has one view, Read (decision 055): a
+ * lesson with a video opens with the player, then reads as usual.
  * The author preview renders this same page with a Draft banner. Lesson text
  * is server-rendered; only the islands the lesson's blocks need hydrate.
  *
@@ -35,8 +32,7 @@ const modeLabels: Record<LessonMode, string> = { read: 'Read', watch: 'Watch', t
 export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[]; reward?: RewardNotice }>) {
   return () => {
     let { view, issues, reward } = handle.props
-    let { course, lesson, content, mode, viewer } = view
-    let modes: LessonMode[] = hasVideo(content) ? ['read', 'watch', 'terminal'] : ['read', 'terminal']
+    let { course, lesson, content, viewer } = view
     let segments: SegmentState[] = view.lessons.map((l) =>
       l.slug === lesson.slug ? (l.state === 'done' ? 'done' : 'current') : l.state === 'done' ? 'done' : 'upcoming',
     )
@@ -45,7 +41,6 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
     // "Complete lesson" waits for the prompt exercises and the quick checks
     // not yet answered (decision 052; an ask with gate=false never waits).
     let gated = exercisesOf(content).length > 0 || openAsks(view).length > 0
-    let modeItems = modes.map((m) => ({ label: modeLabels[m], href: view.href.mode(m), current: m === mode }))
     let progressLabel = `Lesson ${view.index + 1} of ${view.total}, ${done} complete`
     let depths = depthTabs(view)
 
@@ -73,7 +68,6 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
             titleAs="h1"
             segments={segments}
             progressLabel={progressLabel}
-            modes={modeItems}
             depths={depths}
             xp={
               viewer ? (
@@ -94,53 +88,39 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
             </a>
           </p>
         ) : null}
-        {mode === 'terminal' ? (
-          <PageFrame rails>
-            <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, workspaceMain]}>
-              <LessonModes modes={modeItems} aside={depths.length ? <OutlineDisclosure view={view} /> : undefined} mix={modesStrip} />
-              <DepthRow view={view} mix={terminalDepth} />
-              <TerminalMode view={view} />
-              <LessonFooter view={view} gated={gated} issues={issues} width={hasCode(content) ? 'full' : 'solo'} />
+        <PageFrame rails>
+          <div mix={bodyStyle}>
+            <OutlineNav view={view} />
+            <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, mainStyle]}>
+              <LessonRow depths={depths} aside={<OutlineDisclosure view={view} />} mix={phoneRow} />
+              <div mix={readBody}>
+                <ReadMode view={view} />
+              </div>
+              <LessonFooter view={view} gated={gated} issues={issues} />
             </main>
-          </PageFrame>
-        ) : (
-          <PageFrame rails>
-            <div mix={bodyStyle}>
-              <OutlineNav view={view} />
-              <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, mainStyle]}>
-                <LessonModes modes={modeItems} aside={<OutlineDisclosure view={view} />} mix={modesStrip} />
-                <div mix={mode === 'watch' ? watchBody : readBody}>
-                  {mode === 'watch' ? <WatchMode view={view} /> : <ReadMode view={view} />}
-                </div>
-                <LessonFooter view={view} gated={gated} issues={issues} width={mode === 'watch' ? 'watch' : 'read'} />
-              </main>
-            </div>
-          </PageFrame>
-        )}
+          </div>
+        </PageFrame>
       </Layout>
     )
   }
 }
-
-type FooterWidth = 'read' | 'watch' | 'solo' | 'full'
 
 /**
  * Prev/next lesson navigation and the gated "lesson complete" key: the
  * lesson's last band, under a hairline rule with `+` marks where it meets
  * the column's edges. Its content lines up with the column above it.
  */
-function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean; issues?: string[]; width: FooterWidth }>) {
+function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean; issues?: string[] }>) {
   return () => {
-    let { view, gated, issues, width } = handle.props
+    let { view, gated, issues } = handle.props
     let { prev, next } = view
     // Prompts join the save with form=; asks are read from the journal (decision 052).
-    let fields: [string, string][] = view.mode !== 'read' ? [['mode', view.mode]] : []
     let asks = openAsks(view)
     return (
       <nav aria-label="Lesson navigation" mix={footerBand}>
         <Crosshair placement="top-start" mix={phoneHidden} />
         <Crosshair placement="top-end" mix={phoneHidden} />
-        <div mix={[footerStyle, footerWidths[width]]}>
+        <div mix={[footerStyle, footerWidth]}>
           {prev ? (
             <Keycap variant="ghost-mono" size="md" href={view.href.lesson(prev.slug)} mix={prevStyle}>
               <span aria-hidden="true">← </span>
@@ -152,7 +132,7 @@ function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean; issues?
             gated={gated}
             prompts={exercisesOf(view.content).length > 0}
             asks={asks}
-            form={view.completeForm ? { ...view.completeForm, fields } : undefined}
+            form={view.completeForm}
             issues={issues}
             passed={view.lesson.state === 'done'}
             href={next ? view.href.lesson(next.slug) : view.href.back}
@@ -180,24 +160,12 @@ const contentsStyle = css({ display: 'contents' })
 const pageStyles = `@layer app {
   /* The open lesson's progress segment fills volt once its checks pass. */
   ${PASSED_ROOT} [data-lesson-progress] [data-state="current"] { background: var(--volt); }
-  /* The depth tabs fill the narrow outline sidebar's row (decision 053). */
-  [data-depth-row="sidebar"] > nav { flex: 1 1 100%; display: flex; }
-  [data-depth-row="sidebar"] > nav > a { flex: 1 1 0; padding-inline: var(--space-2); }
-  /* Watch: the VideoPlayer island's player + transcript join the watch row,
-     so the transcript sits under the video beside the side card (as drawn).
-     The row is ruled cells (decision 047): each cell draws its top and
-     leading hairline 1px outside itself and the row clips its own edges,
-     so there is one line between cells and none doubled on the frame. */
-  [data-watch] > div:first-child { display: contents; }
-  [data-watch] > div:first-child > section:first-child { flex: 1 1 100%; }
-  [data-watch] > div:first-child > section[aria-label="Transcript"] { flex: 999 1 420px; }
-  [data-watch] > div:first-child > section,
-  [data-watch] > aside {
-    border: 0;
-    margin: calc(-1 * var(--border-w)) 0 0 calc(-1 * var(--border-w));
-    border-top: var(--border-w) solid var(--line-cell);
-    border-left: var(--border-w) solid var(--line-cell);
-  }
+  /* The lesson's video (decision 055): the VideoPlayer island's player and
+     transcript stack in the read column as one ruled box, sharing a hairline
+     (decision 047) instead of floating apart. */
+  [data-lesson-video] > div { gap: 0; }
+  [data-lesson-video] > div > section { flex-basis: 100%; }
+  [data-lesson-video] > div > section + section { border-top: 0; }
 }`
 
 const draftStyle = css({
@@ -235,10 +203,10 @@ const bodyStyle = css({
 // The skip link's target takes focus (tabIndex -1) without drawing a ring round the page (decision 031).
 const skipTargetStyle = css({ '&:focus': { outline: 'none' } })
 const mainStyle = css({ minWidth: 0, display: 'flex', flexDirection: 'column' })
-// Phones: the page's one row of chrome under the header (decision 051): the
-// mode tabs, then the outline disclosure as the row's end cell. The progress
-// rides the sticky bar's bottom edge.
-const modesStrip = css({
+// Phones: the page's one row of chrome under the header (decisions 051, 055):
+// the depth tabs, then the outline disclosure as the row's end cell. The
+// progress rides the sticky bar's bottom edge.
+const phoneRow = css({
   [MOBILE]: {
     minHeight: 'var(--control-lg)',
     paddingLeft: 'var(--section-pad-x)',
@@ -252,18 +220,6 @@ const readBody = css({
   [MOBILE]: { padding: 'var(--space-8) var(--section-pad-x) var(--space-14)' },
   '@media (max-width: 480px)': { padding: 'var(--space-6) var(--space-4) var(--space-12)' },
 })
-const watchBody = css({
-  padding: 'var(--space-10) var(--section-pad-x) var(--space-16)',
-  [MOBILE]: { padding: 'var(--space-6) var(--section-pad-x) var(--space-12)' },
-  '@media (max-width: 480px)': { padding: 'var(--space-4) var(--space-4) var(--space-10)' },
-})
-// Terminal has no outline sidebar: from 760 to 1023px, where the sub-bar has
-// no room for them, the depth tabs head the workspace (decision 053).
-const terminalDepth = css({
-  justifyContent: 'flex-end',
-  '@media (max-width: 759px), (min-width: 1024px)': { display: 'none' },
-})
-const workspaceMain = css({ display: 'flex', flexDirection: 'column', minWidth: 0 })
 const footerBand = css({
   position: 'relative',
   padding: 'var(--space-6) var(--section-pad-x) var(--space-16)',
@@ -272,12 +228,7 @@ const footerBand = css({
 })
 // Phones: the column has no rails for the marks to sit on.
 const phoneHidden = css({ '@media (max-width: 480px)': { display: 'none' } })
-const footerWidths: Record<FooterWidth, ReturnType<typeof css>> = {
-  read: css({ maxWidth: 'var(--read-width)', marginInline: 'auto' }),
-  watch: css({ maxWidth: 'var(--watch-width)', marginInline: 'auto' }),
-  solo: css({ maxWidth: '900px', marginInline: 'auto' }),
-  full: css({}),
-}
+const footerWidth = css({ maxWidth: 'var(--read-width)', marginInline: 'auto' })
 const footerStyle = css({
   display: 'flex',
   alignItems: 'center',

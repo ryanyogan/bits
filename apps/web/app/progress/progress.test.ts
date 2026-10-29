@@ -52,9 +52,10 @@ describe('progress', () => {
   it('a real pass saves the lesson, the prompt, the neurons and the streak, once', async () => {
     let { cookie, user } = await signIn('learner@example.com')
     await runAt(cookie, moon, [0, 100])
+    // A stale `mode` field from an old page is ignored (decision 055).
     let response = await completeLesson(cookie, COURSE, 'temperature', { ...passing, mode: 'terminal' })
     assert.equal(response.status, 303)
-    assert.equal(response.headers.get('Location'), '/courses/tokens-and-temperature/top-p-and-friends?mode=terminal')
+    assert.equal(response.headers.get('Location'), '/courses/tokens-and-temperature/top-p-and-friends')
 
     let saved = (await findUserById(testDb, user.id))!
     assert.equal(saved.xp_total, 40)

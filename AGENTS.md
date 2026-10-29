@@ -379,7 +379,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | ProgressBar / SegmentedProgress | progress-bar.tsx | pct, variant card/banner/art/row/level, color, label / segments | static |
 | ProgressRing | progress-ring.tsx | pct, size 96/132, color, caption, label | static |
 | LessonNode / LessonNodeRow | lesson-node.tsx | state done/current/next, size, n, passed / state, badge | static |
-| LessonBar / LessonModes | lesson-bar.tsx | backHref, context, title, titleAs, segments, modes, depths (the "New to this / Engineer" tabs, a cell from 1024px; decision 053), neurons, xp, position shell/sticky/static (`shell` = AppBar `sub`; two-line title, 3px progress strip on phones) / modes, aside (the <760px chrome row; `aside` holds the outline disclosure, which heads with the depth tabs), mix | static |
+| LessonBar / LessonRow | lesson-bar.tsx | backHref, context, title, titleAs, segments, depths (the "New to this / Engineer" tabs, the bar's one control from 760px, only when the lesson has depth blocks; decisions 053, 055), neurons, xp, position shell/sticky/static (`shell` = AppBar `sub`; two-line title, 3px progress strip on phones) / depths, aside (the <760px chrome row: the depth tabs, then `aside`, the outline disclosure), mix | static |
 | TutorAvatar / TutorMessage / LearnerBubble / ModelOutput | tutor.tsx | size / variant / variant / temperature, tokens, state done/streaming/example/error, note | static |
 | CheckChip | check-chip.tsx | passed, compact | static |
 | TokenPill / TokenizerPanel | token-pill.tsx | text, id, index / tokens, illustrative | static |
@@ -400,7 +400,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | TerminalLog | terminal.tsx | path, entries, replies, placeholder, flush (no outer border inside a ruled cell); a Run/Send Keycap inside the field frame; fixed height (`--terminal-height`, capped below the header; all the room under it on phones), log scrolls inside | island |
 | TerminalOutput | terminal.tsx | lines | static |
 | OutputPanel | terminal.tsx | command, lines (replayed), flush; a Ghost holds the full size, scrolls past `--output-panel-height` | island |
-| VideoPlayer | video-player.tsx | title, duration, chapters, cues, transcriptOpen, source {src} (plain `<video>`, MP4), initialTime, persist (position) | island (simulated clock without `source`) |
+| VideoPlayer | video-player.tsx | title, duration, chapters, cues, transcriptOpen, source {src} (plain `<video>`, MP4), initialTime, persist (position); on lesson pages it sits at the top of the lesson (decision 055) | island (simulated clock without `source`) |
 Helpers (decision 023): `lib/stable.tsx` has `createFollower()` (a `ref`
 mixin that keeps a fixed-height scroll window at the bottom while the reader
 is there; pair it with `scrollWindowStyle`) and `stackStyle` + `<Ghost>`
@@ -667,8 +667,12 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   indirectly: the test platform builds content while `#platform` loads,
   and the cycle hangs every test run. Use `progress/draft-keys.ts` and
   `video/keys.ts`, which are pure.
+- A lesson has one view (decision 055): no Read/Watch/Terminal modes and
+  no `?mode=` (an old link just renders the lesson). A linked video plays
+  at the top of the lesson, above the first block (`LessonVideo` in
+  `lesson/ui/read-mode.tsx`), resuming from the `video` draft.
 - Tests: `app/test/videos.ts` seeds a ready video for the Temperature
-  lesson, so it has Watch mode.
+  lesson, so it opens with the player.
 
 ## Runtime rules
 

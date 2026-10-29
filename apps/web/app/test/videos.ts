@@ -1,6 +1,6 @@
 // Test support: a ready lesson video, seeded by the test platform before it
-// builds content/courses/, so the Temperature lesson links it and has Watch
-// mode (decision 029). The "MP4" is 64 KiB of patterned bytes: enough to test
+// builds content/courses/, so the Temperature lesson links it and opens with
+// the player (decisions 029, 055). The "MP4" is 64 KiB of patterned bytes: enough to test
 // Range answers, not playable.
 import { insertVideo, markVideoReady, type D1DataTableDatabase } from '@bits/db'
 import type { R2Bucket } from '@cloudflare/workers-types/index.ts'

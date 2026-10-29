@@ -16,12 +16,11 @@ export interface LessonBarProps {
   title: string
   segments: SegmentState[]
   progressLabel: string
-  modes: SegmentedTabItem[]
   /**
-   * The lesson's reading depths ("New to this" / "Engineer", decision 053)
-   * as URL tabs, a cell before the mode tabs. Pass them only when the lesson
-   * has depth blocks. In the shell they show from 1024px; under it the page
-   * puts them in its outline (sidebar or phone disclosure).
+   * The lesson's reading depths ("New to this" / "Engineer", decisions 053
+   * and 055) as URL tabs: the bar's one control, a cell after the progress.
+   * Pass them only when the lesson has depth blocks. In the shell they show
+   * from 760px; under it the page's `LessonRow` carries them.
    */
   depths?: SegmentedTabItem[]
   /** The viewer's neurons, shown as an XpPill at the row's end (hidden at ≤480px). */
@@ -38,8 +37,8 @@ export interface LessonBarProps {
    * `AppBar`'s `sub`; decision 022). One row, `--lessonbar-h` tall, aligned
    * to the AppBar's column, no glass of its own. Under 760px it keeps back +
    * the title (two lines, never cut mid-word) and draws the segmented
-   * progress as a strip along its bottom edge; render `LessonModes` at the
-   * top of the page for the tabs (decision 051). `sticky`: a standalone glass
+   * progress as a strip along its bottom edge; render `LessonRow` at the
+   * top of the page for the depth tabs and the outline (decision 051). `sticky`: a standalone glass
    * bar pinned at the top (no AppBar). `static`: in-page demos.
    */
   position?: 'shell' | 'sticky' | 'static'
@@ -47,9 +46,9 @@ export interface LessonBarProps {
 }
 
 /**
- * The compact lesson header (components §3.1c; canonical for Read, Watch and
- * Terminal modes): back, course context + lesson title, segmented progress,
- * mode tabs (links) and neurons. Static. On lesson pages it is the AppBar's
+ * The compact lesson header (components §3.1c; a lesson has one view,
+ * decision 055): back, course context + lesson title, segmented progress,
+ * the depth tabs (links) and neurons. Static. On lesson pages it is the AppBar's
  * sub-bar (`position="shell"`) and the only place the header shows neurons:
  * the AppBar carries no XP or streak pill (decision 048).
  */
@@ -62,7 +61,6 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
       title,
       segments,
       progressLabel,
-      modes,
       depths,
       neurons,
       xp,
@@ -81,24 +79,14 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
         <div data-lesson-progress mix={[progressStyle, shell ? wideOnly : undefined]}>
           <SegmentedProgress segments={segments} label={progressLabel} />
         </div>
-        {shell ? (
-          // A wrapper, not `mix`: SegmentedTabs' own display rule would win.
-          <div mix={wideOnly}>
-            <SegmentedTabs label="Lesson format" items={modes} />
-          </div>
-        ) : (
-          <>
-            {depths?.length ? <SegmentedTabs label="Lesson depth" items={depths} keepPlace /> : null}
-            <SegmentedTabs label="Lesson format" items={modes} />
-          </>
-        )}
+        {depths?.length ? <SegmentedTabs label="Lesson depth" items={depths} keepPlace /> : null}
         {xp !== undefined ? <div mix={[xpSlot, lessonBarXpStyle]}>{xp}</div> : neurons !== undefined ? <XpPill neurons={neurons} mix={lessonBarXpStyle} /> : null}
       </>
     )
     if (shell) {
       // Inside the AppBar's <header> (one banner landmark), so not a <header>.
       // The row is the page's ruled column (decision 047): the rails run
-      // through it, back and the mode tabs are cells at either end.
+      // through it, back and the depth tabs (or neurons) are cells at either end.
       return (
         <div mix={[shellStyle, mix]}>
           <div mix={shellInner}>
@@ -123,9 +111,6 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
                 <SegmentedTabs label="Lesson depth" items={depths} keepPlace />
               </div>
             ) : null}
-            <div mix={[tabsCell, wideOnly]}>
-              <SegmentedTabs label="Lesson format" items={modes} />
-            </div>
             {xp !== undefined || neurons !== undefined ? (
               // The pill closes the row as its own cell, after the tabs.
               <div mix={[xpCell, lessonBarXpStyle]}>{xp !== undefined ? xp : <XpPill neurons={neurons ?? 0} />}</div>
@@ -138,8 +123,9 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
   }
 }
 
-export interface LessonModesProps {
-  modes: SegmentedTabItem[]
+export interface LessonRowProps {
+  /** The depth tabs (as `LessonBar`'s `depths`); pass them only when the lesson has depth blocks. */
+  depths?: SegmentedTabItem[]
   /**
    * The row's end, e.g. the lesson outline disclosure ("Lesson 3 of 8 ▾").
    * The row is `position: relative`, so an open disclosure can hang its
@@ -150,19 +136,19 @@ export interface LessonModesProps {
 }
 
 /**
- * The shell sub-bar's mode tabs for screens under 760px, where the sticky
- * header keeps back + title and draws the progress along its edge (decisions
- * 022 and 051). Put it at the top of the lesson: the page's one row of
- * chrome under the header, with the outline as its `aside`. It scrolls with
- * the page and hides at 760px and up. Static.
+ * The page's one row of chrome under 760px (decisions 022, 051 and 055),
+ * where the sticky header keeps back + title and draws the progress along
+ * its edge: the shell sub-bar's depth tabs, with the outline disclosure as
+ * its `aside` at the row's end. Put it at the top of the lesson. It scrolls
+ * with the page and hides at 760px and up. Static.
  */
-export function LessonModes(handle: Handle<LessonModesProps>) {
+export function LessonRow(handle: Handle<LessonRowProps>) {
   return () => {
-    let { modes, aside, mix } = handle.props
+    let { depths, aside, mix } = handle.props
     return (
-      <div mix={[modesRow, mix]}>
-        <SegmentedTabs label="Lesson format" items={modes} />
-        {aside !== undefined ? <div mix={modesAside}>{aside}</div> : null}
+      <div mix={[lessonRow, mix]}>
+        {depths?.length ? <SegmentedTabs label="Lesson depth" items={depths} keepPlace /> : null}
+        {aside !== undefined ? <div mix={lessonRowAside}>{aside}</div> : null}
       </div>
     )
   }
@@ -227,27 +213,17 @@ const backFill = css({
   border: 0,
   [FOCUS]: { outlineOffset: 'var(--focus-offset-inset)' },
 })
-// The mode tabs close the row as its last cell.
-const tabsCell = css({
-  alignSelf: 'stretch',
-  display: 'flex',
-  alignItems: 'center',
-  paddingInline: 'var(--space-4)',
-  borderLeft: 'var(--border-w) solid var(--line-cell)',
-  '&:last-child': { paddingRight: 'var(--space-3)' },
-  // Repeated from wideOnly: this mixin is declared later, so its layer wins.
-  [SHELL_NARROW]: { display: 'none' },
-})
-// The depth tabs (decision 053): a cell like the mode tabs', from 1024px.
-// Narrower, the row has no room left for the title, so the page puts them
-// in the outline (or above the terminal) instead.
+// The depth tabs (decisions 053, 055): a cell after the progress, from
+// 760px. Under it the row keeps its room for the title, and the page's
+// LessonRow carries the tabs.
 const depthCell = css({
   alignSelf: 'stretch',
   display: 'flex',
   alignItems: 'center',
   paddingInline: 'var(--space-4)',
   borderLeft: 'var(--border-w) solid var(--line-cell)',
-  '@media (max-width: 1023.98px)': { display: 'none' },
+  '&:last-child': { paddingRight: 'var(--space-3)' },
+  [SHELL_NARROW]: { display: 'none' },
 })
 // The neurons cell: last in the row, pushed to the end when the tabs hide (<760px).
 const xpCell = css({
@@ -260,7 +236,7 @@ const xpCell = css({
 })
 const xpSlot = css({ display: 'flex', alignItems: 'center' })
 const wideOnly = css({ [SHELL_NARROW]: { display: 'none' } })
-// ≤480px (Lesson spec, 360px): row 1 back + title (truncated), row 2 mode tabs + progress.
+// ≤480px (Lesson spec, 360px): row 1 back + title (truncated), row 2 depth tabs + progress.
 const titleBlock = css({
   display: 'flex',
   flexDirection: 'column',
@@ -307,7 +283,7 @@ const progressStyle = css({
   margin: '0 auto',
   [NARROW]: { order: 10, flex: '1 1 72px', maxWidth: 'none', margin: 0 },
 })
-const modesRow = css({
+const lessonRow = css({
   display: 'none',
   [SHELL_NARROW]: {
     position: 'relative',
@@ -318,7 +294,7 @@ const modesRow = css({
     '& > nav': { alignSelf: 'center' },
   },
 })
-const modesAside = css({ marginLeft: 'auto', minWidth: 0, alignSelf: 'stretch', display: 'flex', alignItems: 'stretch' })
+const lessonRowAside = css({ marginLeft: 'auto', minWidth: 0, alignSelf: 'stretch', display: 'flex', alignItems: 'stretch' })
 // The phone progress strip: segments 3px tall on the bar's bottom hairline,
 // inside the rails. Hidden from 760px, where the row has its own progress cell.
 const phoneProgress = css({

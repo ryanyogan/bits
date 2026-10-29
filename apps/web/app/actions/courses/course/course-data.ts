@@ -51,7 +51,7 @@ export interface CourseView {
   source: { files: number; path: string; author: string; updated: string }
 }
 
-type LessonHref = (lesson: string, mode?: 'watch') => string
+type LessonHref = (lesson: string) => string
 
 /**
  * `course` carries the viewer's progress (D1 when signed in, the session
@@ -81,7 +81,8 @@ export function buildCourseView(course: CourseDetail, viewer: Viewer | null, les
   let first = all[0]!
   let intro =
     course.introLabel && first.kinds.includes('video')
-      ? { label: course.introLabel, href: lessonHref(first.slug, 'watch') }
+      ? // The video plays at the top of the lesson (decision 055).
+        { label: course.introLabel, href: lessonHref(first.slug) }
       : undefined
 
   let modules = course.modules.map((module) => ({

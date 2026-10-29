@@ -77,16 +77,16 @@ describe('URL-backed selection', () => {
   it('marks the current segmented tab with aria-current="page"', async () => {
     let html = await renderToString(
       <SegmentedTabs
-        label="Lesson format"
+        label="Lesson depth"
         items={[
-          { label: 'Read', href: '?mode=read', current: true },
-          { label: 'Watch', href: '?mode=watch' },
+          { label: 'New to this', href: '?depth=new', current: true },
+          { label: 'Engineer', href: '?depth=engineer' },
         ]}
       />,
     )
     let body = html.replace(/<head>[\s\S]*<\/head>/, '')
-    assert.match(body, /<nav[^>]*aria-label="Lesson format"/)
-    assert.match(body, /<a[^>]*aria-current="page"[^>]*>Read</)
+    assert.match(body, /<nav[^>]*aria-label="Lesson depth"/)
+    assert.match(body, /<a[^>]*aria-current="page"[^>]*>New to this</)
     assert.equal((body.match(/aria-current="page"/g) ?? []).length, 1)
   })
 

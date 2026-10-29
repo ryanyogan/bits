@@ -8,7 +8,7 @@ import { LearnerBubble, TutorMessage } from '@bits/ui/tutor'
 import { h2Style, introStyle, leadStyle, PHONE } from './styles.ts'
 
 const features = [
-  ['Read', "Chat-style lessons you can skim, or switch to terminal mode if that's more your speed."],
+  ['Read', 'Chat-style lessons you can skim, explained for newcomers or straight to the point for engineers.'],
   ['Type', "Prompt exercises with live checks — you can't skip ahead by scrolling."],
   ['Run', 'Real code in a real editor. Copy it, change it, break it on purpose.'],
 ] as const
@@ -76,7 +76,7 @@ function LessonPreview(_handle: Handle) {
       <div inert aria-hidden="true" mix={cardStyle}>
         <div mix={cardHeader}>
           <span mix={cardContext}>Lesson 2 · Tokens, not words</span>
-          <StaticTabs items={['Read', 'Watch', 'Terminal']} selected={0} size="sm" />
+          <StaticTabs items={['New to this', 'Engineer']} selected={0} size="sm" />
         </div>
         <div mix={cardBody}>
           <TutorMessage variant="preview">

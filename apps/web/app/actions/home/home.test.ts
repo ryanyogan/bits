@@ -62,7 +62,7 @@ describe('landing page', () => {
     assert.ok(html.includes(`<form method="get" action="${action}"`), 'GET form to lesson 1')
     assert.ok(html.includes(`href="${escape(lessonOneHref('Why do models make things up?'))}"`))
     let agent = agentLessonHref('Build me a tiny agent')
-    assert.match(agent, /mode=terminal/)
+    assert.equal(agent, '/courses/first-agent-loop/the-loop?q=Build+me+a+tiny+agent')
     assert.ok(html.includes(`href="${escape(agent)}"`))
     let lesson = await page(lessonOneHref('hello'))
     assert.equal(lesson.status, 200)

@@ -25,12 +25,7 @@ export default createController(routes.courses.course, {
         )
       }
 
-      let view = buildCourseView(course, viewer, (lesson, mode) =>
-        routes.courses.lesson.index.href(
-          { course: course.slug, lesson },
-          { searchParams: mode ? { mode } : undefined },
-        ),
-      )
+      let view = buildCourseView(course, viewer, (lesson) => routes.courses.lesson.index.href({ course: course.slug, lesson }))
 
       return context.render(
         <CoursePage

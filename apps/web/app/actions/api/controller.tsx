@@ -47,12 +47,12 @@ export default createController(routes.api, {
         if (!parsed.success) {
           return jsonError('invalid', 422, { issues: parsed.issues.map((issue) => issue.message) })
         }
-        let { course, lesson, ask, mode } = parsed.value
+        let { course, lesson, ask } = parsed.value
         let raw = context.formData.get(fieldNames.ask(ask))
         let answer = typeof raw === 'string' ? raw.trim() : ''
         let wantsJson = (context.headers.get('Accept') ?? '').includes('application/json')
         let back = () =>
-          redirect(`${routes.courses.lesson.index.href({ course, lesson }, { searchParams: mode === 'read' ? {} : { mode } })}#ask-${ask}`, 303)
+          redirect(`${routes.courses.lesson.index.href({ course, lesson })}#ask-${ask}`, 303)
         if (!answer) return wantsJson ? jsonError('empty', 422) : back()
         let result = await answerAsk(context, { course, lesson, ask, answer })
         if (wantsJson) return result.ok ? noStoreJson(result.verdict) : jsonError(result.error, result.status)

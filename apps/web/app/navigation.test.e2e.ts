@@ -284,24 +284,6 @@ describe('client navigation', () => {
     assert.deepEqual(posts, ['/api/ask', '/api/ask'])
   })
 
-  it('answers a quick check in Terminal mode: a picked option, a verdict in the log', async (t) => {
-    let page = await t.serve(await createTestServer(router.fetch))
-    let href = routes.courses.lesson.index.href(
-      { course: 'first-agent-loop', lesson: 'agents-are-loops' },
-      { searchParams: { mode: 'terminal' } },
-    )
-    await page.goto(href)
-    await page.waitForLoadState('networkidle')
-    await page.getByRole('button', { name: /Find why last night/ }).click()
-    let field = page.locator('form[id^="ask-"]').getByRole('textbox')
-    assert.match(await field.inputValue(), /Find why last night/)
-    await field.press('Enter')
-    await page.getByText(/✓ right · \+10 neurons/).waitFor()
-    assert.equal(new URL(page.url()).search, '?mode=terminal')
-    // The canned "Good thinking" reply is gone: answers get a real verdict only.
-    assert.equal(await page.getByText(/Good thinking/).count(), 0)
-  })
-
   it('opens the run window on the first run without moving the composer (decision 025)', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.goto(temperature)

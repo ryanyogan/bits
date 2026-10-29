@@ -89,8 +89,7 @@ async function signInBrowser(page: Page, email: string) {
 let counter = 0
 const uniqueEmail = (tag: string) => `a11y-${tag}-${Date.now()}-${++counter}@example.com`
 
-const lesson = (course: string, slug: string, mode?: 'read' | 'watch' | 'terminal') =>
-  routes.courses.lesson.index.href({ course, lesson: slug }, mode ? { searchParams: { mode } } : undefined)
+const lesson = (course: string, slug: string) => routes.courses.lesson.index.href({ course, lesson: slug })
 
 /** Pages that look the same to everyone: audited signed out (and, where the shell differs, signed in below). */
 const publicPages: Array<{ name: string; href: string; ready?: (page: Page) => Promise<void> }> = [
@@ -104,17 +103,15 @@ const publicPages: Array<{ name: string; href: string; ready?: (page: Page) => P
   { name: 'courses search', href: routes.courses.index.href(undefined, { searchParams: { q: 'token' } }) },
   { name: 'courses search, no results', href: routes.courses.index.href(undefined, { searchParams: { q: 'zzzzqx' } }) },
   { name: 'course', href: routes.courses.course.index.href({ course: 'tokens-and-temperature' }) },
-  // Read mode with each toy: nexttoken + composer, training, attention, compare, rabbithole, odds, tokenizer + quiz.
+  // A lesson with each toy (one view, decision 055): nexttoken + composer, training, attention, compare, rabbithole, odds, tokenizer + quiz.
   { name: 'lesson read: nexttoken + composer', href: lesson('tokens-and-temperature', 'probabilities-not-answers') },
   { name: 'lesson read: training', href: lesson('what-is-an-llm', 'where-it-learned-pretraining') },
   { name: 'lesson read: attention', href: lesson('what-is-an-llm', 'attention-how-it-keeps-track') },
   { name: 'lesson read: compare', href: lesson('tokens-and-temperature', 'greedy-vs-sampled') },
   { name: 'lesson read: tokenizer + quiz', href: lesson('tokens-and-temperature', 'what-is-a-token') },
-  { name: 'lesson read: odds', href: lesson('tokens-and-temperature', 'temperature') },
-  { name: 'lesson watch', href: lesson('tokens-and-temperature', 'temperature', 'watch') },
-  { name: 'lesson terminal: code + quiz', href: lesson('first-agent-loop', 'the-loop', 'terminal') },
+  { name: 'lesson read: video + odds', href: lesson('tokens-and-temperature', 'temperature') },
   { name: 'lesson read: code', href: lesson('first-agent-loop', 'the-loop') },
-  { name: 'lesson terminal: composer', href: lesson('what-is-an-llm', 'say-hi-to-claude', 'terminal') },
+  { name: 'lesson read: composer', href: lesson('what-is-an-llm', 'say-hi-to-claude') },
   { name: 'login email', href: routes.login.index.href() },
   { name: 'login signup', href: routes.login.index.href(undefined, { searchParams: { mode: 'signup' } }) },
   { name: 'terms', href: routes.legal.terms.href() },
@@ -155,15 +152,6 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await settled(page)
     await expectClean(page, 'quick check right')
 
-    // Terminal mode: the quick check is a log entry with its options.
-    await page.goto(lesson('first-agent-loop', 'agents-are-loops', 'terminal'))
-    await settled(page)
-    await page.getByRole('button', { name: /Translate every product/ }).click()
-    await page.locator('form[id^="ask-"]').getByRole('textbox').press('Enter')
-    await page.getByText('✗ not quite').waitFor()
-    await settled(page)
-    await expectClean(page, 'terminal quick check wrong')
-
     await page.goto(lesson('what-is-an-llm', 'say-hi-to-claude'))
     await settled(page)
     let prompt = page.getByRole('textbox').first()
@@ -180,11 +168,6 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await settled(page)
     await page.getByRole('textbox').first().focus()
     await expectClean(page, 'composer field focused')
-
-    await page.goto(lesson('what-is-an-llm', 'say-hi-to-claude', 'terminal'))
-    await settled(page)
-    await page.locator('section[aria-label="Lesson"] form input:not([type="hidden"])').focus()
-    await expectClean(page, 'terminal field focused')
 
     await page.goto(lesson('first-agent-loop', 'the-loop'))
     await settled(page)
@@ -204,7 +187,7 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await expectClean(page, 'styleguide field specimen, a prompt focused', 1440)
   })
 
-  it('lesson depth control (decision 053): the sub-bar tabs, both depths, and the phone outline with them', async (t) => {
+  it('lesson depth control (decisions 053, 055): the sub-bar tabs, both depths, and the phone chrome row', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     let href = lesson(plainCourse.slug, plainCourse.lessons[0])
     await page.goto(href)
@@ -213,15 +196,12 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await page.goto(`${href}?depth=engineer`)
     await settled(page)
     await expectClean(page, 'lesson depth: engineer')
-    await page.goto(`${href}?mode=terminal`)
-    await settled(page)
-    await expectClean(page, 'lesson depth: terminal')
     await page.goto(href)
     await settled(page)
     await page.setViewportSize({ width: 360, height: 800 })
+    await page.locator('main nav[aria-label="Lesson depth"]').waitFor()
     await page.locator('nav[aria-label="Lessons"] summary').last().click()
-    await page.locator('details[open] nav[aria-label="Lesson depth"]').waitFor()
-    await expectClean(page, 'lesson depth: phone outline open', 360)
+    await expectClean(page, 'lesson depth: phone row, outline open', 360)
   })
 
   it('interactive states: mobile menu, attention pick, transcript, toy steps', async (t) => {
@@ -239,12 +219,12 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await toolbar.getByRole('button').first().click()
     await expectClean(page, 'attention: another token picked')
 
-    await page.goto(lesson('tokens-and-temperature', 'temperature', 'watch'))
+    await page.goto(lesson('tokens-and-temperature', 'temperature'))
     await settled(page)
     let transcript = page.getByRole('button', { name: 'Transcript' })
     if ((await transcript.getAttribute('aria-pressed')) !== 'true') await transcript.click()
     await page.getByRole('button', { name: 'CC: captions' }).click()
-    await expectClean(page, 'watch: transcript + captions toggled')
+    await expectClean(page, 'lesson video: transcript + captions toggled')
 
     await page.goto(lesson('what-is-an-llm', 'where-it-learned-pretraining'))
     await settled(page)
@@ -293,7 +273,7 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     // Measured on body: html clips sideways overflow and reserves the
     // scrollbar gutter (decision 049), so the root's own widths never show it.
     let overflow = () => page.evaluate(() => document.body.scrollWidth - document.body.clientWidth)
-    for (let href of [lesson('first-agent-loop', 'the-loop'), lesson('first-agent-loop', 'the-loop', 'terminal')]) {
+    for (let href of [lesson('first-agent-loop', 'the-loop'), lesson('tokens-and-temperature', 'temperature')]) {
       await page.goto(href)
       await settled(page)
       assert.equal(await overflow(), 0, `${href}: no sideways page scroll`)

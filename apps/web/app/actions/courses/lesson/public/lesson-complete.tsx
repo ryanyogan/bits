@@ -19,10 +19,9 @@ export interface LessonCompleteProps {
   label: string
   /**
    * The native form that saves the lesson (absent in the author preview).
-   * Exercises add their prompt and runs to it with `form=`; `fields` are
-   * extra hidden fields (the mode).
+   * Exercises add their prompt and runs to it with `form=`.
    */
-  form?: { id: string; action: string; fields: [name: string, value: string][] }
+  form?: { id: string; action: string }
   /** Why the server refused the last save (422). */
   issues?: string[]
   /** Signed out: after passing, nudge to sign in to keep the neurons. */
@@ -151,9 +150,6 @@ export const LessonComplete = clientEntry(
                 }),
               ]}
             >
-              {form.fields.map(([name, value]) => (
-                <input key={`${name}=${value}`} type="hidden" name={name} value={value} />
-              ))}
               <Keycap
                 type="submit"
                 disabled={!open}

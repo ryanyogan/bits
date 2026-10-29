@@ -19,11 +19,9 @@ export function lessonOneHref(q?: string): string {
   return routes.courses.lesson.index.href(lessonOne(), q ? { searchParams: { q } } : undefined)
 }
 
-/** The agent-loop lesson in Terminal mode (the CodeLesson artboard). */
+/** The agent-loop lesson (the CodeLesson artboard). */
 export function agentLessonHref(q?: string): string {
-  let searchParams: Record<string, string> = { mode: 'terminal' }
-  if (q) searchParams.q = q
-  return routes.courses.lesson.index.href(AGENT_LESSON, { searchParams })
+  return routes.courses.lesson.index.href(AGENT_LESSON, q ? { searchParams: { q } } : undefined)
 }
 
 export function trackHref(track: 'foundations' | 'prompting' | 'tools' | 'agents'): string {

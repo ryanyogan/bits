@@ -1,7 +1,8 @@
 # 053. Two reading depths in one lesson: `:::new` and `:::engineer`
 
 Status: Accepted (2026-10-29). Amends 018 (content), 021 (lesson toys),
-022 and 051 (lesson chrome).
+022 and 051 (lesson chrome). Placement amended the same day by 055: the
+mode tabs are gone and the depth tabs take their place at every width.
 
 ## Context
 

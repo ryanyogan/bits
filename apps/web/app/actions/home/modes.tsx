@@ -28,15 +28,15 @@ export function Modes(_handle: Handle) {
         <ModeCard
           eyebrow="Text · always"
           color="var(--volt)"
-          title="Chat or terminal"
-          desc="Read the lesson as a conversation with a tutor, or flip to terminal mode for a CLI feel. Either way, you type to move forward."
+          title="Chat with a tutor"
+          desc="Read the lesson as a conversation with a tutor, at the depth you pick: new to this, or engineer. Either way, you type to move forward."
           art={<ReadArt />}
         />
         <ModeCard
           eyebrow="Video · optional"
           color="var(--ion)"
           title="Watch when it helps"
-          desc="Chaptered videos with a synced transcript. Jump back to text any time — your place is kept in both."
+          desc="Chaptered videos with a synced transcript, at the top of the lesson. The text below has everything in it too, and your place in the video is kept."
           art={<WatchArt />}
         />
         <ModeCard

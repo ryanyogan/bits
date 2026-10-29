@@ -202,7 +202,7 @@ export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' :
 
 /** Block reference rows (artboard lines 213–221), with the attrs the build accepts. */
 export const blocks = [
-  { name: 'plain markdown', attrs: '—', what: 'A tutor message in chat mode, a comment block in terminal mode. --- starts a new message; ::ask[…] adds the learner’s line. **strong**, `code`, ==mark== and [links](/courses/…) work inline; links are site paths or https:// URLs.' },
+  { name: 'plain markdown', attrs: '—', what: 'A tutor message. --- starts a new message; ::ask[…] adds the learner’s line. **strong**, `code`, ==mark== and [links](/courses/…) work inline; links are site paths or https:// URLs.' },
   { name: ':::prompt', attrs: 'id, xp, model?, temperature?', what: 'The “Your turn” composer. Each “- check” line is a live goal; “- run” requires specific runs before it passes. In “- draft”, “- placeholder” and “- example” strings, \\n is a line break.' },
   { name: ':::code', attrs: 'file, lang, copy, type-mode, highlight="12-32", label?, focus?', what: 'The editor: tabs, syntax highlighting, copy button, optional retype-it mode. Adjacent blocks become tabs; close each with its own ::: line.' },
   { name: ':::ask', attrs: 'id, xp, gate?, multiple?', what: 'A quick check in the prompt window, graded on the server. The question, then - accept "label" /pattern/i (every one must match), - reject "label" /pattern/i "feedback", - choice "text" correct? "why" (chips that fill the field), - hint, - explain, - placeholder. Patterns use the check grammar. It gates Complete lesson unless gate=false.' },
@@ -215,5 +215,5 @@ export const blocks = [
   { name: ':::compare', attrs: 'left, right, illustrative?', what: 'Two answers side by side. Lines: - prompt "…", - left "…", - right "…".' },
   { name: ':::rabbithole', attrs: '—', what: 'Up to 3 links: - video "Title" by="3Blue1Brown" mins=8 url="https://…" (or - read …; deep for long pieces).' },
   { name: ':::new / :::engineer', attrs: '—', what: 'Two reading depths of one idea: :::new for someone brand new to AI, :::engineer for the mechanism and the point. The learner picks one and every lesson follows it; text outside both is shared. They hold prose, ::ask lines, :::code, :::terminal, :::odds, :::tokenizer and the toys, never :::prompt, :::ask, :::quiz or :::rabbithole (those stay shared, so progress never depends on depth). To hold a block, use a longer fence: ::::new … ::::. They don’t nest; one depth without the other is a warning.' },
-  { name: 'video: (frontmatter)', attrs: 'path, chapters?', what: 'Turns on the Watch tab. Lessons without it stay text-only.' },
+  { name: 'video: (frontmatter)', attrs: 'path, chapters?', what: 'Puts the video player at the top of the lesson, above the first block. Lessons without it stay text-only.' },
 ]

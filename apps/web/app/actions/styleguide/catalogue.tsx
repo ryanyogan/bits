@@ -26,7 +26,7 @@ import { Icon, iconNames } from '@bits/ui/icon'
 import { Kbd } from '@bits/ui/kbd'
 import { KeyValueList } from '@bits/ui/key-value-list'
 import { Keycap, type KeycapVariant } from '@bits/ui/keycap'
-import { LessonBar, LessonModes } from '@bits/ui/lesson-bar'
+import { LessonBar, LessonRow } from '@bits/ui/lesson-bar'
 import { LessonNode, LessonNodeRow, lessonListStyle } from '@bits/ui/lesson-node'
 import { LiveDot } from '@bits/ui/live-dot'
 import { Logo } from '@bits/ui/logo'
@@ -177,7 +177,7 @@ export function Catalogue(handle: Handle) {
             />
           </div>
         </Specimen>
-        <Specimen caption="App shell (decision 022) — on lesson pages the LessonBar is the AppBar's sub-bar (position shell): one sticky header, same bar as every page. The neurons sit in the sub-bar, never the AppBar (decision 048). Under 760px the sub-bar keeps back + a two-line title with the progress along its bottom edge, and LessonModes is the page's one chrome row: the tabs, with the outline disclosure as its aside (decision 051).">
+        <Specimen caption="App shell (decision 022) — on lesson pages the LessonBar is the AppBar's sub-bar (position shell): one sticky header, same bar as every page. The neurons sit in the sub-bar, never the AppBar (decision 048). Under 760px the sub-bar keeps back + a two-line title with the progress along its bottom edge, and LessonRow is the page's one chrome row: the depth tabs (decision 053, only when the lesson has depth blocks), with the outline disclosure as its aside (decisions 051, 055).">
           <div mix={barFrame}>
             <AppBar
               brand={APP_NAME}
@@ -200,26 +200,24 @@ export function Catalogue(handle: Handle) {
                   title="Temperature & randomness"
                   segments={['done', 'done', 'done', 'done', 'done', 'current', 'upcoming', 'upcoming']}
                   progressLabel="Lesson 6 of 8, 5 complete (shell sample)"
-                  modes={[
-                    { label: 'Read', href: '#sg-nav', current: true },
-                    { label: 'Watch', href: '#sg-nav-w' },
-                    { label: 'Terminal', href: '#sg-nav-t' },
+                  depths={[
+                    { label: 'New to this', href: '#sg-nav', current: true, prefetch: false },
+                    { label: 'Engineer', href: '#sg-nav-e', prefetch: false },
                   ]}
                   neurons={1240}
                 />
               }
             />
-            <LessonModes
-              modes={[
-                { label: 'Read', href: '#sg-nav', current: true },
-                { label: 'Watch', href: '#sg-nav-w' },
-                { label: 'Terminal', href: '#sg-nav-t' },
+            <LessonRow
+              depths={[
+                { label: 'New to this', href: '#sg-nav', current: true, prefetch: false },
+                { label: 'Engineer', href: '#sg-nav-e', prefetch: false },
               ]}
               mix={modesSample}
             />
           </div>
         </Specimen>
-        <Specimen caption="LessonBar — back · context · segmented progress · mode tabs · neurons">
+        <Specimen caption="LessonBar — back · context · segmented progress · depth tabs · neurons (a lesson has one view, decision 055)">
           <div mix={barFrame}>
             <LessonBar
               position="static"
@@ -228,10 +226,9 @@ export function Catalogue(handle: Handle) {
               title="Temperature & randomness"
               segments={['done', 'done', 'done', 'done', 'done', 'current', 'upcoming', 'upcoming']}
               progressLabel="Lesson 6 of 8, 5 complete"
-              modes={[
-                { label: 'Read', href: '#sg-nav', current: true },
-                { label: 'Watch', href: '#sg-nav-w' },
-                { label: 'Terminal', href: '#sg-nav-t' },
+              depths={[
+                { label: 'New to this', href: '#sg-nav', current: true, prefetch: false },
+                { label: 'Engineer', href: '#sg-nav-e', prefetch: false },
               ]}
               neurons={1240}
             />
@@ -460,11 +457,11 @@ export function Catalogue(handle: Handle) {
           <Specimen caption="SegmentedTabs — URL tabs (links + aria-current)">
             <div mix={column}>
               <SegmentedTabs
-                label="Lesson format (sample)"
+                label="Tabs (sample)"
                 items={[
-                  { label: 'Read', href: '#sg-selection', current: true },
-                  { label: 'Watch', href: '#sg-sel-w', forceState: 'hover' },
-                  { label: 'Terminal', href: '#sg-sel-t', forceState: 'focus' },
+                  { label: 'Current', href: '#sg-selection', current: true },
+                  { label: 'Hover', href: '#sg-sel-h', forceState: 'hover' },
+                  { label: 'Focus', href: '#sg-sel-f', forceState: 'focus' },
                 ]}
               />
               <span mix={note}>current · hover · focus-visible</span>
@@ -476,7 +473,7 @@ export function Catalogue(handle: Handle) {
                   { label: 'Create account', href: '#sg-sel-c' },
                 ]}
               />
-              <StaticTabs items={['Read', 'Watch', 'Terminal']} selected={1} size="sm" />
+              <StaticTabs items={['New to this', 'Engineer']} selected={1} size="sm" />
               <span mix={note}>StaticTabs (decorative, Main preview)</span>
             </div>
           </Specimen>
