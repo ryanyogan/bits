@@ -19,9 +19,14 @@ export interface LessonNodeProps {
 }
 
 /**
- * The lesson state dot (components §10.1). Decorative (`aria-hidden`): the
+ * The lesson state node (components §10.1). Decorative (`aria-hidden`): the
  * row's text carries the state. The current node pulses (off under reduced
  * motion). Static.
+ *
+ * Square, not round (decision 047): a node is a checkbox for a lesson, not
+ * a dot, so it takes the grid's shape. Done is a volt-framed tick on a faint
+ * volt tint, current an ion frame with a small square in it, next a dashed
+ * frame. `--radius-round` stays for things that mean "round".
  */
 export function LessonNode(handle: Handle<LessonNodeProps>) {
   return () => {
@@ -55,8 +60,7 @@ const nodeStyle = css({
   boxSizing: 'border-box',
   display: 'grid',
   placeItems: 'center',
-  borderRadius: 'var(--radius-pill)',
-  '&[data-state="done"]': { background: 'var(--volt)', color: 'var(--on-volt)' },
+  '&[data-state="done"]': { border: 'var(--border-w) solid var(--volt)', background: 'var(--volt-a14)', color: 'var(--volt)' },
   '&[data-state="current"]': { border: 'var(--border-w-strong) solid var(--ion)' },
   '&[data-state="next"]': { border: 'var(--border-w) dashed var(--line-node-next)' },
   // Forced colours: done is a filled disc (it was only a background), current a ring, next a dashed ring.
@@ -68,7 +72,9 @@ const sizeStyles: Record<LessonNodeSize, ReturnType<typeof css>> = {
   30: css({
     width: '30px',
     height: '30px',
+    // Opaque, so the syllabus trace stops at the node's edge.
     '&[data-state="current"], &[data-state="next"]': { background: 'var(--ink)' },
+    '&[data-state="done"]': { background: 'linear-gradient(var(--volt-a14), var(--volt-a14)), var(--ink)' },
   }),
   // Resolutions §4: the outline numerals must be readable.
   20: css({
@@ -83,9 +89,8 @@ const sizeStyles: Record<LessonNodeSize, ReturnType<typeof css>> = {
 }
 
 const dotStyle = css({
-  width: '10px',
-  height: '10px',
-  borderRadius: 'var(--radius-pill)',
+  width: '8px',
+  height: '8px',
   background: 'var(--ion)',
   [FORCED_COLORS]: forcedFill,
 })

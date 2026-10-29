@@ -1,11 +1,14 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
+import { CellGrid } from '@bits/ui/cell-grid'
 import { ContinueBanner } from '@bits/ui/continue-banner'
-import { CourseCard, WriteCourseCard, courseGridStyle } from '@bits/ui/course-card'
+import { CourseCard, WriteCourseCard } from '@bits/ui/course-card'
 import { EmptyState } from '@bits/ui/empty-state'
 import { Eyebrow } from '@bits/ui/eyebrow'
 import { FilterPill } from '@bits/ui/filter-pill'
 import { Keycap } from '@bits/ui/keycap'
+import { PageFrame } from '@bits/ui/page-frame'
+import { RuledSection } from '@bits/ui/ruled-section'
 import { SearchField } from '@bits/ui/search-field'
 
 import type { Viewer } from '../../auth/identity.ts'
@@ -40,7 +43,18 @@ export interface CatalogPageProps {
 
 const SEARCH_ID = 'course-search'
 
-/** `/courses` (docs/design/spec/pages/Catalog.md). */
+/**
+ * `/courses` (docs/design/spec/pages/Catalog.md), on the squared grid
+ * (decision 047): a `PageFrame` over the rabbit-hole background, in bands.
+ * The title band is open so the hole shows; the continue banner, the
+ * search + track toolbar and the course cells sit on flat ink.
+ *
+ * Search and the track pills are URL state. Typing (LiveSearch) or a pill
+ * re-renders the whole page in place, so the counts, the result label and
+ * the cells change together in one response. No `<Frame>`: the results
+ * aren't a region with its own data (the counts share it), and a frame
+ * request would add a round trip.
+ */
 export function CatalogPage(handle: Handle<CatalogPageProps>) {
   return () => {
     let { viewer, query, results, counts, continueTarget, courseHref } = handle.props
@@ -57,8 +71,8 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
       >
         <div mix={stageStyle}>
           <CatalogBackground replayKey={`catalog-bg:${query.track ?? 'all'}`} />
-          <div mix={pageStyle}>
-            <div mix={titleRow}>
+          <PageFrame>
+            <RuledSection as="header" rule={false} pad="none">
               <div mix={titleBlock}>
                 <Eyebrow>All courses · free</Eyebrow>
                 <h1 mix={h1Style}>
@@ -67,54 +81,82 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
                   rabbit hole.
                 </h1>
               </div>
-              <SearchField
-                action={routes.courses.index.href()}
-                value={query.q}
-                hidden={hidden}
-                id={SEARCH_ID}
-                mix={searchStyle}
-              />
-              <LiveSearch target={SEARCH_ID} />
-            </div>
+            </RuledSection>
 
             {continueTarget ? (
-              <ContinueBanner
-                href={continueTarget.href}
-                courseTitle={continueTarget.courseTitle}
-                eyebrow={`Continue · lesson ${continueTarget.n} of ${continueTarget.total}`}
-                nextLesson={continueTarget.lessonTitle}
-                mins={continueTarget.mins}
-                pct={continueTarget.pct}
-                sigil={continueTarget.sigil}
-                tone={continueTarget.tone}
-                pattern={continueTarget.pattern}
-              />
+              <RuledSection aria-label="Continue where you left off" pad="none">
+                <ContinueBanner
+                  href={continueTarget.href}
+                  courseTitle={continueTarget.courseTitle}
+                  eyebrow={`Continue · lesson ${continueTarget.n} of ${continueTarget.total}`}
+                  nextLesson={continueTarget.lessonTitle}
+                  mins={continueTarget.mins}
+                  pct={continueTarget.pct}
+                  sigil={continueTarget.sigil}
+                  tone={continueTarget.tone}
+                  pattern={continueTarget.pattern}
+                  edge="flush"
+                />
+              </RuledSection>
             ) : null}
 
-            <div mix={filterRow}>
-              <nav aria-label="Filter by track" mix={pillRow}>
-                {trackFilters.map((filter) => (
-                  <FilterPill
-                    key={filter.label}
-                    href={catalogHref({ track: filter.slug, q: query.q })}
-                    dot={filter.dot}
-                    count={counts[filter.slug ?? 'all']}
-                    selected={filter.slug === query.track}
-                  >
-                    {filter.label}
-                  </FilterPill>
-                ))}
-              </nav>
-              <p aria-live="polite" mix={resultStyle}>
-                {resultLabel(results.length)}
-              </p>
-            </div>
+            <RuledSection
+              as="div"
+              label="Find a course"
+              aside={
+                <p aria-live="polite" mix={resultStyle}>
+                  {resultLabel(results.length)}
+                </p>
+              }
+              pad="none"
+              mix={toolbarBand}
+            >
+              <div mix={toolbarStyle}>
+                <SearchField
+                  action={routes.courses.index.href()}
+                  value={query.q}
+                  hidden={hidden}
+                  id={SEARCH_ID}
+                  variant="cell"
+                  mix={searchCell}
+                />
+                <LiveSearch target={SEARCH_ID} />
+                <nav aria-label="Filter by track" mix={pillRow}>
+                  {trackFilters.map((filter) => (
+                    <FilterPill
+                      key={filter.label}
+                      href={catalogHref({ track: filter.slug, q: query.q })}
+                      dot={filter.dot}
+                      count={counts[filter.slug ?? 'all']}
+                      selected={filter.slug === query.track}
+                      variant="cell"
+                    >
+                      {filter.label}
+                    </FilterPill>
+                  ))}
+                </nav>
+              </div>
+            </RuledSection>
 
-            <section aria-labelledby="courses-heading" mix={resultsStyle}>
+            <RuledSection aria-labelledby="courses-heading" pad="none">
               <h2 id="courses-heading" class="sr-only">
                 Courses
               </h2>
-              <ul mix={courseGridStyle}>
+              {results.length === 0 ? (
+                <div mix={emptyCell}>
+                  <EmptyState
+                    variant="bare"
+                    title={query.q ? `0 results for “${query.q}”` : '0 results'}
+                    hint="Try “agents”, “tokens” or clear the filter."
+                    action={
+                      <Keycap variant="ghost" size="sm" href={catalogHref({})}>
+                        Clear filters
+                      </Keycap>
+                    }
+                  />
+                </div>
+              ) : null}
+              <CellGrid as="ul" cols={3} fill="ink">
                 {results.map((course) => (
                   <li key={course.slug} mix={cellStyle}>
                     <CourseCard
@@ -130,56 +172,38 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
                       pattern={course.pattern}
                       formats={course.formats}
                       pct={course.pct}
-                      mix={cardFill}
+                      variant="cell"
                     />
                   </li>
                 ))}
                 <li mix={cellStyle}>
-                  <WriteCourseCard href={routes.author.index.href()} />
+                  <WriteCourseCard href={routes.author.index.href()} variant="cell" />
                 </li>
-              </ul>
-              {results.length === 0 ? (
-                <EmptyState
-                  title={query.q ? `0 results for “${query.q}”` : '0 results'}
-                  hint="Try “agents”, “tokens” or clear the filter."
-                  action={
-                    <Keycap variant="ghost" size="sm" href={catalogHref({})}>
-                      Clear filters
-                    </Keycap>
-                  }
-                />
-              ) : null}
-            </section>
-          </div>
+              </CellGrid>
+            </RuledSection>
+            <RuledSection as="div" pad="none">
+              <div mix={tailStyle} />
+            </RuledSection>
+          </PageFrame>
         </div>
       </Layout>
     )
   }
 }
 
-const MOBILE = '@media (max-width: 480px)'
+const PHONE = '@media (max-width: 480px)'
+const STACKED = '@media (max-width: 1023.98px)'
 
 /** Holds the page and its background layer (z-index -1 stays inside it). */
 const stageStyle = css({ position: 'relative', isolation: 'isolate' })
 
-const pageStyle = css({
-  maxWidth: 'var(--page-max)',
-  margin: '0 auto',
-  padding: 'var(--space-14) var(--page-gutter) var(--space-24)',
+const titleBlock = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: 'var(--space-12)',
-  [MOBILE]: { padding: 'var(--space-8) var(--page-gutter) var(--space-16)', gap: 'var(--space-8)' },
+  gap: 'var(--space-3_5)',
+  padding: 'var(--space-20) var(--section-pad-x) var(--space-16)',
+  [PHONE]: { padding: 'var(--space-12) var(--section-pad-x) var(--space-10)' },
 })
-
-const titleRow = css({
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-end',
-  gap: 'var(--space-8)',
-  flexWrap: 'wrap',
-})
-const titleBlock = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-3_5)' })
 const h1Style = css({
   margin: 0,
   fontFamily: 'var(--font-display)',
@@ -187,48 +211,42 @@ const h1Style = css({
   fontSize: 'clamp(36px, 5vw, 64px)',
   lineHeight: 1,
   letterSpacing: 'var(--tracking-tight)',
-})
-const searchStyle = css({
-  flex: '0 1 440px',
-  maxWidth: 'none',
-  [MOBILE]: { flex: '1 1 100%' },
+  // Inside the rails a phone column is ~300px: "rabbit hole." at 36px is the widest line.
+  [PHONE]: { fontSize: 'var(--fs-32)' },
 })
 
-const filterRow = css({
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: 'var(--space-4)',
-  flexWrap: 'wrap',
+const toolbarBand = css({ background: 'var(--cell-fill)' })
+const resultStyle = css({ margin: 0, color: 'var(--muted)' })
+
+// Search and the track pills in one ruled row: search fills the left, the
+// pills are cells on the right. Stacked under 1024px, search first.
+const toolbarStyle = css({
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
+  minHeight: 'var(--control-lg)',
+  [STACKED]: { gridTemplateColumns: 'minmax(0, 1fr)' },
+})
+const searchCell = css({
+  borderRight: 'var(--border-w) solid var(--line-cell)',
+  [STACKED]: { borderRight: 0, borderBottom: 'var(--border-w) solid var(--line-cell)' },
 })
 const pillRow = css({
   display: 'flex',
-  gap: 'var(--space-2)',
-  flexWrap: 'wrap',
-  [MOBILE]: {
-    flex: '1 1 100%',
-    minWidth: 0,
+  minWidth: 0,
+  // The last pill ends the row: the rail draws its right edge.
+  '& > a:last-child': { borderRight: 0 },
+  [STACKED]: {
     // Contains the pills' absolutely-positioned sr-only text, which would
     // otherwise escape the scroller and widen the page.
     position: 'relative',
-    flexWrap: 'nowrap',
     overflowX: 'auto',
     scrollSnapType: 'x proximity',
     scrollbarWidth: 'none',
-    // Bleed to the screen edge; the vertical padding keeps focus rings unclipped.
-    margin: 'calc(var(--space-1) * -1) calc(var(--page-gutter) * -1)',
-    padding: 'var(--space-1) var(--page-gutter)',
-    scrollPaddingInline: 'var(--page-gutter)',
     '& > a': { flex: 'none', scrollSnapAlign: 'start' },
+    '& > a:last-child': { borderRight: 'var(--border-w) solid var(--line-cell)' },
   },
 })
-const resultStyle = css({
-  margin: 0,
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-13)',
-  color: 'var(--muted)',
-})
 
-const resultsStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-12)', [MOBILE]: { gap: 'var(--space-8)' } })
-const cellStyle = css({ display: 'flex', minWidth: 0, '& > a': { flex: 1 } })
-const cardFill = css({ width: '100%' })
+const emptyCell = css({ borderTop: 'var(--border-w) solid var(--line-cell)', background: 'var(--cell-fill)' })
+const cellStyle = css({ display: 'flex' })
+const tailStyle = css({ height: 'var(--space-16)' })

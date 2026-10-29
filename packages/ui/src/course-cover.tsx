@@ -111,6 +111,7 @@ export function CourseCover(handle: Handle<CourseCoverProps>) {
       variant === 'thumb' ? (sigil.length > 3 ? 'thumb-sm' : 'thumb') : variant === 'banner' ? 'banner' : variant
     return (
       <div
+        class="cover"
         mix={[
           coverStyle,
           toneVars[tone],

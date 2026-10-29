@@ -9,12 +9,13 @@ export interface CatalogBackgroundProps {
 }
 
 /**
- * The catalog's background (decision 041): a rabbit hole for "Pick your next
- * rabbit hole." Rings in the three track colours drop into a tilted funnel
- * behind the title, one after another, and a few neurons spiral down after
- * them, over a dot grid that fades out before the course grid. Then it
- * rests: the whole sequence is over in under 5 seconds (WCAG 2.2.2, so no
- * pause control is needed), and picking a track plays it again.
+ * The catalog's background (decision 041, squared in 047): a rabbit hole for
+ * "Pick your next rabbit hole." Square frames in the three track colours
+ * drop into a tunnel behind the title, one after another, and a few square
+ * neurons spiral down after them, over the landing's graph paper, which
+ * fades out before the course grid. Hairlines only: no glows, no blobs.
+ * Then it rests: the whole sequence is over in under 5 seconds (WCAG 2.2.2,
+ * so no pause control is needed), and picking a track plays it again.
  *
  * Pure CSS, server-rendered, no JS: every animated property is `transform`
  * or `opacity`, so the compositor runs it. Decorative only (`aria-hidden`,
@@ -74,8 +75,11 @@ const layerStyle = css({
 const gridStyle = css({
   position: 'absolute',
   inset: 0,
-  backgroundImage: 'radial-gradient(var(--dot-grid-field) 1px, transparent 1.5px)',
-  backgroundSize: 'var(--space-6) var(--space-6)',
+  // The landing field's graph paper (decision 047), so the two pages match.
+  backgroundImage:
+    'linear-gradient(var(--field-grid) 1px, transparent 1px), linear-gradient(90deg, var(--field-grid) 1px, transparent 1px)',
+  backgroundSize: 'var(--field-grid-step) var(--field-grid-step)',
+  backgroundPosition: 'center top',
   // The grid only shows around the hole.
   maskImage: 'radial-gradient(ellipse 60% 70% at 74% 30%, black, transparent 70%)',
   '@media (max-width: 760px)': {
@@ -84,34 +88,38 @@ const gridStyle = css({
 })
 
 /**
- * The funnel: a wide box whose rings shrink toward a point above its centre,
- * so it reads as looking down into a hole at an angle.
+ * The tunnel: a wide box whose frames shrink toward a point above its
+ * centre, so it reads as looking down a square shaft at an angle.
  */
 const holeStyle = css({
-  '--rim': 'min(980px, 120vw)',
+  '--rim': 'min(640px, 80vw)',
   position: 'absolute',
   width: 'var(--rim)',
   height: 'calc(var(--rim) * 0.42)',
-  left: '74%',
-  top: '30%',
+  left: '72%',
+  top: '24%',
   translate: '-50% -50%',
   '@media (max-width: 760px)': {
-    '--rim': '150vw',
-    left: '80%',
-    top: '150px',
+    '--rim': '130vw',
+    left: '82%',
+    top: '92px',
   },
 })
 
-/** The glow at the bottom of the hole: it brightens as the rings land. */
+/**
+ * The floor of the shaft, a flat synapse tint the shape of the deepest
+ * frame: it fades in as the frames land.
+ */
 const coreStyle = css({
   position: 'absolute',
+  // Centred in the deepest frame (scale 1 / 4.85 about 50% 20%).
   left: '50%',
-  top: '20%',
-  width: '22%',
-  aspectRatio: '1.6',
+  top: '26%',
+  width: '16%',
+  height: '16%',
   translate: '-50% -50%',
-  borderRadius: '50%',
-  background: 'radial-gradient(closest-side, var(--syn-a25), var(--ion-a06) 55%, transparent)',
+  background: 'var(--ion-a06)',
+  border: '1px solid var(--syn-a50)',
   opacity: 0.85,
   animation: `catalog-bg-glow ${RING_DROP + 7 * RING_STAGGER}s ease-out both`,
   '@keyframes catalog-bg-glow': {
@@ -123,7 +131,7 @@ const coreStyle = css({
 })
 
 /**
- * Ring `--i` rests at depth `--i`: smaller and fainter the deeper it is.
+ * Frame `--i` rests at depth `--i`: smaller and fainter the deeper it is.
  * It drops in from above the rim, outermost first.
  */
 const ringStyle = css({
@@ -131,17 +139,14 @@ const ringStyle = css({
   '--o': 'calc(0.9 - var(--i) * 0.08)',
   position: 'absolute',
   inset: 0,
-  borderRadius: '50%',
   border: '1px solid var(--ring)',
-  boxShadow: '0 0 28px var(--ring-glow), inset 0 0 28px var(--ring-glow)',
   // The rim is the box's outline; the bottom of the hole is up at 20%.
   transformOrigin: '50% 20%',
   transform: 'scale(var(--s))',
   opacity: 'var(--o)',
   '--ring': 'var(--volt-a30)',
-  '--ring-glow': 'var(--volt-a06)',
-  '&:nth-of-type(3n + 2)': { '--ring': 'var(--ion-a35)', '--ring-glow': 'var(--ion-a06)' },
-  '&:nth-of-type(3n + 3)': { '--ring': 'var(--syn-a50)', '--ring-glow': 'var(--syn-a14)' },
+  '&:nth-of-type(3n + 2)': { '--ring': 'var(--ion-a35)' },
+  '&:nth-of-type(3n + 3)': { '--ring': 'var(--syn-a50)' },
   animation: `catalog-bg-drop ${RING_DROP}s var(--ease-out) both`,
   animationDelay: `calc(var(--i) * ${RING_STAGGER}s)`,
   '@keyframes catalog-bg-drop': {
@@ -153,7 +158,7 @@ const ringStyle = css({
 })
 
 /**
- * A neuron spiralling down the hole once: one transform list (squash to the
+ * A square neuron spiralling down the hole once: one transform list (squash to the
  * rings' ellipse, turn, reach out, size), interpolated part by part, so a
  * single element orbits inward on the compositor.
  */
@@ -164,11 +169,9 @@ const moteStyle = css({
   width: 'var(--space-1_5)',
   height: 'var(--space-1_5)',
   margin: 'calc(var(--space-1_5) / -2)',
-  borderRadius: '50%',
   background: 'var(--volt)',
-  boxShadow: '0 0 10px var(--volt-a60)',
-  '&:nth-of-type(3n + 2)': { background: 'var(--ion)', boxShadow: '0 0 10px var(--ion-a60)' },
-  '&:nth-of-type(3n + 3)': { background: 'var(--synapse)', boxShadow: '0 0 10px var(--syn-a60)' },
+  '&:nth-of-type(3n + 2)': { background: 'var(--ion)' },
+  '&:nth-of-type(3n + 3)': { background: 'var(--synapse)' },
   opacity: 0,
   animation: `catalog-bg-spiral ${MOTE_SPIRAL}s cubic-bezier(0.45, 0, 0.6, 1) both`,
   animationDelay: `calc(${MOTE_START}s + var(--i) * ${MOTE_STAGGER}s)`,

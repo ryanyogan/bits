@@ -12,6 +12,12 @@ export interface FilterPillProps {
   /** Result count shown after the label. */
   count?: number
   selected?: boolean
+  /**
+   * `pill` (default): a bordered key on its own. `cell`: a full-height cell
+   * of a ruled toolbar (decision 047), divided from the next by a hairline;
+   * put a set in a row whose box draws the outer lines.
+   */
+  variant?: 'pill' | 'cell'
   /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
   prefetch?: PrefetchProp
   forceState?: ForcedState
@@ -25,14 +31,14 @@ export interface FilterPillProps {
  */
 export function FilterPill(handle: Handle<FilterPillProps>) {
   return () => {
-    let { href, dot, count, selected, prefetch, forceState, mix, children } = handle.props
+    let { href, dot, count, selected, variant = 'pill', prefetch, forceState, mix, children } = handle.props
     return (
       <a
         href={href}
         aria-current={selected ? 'true' : undefined}
         data-rmx-prefetch={prefetchFor(href, prefetch)}
         data-force={forceState}
-        mix={[pillStyle, mix]}
+        mix={[pillStyle, variant === 'cell' ? cellStyle : undefined, mix]}
       >
         <span
           aria-hidden="true"
@@ -74,10 +80,13 @@ const pillStyle = css({
     borderColor: 'var(--line-node-next)',
     color: 'var(--text-quiet)',
   },
+  // Selected (decision 047, calmer): a quiet fill step, the text at full
+  // strength and a 2px volt underline inside the box, like the landing nav.
   '&[aria-current="true"]': {
-    borderColor: 'var(--text)',
-    background: 'var(--text)',
-    color: 'var(--ink)',
+    borderColor: 'var(--line-strong)',
+    background: 'var(--selected)',
+    color: 'var(--text)',
+    boxShadow: 'inset 0 calc(-1 * var(--border-w-strong)) 0 var(--volt)',
   },
   [FOCUS]: focusOutline,
   [FORCED_COLORS]: { '&[aria-current="true"]': forcedSelected },
@@ -88,15 +97,29 @@ const dotStyle = css({
   width: '7px',
   height: '7px',
   borderRadius: 'var(--radius-round)',
-  '&[data-all="true"]': { background: 'var(--text)' },
-  // The "All" dot would vanish on the selected (text-coloured) pill: use ink (README §C).
-  '[aria-current="true"] > &[data-all="true"]': { background: 'var(--ink)' },
+  '&[data-all="true"]': { background: 'var(--text-quiet)' },
 })
 
 const countStyle = css({
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',
   color: 'var(--dim)',
-  // Resolutions §6: #4A5068 on #ECEEF5 when selected.
-  '[aria-current="true"] > &': { color: 'var(--code-gutter)' },
+  '[aria-current="true"] > &': { color: 'var(--muted)' },
+})
+
+// A cell of a ruled toolbar: no box of its own, full height, a hairline on
+// its right; hover is a fill step. The focus outline sits inside, where the
+// neighbouring cells can't cover it.
+const cellStyle = css({
+  minHeight: 'var(--control-lg)',
+  padding: '0 var(--space-5)',
+  border: 0,
+  borderRight: 'var(--border-w) solid var(--line-cell)',
+  '&:not([aria-current="true"]):hover, &[data-force="hover"]': {
+    background: 'var(--fill-hover)',
+    color: 'var(--text)',
+  },
+  '&[aria-current="true"]': { border: 0, borderRight: 'var(--border-w) solid var(--line-cell)' },
+  [FOCUS]: { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
+  [FORCED_COLORS]: { borderRightColor: 'GrayText' },
 })
