@@ -21,7 +21,7 @@ import { ShareButton } from './public/share-button.tsx'
 import { CourseRow } from './ui/course-row.tsx'
 import { GeneratedAvatar } from './ui/generated-avatar.tsx'
 import { JournalList } from './ui/journal-entry.tsx'
-import { Panel, panelLinkStyle, panelListStyle } from './ui/panel.tsx'
+import { Panel, panelLinkStyle, panelListStyle } from '@bits/ui/panel'
 
 export interface ProfilePageProps {
   profile: Profile
@@ -196,7 +196,7 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
 
               <aside aria-label={own ? 'Badges and account' : 'Badges'} mix={columnStyle}>
                 <Panel id="badges-heading" title="Badges" aside={`${earned} of ${profile.badges.length}`} flush>
-                  <CellGrid as="ul" cols={3} colsMid={4} colsPhone={3} pad={false} aria-labelledby="badges-heading">
+                  <CellGrid as="ul" cols={3} colsMid={4} colsPhone={3} pad={false} top={false} aria-labelledby="badges-heading">
                     {profile.badges.map((badge) => (
                       <BadgeTile key={badge.name} name={badge.name} glyph={badge.glyph} color={badge.color} locked={!badge.earned} />
                     ))}

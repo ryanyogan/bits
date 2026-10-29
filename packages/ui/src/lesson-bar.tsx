@@ -3,7 +3,7 @@ import { css } from 'remix/component'
 
 import { BackButton } from './back-button.tsx'
 import { Crosshair } from './crosshair.tsx'
-import { FORCED_COLORS } from './lib/states.ts'
+import { FOCUS, FORCED_COLORS } from './lib/states.ts'
 import { SegmentedProgress, type SegmentState } from './progress-bar.tsx'
 import { SegmentedTabs, type SegmentedTabItem } from './segmented-tabs.tsx'
 import { XpPill } from './xp-pill.tsx'
@@ -88,7 +88,7 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
             <Crosshair placement="top-start" mix={shellMark} />
             <Crosshair placement="top-end" mix={shellMark} />
             <div mix={backCell}>
-              <BackButton href={backHref} label={backLabel} />
+              <BackButton href={backHref} label={backLabel} mix={backFill} />
             </div>
             <div mix={titleBlock}>
               <span mix={contextStyle}>{context}</span>
@@ -154,8 +154,8 @@ const stickyStyle = css({
   position: 'sticky',
   top: 0,
   zIndex: 5,
-  WebkitBackdropFilter: 'blur(var(--blur-glass))',
-  backdropFilter: 'blur(var(--blur-glass))',
+  // Flat (decision 047): an opaque ground instead of glass blur.
+  background: 'var(--ink)',
 })
 // A full-bleed hairline separates the AppBar's row from this one.
 // Opaque: with no blur, lesson text scrolling under a translucent row reads
@@ -174,12 +174,10 @@ const shellInner = css({
   alignItems: 'center',
   gap: 'var(--space-5)',
   [SHELL_NARROW]: { gap: 'var(--space-3)' },
-  // Phones: the lesson page drops its gutter, and the bar follows.
-  [NARROW]: { width: '100%', borderInline: 0 },
   [FORCED_COLORS]: { borderColor: 'GrayText' },
 })
 // The marks sit on the row's top hairline, which is the shell's border.
-const shellMark = css({ top: 'calc((var(--mark-size) + 1px) / -2)', [NARROW]: { display: 'none' } })
+const shellMark = css({ top: 'calc((var(--mark-size) + 1px) / -2)' })
 // Back is the row's first cell, a square the row's height.
 const backCell = css({
   flex: 'none',
@@ -188,6 +186,14 @@ const backCell = css({
   placeItems: 'center',
   width: 'calc(var(--lessonbar-h) - var(--border-w))',
   borderRight: 'var(--border-w) solid var(--line-cell)',
+})
+// The back link is the whole cell: no box of its own, a fill step on hover,
+// and the focus outline inside the cell's hairlines.
+const backFill = css({
+  width: '100%',
+  height: '100%',
+  border: 0,
+  [FOCUS]: { outlineOffset: 'var(--focus-offset-inset)' },
 })
 // The mode tabs close the row as its last cell.
 const tabsCell = css({

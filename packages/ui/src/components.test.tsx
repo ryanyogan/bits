@@ -10,6 +10,7 @@ import { CellGrid } from './cell-grid.tsx'
 import { CourseCard } from './course-card.tsx'
 import { Crosshair } from './crosshair.tsx'
 import { PageFrame } from './page-frame.tsx'
+import { Panel } from './panel.tsx'
 import { RuledSection } from './ruled-section.tsx'
 import { coverPatterns, CourseCover } from './course-cover.tsx'
 import { Document } from './document.tsx'
@@ -511,6 +512,29 @@ describe('layout stability', () => {
     )
     assert.doesNotMatch(bare, /aria-hidden/, 'no marks without a rule')
     assert.doesNotMatch(bare, /<p/, 'no header strip without index, label or aside')
+  })
+
+  it('RuledSection can make its strip label the heading', async () => {
+    let html = await markup(
+      <RuledSection label="Syllabus" labelAs="h2" labelId="syl">
+        x
+      </RuledSection>,
+    )
+    assert.match(html, /^<section aria-labelledby="syl"/)
+    assert.match(html, /<h2 id="syl"[^>]*>Syllabus<\/h2>/)
+    assert.doesNotMatch(html, /<p/)
+  })
+
+  it('Panel is a section labelled by its strip heading', async () => {
+    let html = await markup(
+      <Panel id="badges" title="Badges" aside="3 of 9">
+        body
+      </Panel>,
+    )
+    assert.match(html, /^<section aria-labelledby="badges"/)
+    assert.match(html, /<h2 id="badges"[^>]*>Badges<\/h2>/)
+    assert.match(html, /3 of 9/)
+    assert.match(await markup(<Panel id="a" title="A" level={3} />), /<h3 id="a"/)
   })
 
   it('CellGrid renders the requested list element with its label', async () => {

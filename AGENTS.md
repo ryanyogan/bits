@@ -158,6 +158,16 @@ content/fixtures/         deliberately broken folders for tests
    303 on success. See `app/actions/login/` for the pattern.
 6. Existing placeholder pages: replace `PlaceholderPage` in that area's
    controller with the real page.
+7. Grid layout (decision 047): the page brings its own `<PageFrame>` as a
+   top-level child of `Layout` (Layout detects it and gives `<main>` the
+   framed style, so no `bleed` is needed). Inside it, start with
+   `PageHead` (`app/ui/page-head.tsx`: strip, `<h1>`, lead) and lay the
+   rest out as `RuledSection`s with `CellGrid`s and `Panel`s; close the
+   rails with an empty `<RuledSection as="div" pad="none" />`. A 4xx with
+   nothing else to show uses `StatusPage` (`app/ui/not-found-page.tsx`).
+   Use the shared strip (`RuledSection label` + `labelAs="h2"`, or
+   `Panel`) instead of a local copy, and keep the 12px phone inset: no
+   page drops the frame's gutter or rails.
 
 ## Client navigation (decision 020)
 
@@ -324,17 +334,18 @@ Rationale: `docs/decisions/010-component-library.md`.
 | SegmentedTabs / StaticTabs | segmented-tabs.tsx | label, items, flavour mode/account / items, selected, size | static (URL tabs) |
 | TabPanels | tab-panels.tsx | label, items {name, label, panel}, defaultTab, flavour | island (@remix-run/ui tabs) |
 | ChoiceChip / Chip / SuggestionChip | chip.tsx | name, value, type, defaultChecked / selected / href, prefetch | static |
-| FilterPill | filter-pill.tsx | href, dot, count, selected, prefetch | static |
+| FilterPill | filter-pill.tsx | href, dot, count, selected, prefetch, variant pill/cell (`cell`: a full-height cell of a ruled toolbar row) | static |
 | Tag | tag.tsx | variant, color | static |
 | TextField | text-field.tsx | name, label, type, value, error, hint, mono, compact, enterKeyHint, autoCapitalize, spellCheck | static |
-| SearchField | search-field.tsx | action, name, value, label, shortcut | static |
+| SearchField | search-field.tsx | action, name, value, label, shortcut, variant field/cell (`cell`: no box, fills its grid cell) | static |
 | SearchShortcut | search-shortcut.tsx | target (input id; `/` and Cmd/Ctrl-K focus it) | island |
 | CodeInput | code-input.tsx | name, length, error, autoSubmit, autoFocus, value | island (one input without JS) |
 | Switch | switch.tsx | name, legend, options, value | static (native radios) |
-| QuizChoice | quiz-choice.tsx | name, question, options, multiple, explanation, action | static (POST form) |
+| QuizChoice | quiz-choice.tsx | name, question, options, multiple, explanation, action, formAction, label (header strip, default "quick check") | static (POST form) |
 | PageFrame | page-frame.tsx | as div/main, id, rails (the ruled column: `--frame-max` wide, hairline rails; decision 047) | static |
-| RuledSection | ruled-section.tsx | as, id, aria-labelledby, index, label, aside, tone, pad default/tight/none, rule, marks (full-bleed rule + `+` marks + `02 / label` strip) | static |
-| CellGrid / cellLinkStyle | cell-grid.tsx | cols, colsMid, colsPhone, edge flush/boxed, fill none/ink, pad, as ul/ol/div (cells share 1px borders) / mixin for a whole-cell `<a>` | static |
+| RuledSection | ruled-section.tsx | as, id, aria-labelledby, index, label, labelAs p/h2/h3 + labelId (the strip label is the section's heading and labels it), aside, tone, pad default/tight/none, rule, marks (full-bleed rule + `+` marks + `02 / label` strip; the strip draws the hairline under itself) | static |
+| Panel / panelLinkStyle / panelListStyle | panel.tsx | id, title, level 2/3, aside, flush (a block inside a grid cell: the strip with a real heading, then a padded or flush body; stacked panels share a hairline) / aside link / flush list rows | static |
+| CellGrid / cellLinkStyle | cell-grid.tsx | cols, colsMid, colsPhone, edge flush/boxed, fill none/ink, top (`false` right under a strip, which already draws that line), pad, as ul/ol/div (cells share 1px borders) / mixin for a whole-cell `<a>` | static |
 | Crosshair | crosshair.tsx | placement top-start/top-end/bottom-start/bottom-end (the `+` where a rule meets a rail) | static |
 | Card | card.tsx | variant default/page/compact/dashed/glass, as, label | static |
 | Callout | callout.tsx | tone ok/warning/danger/info, role, title, compact | static |
@@ -342,13 +353,13 @@ Rationale: `docs/decisions/010-component-library.md`.
 | Kbd | kbd.tsx | decorative | static |
 | StatTile | stat-tile.tsx | value, label, color, variant main/profile (flat, borderless: a `CellGrid` cell) | static |
 | KeyValueList | key-value-list.tsx | items, variant default/course | static |
-| EmptyState | empty-state.tsx | title, hint, action | static |
+| EmptyState | empty-state.tsx | title, hint, action, variant boxed/bare (`boxed`: flat hairline box with a mono `∅`; `bare`: no box, for a state that fills a cell or band) | static |
 | LiveDot | live-dot.tsx | tone, pulse | static |
 | Footer | footer.tsx | brand, homeHref, links, copyright | static |
 | XpPill / StreakPill / AvatarButton | xp-pill.tsx / streak-pill.tsx / avatar-button.tsx | neurons / days / initials, href, current, prefetch | static |
 | CourseCover / Sigil | course-cover.tsx | pattern (8 `coverPatterns`), tone volt/ion/synapse, sigil, variant card/banner/art/thumb | static |
-| CourseCard / WriteCourseCard | course-card.tsx | href, title, desc, level, lessons, mins, sigil, tone, pattern, formats, pct, prefetch | static |
-| ContinueBanner | continue-banner.tsx | href, courseTitle, nextLesson, mins, pct, sigil, tone, pattern, prefetch | static |
+| CourseCard / WriteCourseCard | course-card.tsx | href, title, desc, level, lessons, mins, sigil, tone, pattern, formats, pct, prefetch, variant card/cell (`cell`: a whole-cell link in a `CellGrid`, built on `cellLinkStyle`) | static |
+| ContinueBanner | continue-banner.tsx | href, courseTitle, eyebrow, nextLesson, mins, pct, sigil, tone, pattern, prefetch, edge boxed/flush (`flush`: fills a ruled band rail to rail) | static |
 | ProgressBar / SegmentedProgress | progress-bar.tsx | pct, variant card/banner/art/row/level, color, label / segments | static |
 | ProgressRing | progress-ring.tsx | pct, size 96/132, color, caption, label | static |
 | LessonNode / LessonNodeRow | lesson-node.tsx | state done/current/next, size, n, passed / state, badge | static |
@@ -357,7 +368,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | CheckChip | check-chip.tsx | passed, compact | static |
 | TokenPill / TokenizerPanel | token-pill.tsx | text, id, index / tokens, illustrative | static |
 | HexBadge / BadgeTile / BadgeChip | hex-badge.tsx | name, glyph, color, variant earned/locked/preview/chip (BadgeTile is a grid cell: `CellGrid as="ul" pad={false}`, or `badgeGridStyle`) | static |
-| ActivityGrid | activity-grid.tsx | levels (`sampleActivity()` for demos), label, end (month names), caption, variant card/bare (square cells sized 7–24px to fill the width) | static |
+| ActivityGrid | activity-grid.tsx | levels (`sampleActivity()` for demos), label, heading, headingLevel, titles (per-cell hover), end (month names), caption, variant card/bare (`bare`: no box or heading, inside a `Panel`; square cells sized 7–24px to fill the width) | static |
 | RewardToast | reward-toast.tsx | xp, message, title, badge {name, glyph, color}, next, variant lesson/system | static |
 | RewardRegion | reward-toast.tsx | dismissAfter, initial (server-decided reward, in the HTML); shows toasts from `announceReward()` (`bits:reward`) as a fixed overlay at the viewport's bottom (`--z-toast`, `--toast-width`), never in the flow | island |
 | OddsBars | odds-bars.tsx | context, candidates, defaultValue (follows `bits:temperature`) | island |
@@ -369,10 +380,10 @@ Rationale: `docs/decisions/010-component-library.md`.
 | ComparePanel | compare-panel.tsx | left, right, rows {prompt?, left, right}, illustrative (`:::compare`) | static |
 | RabbitHole | rabbit-hole.tsx | links {kind video/read, title, by, url, mins, deep}, id (`:::rabbithole`) | static |
 | PromptComposer | prompt-composer.tsx | id, task, checks, temperatures, examples, reward, keepRuns, submit, run (/api/run); runs fill a fixed window (`--run-log-height`) that follows the newest reply; compact (`--run-log-empty-height`) until the first run, which grows it once and scrolls so the composer stays put | island (Enter runs, Shift+Enter newline) |
-| CodeEditor | code-editor.tsx | files, highlight, focusLine, typeMode | island (@remix-run/ui tabs) |
-| TerminalLog | terminal.tsx | path, entries, replies, placeholder; fixed height (`--terminal-height`, capped below the header; all the room under it on phones), log scrolls inside | island |
+| CodeEditor | code-editor.tsx | files, highlight, focusLine, typeMode, persist, flush (no outer border inside a ruled cell) | island (@remix-run/ui tabs) |
+| TerminalLog | terminal.tsx | path, entries, replies, placeholder, flush (no outer border inside a ruled cell); fixed height (`--terminal-height`, capped below the header; all the room under it on phones), log scrolls inside | island |
 | TerminalOutput | terminal.tsx | lines | static |
-| OutputPanel | terminal.tsx | command, lines (replayed); a Ghost holds the full size, scrolls past `--output-panel-height` | island |
+| OutputPanel | terminal.tsx | command, lines (replayed), flush; a Ghost holds the full size, scrolls past `--output-panel-height` | island |
 | VideoPlayer | video-player.tsx | title, duration, chapters, cues, transcriptOpen, source {src} (plain `<video>`, MP4), initialTime, persist (position) | island (simulated clock without `source`) |
 Helpers (decision 023): `lib/stable.tsx` has `createFollower()` (a `ref`
 mixin that keeps a fixed-height scroll window at the bottom while the reader

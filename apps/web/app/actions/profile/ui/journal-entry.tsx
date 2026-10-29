@@ -3,7 +3,7 @@ import { css } from 'remix/component'
 import { EmptyState } from '@bits/ui/empty-state'
 
 import type { JournalEntry } from '../data.ts'
-import { panelListStyle } from './panel.tsx'
+import { panelListStyle } from '@bits/ui/panel'
 
 /**
  * The prompt journal (components §11.4) as rows of a ruled panel (decision
@@ -41,10 +41,7 @@ export function JournalList(handle: Handle<{ entries: JournalEntry[] }>) {
   }
 }
 
-const emptyStyle = css({
-  padding: 'var(--space-6) var(--cell-pad)',
-  borderTop: 'var(--border-w) solid var(--line-cell)',
-})
+const emptyStyle = css({ padding: 'var(--space-6) var(--cell-pad)' })
 const entryStyle = css({
   display: 'flex',
   flexDirection: 'column',

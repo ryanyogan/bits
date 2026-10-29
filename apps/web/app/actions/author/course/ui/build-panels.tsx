@@ -2,7 +2,7 @@ import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 import { keycapFace, Keycap } from '@bits/ui/keycap'
 import { LiveDot } from '@bits/ui/live-dot'
-import { MonoHeading } from '@bits/ui/eyebrow'
+import { Panel } from '@bits/ui/panel'
 
 import { routes } from '../../../../routes.ts'
 import { VideoUpload as VideoUploadIsland } from '../../public/video-upload.tsx'
@@ -131,14 +131,13 @@ export function VersionList(handle: Handle<{ item: AuthorCourse }>) {
   return () => {
     let { item } = handle.props
     return (
-      <section aria-labelledby="versions-title" mix={panelStyle}>
-        <MonoHeading id="versions-title">VERSIONS</MonoHeading>
+      <Panel id="versions-title" title="Versions">
         <ol mix={rowsStyle}>
           {item.versions.map((version) => (
             <VersionRow key={version.n} item={item} version={version} />
           ))}
         </ol>
-      </section>
+      </Panel>
     )
   }
 }
@@ -180,13 +179,8 @@ export function VideoList(handle: Handle<{ item: AuthorCourse }>) {
     let { item } = handle.props
     let ready = item.videos.filter((v) => v.status === 'ready').length
     return (
-      <section aria-labelledby="videos-title" mix={panelStyle}>
-        <div mix={panelHead}>
-          <MonoHeading id="videos-title">VIDEOS</MonoHeading>
-          <span mix={rowMeta}>
-            {ready} of {item.videos.length} ready
-          </span>
-        </div>
+      <Panel id="videos-title" title="Videos" aside={`${ready} of ${item.videos.length} ready`}>
+        <div mix={panelBody}>
         {item.videos.length ? (
           <ul mix={rowsStyle}>
             {item.videos.map((video) => (
@@ -202,7 +196,8 @@ export function VideoList(handle: Handle<{ item: AuthorCourse }>) {
             it.
           </p>
         ) : null}
-      </section>
+        </div>
+      </Panel>
     )
   }
 }
@@ -356,15 +351,8 @@ const itemStyle = css({
 })
 const glyphStyle = css({ '[data-level="ok"] > &': { color: 'var(--volt)' } })
 
-const panelStyle = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--space-3_5)',
-  minWidth: 0,
-  padding: 'var(--space-8) var(--section-pad-x)',
-  '@media (max-width: 480px)': { padding: 'var(--space-6) var(--section-pad-x)' },
-})
-const panelHead = css({ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 'var(--space-3)' })
+// A panel's body when it holds more than one block (decision 047: `Panel` pads it).
+const panelBody = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-3_5)', minWidth: 0 })
 const rowsStyle = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column' })
 const rowStyle = css({
   display: 'flex',

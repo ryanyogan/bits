@@ -87,7 +87,6 @@ function createBar() {
       height: 'var(--nav-progress-h)',
       zIndex: 'var(--z-nav-progress)',
       background: 'var(--volt)',
-      boxShadow: '0 0 8px var(--volt-a60)',
       transformOrigin: 'left center',
       transform: 'scaleX(0)',
       pointerEvents: 'none',

@@ -1,23 +1,40 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
+import { FORCED_COLORS } from './lib/states.ts'
+
 export interface EmptyStateProps {
   title: RemixNode
   hint?: RemixNode
   /** Usually a ghost Keycap ("Clear filters"). */
   action?: RemixNode
-  /** `boxed` (default): a dashed box. `bare`: no box, for a state that fills a grid cell or ruled band (decision 047). */
+  /**
+   * `boxed` (default): a flat hairline box with a mono `∅` mark, for a list
+   * that is empty inside a padded cell or panel. `bare`: no box, for a state
+   * that fills a grid cell or ruled band on its own (decision 047).
+   */
   variant?: 'boxed' | 'bare'
   mix?: MixInput<HTMLElement>
 }
 
-/** Dashed empty state (components §8.7): "0 results for “x”". Static. */
+/**
+ * Empty state (components §8.7, on the squared grid of decision 047):
+ * "0 results for “x”", a hint and an optional action, aligned to the
+ * cell's left edge like everything else in the grid. Static.
+ */
 export function EmptyState(handle: Handle<EmptyStateProps>) {
   return () => {
     let { title, hint, action, variant = 'boxed', mix } = handle.props
     return (
-      <div mix={[boxStyle, variant === 'bare' ? bareStyle : undefined, mix]}>
-        <p mix={titleStyle}>{title}</p>
+      <div mix={[baseStyle, variant === 'bare' ? bareStyle : boxedStyle, mix]}>
+        <p mix={titleStyle}>
+          {variant === 'boxed' ? (
+            <span aria-hidden="true" mix={markStyle}>
+              {'∅ '}
+            </span>
+          ) : null}
+          {title}
+        </p>
         {hint ? <p mix={hintStyle}>{hint}</p> : null}
         {action ? <div mix={actionStyle}>{action}</div> : null}
       </div>
@@ -25,18 +42,21 @@ export function EmptyState(handle: Handle<EmptyStateProps>) {
   }
 }
 
-const boxStyle = css({
+const baseStyle = css({
   display: 'flex',
   flexDirection: 'column',
-  alignItems: 'center',
-  gap: 'var(--space-2_5)',
-  padding: 'var(--space-12)',
-  borderRadius: 'var(--radius-20)',
-  border: 'var(--border-w) dashed var(--line-dashed)',
-  textAlign: 'center',
-  '@media (max-width: 480px)': { padding: 'var(--space-8) var(--space-4_5)' },
+  alignItems: 'flex-start',
+  gap: 'var(--space-2)',
+  textAlign: 'start',
 })
-const bareStyle = css({ border: 0, padding: 'var(--space-12) var(--cell-pad)' })
-const titleStyle = css({ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-15)', color: 'var(--text)' })
-const hintStyle = css({ margin: 0, fontSize: 'var(--fs-15)', color: 'var(--muted)' })
-const actionStyle = css({ marginTop: 'var(--space-1_5)' })
+const boxedStyle = css({
+  padding: 'var(--space-6) var(--cell-pad)',
+  border: 'var(--border-w) solid var(--line-cell)',
+  background: 'var(--well)',
+  [FORCED_COLORS]: { borderColor: 'GrayText' },
+})
+const bareStyle = css({ padding: 'var(--space-12) var(--cell-pad)' })
+const titleStyle = css({ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-14)', color: 'var(--text)' })
+const markStyle = css({ color: 'var(--dim)' })
+const hintStyle = css({ margin: 0, fontSize: 'var(--fs-14)', lineHeight: 1.5, color: 'var(--muted)' })
+const actionStyle = css({ marginTop: 'var(--space-2)' })

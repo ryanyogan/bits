@@ -67,13 +67,14 @@ export function AuthorPage(handle: Handle<AuthorPageProps>) {
           </RuledSection>
 
           <RuledSection
-            aria-labelledby="your-courses"
-            label={<span id="your-courses">Your courses</span>}
+            label="Your courses"
+            labelAs="h2"
+            labelId="your-courses"
             aside={courses.length ? plural(courses.length, 'course') : undefined}
             pad="none"
           >
             {courses.length ? (
-              <CellGrid as="ul" cols={1} colsMid={1} pad={false} aria-labelledby="your-courses">
+              <CellGrid as="ul" cols={1} colsMid={1} pad={false} top={false} aria-labelledby="your-courses">
                 {courses.map((item) => (
                   <li key={item.course.slug}>
                     <AuthorCourseRow item={item} />
@@ -87,7 +88,7 @@ export function AuthorPage(handle: Handle<AuthorPageProps>) {
             )}
           </RuledSection>
 
-          <RuledSection aria-labelledby="the-blocks" label={<span id="the-blocks">The blocks</span>} pad="none">
+          <RuledSection label="The blocks" labelAs="h2" labelId="the-blocks" pad="none">
             <BlockTable />
           </RuledSection>
         </PageFrame>

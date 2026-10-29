@@ -394,7 +394,8 @@
     /* Squared (decision 047): every step is 0, so every corner in the app
      * is square; the names stay so components and pages keep compiling.
      * --radius-round is for shapes that mean "round" (live dots, avatars,
-     * rings, lesson nodes); --radius-tiny for a mark inside text. */
+     * rings; lesson nodes are squares, 047-catalog-notes); --radius-tiny for
+     * a mark inside text. */
     --radius-xs: 0;
     --radius-sm: 0;
     --radius-md: 0;

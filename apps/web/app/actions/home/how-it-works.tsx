@@ -31,7 +31,7 @@ const sampleTokens: [string, string][] = [
 export function HowItWorks(_handle: Handle) {
   return () => (
     <RuledSection id="how" aria-labelledby="how-title" index="02" label="How it works" tone="ion" pad="none" mix={timeline}>
-      <CellGrid cols={2} fill="ink" pad={false}>
+      <CellGrid cols={2} fill="ink" pad={false} top={false}>
         <div mix={copyCell}>
           <div mix={introStyle}>
             <h2 id="how-title" mix={h2Style}>

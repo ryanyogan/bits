@@ -181,16 +181,6 @@ const formatsStyle = css({ display: 'flex', gap: 'var(--space-1_5)', flexWrap: '
 const progressRow = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-2_5)' })
 const pctStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--tone)' })
 
-/** The grid the cards sit in: `auto-fill minmax(min(290px,100%),1fr)`, gap 20. */
-export const courseGridStyle = css({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(min(290px, 100%), 1fr))',
-  gap: 'var(--space-5)',
-  margin: 0,
-  padding: 0,
-  listStyle: 'none',
-})
-
 export interface WriteCourseCardProps {
   href: string
   /** `card` (default, dashed box) or `cell` (the whole cell of a `CellGrid`). */

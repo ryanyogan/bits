@@ -23,6 +23,12 @@ export interface CellGridProps {
   edge?: CellGridEdge
   /** `ink` gives every cell the nearly opaque `--cell-fill` (over the landing's field). */
   fill?: CellGridFill
+  /**
+   * Draw the first row's top hairline (default). Off for a grid right under
+   * a `RuledSection` or `Panel` strip, which already draws that line: two
+   * translucent hairlines side by side read as one thick one.
+   */
+  top?: boolean
   /** Pad each cell with `--cell-pad` (default). Off when the cells pad themselves. */
   pad?: boolean
   /** `ul` / `ol` (children are `<li>`), or `div`. */
@@ -45,11 +51,12 @@ export interface CellGridProps {
  */
 export function CellGrid(handle: Handle<CellGridProps>) {
   return () => {
-    let { cols = 3, colsMid, colsPhone = 1, edge = 'flush', fill = 'none', pad = true, as = 'div', mix, children } = handle.props
+    let { cols = 3, colsMid, colsPhone = 1, edge = 'flush', fill = 'none', top = true, pad = true, as = 'div', mix, children } = handle.props
     let mid = colsMid ?? (cols === 3 ? 3 : Math.min(cols, 2))
     let styles = [
       gridStyle,
       layoutFor(cols, mid as CellGridCols, colsPhone),
+      top ? undefined : openFor(cols, mid as CellGridCols, colsPhone),
       edge === 'boxed' ? boxedStyle : undefined,
       fill === 'ink' ? inkStyle : undefined,
       pad ? padStyle : undefined,
@@ -97,6 +104,19 @@ function layoutFor(cols: CellGridCols, mid: CellGridCols, phone: CellGridCols) {
   if (!style) {
     style = css({ [WIDE]: columns(cols), [MID]: columns(mid), [PHONE]: columns(phone) })
     layouts.set(key, style)
+  }
+  return style
+}
+
+const opens = new Map<string, ReturnType<typeof css>>()
+/** No top border on the first row: the first `n` cells at each breakpoint. */
+function openFor(cols: CellGridCols, mid: CellGridCols, phone: CellGridCols) {
+  let key = `${cols}/${mid}/${phone}`
+  let style = opens.get(key)
+  if (!style) {
+    let first = (n: CellGridCols) => ({ [`& > :nth-child(-n+${n})`]: { borderTop: 0 } }) as CssInput
+    style = css({ [WIDE]: first(cols), [MID]: first(mid), [PHONE]: first(phone) })
+    opens.set(key, style)
   }
   return style
 }

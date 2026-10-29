@@ -90,7 +90,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
           </p>
         ) : null}
         {mode === 'terminal' ? (
-          <PageFrame mix={frameStyle}>
+          <PageFrame>
             <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, workspaceMain]}>
               <LessonModes segments={segments} progressLabel={progressLabel} modes={modeItems} mix={modesStrip} />
               <TerminalMode view={view} />
@@ -98,7 +98,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
             </main>
           </PageFrame>
         ) : (
-          <PageFrame mix={frameStyle}>
+          <PageFrame>
             <div mix={bodyStyle}>
               <OutlineNav view={view} />
               <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, mainStyle]}>
@@ -215,10 +215,8 @@ const draftLink = css({
   '&:hover': { color: 'var(--text)' },
 })
 // The lesson sits in the ruled column (decision 047): the PageFrame's rails
-// line up with the lesson bar's, and the outline is the column's first cell.
-// Phones (≤480px) give the rails the full screen width: the prose column
-// needs every pixel more than the gutter does.
-const frameStyle = css({ '@media (max-width: 480px)': { width: '100%', borderInline: 0 } })
+// line up with the lesson bar's and the AppBar's, and the outline is the
+// column's first cell. Phones keep the 12px inset like every other page.
 // Outline | lesson, sharing the outline's hairline (decision 022).
 const bodyStyle = css({
   display: 'grid',
