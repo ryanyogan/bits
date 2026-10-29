@@ -340,7 +340,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | Callout | callout.tsx | tone ok/warning/danger/info, role, title, compact | static |
 | Eyebrow / MonoHeading | eyebrow.tsx | tone, size, as / level, id | static |
 | Kbd | kbd.tsx | decorative | static |
-| StatTile | stat-tile.tsx | value, label, color, variant main/profile | static |
+| StatTile | stat-tile.tsx | value, label, color, variant main/profile (flat, borderless: a `CellGrid` cell) | static |
 | KeyValueList | key-value-list.tsx | items, variant default/course | static |
 | EmptyState | empty-state.tsx | title, hint, action | static |
 | LiveDot | live-dot.tsx | tone, pulse | static |
@@ -356,8 +356,8 @@ Rationale: `docs/decisions/010-component-library.md`.
 | TutorAvatar / TutorMessage / LearnerBubble / ModelOutput | tutor.tsx | size / variant / variant / temperature, tokens, state done/streaming/example/error, note | static |
 | CheckChip | check-chip.tsx | passed, compact | static |
 | TokenPill / TokenizerPanel | token-pill.tsx | text, id, index / tokens, illustrative | static |
-| HexBadge / BadgeTile / BadgeChip | hex-badge.tsx | name, glyph, color, variant earned/locked/preview/chip | static |
-| ActivityGrid | activity-grid.tsx | levels (`sampleActivity()` for demos), label | static |
+| HexBadge / BadgeTile / BadgeChip | hex-badge.tsx | name, glyph, color, variant earned/locked/preview/chip (BadgeTile is a grid cell: `CellGrid as="ul" pad={false}`, or `badgeGridStyle`) | static |
+| ActivityGrid | activity-grid.tsx | levels (`sampleActivity()` for demos), label, end (month names), caption, variant card/bare (square cells sized 7–24px to fill the width) | static |
 | RewardToast | reward-toast.tsx | xp, message, title, badge {name, glyph, color}, next, variant lesson/system | static |
 | RewardRegion | reward-toast.tsx | dismissAfter, initial (server-decided reward, in the HTML); shows toasts from `announceReward()` (`bits:reward`) as a fixed overlay at the viewport's bottom (`--z-toast`, `--toast-width`), never in the flow | island |
 | OddsBars | odds-bars.tsx | context, candidates, defaultValue (follows `bits:temperature`) | island |
