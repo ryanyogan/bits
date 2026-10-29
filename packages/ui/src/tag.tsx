@@ -1,6 +1,8 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
+import { FORCED_COLORS } from './lib/states.ts'
+
 export type TagVariant =
   | 'meta'
   | 'meta-ion'
@@ -10,13 +12,17 @@ export type TagVariant =
   | 'your-turn'
   | 'your-turn-sm'
   | 'run-hint'
+  | 'free'
+  | 'pro'
 
 export interface TagProps {
   /**
    * `meta` / `meta-ion` (Course hero), `format` (text · video · code on cards),
    * `cover` (track name on a cover; pass `color`), `done` ("✓ DONE"),
    * `your-turn` (composer header), `your-turn-sm` (Authoring preview),
-   * `run-hint` (static composer "Run ↵").
+   * `run-hint` (static composer "Run ↵"), `free` / `pro` (a course's access,
+   * decision 048: free in the brand's colour, pro a small dark key). Write
+   * them in sentence case: `Free`, `Pro`.
    */
   variant: TagVariant
   /** Text colour for `cover` tags, e.g. `var(--ion)`. */
@@ -103,5 +109,24 @@ const variantStyles: Record<TagVariant, ReturnType<typeof css>> = {
     background: 'var(--volt)',
     color: 'var(--on-volt)',
     fontSize: 'var(--fs-12)',
+  }),
+  // The XP pill's recipe: good news in the brand colour (--volt-soft 15.97:1 on ink).
+  free: css({
+    padding: 'var(--space-0_75) var(--space-2)',
+    border: 'var(--border-w) solid var(--volt-a28)',
+    background: 'var(--volt-a08)',
+    color: 'var(--volt-soft)',
+    fontSize: 'var(--fs-11)',
+    [FORCED_COLORS]: { border: '1px solid CanvasText' },
+  }),
+  // A small dark key: solid, not an alert and not a lock.
+  pro: css({
+    padding: 'var(--space-0_75) var(--space-2)',
+    border: 'var(--border-w) solid var(--line-strong)',
+    background: 'var(--raised)',
+    boxShadow: 'var(--shadow-keycap-dark)',
+    color: 'var(--text)',
+    fontSize: 'var(--fs-11)',
+    [FORCED_COLORS]: { border: '1px solid CanvasText' },
   }),
 }

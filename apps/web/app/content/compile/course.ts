@@ -127,6 +127,7 @@ export function buildCourse(sourceFiles: SourceFile[], options: BuildOptions): C
     tone: meta.cover.tone ?? TONES[(meta.order ?? 0) % TONES.length]!,
     pattern: meta.cover.pattern,
     formats,
+    access: meta.access ?? 'free',
     outcomes: meta.outcomes,
     badge: { id: meta.badge.id ?? slug, name: meta.badge.name, glyph: meta.badge.glyph },
     authors: meta.authors ?? [],
