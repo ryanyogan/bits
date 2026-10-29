@@ -1,9 +1,8 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 import { Callout, type CalloutTone } from '@bits/ui/callout'
-import { Card } from '@bits/ui/card'
 import { CodeInput } from '@bits/ui/code-input'
-import { Eyebrow, MonoHeading } from '@bits/ui/eyebrow'
+import { MonoHeading } from '@bits/ui/eyebrow'
 import { Icon } from '@bits/ui/icon'
 import { Keycap } from '@bits/ui/keycap'
 import { KeyValueList } from '@bits/ui/key-value-list'
@@ -11,6 +10,8 @@ import { Switch } from '@bits/ui/switch'
 import { Tag } from '@bits/ui/tag'
 import { TextField } from '@bits/ui/text-field'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
+import { PageFrame } from '@bits/ui/page-frame'
+import { RuledSection } from '@bits/ui/ruled-section'
 
 import type { Viewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
@@ -23,7 +24,7 @@ import { HandleField } from './ui/handle-field.tsx'
 import { MethodRow } from './ui/method-row.tsx'
 import { ReauthBlock } from './ui/reauth-block.tsx'
 import { Layout } from '../../ui/layout.tsx'
-import { pageShell } from '../../ui/page-shell.ts'
+import { PageHead } from '../../ui/page-head.tsx'
 
 export type SettingsSection = 'profile' | 'email' | 'sign-in' | 'data' | 'sessions' | 'danger'
 
@@ -78,25 +79,42 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
     let passkeyCount = account.methods.filter((m) => m.kind === 'passkey').length
 
     return (
-      <Layout title="Settings" description="Your sign-in, your profile, your data." viewer={viewer} bleed>
-        <div mix={pageStyle}>
-          <header mix={headerStyle}>
-            <Eyebrow as="p">Account</Eyebrow>
-            <h1 mix={titleStyle}>Settings</h1>
-            <p mix={leadStyle}>
-              Your sign-in, your profile, your data. Everything here is yours to change or take with you.
-            </p>
-          </header>
+      <Layout title="Settings" description="Your sign-in, your profile, your data." viewer={viewer}>
+        <PageFrame>
+          <PageHead
+            label="Account"
+            title="Settings"
+            titleId="settings-title"
+            lead="Your sign-in, your profile, your data. Everything here is yours to change or take with you."
+          >
+            {/* Always rendered, so a notice that arrives with the page is in a live region (decision 031). */}
+            <div role="status" mix={noticeSlotStyle}>
+              {notice ? (
+                <Callout tone={notice.tone} title={noticeTitles[notice.section]}>
+                  {notice.text}
+                </Callout>
+              ) : null}
+            </div>
+          </PageHead>
 
-          <div role="status" mix={noticeSlotStyle}>
-            {notice ? (
-              <Callout tone={notice.tone} title={noticeTitles[notice.section]}>
-                {notice.text}
-              </Callout>
-            ) : null}
-          </div>
-
+          <RuledSection as="div" pad="none">
           <div mix={panesStyle}>
+            <aside mix={asideStyle} aria-labelledby="settings-outline">
+              <MonoHeading id="settings-outline" mix={outlineHeadingStyle}>
+                On this page
+              </MonoHeading>
+              <nav aria-labelledby="settings-outline">
+                <ul mix={outlineListStyle}>
+                  {outline.map((item) => (
+                    <li key={item.id}>
+                      <a href={`#${item.id}`} mix={[outlineLinkStyle, item.id === 'danger' ? outlineDangerStyle : undefined]}>
+                        {item.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            </aside>
             <div mix={columnStyle}>
               {/* 1. Profile */}
               <Section id="profile" title="Profile" description="How you appear on bits. Your email is never shown.">
@@ -331,26 +349,9 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
               </Section>
             </div>
 
-            <aside mix={asideStyle} aria-labelledby="settings-outline">
-              <Card variant="compact" mix={outlineCardStyle}>
-                <MonoHeading id="settings-outline" mix={outlineHeadingStyle}>
-                  On this page
-                </MonoHeading>
-                <nav aria-labelledby="settings-outline">
-                  <ul mix={outlineListStyle}>
-                    {outline.map((item) => (
-                      <li key={item.id}>
-                        <a href={`#${item.id}`} mix={outlineLinkStyle}>
-                          {item.label}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </nav>
-              </Card>
-            </aside>
           </div>
-        </div>
+          </RuledSection>
+        </PageFrame>
       </Layout>
     )
   }
@@ -364,26 +365,25 @@ interface SectionProps {
   children?: RemixNode
 }
 
-/** SectionCard (24px, radius 20, gap 18) with a MonoHeading `<h2>` and description. */
+/**
+ * One settings group: a row of the ruled column (decision 047). The heading
+ * and description sit in a narrow left cell, the controls in the wide right
+ * one; stacked under 1100px. Rows share one hairline.
+ */
 function Section(handle: Handle<SectionProps>) {
   return () => {
     let { id, title, description, danger, children } = handle.props
     let headingId = `${id}-heading`
     return (
-      <Card
-        as="section"
-        variant={danger ? 'dashed' : 'page'}
-        labelledBy={headingId}
-        mix={[sectionStyle, danger ? dangerSectionStyle : undefined]}
-      >
+      <section aria-labelledby={headingId} mix={[sectionStyle, danger ? dangerSectionStyle : undefined]}>
         <div mix={sectionHeadStyle} id={id}>
           <MonoHeading id={headingId} mix={danger ? dangerHeadingStyle : undefined}>
             {title}
           </MonoHeading>
           <p mix={descriptionStyle}>{description}</p>
         </div>
-        {children}
-      </Card>
+        <div mix={sectionBodyStyle}>{children}</div>
+      </section>
     )
   }
 }
@@ -393,9 +393,9 @@ const pendingStyle = css({
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--space-4)',
-  padding: 'var(--space-4)',
-  borderRadius: 'var(--radius-12)',
-  border: 'var(--border-w) solid var(--line-strong)',
+  padding: 'var(--space-5)',
+  border: 'var(--border-w) solid var(--line-cell)',
+  boxShadow: 'inset var(--border-w-strong) 0 0 var(--volt-edge)',
   background: 'var(--well)',
 })
 
@@ -403,105 +403,97 @@ const pendingHeadStyle = css({ display: 'flex', alignItems: 'center', gap: 'var(
 
 const pendingTileStyle = css({
   flex: 'none',
-  width: '64px',
-  height: '64px',
-  borderRadius: 'var(--radius-xl)',
+  width: '48px',
+  height: '48px',
+  color: 'var(--volt)',
   background: 'var(--volt-tint)',
-  border: 'var(--border-w) solid var(--volt-a40)',
+  border: 'var(--border-w) solid var(--volt-edge)',
   display: 'grid',
   placeItems: 'center',
-  '@media (max-width: 480px)': { width: '48px', height: '48px' },
 })
 
 const pendingTextStyle = css({ margin: 0, fontSize: 'var(--fs-15)', lineHeight: 1.55, color: 'var(--text-body)' })
 
 const pendingEmailStyle = css({ color: 'var(--text)', fontFamily: 'var(--font-mono)', overflowWrap: 'anywhere' })
 
-const pageStyle = [
-  pageShell,
-  css({
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-10)',
-    '@media (max-width: 480px)': { gap: 'var(--space-7)' },
-  }),
-]
 
-const headerStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-3_5)' })
 
-const titleStyle = css({
-  margin: 0,
-  fontFamily: 'var(--font-display)',
-  fontWeight: 800,
-  fontSize: 'clamp(36px, 5vw, 64px)',
-  lineHeight: 1,
-  letterSpacing: 'var(--tracking-tight)',
+// The outline in a side cell, the groups in the wide one, one hairline
+// between them; the outline goes under 900px (the groups are the page).
+const panesStyle = css({
+  display: 'grid',
+  gridTemplateColumns: '240px minmax(0, 1fr)',
+  '@media (max-width: 899.98px)': { gridTemplateColumns: 'minmax(0, 1fr)' },
 })
-
-const leadStyle = css({
-  margin: 0,
-  maxWidth: '60ch',
-  fontSize: 'var(--fs-18)',
-  lineHeight: 1.6,
-  color: 'var(--text-lead)',
-})
-
-const panesStyle = css({ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-8)', alignItems: 'flex-start' })
 
 const columnStyle = css({
-  flex: '999 1 600px',
   minWidth: 0,
   display: 'flex',
   flexDirection: 'column',
-  gap: 'var(--space-4)',
+  borderLeft: 'var(--border-w) solid var(--line-cell)',
+  '@media (max-width: 899.98px)': { borderLeft: 0 },
+  '@media (forced-colors: active)': { borderColor: 'GrayText' },
 })
 
 const asideStyle = css({
-  flex: '1 1 320px',
   minWidth: 0,
+  alignSelf: 'start',
   position: 'sticky',
-  top: 'calc(var(--shell-h) + var(--space-4))',
-  '@media (max-width: 951px)': { position: 'static' },
-  '@media (max-width: 820px)': { display: 'none' },
+  top: 'var(--shell-h)',
+  '@media (max-width: 899.98px)': { display: 'none' },
 })
 
-const outlineCardStyle = css({ gap: 'var(--space-1)' })
 
-const outlineHeadingStyle = css({ padding: '0 var(--space-3) var(--space-2_5)' })
 
-const outlineListStyle = css({
-  margin: 0,
-  padding: 0,
-  listStyle: 'none',
+const outlineHeadingStyle = css({
   display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--space-1)',
+  alignItems: 'center',
+  minHeight: 'var(--touch-target)',
+  padding: '0 var(--space-6)',
+  borderBottom: 'var(--border-w) solid var(--line-cell)',
 })
+
+const outlineListStyle = css({ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column' })
 
 const outlineLinkStyle = css({
   display: 'flex',
   alignItems: 'center',
-  minHeight: 'var(--touch-target)',
-  padding: 'var(--space-1_5) var(--space-3)',
-  borderRadius: 'var(--radius-10)',
+  minHeight: 'var(--control-field)',
+  padding: 'var(--space-2) var(--space-6)',
+  boxSizing: 'border-box',
+  borderBottom: 'var(--border-w) solid var(--line-cell)',
   fontSize: 'var(--fs-14)',
-  color: 'var(--text-body)',
+  color: 'var(--muted)',
   textDecoration: 'none',
   '&:hover': { background: 'var(--fill-hover)', color: 'var(--text)' },
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
+  '@media (forced-colors: active)': { borderColor: 'GrayText', '&:hover': { textDecoration: 'underline' } },
 })
+
+const outlineDangerStyle = css({ '&:hover': { color: 'var(--danger)' } })
 
 const sectionStyle = css({
-  padding: 'var(--space-6)',
-  '@media (max-width: 480px)': { padding: 'var(--space-4_5)' },
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 0.8fr) minmax(0, 1.6fr)',
+  gap: 'var(--space-6) var(--space-10)',
+  padding: 'var(--space-12) var(--section-pad-x)',
+  borderBottom: 'var(--border-w) solid var(--line-cell)',
+  '&:last-child': { borderBottom: 0 },
+  '@media (max-width: 1099.98px)': { gridTemplateColumns: 'minmax(0, 1fr)', gap: 'var(--space-5)' },
+  '@media (max-width: 480px)': { padding: 'var(--space-8) var(--section-pad-x)' },
+  '@media (forced-colors: active)': { borderColor: 'GrayText' },
 })
 
+const sectionBodyStyle = css({ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-4_5)', maxWidth: '640px' })
+
+// The danger row: a faint danger ground and a danger rule down its left
+// edge, inside the cell (decision 047: accents as signals).
 const dangerSectionStyle = css({
-  gap: 'var(--space-4_5)',
-  border: 'var(--border-w) dashed var(--danger-a35)',
   background: 'var(--danger-a04)',
+  boxShadow: 'inset var(--border-w-strong) 0 0 var(--danger-line)',
 })
 
-const sectionHeadStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' })
+const sectionHeadStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', alignSelf: 'start' })
 
 const dangerHeadingStyle = css({ color: 'var(--danger)' })
 
@@ -543,14 +535,14 @@ const monoLinkStyle = css({
   '&:hover': { color: 'var(--volt-link-hover)' },
 })
 
-// Section footers: right-aligned on desktop, full width on phones.
-const footerStyle = css({ display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 'var(--space-3)' })
+// Section footers: at the start of the controls column, full width on phones.
+const footerStyle = css({ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)' })
 const footerKeyStyle = css({ '@media (max-width: 480px)': { flex: '1 1 100%' } })
 
-const sessionsFormStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', alignItems: 'stretch', '& p': { textAlign: 'right' }, '@media (max-width: 480px)': { '& p': { textAlign: 'left' } } })
+const sessionsFormStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', alignItems: 'stretch' })
 
 const emailValueStyle = css({ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-2_5)' })
-const verifiedStyle = css({ borderColor: 'var(--volt-a40)', color: 'var(--volt)' })
+const verifiedStyle = css({ borderColor: 'var(--volt-edge)', color: 'var(--volt)' })
 const unverifiedStyle = css({ borderColor: 'var(--warn-line)', color: 'var(--warn)' })
 
 // The open content sits in the ::details-content slot, so stretch the items
@@ -563,13 +555,16 @@ const disclosureStyle = css({
   '& > summary': { alignSelf: 'flex-start' },
 })
 
+// One box of rows sharing hairlines (decision 047), not a stack of cards.
 const methodListStyle = css({
   margin: 0,
   padding: 0,
   listStyle: 'none',
   display: 'flex',
   flexDirection: 'column',
-  gap: 'var(--space-2_5)',
+  border: 'var(--border-w) solid var(--line-cell)',
+  '& > li + li': { borderTop: 'var(--border-w) solid var(--line-cell)' },
+  '@media (forced-colors: active)': { borderColor: 'GrayText', '& > li + li': { borderColor: 'GrayText' } },
 })
 
 const centeredTermsStyle = css({ '& dt': { alignSelf: 'center' } })
@@ -583,4 +578,4 @@ const noticeTitles: Record<SettingsSection, string> = {
   danger: 'Delete account',
 }
 
-const noticeSlotStyle = css({ '&:empty': { display: 'none' }, marginBottom: 'calc(var(--space-6) * -1)', '@media (max-width: 480px)': { marginBottom: 'calc(var(--space-3) * -1)' } })
+const noticeSlotStyle = css({ width: '100%', '&:not(:empty)': { paddingTop: 'var(--space-2)' } })

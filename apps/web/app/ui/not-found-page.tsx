@@ -2,11 +2,11 @@ import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 import { Keycap } from '@bits/ui/keycap'
 import { PageFrame } from '@bits/ui/page-frame'
-import { RuledSection } from '@bits/ui/ruled-section'
 
 import type { Viewer } from '../auth/identity.ts'
 import { routes } from '../routes.ts'
 import { Layout } from './layout.tsx'
+import { PageHead } from './page-head.tsx'
 
 export interface NotFoundPageProps {
   path: string
@@ -84,45 +84,21 @@ function StatusPage(handle: Handle<StatusPageProps>) {
     return (
       <Layout title={title} viewer={viewer}>
         <PageFrame>
-          <RuledSection rule={false} index={code} label={eyebrow} tone="ion" aria-labelledby="status-title">
-            <div mix={boxStyle}>
-              <h1 id="status-title" mix={h1Style}>
-                {heading}
-              </h1>
-              <p mix={hintStyle}>{hint}</p>
-              <div mix={actionsStyle}>
-                <Keycap size="lg" href={routes.courses.index.href()}>
-                  Browse courses →
-                </Keycap>
-                <Keycap size="lg" variant="ghost" href={routes.home.href()}>
-                  Home
-                </Keycap>
-              </div>
+          <PageHead index={code} tone="ion" label={eyebrow} title={heading} titleId="status-title" lead={hint}>
+            <div mix={actionsStyle}>
+              <Keycap size="lg" href={routes.courses.index.href()}>
+                Browse courses →
+              </Keycap>
+              <Keycap size="lg" variant="ghost" href={routes.home.href()}>
+                Home
+              </Keycap>
             </div>
-          </RuledSection>
+          </PageHead>
         </PageFrame>
       </Layout>
     )
   }
 }
 
-const boxStyle = css({
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'flex-start',
-  gap: 'var(--space-5)',
-  maxWidth: 'var(--read-width)',
-})
-const h1Style = css({
-  margin: 0,
-  fontFamily: 'var(--font-display)',
-  fontWeight: 700,
-  fontSize: 'var(--type-h2-size)',
-  lineHeight: 'var(--type-h2-leading)',
-  letterSpacing: 'var(--type-h2-tracking)',
-  textWrap: 'balance',
-  '@media (max-width: 480px)': { fontSize: 'var(--fs-30)' },
-})
-const hintStyle = css({ margin: 0, maxWidth: '52ch', fontSize: 'var(--fs-17)', lineHeight: 1.6, color: 'var(--muted)' })
 const codeStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-15)', color: 'var(--text-quiet)', overflowWrap: 'anywhere' })
 const actionsStyle = css({ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', paddingTop: 'var(--space-3)' })

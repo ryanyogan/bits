@@ -7,6 +7,7 @@ import { RuledSection } from '@bits/ui/ruled-section'
 import type { Viewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
 import { Layout } from '../../ui/layout.tsx'
+import { PageHead } from '../../ui/page-head.tsx'
 
 export interface LegalPageProps {
   title: string
@@ -32,14 +33,7 @@ export function LegalPage(handle: Handle<LegalPageProps>) {
     return (
       <Layout title={title} description={description} viewer={viewer} currentPath={path} canonicalPath={path}>
         <PageFrame>
-          <RuledSection rule={false} label="Policies" aside={`Updated ${updated}`} aria-labelledby="legal-title">
-            <div mix={headerStyle}>
-              <h1 id="legal-title" mix={titleStyle}>
-                {title}
-              </h1>
-              <p mix={leadStyle}>{description}</p>
-            </div>
-          </RuledSection>
+          <PageHead label="Policies" aside={`Updated ${updated}`} title={title} titleId="legal-title" lead={description} />
           <RuledSection pad="none" aria-label={`${title} in full`}>
             <div mix={bodyStyle}>
               <nav aria-label="Policies" mix={sideStyle}>
@@ -62,16 +56,6 @@ export function LegalPage(handle: Handle<LegalPageProps>) {
   }
 }
 
-const headerStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', maxWidth: 'var(--read-width)' })
-const titleStyle = css({
-  margin: 0,
-  fontFamily: 'var(--font-display)',
-  fontSize: 'var(--type-h2-size)',
-  lineHeight: 'var(--type-h2-leading)',
-  letterSpacing: 'var(--type-h2-tracking)',
-  '@media (max-width: 480px)': { fontSize: 'var(--fs-30)' },
-})
-const leadStyle = css({ margin: 0, fontSize: 'var(--fs-17)', lineHeight: 1.6, color: 'var(--text-lead)' })
 // A side column of policy links beside the prose, sharing one hairline;
 // stacked above it on phones.
 const bodyStyle = css({
