@@ -58,8 +58,10 @@ export interface KeycapProps {
 }
 
 /**
- * The keycap button: a raised key with a 4px edge that travels 3px when
- * pressed (resolutions §3).
+ * The keycap button. Squared and flat (decision 047): a mono label, a crisp
+ * 1px border on the dark keys and a 2px underline drawn inside the box
+ * (`--shadow-keycap-*`), which thins as the key moves 1px when pressed.
+ * No drop edge, no hover lift, no glow.
  *
  * Server-only (no clientEntry): hover and press are pure CSS. Islands that
  * need a keycap (copy, run) import it and add behaviour through `mix`.
@@ -176,10 +178,10 @@ const sizeStyles: Record<KeycapSize, ReturnType<typeof css>> = {
   lg: css({ minHeight: 'var(--control-lg)', padding: '0 var(--space-6_5)', fontSize: 'var(--fs-16)' }),
 }
 
-/** Flat ghost buttons keep the System 44px / radius 10 geometry at `sm`. */
+/** Flat ghost buttons keep the System 44px geometry at `sm`. */
 const ghostSizeStyles: Record<KeycapSize, ReturnType<typeof css>> = {
-  sm: css({ minHeight: 'var(--touch-target)', padding: '0 var(--space-4)', borderRadius: 'var(--radius-10)' }),
-  md: css({ minHeight: 'var(--control-md)', padding: '0 var(--space-4_5)', borderRadius: 'var(--radius-10)' }),
+  sm: css({ minHeight: 'var(--touch-target)', padding: '0 var(--space-4)' }),
+  md: css({ minHeight: 'var(--control-md)', padding: '0 var(--space-4_5)' }),
   lg: css({ minHeight: 'var(--control-lg)', padding: '0 var(--space-6_5)' }),
 }
 
@@ -191,7 +193,6 @@ const variantStyles: Record<KeycapVariant, ReturnType<typeof css>> = {
     [HOVER]: {
       background: 'var(--volt-hover)',
       boxShadow: 'var(--shadow-keycap-volt-hover)',
-      transform: 'translateY(-1px)',
     },
     [ACTIVE]: {
       transform: 'translateY(var(--keycap-travel))',
@@ -213,7 +214,7 @@ const variantStyles: Record<KeycapVariant, ReturnType<typeof css>> = {
     border: 'var(--border-w) solid var(--line-strong)',
     fontWeight: 400,
     boxShadow: 'var(--shadow-keycap-dark)',
-    [HOVER]: { transform: 'translateY(-1px)', filter: 'brightness(1.06)' },
+    [HOVER]: { background: 'var(--selected)', borderColor: 'var(--line-drop)' },
     [ACTIVE]: {
       transform: 'translateY(var(--keycap-travel))',
       boxShadow: 'var(--shadow-keycap-dark-pressed)',
@@ -256,7 +257,7 @@ const variantStyles: Record<KeycapVariant, ReturnType<typeof css>> = {
     background: 'var(--ion)',
     color: 'var(--ink)',
     boxShadow: 'var(--shadow-keycap-ion)',
-    [HOVER]: { transform: 'translateY(-1px)', filter: 'brightness(1.06)' },
+    [HOVER]: { filter: 'brightness(1.06)' },
     [ACTIVE]: {
       transform: 'translateY(var(--keycap-travel))',
       boxShadow: 'var(--shadow-keycap-ion-pressed)',
@@ -268,7 +269,7 @@ const variantStyles: Record<KeycapVariant, ReturnType<typeof css>> = {
     background: 'var(--danger)',
     color: 'var(--on-volt)',
     boxShadow: 'var(--shadow-keycap-danger)',
-    [HOVER]: { transform: 'translateY(-1px)', filter: 'brightness(1.06)' },
+    [HOVER]: { filter: 'brightness(1.06)' },
     [ACTIVE]: {
       transform: 'translateY(var(--keycap-travel))',
       boxShadow: 'var(--shadow-keycap-danger-pressed)',

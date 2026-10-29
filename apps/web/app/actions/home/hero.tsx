@@ -24,6 +24,10 @@ const suggestions = [
  * the LCP paint with no JS; only the prompt input's typewriter placeholder
  * hydrates. The prompt bar is a GET form to lesson 1 with `?q=`.
  *
+ * It is the first band of the page's ruled frame (decision 047) and has no
+ * rule of its own: the header's rule closes it from above. The neural field
+ * shows through it; everything on top sits on flat ink (`--cell-fill`).
+ *
  * The h1 never animates (it is the LCP element). The lines around it rise in
  * once on load, CSS only (decision 040).
  */
@@ -32,7 +36,9 @@ export function Hero(handle: Handle<{ signedIn?: boolean }>) {
     <section aria-labelledby="hero-title" mix={heroStyle}>
       <p mix={[badgeStyle, rise[0]]}>
         <span aria-hidden="true" mix={pulseDot} />
-        Free courses · from zero to your first agent
+        <span>
+          Free courses<span mix={dotBreak}> · </span>from zero to your first agent
+        </span>
       </p>
       <h1 id="hero-title" mix={h1Style}>
         Learn AI by <span mix={voltText}>typing</span> to it.
@@ -106,11 +112,9 @@ const rise = [0, 1, 2, 3, 4, 5].map((i) =>
 )
 
 const heroStyle = css({
-  maxWidth: 'var(--page-max)',
-  margin: '0 auto',
   // Spec: 104px top, 820px tall. The height is capped by the viewport so
   // the scroll cue and pause control stay above the fold on a laptop.
-  padding: 'var(--space-24) var(--page-gutter) var(--space-18)',
+  padding: 'var(--space-24) var(--section-pad-x) var(--space-12)',
   minHeight: 'min(var(--hero-min-height), calc(100svh - var(--appbar-h)))',
   boxSizing: 'border-box',
   display: 'flex',
@@ -119,12 +123,13 @@ const heroStyle = css({
   textAlign: 'center',
   gap: 'var(--space-7)',
   [PHONE]: {
-    padding: 'var(--space-12) var(--page-gutter) var(--space-12)',
+    padding: 'var(--space-12) var(--section-pad-x) var(--space-10)',
     minHeight: 'auto',
     gap: 'var(--space-6)',
   },
 })
 
+// A square tag with a hairline on flat ink (decision 047).
 const badgeStyle = css({
   margin: 0,
   maxWidth: '100%',
@@ -132,33 +137,30 @@ const badgeStyle = css({
   display: 'inline-flex',
   alignItems: 'center',
   gap: 'var(--space-2_5)',
-  padding: 'var(--space-2) var(--space-4) var(--space-2) var(--space-3)',
-  border: '1px solid var(--volt-a28)',
-  borderRadius: 'var(--radius-pill)',
-  background: 'var(--ink-a60)',
-  WebkitBackdropFilter: 'blur(var(--space-2_5))',
-  backdropFilter: 'blur(var(--space-2_5))',
+  padding: 'var(--space-2) var(--space-3_5)',
+  border: 'var(--border-w) solid var(--volt-a28)',
+  background: 'var(--cell-fill)',
   fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-13)',
+  fontSize: 'var(--fs-12)',
   color: 'var(--volt)',
   textAlign: 'left',
   textWrap: 'balance',
-  // The 13px line is ~330px wide: on a 360px phone it wrapped into a
-  // two-line pill. 11px with title tracking keeps it on one line.
+  // Phones break the line at its " · " (dotBreak) instead of mid-phrase.
   [PHONE]: {
     gap: 'var(--space-2)',
-    padding: 'var(--space-1_5) var(--space-3) var(--space-1_5) var(--space-2_5)',
+    padding: 'var(--space-1_5) var(--space-2_5)',
     fontSize: 'var(--fs-11)',
     letterSpacing: 'var(--tracking-title)',
   },
 })
 
+// A live dot: round, because round means "on" (decision 047).
 const pulseDot = css({
   flex: 'none',
   display: 'block',
-  width: 'var(--space-2)',
-  height: 'var(--space-2)',
-  borderRadius: 'var(--radius-pill)',
+  width: 'var(--space-1_5)',
+  height: 'var(--space-1_5)',
+  borderRadius: 'var(--radius-round)',
   background: 'var(--volt)',
   animation: 'bits-pulse-volt var(--duration-pulse) ease-in-out infinite',
   [REDUCED]: { animation: 'none' },
@@ -191,7 +193,7 @@ const caretStyle = css({
 const subStyle = css({
   margin: 0,
   maxWidth: '640px',
-  fontSize: 'var(--fs-20)',
+  fontSize: 'var(--fs-19)',
   lineHeight: 1.55,
   color: 'var(--text-lead)',
   textWrap: 'pretty',
@@ -199,14 +201,14 @@ const subStyle = css({
 })
 
 /*
- * The prompt bar (components §7.4), reworked in decision 040.
+ * The prompt bar (components §7.4; decisions 040 and 047).
  *
- * One row, everything centred on it. The Ask key's edge is drawn inside the
- * key (an inset shadow), so its box is what you see and the insets around
- * it are equal: 8px on desktop, 6px on phones. Radii nest: bar = key
- * radius (10) + inset, so 18 (`--radius-xl`) and 16. The chevron uses the
- * input's font, size and line box, so its glyph sits on the text's line
- * instead of floating in a taller 20px line.
+ * One row, everything centred on it, squared. The Ask key's underline is
+ * drawn inside the key, so its box is what you see and the insets around
+ * it are equal: 8px on desktop, 6px on phones. The chevron uses the input's
+ * font, size and line box, so its glyph sits on the text's line. The ground
+ * is flat ink (`--cell-fill`, no blur) with a hairline that turns volt and
+ * doubles on focus.
  */
 const barStyle = css({
   width: '100%',
@@ -216,23 +218,13 @@ const barStyle = css({
   gap: 'var(--space-3)',
   padding: 'var(--space-2) var(--space-2) var(--space-2) var(--space-5)',
   boxSizing: 'border-box',
-  // Glass over the field: translucent ink, blurred and a little saturated,
-  // so the field glows through without drawing lines behind the text.
-  background: 'var(--ink-a60)',
-  WebkitBackdropFilter: 'blur(var(--blur-prompt)) saturate(1.4)',
-  backdropFilter: 'blur(var(--blur-prompt)) saturate(1.4)',
-  border: '1px solid var(--volt-a28)',
-  borderRadius: 'var(--radius-xl)',
-  boxShadow: 'inset 0 1px 0 var(--line-glass), var(--shadow-prompt-bar)',
+  background: 'var(--cell-fill)',
+  border: 'var(--border-w) solid var(--line-drop)',
   transition: 'border-color var(--duration-focus), box-shadow var(--duration-focus)',
-  '&:hover': { borderColor: 'var(--volt-a40)' },
+  '&:hover': { borderColor: 'var(--line-node-next)' },
   '&:focus-within': {
-    borderColor: 'var(--volt-a60)',
-    boxShadow: 'inset 0 1px 0 var(--line-glass), var(--focus-ring), var(--shadow-prompt-bar)',
-  },
-  // Without backdrop-filter the bar would be see-through: make it solid.
-  '@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))': {
-    background: 'var(--glass-82)',
+    borderColor: 'var(--focus-border)',
+    boxShadow: 'var(--focus-ring-soft)',
   },
   [FORCED]: {
     background: 'Canvas',
@@ -242,7 +234,6 @@ const barStyle = css({
   [PHONE]: {
     gap: 'var(--space-2_5)',
     padding: 'var(--space-1_5) var(--space-1_5) var(--space-1_5) var(--space-4)',
-    borderRadius: 'var(--radius-16)',
   },
 })
 
@@ -265,7 +256,6 @@ const askStyle = css({
   padding: '0 var(--space-3) 0 var(--space-4)',
   boxSizing: 'border-box',
   border: 0,
-  borderRadius: 'var(--radius-10)',
   background: 'var(--volt)',
   color: 'var(--on-volt)',
   fontFamily: 'var(--font-mono)',
@@ -275,13 +265,13 @@ const askStyle = css({
   whiteSpace: 'nowrap',
   cursor: 'pointer',
   WebkitTapHighlightColor: 'transparent',
-  // The keycap edge, inside the key: 2px of --volt-edge along the bottom.
-  boxShadow: 'inset 0 calc(-1 * var(--space-0_5)) 0 var(--volt-edge), inset 0 1px 0 var(--inset-highlight)',
+  // The flat key (decision 047): a 2px underline inside the box.
+  boxShadow: 'var(--shadow-keycap-volt)',
   transition:
     'background-color var(--duration-press) var(--ease), box-shadow var(--duration-press) var(--ease), transform var(--duration-press) var(--ease)',
   '&:hover': { background: 'var(--volt-hover)' },
-  '&:active': { transform: 'translateY(1px)', boxShadow: 'inset 0 1px 0 var(--volt-edge)' },
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:active': { transform: 'translateY(var(--keycap-travel))', boxShadow: 'var(--shadow-keycap-volt-pressed)' },
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset)' },
   '&[aria-busy="true"]': { cursor: 'progress' },
   [REDUCED]: { transition: 'none' },
   [FORCED]: { border: '1px solid ButtonText' },
@@ -295,7 +285,6 @@ const enterTile = css({
   height: 'var(--space-6)',
   boxSizing: 'border-box',
   padding: '0 var(--space-1_5)',
-  borderRadius: 'var(--radius-5)',
   background: 'var(--on-volt-a12)',
   fontSize: 'var(--fs-12)',
 })
@@ -305,19 +294,16 @@ const chipsStyle = css({
   margin: 0,
   padding: 0,
   display: 'flex',
-  gap: 'var(--space-2_5)',
+  gap: 'var(--space-2)',
   flexWrap: 'wrap',
   justifyContent: 'center',
   maxWidth: 'var(--read-width)',
-  [PHONE]: { gap: 'var(--space-2)' },
 })
 
-// Chips sit on the field too: give them the badge's glass so they read.
+// Chips sit on the field too: give them the flat ink ground so they read.
 const chipStyle = css({
   minHeight: 'var(--touch-target)',
-  background: 'var(--ink-a60)',
-  WebkitBackdropFilter: 'blur(var(--space-2_5))',
-  backdropFilter: 'blur(var(--space-2_5))',
+  background: 'var(--cell-fill)',
 })
 
 const noteStyle = css({ marginTop: 'var(--space-1_5)' })
@@ -342,11 +328,12 @@ const cueTextStyle = css({
   letterSpacing: 'var(--tracking-cue)',
   textTransform: 'uppercase',
   color: 'var(--dim)',
+  [PHONE]: { letterSpacing: 'var(--tracking-eyebrow-s)' },
 })
 
 const cueLine = css({
   display: 'block',
-  width: '1px',
+  width: 'var(--border-w)',
   height: 'var(--space-12)',
   background: 'var(--volt)',
   animation: 'bits-cue 2.4s ease-in-out infinite',

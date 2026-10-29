@@ -1,45 +1,45 @@
 import { css, type Handle } from 'remix/component'
 import { Keycap } from '@bits/ui/keycap'
+import { RuledSection } from '@bits/ui/ruled-section'
 
 import { routes } from '../../routes.ts'
 import { lessonOneHref } from './links.ts'
 import { dotBreak, monoNote, PHONE } from './styles.ts'
 
-/** Closing CTA (Main.md §7). */
+/** Closing CTA (Main.md §7): one wide band, centred, the field glowing through. */
 export function ClosingCta(_handle: Handle) {
   return () => (
-    <section aria-labelledby="cta-title" mix={ctaStyle}>
-      <h2 id="cta-title" mix={titleStyle}>
-        Your first prompt is waiting.
-      </h2>
-      <div mix={buttons}>
-        <Keycap size="lg" glow href={lessonOneHref()} mix={button}>
-          Start lesson 1 →
-        </Keycap>
-        <Keycap size="lg" variant="dark" href={routes.courses.index.href()} mix={button}>
-          Browse courses
-        </Keycap>
+    <RuledSection aria-labelledby="cta-title" pad="none">
+      <div mix={ctaStyle}>
+        <h2 id="cta-title" mix={titleStyle}>
+          Your first prompt is waiting.
+        </h2>
+        <div mix={buttons}>
+          <Keycap size="lg" href={lessonOneHref()} mix={button}>
+            Start lesson 1 →
+          </Keycap>
+          <Keycap size="lg" variant="dark" href={routes.courses.index.href()} mix={button}>
+            Browse courses
+          </Keycap>
+        </div>
+        <p mix={monoNote}>
+          Free forever<span mix={dotBreak}> · </span>progress saves when you sign in
+        </p>
       </div>
-      <p mix={monoNote}>
-        Free forever<span mix={dotBreak}> · </span>progress saves when you sign in
-      </p>
-    </section>
+    </RuledSection>
   )
 }
 
 const ctaStyle = css({
-  maxWidth: 'var(--page-max)',
-  margin: '0 auto',
   // Spec: 160px top, 140px bottom.
-  padding:
-    'calc(var(--space-30) + var(--space-10)) var(--page-gutter) calc(var(--space-30) + var(--space-5))',
+  padding: 'calc(var(--space-30) + var(--space-10)) var(--section-pad-x) calc(var(--space-30) + var(--space-5))',
   boxSizing: 'border-box',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   textAlign: 'center',
   gap: 'var(--space-9)',
-  [PHONE]: { padding: 'var(--space-24) var(--page-gutter) var(--space-20)' },
+  [PHONE]: { padding: 'var(--space-24) var(--section-pad-x) var(--space-20)' },
 })
 
 const titleStyle = css({
@@ -55,7 +55,7 @@ const titleStyle = css({
 
 const buttons = css({
   display: 'flex',
-  gap: 'var(--space-3_5)',
+  gap: 'var(--space-3)',
   flexWrap: 'wrap',
   justifyContent: 'center',
   [PHONE]: { width: '100%' },

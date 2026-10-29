@@ -13,10 +13,10 @@ export const swatches = [
   { name: 'Text', token: '--text', hex: '#ECEEF5', use: 'Headlines and primary copy.' },
   { name: 'Muted', token: '--muted', hex: '#9AA0B4', use: 'Body secondary, descriptions.' },
   { name: 'Dim', token: '--dim', hex: '#7A8098', use: 'Hints and meta. Smallest allowed grey (4.9:1).' },
-  { name: 'Volt', token: '--volt', hex: '#C6FF3D', use: 'Primary action, your turn, success. Text on it is Ink.' },
-  { name: 'Volt edge', token: '--volt-edge', hex: '#6E9116', use: 'Keycap shadow under Volt only.' },
-  { name: 'Ion', token: '--ion', hex: '#3DE3FF', use: 'Model output, in-progress, video.' },
-  { name: 'Synapse', token: '--synapse', hex: '#9D85FF', use: '3D field and Tools track only.' },
+  { name: 'Volt', token: '--volt', hex: '#B8E05A', use: 'Primary action, your turn, success. Text on it is Ink.' },
+  { name: 'Volt edge', token: '--volt-edge', hex: '#6F8A2E', use: 'The underline inside a Volt key.' },
+  { name: 'Ion', token: '--ion', hex: '#5EC8DC', use: 'Model output, in-progress, video.' },
+  { name: 'Synapse', token: '--synapse', hex: '#9B8CE6', use: '3D field and Tools track only.' },
 ]
 
 export const extendedSwatches = [

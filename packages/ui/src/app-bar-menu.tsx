@@ -113,24 +113,23 @@ const sheetStyle = css({
   borderBottom: 'var(--border-w) solid var(--line-bar)',
   background: 'var(--surface)',
   color: 'var(--text)',
-  boxShadow: 'var(--shadow-float)',
   '&::backdrop': { background: 'var(--ink-a60)' },
   '&:popover-open': { animation: 'bits-rise var(--duration-reveal) var(--ease) both' },
   '@media (prefers-reduced-motion: reduce)': { '&:popover-open': { animation: 'none' } },
 })
 
+// The sheet is a column of cells: one hairline between links (decision 047).
 const sheetNavStyle = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: 'var(--space-0_5)',
+  '& > a + a': { borderTop: 'var(--border-w) solid var(--line-cell)' },
 })
 
 const linkStyle = css({
   display: 'flex',
   alignItems: 'center',
-  minHeight: 'var(--touch-target)',
+  minHeight: 'var(--control-field)',
   padding: '0 var(--space-3)',
-  borderRadius: 'var(--radius-10)',
   color: 'var(--muted)',
   fontSize: 'var(--fs-15)',
   textDecoration: 'none',

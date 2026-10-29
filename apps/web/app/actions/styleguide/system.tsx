@@ -136,7 +136,7 @@ export function SystemBoard(handle: Handle) {
             <span mix={caption}>Shape &amp; motion</span>
             <dl mix={shapeGrid}>
               {[
-                ['radius', '8 · 11 · 14 · 18 · 22 · pill'],
+                ['radius', '0 (squared, decision 047) · round for dots'],
                 ['space', '4-pt; sections 120 / cards 24'],
                 ['glass', '#0C0E16 @ 78% · blur 14–18'],
                 ['keycap press', '120ms · 3px travel'],

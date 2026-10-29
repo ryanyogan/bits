@@ -44,15 +44,13 @@ const slotStyle = css({
 })
 
 const toggleStyle = css({
-  // Glass behind the label, since the field moves underneath it; the
-  // pressed tint (ToolButton outline) is laid over the glass as an image.
-  backgroundColor: 'var(--ink-a60)',
-  WebkitBackdropFilter: 'blur(10px)',
-  backdropFilter: 'blur(10px)',
-  borderRadius: 'var(--radius-pill)',
-  '&:hover': { backgroundColor: 'var(--fill-btn)' },
+  // A flat ink ground behind the label, since the field moves underneath
+  // it (decision 047: no blur); the pressed tint (ToolButton outline) is
+  // laid over it as an image.
+  backgroundColor: 'var(--cell-fill)',
+  '&:hover': { backgroundColor: 'var(--cell-fill-hover)' },
   '&[aria-pressed="true"]': {
-    backgroundColor: 'var(--ink-a60)',
+    backgroundColor: 'var(--cell-fill)',
     backgroundImage: 'linear-gradient(var(--volt-a14), var(--volt-a14))',
   },
   // Forced colours: ToolButton paints pressed as Highlight; keep the tint off it.

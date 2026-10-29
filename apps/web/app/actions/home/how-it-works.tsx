@@ -1,10 +1,11 @@
 import { css, type Handle } from 'remix/component'
-import { Eyebrow } from '@bits/ui/eyebrow'
+import { CellGrid } from '@bits/ui/cell-grid'
+import { RuledSection } from '@bits/ui/ruled-section'
 import { StaticTabs } from '@bits/ui/segmented-tabs'
 import { TokenizerPanel } from '@bits/ui/token-pill'
 import { LearnerBubble, TutorMessage } from '@bits/ui/tutor'
 
-import { h2Style, leadStyle, PHONE, sectionStyle, splitGrid } from './styles.ts'
+import { h2Style, introStyle, leadStyle, PHONE } from './styles.ts'
 
 const features = [
   ['READ', "Chat-style lessons you can skim, or switch to terminal mode if that's more your speed."],
@@ -23,34 +24,38 @@ const sampleTokens: [string, string][] = [
   ['.', '13'],
 ]
 
-/** "02 — How it works" (Main.md §3): FeatureRows + a picture of a lesson. */
+/**
+ * "02 / How it works" (Main.md §3): the pitch and a picture of a lesson in
+ * two cells, then the three verbs (read, type, run) as a row of cells.
+ */
 export function HowItWorks(_handle: Handle) {
   return () => (
-    <section id="how" aria-labelledby="how-title" mix={[sectionStyle, timeline]}>
-      <div mix={splitGrid('500px')}>
-        <div mix={columnStyle}>
-          <Eyebrow tone="ion" as="p">
-            02 — How it works
-          </Eyebrow>
-          <h2 id="how-title" mix={h2Style}>
-            Every lesson is a conversation.
-          </h2>
-          <p mix={[leadStyle, leadWidth]}>
-            No 40-minute lectures. A tutor explains one idea, then hands you the keyboard. You type
-            the prompt, the model answers, and the lesson checks what you actually did.
-          </p>
-          <dl mix={featureList}>
-            {features.map(([key, text]) => (
-              <div key={key} mix={featureRow}>
-                <dt mix={featureKey}>{key}</dt>
-                <dd mix={featureText}>{text}</dd>
-              </div>
-            ))}
-          </dl>
+    <RuledSection id="how" aria-labelledby="how-title" index="02" label="How it works" tone="ion" pad="none" mix={timeline}>
+      <CellGrid cols={2} fill="ink" pad={false}>
+        <div mix={copyCell}>
+          <div mix={introStyle}>
+            <h2 id="how-title" mix={h2Style}>
+              Every lesson is a conversation.
+            </h2>
+            <p mix={leadStyle}>
+              No 40-minute lectures. A tutor explains one idea, then hands you the keyboard. You type
+              the prompt, the model answers, and the lesson checks what you actually did.
+            </p>
+          </div>
         </div>
-        <LessonPreview />
-      </div>
-    </section>
+        <div mix={previewCell}>
+          <LessonPreview />
+        </div>
+      </CellGrid>
+      <CellGrid as="ul" cols={3} fill="ink" aria-label="What you do in a lesson">
+        {features.map(([key, text]) => (
+          <li key={key} mix={featureCell}>
+            <span mix={featureKey}>{key}</span>
+            <span mix={featureText}>{text}</span>
+          </li>
+        ))}
+      </CellGrid>
+    </RuledSection>
   )
 }
 
@@ -108,41 +113,29 @@ function LessonPreview(_handle: Handle) {
 // Names the view timeline the header's "How it works" link follows (decision 040).
 const timeline = css({ viewTimelineName: '--how' })
 
-const columnStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-7)' })
-const leadWidth = css({ maxWidth: '520px' })
-
-const featureList = css({
-  margin: 0,
+const copyCell = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: 'var(--space-0_5)',
-  borderTop: '1px solid var(--line)',
+  justifyContent: 'center',
+  padding: 'var(--section-pad-y) var(--section-pad-x)',
+  [PHONE]: { padding: 'var(--space-12) var(--section-pad-x)' },
 })
-const featureRow = css({
-  display: 'flex',
-  gap: 'var(--space-5)',
-  padding: 'var(--space-4_5) 0',
-  borderBottom: '1px solid var(--line)',
-  alignItems: 'baseline',
-})
+const previewCell = css({ padding: 'var(--section-pad-x)' })
+
+const featureCell = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' })
 const featureKey = css({
-  width: '56px',
-  flex: 'none',
   fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-13)',
+  fontSize: 'var(--fs-12)',
+  letterSpacing: 'var(--tracking-eyebrow-s)',
   color: 'var(--volt)',
 })
-const featureText = css({ margin: 0, fontSize: 'var(--fs-17)', lineHeight: 1.5, color: 'var(--text-body)' })
+const featureText = css({ fontSize: 'var(--fs-16)', lineHeight: 1.5, color: 'var(--text-body)' })
 
 const figureStyle = css({ margin: 0, minWidth: 0 })
 const cardStyle = css({
-  background: 'var(--glass)',
-  WebkitBackdropFilter: 'blur(var(--blur-preview))',
-  backdropFilter: 'blur(var(--blur-preview))',
-  border: '1px solid var(--line-panel)',
-  borderRadius: 'var(--radius-2xl)',
+  background: 'var(--surface)',
+  border: 'var(--border-w) solid var(--line-panel)',
   overflow: 'hidden',
-  boxShadow: 'var(--shadow-float)',
   userSelect: 'none',
 })
 const cardHeader = css({
@@ -150,13 +143,13 @@ const cardHeader = css({
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: 'var(--space-3)',
-  padding: 'var(--space-4) var(--space-5)',
-  borderBottom: '1px solid var(--line)',
+  padding: 'var(--space-3) var(--space-4)',
+  borderBottom: 'var(--border-w) solid var(--line)',
   flexWrap: 'wrap',
 })
 const cardContext = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
 const cardBody = css({
-  padding: 'var(--space-6_5) var(--space-6)',
+  padding: 'var(--space-6)',
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--space-5)',
@@ -169,21 +162,19 @@ const fakeButton = css({
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-4)',
   boxSizing: 'border-box',
-  borderRadius: 'var(--radius-10)',
-  border: '1px solid var(--line-control)',
+  border: 'var(--border-w) solid var(--line-control)',
   color: 'var(--text)',
   fontFamily: 'var(--font-sans)',
   fontSize: 'var(--fs-15)',
 })
-const cardFooter = css({ padding: 'var(--space-3_5)', borderTop: '1px solid var(--line)' })
+const cardFooter = css({ padding: 'var(--space-3)', borderTop: 'var(--border-w) solid var(--line)' })
 const composer = css({
   display: 'flex',
   alignItems: 'center',
   gap: 'var(--space-3)',
   padding: 'var(--space-3) var(--space-3_5)',
-  borderRadius: 'var(--radius-lg)',
   background: 'var(--well)',
-  border: '1px solid var(--volt-a35)',
+  border: 'var(--border-w) solid var(--volt-a35)',
 })
 const yourTurn = css({
   flex: 'none',
@@ -191,8 +182,7 @@ const yourTurn = css({
   fontSize: 'var(--fs-12)',
   color: 'var(--on-volt)',
   background: 'var(--volt)',
-  padding: '3px var(--space-2)',
-  borderRadius: 'var(--radius-xs)',
+  padding: 'var(--space-0_75) var(--space-2)',
 })
 const composerText = css({
   flex: 1,

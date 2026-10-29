@@ -87,7 +87,7 @@ const dotStyle = css({
   flex: 'none',
   width: '7px',
   height: '7px',
-  borderRadius: 'var(--radius-pill)',
+  borderRadius: 'var(--radius-round)',
   '&[data-all="true"]': { background: 'var(--text)' },
   // The "All" dot would vanish on the selected (text-coloured) pill: use ink (README §C).
   '[aria-current="true"] > &[data-all="true"]': { background: 'var(--ink)' },

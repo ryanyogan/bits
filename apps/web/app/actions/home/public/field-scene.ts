@@ -43,11 +43,13 @@ export interface Field {
   dispose(): void
 }
 
+// The toned accents of decision 047 (tokens.css --volt, --ion, --synapse,
+// --volt-soft): calmer than the old neon, still the same three hues.
 const PALETTE = [
-  ['#C6FF3D', '#3DE3FF'],
-  ['#3DE3FF', '#9D85FF'],
-  ['#9D85FF', '#C6FF3D'],
-  ['#E4FF9E', '#9D85FF'],
+  ['#B8E05A', '#5EC8DC'],
+  ['#5EC8DC', '#9B8CE6'],
+  ['#9B8CE6', '#B8E05A'],
+  ['#D9EEAA', '#9B8CE6'],
 ] as const
 
 const MORPH_EASE = 0.055
@@ -101,7 +103,7 @@ uniform float uAlpha; varying float vA;
 void main(){
   float d = length(gl_PointCoord - 0.5); if (d > 0.5) discard;
   float a = smoothstep(0.5, 0.0, d); a *= a;
-  gl_FragColor = vec4(mix(vec3(0.78, 1.0, 0.24), vec3(1.0), 0.5), a * vA * uAlpha);
+  gl_FragColor = vec4(mix(vec3(0.72, 0.88, 0.35), vec3(1.0), 0.4), a * vA * uAlpha);
 }`
 
 function smooth(a: number, b: number, x: number) {
@@ -320,7 +322,8 @@ export function createField(T: Three, options: FieldOptions): Field {
       uPx: { value: px },
       uC1: { value: new T.Color(PALETTE[0][0]) },
       uC2: { value: new T.Color(PALETTE[0][1]) },
-      uAlpha: { value: 1 },
+      // A little under full strength: the field is a ground, not a light show (047).
+      uAlpha: { value: 0.85 },
     },
     vertexShader: pointsVertex,
     fragmentShader: pointsFragment,
@@ -332,7 +335,7 @@ export function createField(T: Three, options: FieldOptions): Field {
   let lineGeo = new T.BufferGeometry()
   lineGeo.setAttribute('position', new T.BufferAttribute(f.edges, 3))
   let lineMat = new T.LineBasicMaterial({
-    color: 0xc6ff3d,
+    color: 0xb8e05a,
     transparent: true,
     opacity: 0.14,
     blending: T.AdditiveBlending,
@@ -413,7 +416,7 @@ export function createField(T: Three, options: FieldOptions): Field {
 
     // Edges and signals fade out during the first morph.
     let netAlpha = 1 - Math.min(1, morph * 1.6)
-    lineMat.opacity = 0.15 * netAlpha
+    lineMat.opacity = 0.12 * netAlpha
     signalMat.uniforms.uAlpha!.value = netAlpha
     lines.visible = netAlpha > 0.01
     signals.visible = netAlpha > 0.01

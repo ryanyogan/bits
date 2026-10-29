@@ -1,11 +1,13 @@
 import { css, type Handle, type RemixNode } from 'remix/component'
+import { CellGrid } from '@bits/ui/cell-grid'
+import { RuledSection } from '@bits/ui/ruled-section'
 
-import { cardDesc, cardTitle, h2Style, sectionStyle, stackSection, voltText } from './styles.ts'
+import { cardDesc, cardTitle, cellLabel, h2Style, PHONE, voltText } from './styles.ts'
 
-/** "Read it. Watch it. Run it." (Main.md §5): three ModeCards (components §12.3). */
+/** "Read it. Watch it. Run it." (Main.md §5): three ModeCards as cells (components §12.3). */
 export function Modes(_handle: Handle) {
   return () => (
-    <section aria-labelledby="modes-title" mix={[sectionStyle, stackSection]}>
+    <RuledSection aria-labelledby="modes-title" pad="none">
       <div mix={headerRow}>
         <h2 id="modes-title" mix={[h2Style, titleStyle]}>
           Read it. Watch it. <span mix={voltText}>Run it.</span>
@@ -15,7 +17,7 @@ export function Modes(_handle: Handle) {
           editor.
         </p>
       </div>
-      <ul mix={gridStyle}>
+      <CellGrid as="ul" cols={3} fill="ink">
         <ModeCard
           eyebrow="TEXT · ALWAYS"
           color="var(--volt)"
@@ -37,8 +39,8 @@ export function Modes(_handle: Handle) {
           desc="Syntax-highlighted, one-click copy, and a “type it yourself” mode for the moments muscle memory matters."
           art={<RunArt />}
         />
-      </ul>
-    </section>
+      </CellGrid>
+    </RuledSection>
   )
 }
 
@@ -59,7 +61,7 @@ function ModeCard(handle: Handle<ModeCardProps>) {
           {art}
         </div>
         <div mix={textStyle}>
-          <p mix={eyebrowStyle} style={{ color }}>
+          <p mix={cellLabel} style={{ color }}>
             {eyebrow}
           </p>
           <h3 mix={cardTitle}>{title}</h3>
@@ -126,6 +128,7 @@ const headerRow = css({
   alignItems: 'flex-end',
   gap: 'var(--space-8)',
   flexWrap: 'wrap',
+  padding: 'var(--section-pad-y) var(--section-pad-x) calc(var(--section-pad-y) / 2)',
 })
 const titleStyle = css({ maxWidth: '720px', textWrap: 'wrap' })
 const introStyle = css({
@@ -135,42 +138,21 @@ const introStyle = css({
   lineHeight: 1.6,
   color: 'var(--text-lead)',
 })
-const gridStyle = css({
-  listStyle: 'none',
-  margin: 0,
-  padding: 0,
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))',
-  gap: 'var(--space-5)',
-})
 const cardStyle = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: 'var(--space-5)',
-  padding: 'var(--space-6)',
-  borderRadius: 'var(--radius-20)',
-  background: 'var(--glass-80)',
-  WebkitBackdropFilter: 'blur(var(--blur-glass))',
-  backdropFilter: 'blur(var(--blur-glass))',
-  border: '1px solid var(--line-glass)',
-  minWidth: 0,
+  gap: 'var(--space-6)',
+  [PHONE]: { gap: 'var(--space-5)' },
 })
 const wellStyle = css({
   position: 'relative',
   height: '200px',
-  borderRadius: 'var(--radius-12)',
   background: 'var(--well)',
-  border: '1px solid var(--line-hair)',
+  border: 'var(--border-w) solid var(--line-hair)',
   overflow: 'hidden',
   boxSizing: 'border-box',
 })
 const textStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' })
-const eyebrowStyle = css({
-  margin: 0,
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-12)',
-  letterSpacing: 'var(--tracking-eyebrow-s)',
-})
 
 const readArt = css({
   height: '100%',
@@ -194,7 +176,6 @@ const bubble = css({
   marginTop: 'var(--space-1_5)',
   height: '28px',
   width: '46%',
-  borderRadius: '10px 10px 3px 10px',
   background: 'var(--skeleton-bubble)',
 })
 const promptLine = css({

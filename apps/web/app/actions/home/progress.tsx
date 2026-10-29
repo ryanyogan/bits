@@ -1,12 +1,13 @@
 import { css, type Handle } from 'remix/component'
-import { Eyebrow } from '@bits/ui/eyebrow'
+import { CellGrid } from '@bits/ui/cell-grid'
 import { BadgeChip } from '@bits/ui/hex-badge'
 import { Keycap } from '@bits/ui/keycap'
 import { ProgressRing } from '@bits/ui/progress-ring'
+import { RuledSection } from '@bits/ui/ruled-section'
 import { StatTile } from '@bits/ui/stat-tile'
 
 import { profileHref } from './links.ts'
-import { h2Style, leadStyle, PHONE, sectionStyle, splitGrid } from './styles.ts'
+import { h2Style, introStyle, leadStyle, PHONE } from './styles.ts'
 
 // Sample data on a marketing page: never personalised (Main.md §6).
 const badges = [
@@ -17,11 +18,27 @@ const badges = [
   { name: 'Tool wielder', color: 'var(--code-gutter-faint)' },
 ]
 
-/** "04 — You" (Main.md §6): ProgressShowcase (components §12.5) + copy. */
+/** "04 / You" (Main.md §6): the copy and a ProgressShowcase (components §12.5) in two cells. */
 export function Progress(_handle: Handle) {
   return () => (
-    <section aria-labelledby="you-title" mix={sectionStyle}>
-      <div mix={splitGrid('480px')}>
+    <RuledSection aria-labelledby="you-title" index="04" label="You" pad="none">
+      <CellGrid cols={2} fill="ink" pad={false}>
+        <div mix={copyCell}>
+          <div mix={introStyle}>
+            <h2 id="you-title" mix={h2Style}>
+              Progress you can feel.
+            </h2>
+            <p mix={leadStyle}>
+              Sign in once and every prompt you write, every lesson you finish and every badge you
+              earn follows you to any device. Free — no card, no trial, no catch.
+            </p>
+          </div>
+          <div>
+            <Keycap variant="dark" href={profileHref()} mix={profileKey}>
+              See your profile →
+            </Keycap>
+          </div>
+        </div>
         <div mix={showcase}>
           <div mix={ringRow}>
             <ProgressRing
@@ -38,11 +55,11 @@ export function Progress(_handle: Handle) {
               <span mix={ringNext}>Up next: Temperature &amp; randomness</span>
             </div>
           </div>
-          <div mix={stats}>
+          <CellGrid cols={3} colsMid={3} colsPhone={3} edge="boxed" pad={false}>
             <StatTile variant="main" value={<span mix={statValue}>12</span>} label="day streak" color="var(--volt)" mix={statStyle} />
             <StatTile variant="main" value={<span mix={statValue}>1,240</span>} label="neurons earned" color="var(--ion)" mix={statStyle} />
             <StatTile variant="main" value={<span mix={statValue}>37</span>} label="prompts written" color="var(--text)" mix={statStyle} />
-          </div>
+          </CellGrid>
           <ul aria-label="Badges" mix={badgeRow}>
             {badges.map((b) => (
               <li key={b.name} mix={badgeItem}>
@@ -51,41 +68,25 @@ export function Progress(_handle: Handle) {
             ))}
           </ul>
         </div>
-        <div mix={copyColumn}>
-          <Eyebrow tone="volt" as="p">
-            04 — You
-          </Eyebrow>
-          <h2 id="you-title" mix={h2Style}>
-            Progress you can feel.
-          </h2>
-          <p mix={leadStyle}>
-            Sign in once and every prompt you write, every lesson you finish and every badge you
-            earn follows you to any device. Free — no card, no trial, no catch.
-          </p>
-          <div>
-            <Keycap variant="dark" href={profileHref()} mix={profileKey}>
-              See your profile →
-            </Keycap>
-          </div>
-        </div>
-      </div>
-    </section>
+      </CellGrid>
+    </RuledSection>
   )
 }
 
-const showcase = css({
-  padding: 'var(--space-7)',
-  borderRadius: 'var(--radius-24)',
-  background: 'var(--glass-82)',
-  WebkitBackdropFilter: 'blur(var(--blur-prompt))',
-  backdropFilter: 'blur(var(--blur-prompt))',
-  border: '1px solid var(--line-panel)',
+const copyCell = css({
   display: 'flex',
   flexDirection: 'column',
+  justifyContent: 'center',
+  gap: 'var(--space-8)',
+  padding: 'var(--section-pad-y) var(--section-pad-x)',
+  [PHONE]: { padding: 'var(--space-12) var(--section-pad-x)' },
+})
+const showcase = css({
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
   gap: 'var(--space-6)',
-  boxShadow: '0 40px 120px var(--shadow-a50)',
-  minWidth: 0,
-  [PHONE]: { padding: 'var(--space-5)' },
+  padding: 'var(--section-pad-x)',
 })
 const ringRow = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-6)', flexWrap: 'wrap' })
 const ringStyle = css({ [PHONE]: { width: '112px', height: '112px' } })
@@ -98,10 +99,9 @@ const ringTitle = css({
   lineHeight: 1.2,
 })
 const ringNext = css({ fontSize: 'var(--fs-15)', color: 'var(--muted)' })
-const stats = css({ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 'var(--space-2_5)' })
-const statStyle = css({ minWidth: 0, [PHONE]: { paddingLeft: 'var(--space-2)', paddingRight: 'var(--space-2)' } })
+// The tiles are cells of a boxed grid: no fill of their own.
+const statStyle = css({ background: 'transparent', [PHONE]: { paddingLeft: 'var(--space-2_5)', paddingRight: 'var(--space-2_5)' } })
 const statValue = css({ [PHONE]: { fontSize: 'var(--fs-20)' } })
-const badgeRow = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', gap: 'var(--space-2_5)', flexWrap: 'wrap' })
+const badgeRow = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' })
 const badgeItem = css({ display: 'flex' })
-const copyColumn = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' })
-const profileKey = css({ minHeight: '48px', padding: '0 var(--space-5)', gap: 'var(--space-2_5)' })
+const profileKey = css({ minHeight: 'var(--space-12)', padding: '0 var(--space-5)', gap: 'var(--space-2_5)' })
