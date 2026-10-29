@@ -211,7 +211,33 @@ export interface RabbitHoleBlock {
 
 export type ToyBlock = NextTokenBlock | TrainingBlock | AttentionBlock | CompareBlock | RabbitHoleBlock
 
-export type Block = MarkdownBlock | PromptBlock | CodeBlock | AskBlock | QuizBlock | OddsBlock | TokenizerBlock | TerminalBlock | ToyBlock
+/**
+ * How deep a lesson explains its idea (decision 053): `new` for someone
+ * brand new to AI, `engineer` for the mechanism and the point.
+ */
+export type LessonDepth = 'new' | 'engineer'
+
+export const lessonDepths: readonly LessonDepth[] = ['new', 'engineer']
+
+/** The depth a learner sees before they pick one. */
+export const DEFAULT_DEPTH: LessonDepth = 'new'
+
+export function isLessonDepth(value: unknown): value is LessonDepth {
+  return value === 'new' || value === 'engineer'
+}
+
+/**
+ * Every top-level block can be tagged with a depth: it came from a `:::new`
+ * or `:::engineer` block and shows only at that depth. Untagged blocks are
+ * shared. Graded and stateful blocks (prompt, ask, quiz, rabbithole) are
+ * always shared; the build refuses them inside a depth block.
+ */
+interface DepthTag {
+  depth?: LessonDepth
+}
+
+export type Block = (MarkdownBlock | PromptBlock | CodeBlock | AskBlock | QuizBlock | OddsBlock | TokenizerBlock | TerminalBlock | ToyBlock) &
+  DepthTag
 
 export interface LessonVideo {
   /** The uploaded MP4 (/media/videos/:id.mp4), linked by the build once it is ready (decision 029). */
@@ -289,4 +315,19 @@ export function upgradeLessonContent(content: LessonContent): LessonContent {
 
 export function hasCode(content: LessonContent): boolean {
   return content.blocks.some((block) => block.type === 'code')
+}
+
+/** The depths a lesson's blocks are tagged with, in `lessonDepths` order (empty: no depth blocks). */
+export function depthsOf(blocks: readonly Block[]): LessonDepth[] {
+  return lessonDepths.filter((depth) => blocks.some((block) => block.depth === depth))
+}
+
+/**
+ * The lesson as read at `depth` (decision 053): the shared blocks plus that
+ * depth's, the other depth's dropped. The same object when the lesson has no
+ * depth blocks.
+ */
+export function contentAtDepth(content: LessonContent, depth: LessonDepth): LessonContent {
+  if (!content.blocks.some((block) => block.depth)) return content
+  return { ...content, blocks: content.blocks.filter((block) => !block.depth || block.depth === depth) }
 }

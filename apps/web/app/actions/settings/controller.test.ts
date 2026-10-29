@@ -117,6 +117,11 @@ describe('/settings', () => {
       body.answers.map((row: { ask: string; answer: string; correct: boolean }) => [row.ask, row.answer, row.correct]),
       [['common-words', 'b', false]],
     )
+    // The lesson depth (decision 053): null until picked, then the saved choice.
+    assert.equal(body.account.lessonDepth, null)
+    await fetchAs(cookie, '/courses/plain-course/lesson-1?depth=engineer')
+    let again = await (await fetchAs(cookie, routes.settings.export.href())).json()
+    assert.equal(again.account.lessonDepth, 'engineer')
   })
 
   it('signs out everywhere: every session of the user stops working', async () => {

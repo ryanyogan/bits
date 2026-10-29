@@ -346,7 +346,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | ToolButton | tool-button.tsx | variant outline/quiz/video, square, label, pressed (busy caret on aria-busy) | static |
 | ProviderButton | provider-button.tsx | icon, href (always data-rmx-document, never prefetched) or type/name/value, busy (caret via busyStyle) | static |
 | BackButton | back-button.tsx | href, label, prefetch | static |
-| SegmentedTabs / StaticTabs | segmented-tabs.tsx | label, items, flavour mode/account / items, selected, size | static (URL tabs) |
+| SegmentedTabs / StaticTabs | segmented-tabs.tsx | label, items (`prefetch: false` for a tab whose GET saves a choice), flavour mode/account, keepPlace / items, selected, size | static (URL tabs) |
 | TabPanels | tab-panels.tsx | label, items {name, label, panel}, defaultTab, flavour | island (@remix-run/ui tabs) |
 | ChoiceChip / Chip / SuggestionChip | chip.tsx | name, value, type, defaultChecked / selected / href, prefetch | static |
 | FilterPill | filter-pill.tsx | href, dot, count, selected, prefetch, variant pill/cell (`cell`: a full-height cell of a ruled toolbar row) | static |
@@ -379,7 +379,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | ProgressBar / SegmentedProgress | progress-bar.tsx | pct, variant card/banner/art/row/level, color, label / segments | static |
 | ProgressRing | progress-ring.tsx | pct, size 96/132, color, caption, label | static |
 | LessonNode / LessonNodeRow | lesson-node.tsx | state done/current/next, size, n, passed / state, badge | static |
-| LessonBar / LessonModes | lesson-bar.tsx | backHref, context, title, titleAs, segments, modes, neurons, xp, position shell/sticky/static (`shell` = AppBar `sub`; two-line title, 3px progress strip on phones) / modes, aside (the <760px chrome row; `aside` holds the outline disclosure), mix | static |
+| LessonBar / LessonModes | lesson-bar.tsx | backHref, context, title, titleAs, segments, modes, depths (the "New to this / Engineer" tabs, a cell from 1024px; decision 053), neurons, xp, position shell/sticky/static (`shell` = AppBar `sub`; two-line title, 3px progress strip on phones) / modes, aside (the <760px chrome row; `aside` holds the outline disclosure, which heads with the depth tabs), mix | static |
 | TutorAvatar / TutorMessage / LearnerBubble / ModelOutput | tutor.tsx | size / variant / variant / temperature, tokens, state done/streaming/example/error, note | static |
 | CheckChip | check-chip.tsx | passed, compact | static |
 | TokenPill / TokenizerPanel | token-pill.tsx | text, id, index / tokens, illustrative | static |
@@ -548,6 +548,15 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   the save reads right answers from the journal, never form fields, and
   patterns and right choices never reach the browser. Tests answer with
   `answerAsk(cookie, course, lesson, ask, answer)`.
+- Lesson depth (decision 053): `:::new` / `:::engineer` wrap the text for
+  one reading depth (anything outside is shared); blocks compile flat with
+  a `depth` tag, and `contentAtDepth()` filters them. `:::prompt`,
+  `:::ask`, `:::quiz` and `:::rabbithole` stay shared (an error inside),
+  depth blocks don't nest, and one holding a block needs a longer fence
+  (`::::engineer … ::::`). The depth is `?depth=`, then
+  `users.lesson_depth`, then the session, then `new` (`lessonDepth()` in
+  `app/progress/depth.ts`, which remembers a `?depth=`); the depth tabs
+  never prefetch, since following one saves the choice.
 - Read published content with `const catalog = await getCatalog(context)`
   (`app/content/request.ts`), then
   `catalog.getCourse/listCourses/getLesson/getContinue` and

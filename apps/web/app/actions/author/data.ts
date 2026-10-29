@@ -214,5 +214,6 @@ export const blocks = [
   { name: ':::attention', attrs: 'caption?, illustrative?', what: 'Click a token to see what it attends to. A tokens "The" " cat" … line, then - from=7 to=1 w=0.62 (0-based).' },
   { name: ':::compare', attrs: 'left, right, illustrative?', what: 'Two answers side by side. Lines: - prompt "…", - left "…", - right "…".' },
   { name: ':::rabbithole', attrs: '—', what: 'Up to 3 links: - video "Title" by="3Blue1Brown" mins=8 url="https://…" (or - read …; deep for long pieces).' },
+  { name: ':::new / :::engineer', attrs: '—', what: 'Two reading depths of one idea: :::new for someone brand new to AI, :::engineer for the mechanism and the point. The learner picks one and every lesson follows it; text outside both is shared. They hold prose, ::ask lines, :::code, :::terminal, :::odds, :::tokenizer and the toys, never :::prompt, :::ask, :::quiz or :::rabbithole (those stay shared, so progress never depends on depth). To hold a block, use a longer fence: ::::new … ::::. They don’t nest; one depth without the other is a warning.' },
   { name: 'video: (frontmatter)', attrs: 'path, chapters?', what: 'Turns on the Watch tab. Lessons without it stay text-only.' },
 ]

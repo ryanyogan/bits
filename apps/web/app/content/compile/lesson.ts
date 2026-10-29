@@ -23,7 +23,9 @@ import {
   type CodeBlockFile,
   type CompareBlock,
   type Inline,
+  depthsOf,
   type LessonContent,
+  type LessonDepth,
   type LessonVideo,
   type MarkdownBlock,
   type NextTokenBlock,
@@ -69,6 +71,8 @@ export interface CompiledLesson {
   kinds: LessonKind[]
   /** Number of `:::prompt` blocks and regex checks, for the report summary. */
   stats: { prompts: number; patterns: number; video?: { path: string; found: boolean; duration?: number } }
+  /** Reading minutes at each depth, when the lesson has depth blocks (decision 053). */
+  minsByDepth?: Record<LessonDepth, number>
 }
 
 /** An uploaded, ready video a lesson's `video:` path links to (decision 029). */
@@ -152,7 +156,10 @@ export function compileLesson(file: SourceFile, context: LessonContext): Compile
   }
   if (video) content.video = video
   if (meta.replies) content.replies = meta.replies
-  return { meta, slug, content, kinds: kindsOf(content, meta.project === true), stats }
+  let compiled: CompiledLesson = { meta, slug, content, kinds: kindsOf(content, meta.project === true), stats }
+  let byDepth = minsByDepth(content)
+  if (byDepth) compiled.minsByDepth = byDepth
+  return compiled
 }
 
 /** `06-temperature.md` → `temperature`. */
@@ -173,6 +180,33 @@ function kindsOf(content: LessonContent, project: boolean): LessonKind[] {
   if (has('code') || has('terminal')) kinds.push('code')
   if (project) kinds.push('project')
   return kinds
+}
+
+/** Words a block reads as: its prose, or a flat allowance for a toy, an editor or an exercise. */
+const BLOCK_WORDS = 60
+
+function wordsIn(block: Block): number {
+  if (block.type !== 'markdown') return BLOCK_WORDS
+  let text = block.paragraphs
+    .flat()
+    .map((part) => (typeof part === 'string' ? part : 'strong' in part ? part.strong : 'code' in part ? part.code : 'mark' in part ? part.mark : part.link))
+    .join(' ')
+  return `${block.ask ?? ''} ${text}`.split(/\s+/).filter(Boolean).length
+}
+
+/**
+ * Reading minutes at each depth (decision 053). The frontmatter `minutes`
+ * is the longer read; the shorter one scales by its share of the words.
+ * Undefined when the lesson has no depth blocks.
+ */
+function minsByDepth(content: LessonContent): Record<LessonDepth, number> | undefined {
+  if (!depthsOf(content.blocks).length) return undefined
+  let words = (depth: LessonDepth) =>
+    content.blocks.filter((block) => !block.depth || block.depth === depth).reduce((sum, block) => sum + wordsIn(block), 0)
+  let counts = { new: words('new'), engineer: words('engineer') }
+  let most = Math.max(counts.new, counts.engineer, 1)
+  let scale = (n: number) => Math.max(1, Math.round((content.minutes * n) / most))
+  return { new: scale(counts.new), engineer: scale(counts.engineer) }
 }
 
 const normalize = (text: string) => text.replace(/\r\n?/g, '\n')
@@ -199,6 +233,21 @@ interface BlockDefaults {
   illustrative: boolean
 }
 
+/**
+ * Depth blocks (decision 053): `:::new` and `:::engineer` wrap markdown shown
+ * at one reading depth. Their children compile as top-level blocks tagged
+ * with the depth; no wrapper node is kept.
+ */
+const DEPTH_NAMES = ['new', 'engineer'] as const satisfies readonly LessonDepth[]
+
+/**
+ * Blocks that stay shared by both depths: the graded and stateful ones, so
+ * progress never depends on the depth a learner reads at.
+ */
+const SHARED_ONLY: ReadonlySet<string> = new Set(['prompt', 'ask', 'quiz', 'rabbithole'])
+
+const isDepth = (name: string): name is LessonDepth => (DEPTH_NAMES as readonly string[]).includes(name)
+
 function compileBlocks(
   nodes: RootContent[],
   lines: string[],
@@ -211,10 +260,16 @@ function compileBlocks(
   let ids = new Map<string, number>()
   let codeFiles = new Set<string>()
   let pointers: { file: string; line: number }[] = []
+  /** The depth block being read, if any. */
+  let depth: LessonDepth | undefined
 
+  let push = (block: Block) => {
+    if (depth) block.depth = depth
+    blocks.push(block)
+  }
   let closeTurn = () => {
-    if (turn && turn.paragraphs.length) blocks.push(turn)
-    else if (turn?.ask) blocks.push(turn)
+    if (turn && turn.paragraphs.length) push(turn)
+    else if (turn?.ask) push(turn)
     turn = undefined
   }
   let claimId = (id: string, line: number) => {
@@ -222,8 +277,38 @@ function compileBlocks(
     if (seen) report.error(`id "${id}" is already used on line ${seen}`, line)
     else ids.set(id, line)
   }
+  // Code and its Run output join only within one depth (or both shared).
+  let previousCode = () => {
+    let previous = blocks[blocks.length - 1]
+    return previous?.type === 'code' && !previous.run && previous.depth === depth ? previous : undefined
+  }
 
-  for (let node of nodes) {
+  let visitDepth = (node: ContainerDirective, line: number) => {
+    let name = node.name as LessonDepth
+    if (depth) {
+      report.error(`:::${name} can’t go inside :::${depth}: depth blocks don’t nest, so close :::${depth} first`, line)
+      return
+    }
+    attributes(node, [], report)
+    let end = node.position?.end.line ?? line
+    let closing = lines[end - 1]?.trim() ?? ''
+    let last = node.children[node.children.length - 1]
+    if (last?.type === 'containerDirective' && last.position?.end.line === end) {
+      // `:::new` … `:::nexttoken` … `:::` … `:::`: the toy's closing line
+      // closed both, and the rest of the depth block leaked out as shared.
+      report.error(`:::${name} holds :::${last.name}, so it needs a longer fence: write ::::${name} … :::: around it`, line)
+    } else if (end === line || !/^:{3,}$/.test(closing)) {
+      report.error(`:::${name} is never closed: add a ::: line after it`, line)
+    }
+    if (!node.children.length) report.warning(`:::${name} is empty`, line)
+    closeTurn()
+    depth = name
+    for (let child of node.children) visit(child)
+    closeTurn()
+    depth = undefined
+  }
+
+  let visit = (node: RootContent) => {
     let line = node.position?.start.line ?? 1
     switch (node.type) {
       case 'paragraph': {
@@ -248,8 +333,20 @@ function compileBlocks(
           }
           break
         }
+        if (node.type === 'containerDirective' && isDepth(node.name)) {
+          visitDepth(node, line)
+          break
+        }
         if (!(BLOCK_NAMES as readonly string[]).includes(node.name)) {
-          report.error(`unknown block ${fence(node)}${node.name} (blocks: ${BLOCK_NAMES.map((n) => `:::${n}`).join(', ')}, ::ask)`, line)
+          let known = [...BLOCK_NAMES, ...DEPTH_NAMES].map((n) => `:::${n}`).join(', ')
+          report.error(`unknown block ${fence(node)}${node.name} (blocks: ${known}, ::ask)`, line)
+          break
+        }
+        if (depth && SHARED_ONLY.has(node.name)) {
+          report.error(
+            `:::${node.name} can’t go inside :::${depth}: prompts, quick checks and rabbit holes are shared by both depths, so progress never depends on depth; move it outside`,
+            line,
+          )
           break
         }
         closeTurn()
@@ -259,23 +356,23 @@ function compileBlocks(
         if (block.type === 'code') {
           for (let file of block.files) codeFiles.add(file.file)
           // Adjacent :::code blocks become one editor with tabs.
-          let previous = blocks[blocks.length - 1]
-          if (previous?.type === 'code' && !previous.run) {
+          let previous = previousCode()
+          if (previous) {
             previous.files.push(...block.files)
             break
           }
         }
         if (block.type === 'terminal') {
           // A :::terminal right after a code group is its Run output panel.
-          let previous = blocks[blocks.length - 1]
-          if (previous?.type === 'code' && !previous.run) {
+          let previous = previousCode()
+          if (previous) {
             previous.run = { cmd: block.cmd, lines: block.lines }
             if (block.ask) previous.run.ask = block.ask
             if (block.summary) previous.run.summary = block.summary
             break
           }
         }
-        blocks.push(block)
+        push(block)
         break
       }
       case 'yaml':
@@ -297,12 +394,19 @@ function compileBlocks(
         report.error(`${describe(node.type)} isn’t supported in lessons`, line)
     }
   }
+
+  for (let node of nodes) visit(node)
   closeTurn()
 
   for (let pointer of pointers) {
     if (!codeFiles.has(pointer.file)) report.warning(`points-at="${pointer.file}" matches no :::code file`, pointer.line)
   }
   if (!blocks.length) report.error('the lesson has no content')
+  let present = depthsOf(blocks)
+  if (present.length === 1) {
+    let other: LessonDepth = present[0] === 'new' ? 'engineer' : 'new'
+    report.warning(`the lesson has :::${present[0]} but no :::${other}, so the ${other} depth shows only the shared text`)
+  }
   return blocks
 }
 
@@ -375,7 +479,7 @@ function rawBody(node: ContainerDirective, lines: string[], report: FileReport):
   let nested = node.children.find(
     (child): child is Directive =>
       (child.type === 'containerDirective' || child.type === 'leafDirective') &&
-      ((BLOCK_NAMES as readonly string[]).includes(child.name) || child.name === 'ask'),
+      ((BLOCK_NAMES as readonly string[]).includes(child.name) || child.name === 'ask' || isDepth(child.name)),
   )
   if (nested) {
     let at = nested.position?.start.line ?? start

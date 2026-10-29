@@ -72,6 +72,8 @@ export default createController(routes.settings, {
           public: user.is_public,
           goals: user.goals,
           timezone: user.timezone,
+          // The reading depth picked on a lesson (decision 053); null until one is picked.
+          lessonDepth: user.lesson_depth ?? null,
           createdAt: new Date(user.created_at).toISOString(),
         },
         signInMethods: account.methods.filter((m) => m.connected).map(({ kind, meta }) => ({ kind, meta })),

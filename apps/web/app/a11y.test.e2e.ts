@@ -204,6 +204,26 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await expectClean(page, 'styleguide field specimen, a prompt focused', 1440)
   })
 
+  it('lesson depth control (decision 053): the sub-bar tabs, both depths, and the phone outline with them', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    let href = lesson(plainCourse.slug, plainCourse.lessons[0])
+    await page.goto(href)
+    await settled(page)
+    await expectClean(page, 'lesson depth: new')
+    await page.goto(`${href}?depth=engineer`)
+    await settled(page)
+    await expectClean(page, 'lesson depth: engineer')
+    await page.goto(`${href}?mode=terminal`)
+    await settled(page)
+    await expectClean(page, 'lesson depth: terminal')
+    await page.goto(href)
+    await settled(page)
+    await page.setViewportSize({ width: 360, height: 800 })
+    await page.locator('nav[aria-label="Lessons"] summary').last().click()
+    await page.locator('details[open] nav[aria-label="Lesson depth"]').waitFor()
+    await expectClean(page, 'lesson depth: phone outline open', 360)
+  })
+
   it('interactive states: mobile menu, attention pick, transcript, toy steps', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.setViewportSize({ width: 360, height: 800 })

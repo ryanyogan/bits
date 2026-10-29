@@ -1,9 +1,10 @@
-import type { Handle } from 'remix/component'
+import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 import { LessonNode } from '@bits/ui/lesson-node'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
+import { SegmentedTabs } from '@bits/ui/segmented-tabs'
 
-import type { LessonView } from '../lesson-view.ts'
+import { depthTabs, type LessonView } from '../lesson-view.ts'
 import { PASSED_ROOT } from '../public/lesson-state.ts'
 import { OutlineScroll } from '../public/outline-scroll.tsx'
 
@@ -73,6 +74,8 @@ export function OutlineNav(handle: Handle<{ view: LessonView }>) {
     let { view } = handle.props
     return (
       <nav aria-label="Lessons" mix={navStyle}>
+        {/* From 1024px the depth tabs sit in the lesson sub-bar instead. */}
+        <DepthRow view={view} place="sidebar" mix={belowWide} />
         <h2 mix={headingStyle}>
           <span>In this course</span>
           <span aria-hidden="true" mix={countStyle}>{`${String(view.index + 1).padStart(2, '0')} / ${String(view.total).padStart(2, '0')}`}</span>
@@ -94,6 +97,9 @@ export function OutlineNav(handle: Handle<{ view: LessonView }>) {
 export function OutlineDisclosure(handle: Handle<{ view: LessonView }>) {
   return () => {
     let { view } = handle.props
+    // The phone home of the depth control (decision 053): the chrome row has
+    // no room for a second pair of tabs, so it heads the open outline.
+    let depths = depthTabs(view)
     return (
       <nav aria-label="Lessons" mix={disclosureNav}>
         <details mix={detailsStyle}>
@@ -106,9 +112,34 @@ export function OutlineDisclosure(handle: Handle<{ view: LessonView }>) {
               ▾
             </span>
           </summary>
-          <OutlineList view={view} />
+          <div mix={panelStyle}>
+            <DepthRow view={view} />
+            <OutlineList view={view} />
+          </div>
         </details>
       </nav>
+    )
+  }
+}
+
+/**
+ * The depth control as a ruled row, "Explain it [New to this] [Engineer]"
+ * (decision 053), for where the lesson sub-bar has no room for it (under
+ * 1024px): the top of the outline sidebar, the open phone outline, and
+ * above the terminal. Nothing when the lesson has no depth blocks.
+ */
+export function DepthRow(handle: Handle<{ view: LessonView; place?: 'sidebar'; mix?: MixInput<HTMLElement> }>) {
+  return () => {
+    let { view, mix } = handle.props
+    let depths = depthTabs(view)
+    if (!depths.length) return null
+    return (
+      <div data-depth-row={handle.props.place} mix={[depthRow, mix]}>
+        <span aria-hidden="true" mix={depthLabel}>
+          Explain it
+        </span>
+        <SegmentedTabs label="Lesson depth" items={depths} keepPlace />
+      </div>
     )
   }
 }
@@ -190,21 +221,40 @@ const detailsStyle = css({
   display: 'flex',
   '&[open] > summary': { background: 'var(--fill-hover)', color: 'var(--text)' },
   '&[open] > summary > span:last-child': { transform: 'rotate(180deg)' },
-  // The open list hangs under the whole row (LessonModes is the positioned
-  // box), over the lesson rather than pushing it down.
-  '& > ol': {
-    position: 'absolute',
-    zIndex: 3,
-    top: '100%',
-    insetInline: 0,
-    maxHeight: 'calc(100svh - var(--shell-h) - var(--control-lg))',
-    overflowY: 'auto',
-    overscrollBehavior: 'contain',
-    background: 'var(--ink)',
-    borderBlock: 'var(--border-w) solid var(--line-cell)',
-  },
   '& li:last-child > a': { borderBottom: 0 },
 })
+// The open panel hangs under the whole row (LessonModes is the positioned
+// box), over the lesson rather than pushing it down.
+const panelStyle = css({
+  position: 'absolute',
+  zIndex: 3,
+  top: '100%',
+  insetInline: 0,
+  maxHeight: 'calc(100svh - var(--shell-h) - var(--control-lg))',
+  overflowY: 'auto',
+  overscrollBehavior: 'contain',
+  background: 'var(--ink)',
+  borderBlock: 'var(--border-w) solid var(--line-cell)',
+})
+// "Explain it  [New to this] [Engineer]": a ruled row above the lessons.
+const depthRow = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  flexWrap: 'wrap',
+  gap: 'var(--space-2) var(--space-3)',
+  padding: 'var(--space-2) var(--space-5)',
+  borderBottom: 'var(--border-w) solid var(--line-cell)',
+  '& > nav': { alignSelf: 'center' },
+})
+// The sidebar is narrow (220px at 760): the label sits above, and the tabs
+// share the row's full width (the tab rules are in lesson-page.tsx's app
+// layer: the tabs' own mixins would beat a rule here).
+const belowWide = css({
+  paddingInline: 'var(--space-3)',
+  '@media (min-width: 1024px)': { display: 'none' },
+})
+const depthLabel = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
 const summaryStyle = css({
   display: 'flex',
   alignItems: 'center',

@@ -13,11 +13,11 @@ import { routes } from '../../../routes.ts'
 import { ogImage } from '../../../ui/og.ts'
 import { Layout } from '../../../ui/layout.tsx'
 import { exercisesOf, hasCode, hasVideo } from './content.ts'
-import { lessonAward, openAsks, type LessonMode, type LessonView } from './lesson-view.ts'
+import { depthTabs, lessonAward, openAsks, type LessonMode, type LessonView } from './lesson-view.ts'
 import { LessonComplete } from './public/lesson-complete.tsx'
 import { PASSED_ROOT } from './public/lesson-state.ts'
 import { LessonXp } from './public/lesson-xp.tsx'
-import { OutlineDisclosure, OutlineNav } from './ui/outline.tsx'
+import { DepthRow, OutlineDisclosure, OutlineNav } from './ui/outline.tsx'
 import { ReadMode } from './ui/read-mode.tsx'
 import { TerminalMode } from './ui/terminal-mode.tsx'
 import { WatchMode } from './ui/watch-mode.tsx'
@@ -47,6 +47,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
     let gated = exercisesOf(content).length > 0 || openAsks(view).length > 0
     let modeItems = modes.map((m) => ({ label: modeLabels[m], href: view.href.mode(m), current: m === mode }))
     let progressLabel = `Lesson ${view.index + 1} of ${view.total}, ${done} complete`
+    let depths = depthTabs(view)
 
     return (
       <Layout
@@ -73,6 +74,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
             segments={segments}
             progressLabel={progressLabel}
             modes={modeItems}
+            depths={depths}
             xp={
               viewer ? (
                 <span data-rmx-key={view.key} mix={contentsStyle}>
@@ -95,7 +97,8 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
         {mode === 'terminal' ? (
           <PageFrame rails>
             <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, workspaceMain]}>
-              <LessonModes modes={modeItems} mix={modesStrip} />
+              <LessonModes modes={modeItems} aside={depths.length ? <OutlineDisclosure view={view} /> : undefined} mix={modesStrip} />
+              <DepthRow view={view} mix={terminalDepth} />
               <TerminalMode view={view} />
               <LessonFooter view={view} gated={gated} issues={issues} width={hasCode(content) ? 'full' : 'solo'} />
             </main>
@@ -177,6 +180,9 @@ const contentsStyle = css({ display: 'contents' })
 const pageStyles = `@layer app {
   /* The open lesson's progress segment fills volt once its checks pass. */
   ${PASSED_ROOT} [data-lesson-progress] [data-state="current"] { background: var(--volt); }
+  /* The depth tabs fill the narrow outline sidebar's row (decision 053). */
+  [data-depth-row="sidebar"] > nav { flex: 1 1 100%; display: flex; }
+  [data-depth-row="sidebar"] > nav > a { flex: 1 1 0; padding-inline: var(--space-2); }
   /* Watch: the VideoPlayer island's player + transcript join the watch row,
      so the transcript sits under the video beside the side card (as drawn).
      The row is ruled cells (decision 047): each cell draws its top and
@@ -250,6 +256,12 @@ const watchBody = css({
   padding: 'var(--space-10) var(--section-pad-x) var(--space-16)',
   [MOBILE]: { padding: 'var(--space-6) var(--section-pad-x) var(--space-12)' },
   '@media (max-width: 480px)': { padding: 'var(--space-4) var(--space-4) var(--space-10)' },
+})
+// Terminal has no outline sidebar: from 760 to 1023px, where the sub-bar has
+// no room for them, the depth tabs head the workspace (decision 053).
+const terminalDepth = css({
+  justifyContent: 'flex-end',
+  '@media (max-width: 759px), (min-width: 1024px)': { display: 'none' },
 })
 const workspaceMain = css({ display: 'flex', flexDirection: 'column', minWidth: 0 })
 const footerBand = css({

@@ -8,7 +8,17 @@ import type { SavedDraft } from '@bits/db'
 import type { AskVerdict } from '@bits/ui/lib/ask-client'
 import type { Completed, CourseDetail, LessonSummary } from '../../../content/types.ts'
 import { routes } from '../../../routes.ts'
-import { exercisesOf, gatingAsksOf, hasVideo, type LessonContent } from './content.ts'
+import {
+  contentAtDepth,
+  DEFAULT_DEPTH,
+  depthsOf,
+  exercisesOf,
+  gatingAsksOf,
+  hasVideo,
+  isLessonDepth,
+  type LessonContent,
+  type LessonDepth,
+} from './content.ts'
 
 export type LessonMode = 'read' | 'watch' | 'terminal'
 
@@ -23,8 +33,13 @@ export interface LessonView {
   total: number
   prev?: LessonSummary
   next?: LessonSummary
+  /** The lesson at `depth`: shared blocks plus that depth's (decision 053). */
   content: LessonContent
   mode: LessonMode
+  /** The depth this page renders at. */
+  depth: LessonDepth
+  /** The depths the lesson's blocks are tagged with; empty when it has none (no depth control). */
+  depths: LessonDepth[]
   viewer: Viewer | null
   /** Watch-mode resume position, seconds (the saved `video` draft; the browser's own copy can be newer). */
   resumeAt?: number
@@ -45,6 +60,8 @@ export interface LessonView {
   href: {
     /** This lesson in a mode. */
     mode(mode: LessonMode): string
+    /** This page at a depth: the current URL with `?depth=` set, its other params kept. */
+    depth(depth: LessonDepth): string
     /** Another lesson of the course (its default mode). */
     lesson(slug: string): string
     back: string
@@ -70,6 +87,8 @@ export interface LessonViewOptions {
   completed?: Completed
   /** The signed-in viewer's saved drafts in this lesson (undefined when signed out). */
   drafts?: Record<string, SavedDraft>
+  /** The depth to render at (`lessonDepth(context)`); else the URL's `?depth=`, else `new`. */
+  depth?: LessonDepth
 }
 
 const MODES: LessonMode[] = ['read', 'watch', 'terminal']
@@ -85,8 +104,11 @@ export async function buildLessonView(
   let found = catalog.getLesson(courseSlug, lessonSlug, options.completed)
   if (!found) return undefined
   let { course, lesson, index, total, prev, next } = found
-  let content = await catalog.lessonContent(course.slug, lesson.slug)
-  if (!content) return undefined
+  let full = await catalog.lessonContent(course.slug, lesson.slug)
+  if (!full) return undefined
+  let asked = url.searchParams.get('depth')
+  let depth = options.depth ?? (isLessonDepth(asked) ? asked : DEFAULT_DEPTH)
+  let content = contentAtDepth(full, depth)
   let requested = url.searchParams.get('mode') as LessonMode | null
   let mode: LessonMode = requested && MODES.includes(requested) ? requested : 'read'
   if (mode === 'watch' && !hasVideo(content)) mode = 'read'
@@ -112,6 +134,8 @@ export async function buildLessonView(
     next,
     content,
     mode,
+    depth,
+    depths: depthsOf(full.blocks),
     viewer: options.viewer ?? null,
     resumeAt: Number.isFinite(resumeAt) && resumeAt > 0 ? resumeAt : undefined,
     drafts,
@@ -128,6 +152,11 @@ export async function buildLessonView(
       : { id: 'lesson-complete', action: routes.courses.lesson.complete.href({ course: course.slug, lesson: lesson.slug }) },
     href: {
       mode: (m) => lessonHref(lesson.slug, m),
+      depth: (d) => {
+        let params = new URLSearchParams(url.search)
+        params.set('depth', d)
+        return `${url.pathname}?${params}`
+      },
       lesson: (slug) => lessonHref(slug),
       back: preview
         ? routes.author.course.index.href({ course: course.slug })
@@ -136,6 +165,23 @@ export async function buildLessonView(
       self,
     },
   }
+}
+
+const depthLabels: Record<LessonDepth, string> = { new: 'New to this', engineer: 'Engineer' }
+
+/**
+ * The depth control's tabs (decision 053), or none when the lesson has no
+ * depth blocks. They never prefetch: following one remembers the choice,
+ * and a speculative GET on hover must not (decision 042).
+ */
+export function depthTabs(view: LessonView): { label: string; href: string; current: boolean; prefetch: false }[] {
+  if (!view.depths.length) return []
+  return (['new', 'engineer'] as const).map((depth) => ({
+    label: depthLabels[depth],
+    href: view.href.depth(depth),
+    current: depth === view.depth,
+    prefetch: false,
+  }))
 }
 
 /** Neurons awarded by this lesson's prompt exercises (an ask reports its own, from the server). */

@@ -1,13 +1,15 @@
 import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
-import { prefetchFor } from './lib/prefetch.ts'
+import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
 import { FOCUS, FORCED_COLORS, focusOutline, forcedSelected, HOVER, type ForcedState } from './lib/states.ts'
 
 export interface SegmentedTabItem {
   label: RemixNode
   href: string
   current?: boolean
+  /** `false` for a tab whose GET remembers a choice (decision 042: no speculative side effects). */
+  prefetch?: PrefetchProp
   /** Style-guide only. */
   forceState?: ForcedState
 }
@@ -46,7 +48,7 @@ export function SegmentedTabs(handle: Handle<SegmentedTabsProps>) {
             key={item.href}
             href={item.href}
             aria-current={item.current ? 'page' : undefined}
-            data-rmx-prefetch={prefetchFor(item.href)}
+            data-rmx-prefetch={prefetchFor(item.href, item.prefetch)}
             data-force={item.forceState}
             data-rmx-reset-focus={place}
             data-rmx-reset-scroll={place}

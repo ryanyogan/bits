@@ -49,6 +49,29 @@ describe('client navigation', () => {
     assert.equal(await complete.isDisabled(), true, 'the gated key is locked again')
   })
 
+  it('switches the lesson depth on the client, and the next lesson follows it (decision 053)', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    await page.setViewportSize({ width: 1440, height: 900 })
+    let lesson1 = routes.courses.lesson.index.href({ course: 'plain-course', lesson: 'lesson-1' })
+    let lesson2 = routes.courses.lesson.index.href({ course: 'plain-course', lesson: 'lesson-2' })
+    await page.goto(lesson1)
+    await page.getByText('New to this: a model reads your words').waitFor()
+    await page.evaluate(() => ((window as { navMarker?: number }).navMarker = 1))
+
+    let depth = page.locator('header nav[aria-label="Lesson depth"]')
+    await depth.getByRole('link', { name: 'Engineer' }).click()
+    await page.getByText('Engineer: the model sees subword tokens').waitFor()
+    assert.equal(await page.getByText('New to this: a model reads your words').count(), 0, 'the new depth is gone')
+    assert.equal(await depth.getByRole('link', { name: 'Engineer' }).getAttribute('aria-current'), 'page')
+    assert.equal(new URL(page.url()).searchParams.get('depth'), 'engineer')
+
+    await page.locator(`nav[aria-label="Lessons"] a[href="${lesson2}"]`).first().click()
+    await page.getByRole('heading', { level: 1, name: 'Lesson 2' }).waitFor()
+    await page.getByText('Engineer: each step samples one token').waitFor()
+    assert.equal(await page.getByText('New to this: the model guesses').count(), 0)
+    assert.equal(await page.evaluate(() => (window as { navMarker?: number }).navMarker), 1, 'navigated on the client')
+  })
+
   it('keeps head links in place across pages with different preloads', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     // Home preloads one more font than /courses, which used to shift every

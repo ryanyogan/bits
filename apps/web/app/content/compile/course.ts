@@ -236,6 +236,7 @@ function groupModules(lessons: (CompiledLesson & { file: string })[], courseTitl
       xp: lesson.meta.xp,
       kinds: lesson.kinds,
     }
+    if (lesson.minsByDepth) info.minsByDepth = lesson.minsByDepth
     current.lessons.push(info)
   }
   return modules

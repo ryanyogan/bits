@@ -5,6 +5,7 @@ import { currentUser, getViewer } from '../../../auth/identity.ts'
 import { getCatalog } from '../../../content/request.ts'
 import { rateLimit } from '../../../middleware/rate-limit.tsx'
 import { passedAsks, takeVerdict } from '../../../progress/ask-session.ts'
+import { lessonDepth } from '../../../progress/depth.ts'
 import { readSubmission } from '../../../progress/check.ts'
 import { loadDrafts } from '../../../progress/drafts.ts'
 import { completeLesson, loadCompleted } from '../../../progress/progress.ts'
@@ -21,15 +22,16 @@ export default createController(routes.courses.lesson, {
   actions: {
     async index(context) {
       let { course, lesson } = context.params
-      let [catalog, completed, drafts] = await Promise.all([
+      let [catalog, completed, drafts, depth] = await Promise.all([
         getCatalog(context),
         loadCompleted(context),
         loadDrafts(context, course, lesson),
+        lessonDepth(context),
       ])
       let viewer = getViewer(context)
       // Quick checks answered right, and a verdict flashed back to a native answer (decision 052).
       let asks = { passed: passedAsks(context, course, lesson), verdict: takeVerdict(context, course, lesson) }
-      let view = await buildLessonView(catalog, course, lesson, context.url, { viewer, completed, drafts, asks })
+      let view = await buildLessonView(catalog, course, lesson, context.url, { viewer, completed, drafts, asks, depth })
       if (!view) {
         return context.render(
           <LessonNotFoundPage course={context.params.course} currentPath={context.url.pathname} viewer={viewer} />,
@@ -60,12 +62,17 @@ export default createController(routes.courses.lesson, {
         if (!result.ok) {
           // Same page again, with what failed.
           let url = new URL(routes.courses.lesson.index.href({ course, lesson }, { searchParams }), context.url)
-          let [completed, drafts] = await Promise.all([loadCompleted(context), loadDrafts(context, course, lesson)])
+          let [completed, drafts, depth] = await Promise.all([
+            loadCompleted(context),
+            loadDrafts(context, course, lesson),
+            lessonDepth(context),
+          ])
           let view = (await buildLessonView(catalog, course, lesson, url, {
             viewer: getViewer(context),
             completed,
             drafts,
             asks: { passed: passedAsks(context, course, lesson) },
+            depth,
           }))!
           let issues = [
             ...result.checked.exercises

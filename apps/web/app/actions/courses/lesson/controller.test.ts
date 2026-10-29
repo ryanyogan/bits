@@ -4,7 +4,7 @@ import { after, describe, it } from 'remix/test'
 import { disposePlatform } from '#platform'
 
 import { routes } from '../../../routes.ts'
-import { fetchAs, signIn } from '../../../test/auth.ts'
+import { fetchAs, sessionCookieFrom, signIn, testDb } from '../../../test/auth.ts'
 
 async function page(path: string, cookie: string | null = null) {
   let response = await fetchAs(cookie, path)
@@ -142,5 +142,66 @@ describe('lesson page and author preview', () => {
     let signedIn = await page(lessonHref(temperature), user.cookie)
     assert.equal(signedIn.status, 200)
     assert.match(signedIn.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="3 queries, 1 round trips", catalog;dur=\d+;desc="memo"$/)
+  })
+
+  // ---- Lesson depth (decision 053) ----
+  let plain = (lesson: string, query = '') => `/courses/plain-course/${lesson}${query}`
+  const NEW = /New to this: a model reads your words/
+  const ENGINEER = /Engineer: the model sees subword tokens/
+
+  it('renders shared blocks plus the active depth: new by default, ?depth=engineer swaps it', async () => {
+    let byDefault = await page(plain('lesson-1'))
+    assert.equal(byDefault.status, 200)
+    assert.match(byDefault.html, /of the plain test course/)
+    assert.match(byDefault.html, NEW)
+    assert.doesNotMatch(byDefault.html, ENGINEER)
+    let engineer = await page(plain('lesson-1', '?depth=engineer'))
+    assert.match(engineer.html, /of the plain test course/)
+    assert.match(engineer.html, ENGINEER)
+    assert.doesNotMatch(engineer.html, NEW)
+    // An unknown depth is ignored.
+    assert.match((await page(plain('lesson-1', '?depth=expert'))).html, NEW)
+  })
+
+  it('draws the depth control only on lessons with depth blocks: links, aria-current, no prefetch', async () => {
+    let { html } = await page(plain('lesson-1', '?mode=terminal&depth=engineer'))
+
+    // The sub-bar cell (1024px up), the outline sidebar row (760–1023px) and the phone disclosure.
+    assert.equal(count(html, /aria-label="Lesson depth"/), 3)
+    assert.match(html, /<a href="\/courses\/plain-course\/lesson-1\?mode=terminal&amp;depth=new"[^>]*>New to this<\/a>/)
+    assert.match(html, /<a href="\/courses\/plain-course\/lesson-1\?mode=terminal&amp;depth=engineer" aria-current="page"[^>]*>Engineer<\/a>/)
+    // Following one remembers the choice, so a hover must not prefetch it (decision 042).
+    assert.doesNotMatch(html, /href="[^"]*depth=[^"]*"[^>]*data-rmx-prefetch/)
+    assert.equal(count((await page(lessonHref(temperature))).html, /aria-label="Lesson depth"/), 0)
+  })
+
+  it('remembers ?depth= in the session when signed out, for the next lesson', async () => {
+    let first = await fetchAs(null, plain('lesson-1', '?depth=engineer'))
+    let cookie = sessionCookieFrom(first)
+    assert.ok(cookie, 'the choice starts a session')
+    let next = await page(plain('lesson-2'), cookie)
+    assert.match(next.html, /Engineer: each step samples one token/)
+    assert.doesNotMatch(next.html, /New to this: the model guesses/)
+    // The URL still wins over the remembered choice, and becomes the new one.
+    assert.match((await page(plain('lesson-2', '?depth=new'), cookie)).html, /New to this: the model guesses/)
+    assert.match((await page(plain('lesson-1'), cookie)).html, NEW)
+  })
+
+  it('remembers ?depth= in users.lesson_depth when signed in, with one UPDATE only when it changes', async () => {
+    let { cookie, user } = await signIn('depth@example.com')
+    let picked = await page(plain('lesson-1', '?depth=engineer'), cookie)
+    assert.match(picked.html, ENGINEER)
+    let row = await testDb.d1.prepare('select lesson_depth from users where id = ?').bind(user.id).first<{ lesson_depth: string }>()
+    assert.equal(row?.lesson_depth, 'engineer')
+    // The same choice again writes nothing: the page costs what any signed-in lesson does.
+    let same = await page(plain('lesson-1', '?depth=engineer'), cookie)
+    assert.match(same.headers.get('Server-Timing') ?? '', /db;dur=\d+;desc="3 queries, 1 round trips"/)
+    // Another browser signed in to the account follows the saved choice.
+    let other = await signIn('depth@example.com')
+    assert.match((await page(plain('lesson-2'), other.cookie)).html, /Engineer: each step samples one token/)
+    // Changing it is one more statement.
+    let changed = await page(plain('lesson-2', '?depth=new'), other.cookie)
+    assert.match(changed.headers.get('Server-Timing') ?? '', /db;dur=\d+;desc="4 queries, 2 round trips"/)
+    assert.match((await page(plain('lesson-1'), cookie)).html, NEW)
   })
 })

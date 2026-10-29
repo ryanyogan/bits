@@ -56,7 +56,10 @@ export interface LessonInfo {
   n: number
   slug: string
   title: string
+  /** The lesson's frontmatter minutes: the longer read when it has two depths. */
   mins: number
+  /** Reading minutes at each depth, when the lesson has depth blocks (decision 053). */
+  minsByDepth?: { new: number; engineer: number }
   xp: number
   kinds: LessonKind[]
 }

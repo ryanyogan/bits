@@ -26,10 +26,19 @@ import { inlineNodes } from './inline.tsx'
 export function ReadMode(handle: Handle<{ view: LessonView }>) {
   return () => {
     let { view } = handle.props
+    // Keys that survive a depth switch (decision 053): a shared block keeps
+    // its key whichever depth's blocks sit around it, so an exercise keeps
+    // its runs; a depth's blocks get keys of their own.
+    let counts: Record<string, number> = {}
+    let keyOf = (block: Block) => {
+      let group = block.depth ?? 'shared'
+      counts[group] = (counts[group] ?? 0) + 1
+      return `${group}-${counts[group]}`
+    }
     return (
       <div mix={columnStyle}>
         {view.content.blocks.map((block, index) => (
-          <ReadBlock key={index} view={view} block={block} index={index} />
+          <ReadBlock key={keyOf(block)} view={view} block={block} index={index} />
         ))}
       </div>
     )

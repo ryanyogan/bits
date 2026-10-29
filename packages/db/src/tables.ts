@@ -9,6 +9,10 @@ import type { TableRow } from 'remix/data-table'
 export const userRoles = ['learner', 'author', 'admin'] as const
 export type UserRole = (typeof userRoles)[number]
 
+/** How deep a lesson explains its idea (decision 053): brand new to AI, or an engineer. */
+export const lessonDepths = ['new', 'engineer'] as const
+export type LessonDepth = (typeof lessonDepths)[number]
+
 export const oauthProviders = ['github', 'google'] as const
 export type OAuthProvider = (typeof oauthProviders)[number]
 
@@ -50,6 +54,8 @@ export const users = table({
     streak_last_day: c.text().nullable(),
     best_streak: c.integer(),
     is_public: c.boolean(),
+    /** The lesson depth the learner picked (decision 053); null until they pick one. */
+    lesson_depth: c.enum(lessonDepths).nullable(),
     created_at: c.integer(),
     updated_at: c.integer(),
   },

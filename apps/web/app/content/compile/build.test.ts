@@ -401,7 +401,83 @@ describe('content build', () => {
       '06-ask.md:19 → reject lines look like: - reject "Not about memory" /never seen/i "It has seen it often. What does it get instead?"',
       '06-ask.md:20 → unknown ask line "- banana" (use accept, reject, choice, hint, explain or placeholder)',
       '06-ask.md:23 → :::ask has 2 right choices: add multiple to allow several',
+      '07-depth.md:13 → :::prompt can’t go inside :::new: prompts, quick checks and rabbit holes are shared by both depths, so progress never depends on depth; move it outside',
+      '07-depth.md:20 → :::new can’t go inside :::engineer: depth blocks don’t nest, so close :::engineer first',
+      '07-depth.md:25 → :::new holds :::nexttoken, so it needs a longer fence: write ::::new … :::: around it',
+      '07-depth.md:36 → :::rabbithole can’t go inside :::engineer: prompts, quick checks and rabbit holes are shared by both depths, so progress never depends on depth; move it outside',
     ])
+  })
+
+  it('tags :::new and :::engineer blocks with their depth and keeps graded blocks shared (decision 053)', async () => {
+    let dir = path.join(coursesDir, '../fixtures/toys')
+    let result = buildCourse(await readCourseFolder(dir), { folder: 'toys' })
+    let blocks = result.lessons!.get('depth')!.blocks
+    assert.deepEqual(
+      blocks.map((block) => [block.type, block.depth ?? 'shared']),
+      [
+        ['markdown', 'shared'],
+        ['markdown', 'new'],
+        ['markdown', 'engineer'],
+        ['nexttoken', 'engineer'],
+        ['markdown', 'engineer'],
+        ['ask', 'shared'],
+        ['markdown', 'shared'],
+      ],
+    )
+    // The frontmatter's illustrative reaches a toy inside a depth block.
+    assert.equal(blocks[3]?.type === 'nexttoken' && blocks[3].illustrative, true)
+    let info = result.manifest!.modules.flatMap((m) => m.lessons).find((l) => l.slug === 'depth')!
+    assert.equal(info.mins, 6)
+    assert.equal(info.minsByDepth?.engineer, 6)
+    assert.ok(info.minsByDepth!.new >= 1 && info.minsByDepth!.new <= 6)
+    // A lesson without depth blocks carries no minsByDepth.
+    let plain = result.manifest!.modules.flatMap((m) => m.lessons).find((l) => l.slug === 'ask')!
+    assert.equal(plain.minsByDepth, undefined)
+  })
+
+  it('checks depth blocks: one depth warns, an unclosed one errors, code joins only within a depth', () => {
+    let oneDepth = build({ '01-one.md': lesson('Shared.\n\n:::engineer\nThe mechanism.\n:::') })
+    assert.deepEqual(errors(oneDepth), [])
+    assert.deepEqual(
+      oneDepth.report.filter((item) => item.level === 'warning').map(formatItem),
+      ['01-one.md → the lesson has :::engineer but no :::new, so the new depth shows only the shared text'],
+    )
+    let unclosed = build({ '01-one.md': lesson('Shared.\n\n:::new\nNever closed.') })
+    assert.deepEqual(errors(unclosed), ['01-one.md:10 → :::new is never closed: add a ::: line after it'])
+    let quiz = build({
+      '01-one.md': lesson('::::new\n:::quiz{id="q" xp=5}\nPick.\n- [x] A\n- [ ] B\n:::\n::::\n\n:::engineer\nE.\n:::'),
+    })
+    assert.deepEqual(errors(quiz), [
+      '01-one.md:9 → :::quiz can’t go inside :::new: prompts, quick checks and rabbit holes are shared by both depths, so progress never depends on depth; move it outside',
+    ])
+    let code = build({
+      '01-one.md': lesson(
+        [
+          '::::new',
+          ':::code{file="a.ts" lang="ts"}',
+          'let a = 1',
+          ':::',
+          '::::',
+          '',
+          ':::code{file="b.ts" lang="ts"}',
+          'let b = 2',
+          ':::',
+          '',
+          ':::engineer',
+          'E.',
+          ':::',
+        ].join('\n'),
+      ),
+    })
+    assert.deepEqual(errors(code), [])
+    let editors = code.lessons!.get('one')!.blocks.filter((block) => block.type === 'code')
+    assert.deepEqual(
+      editors.map((block) => block.type === 'code' && [block.depth ?? 'shared', block.files.map((f) => f.file)]),
+      [
+        ['new', ['a.ts']],
+        ['shared', ['b.ts']],
+      ],
+    )
   })
 
   it('builds quick checks: typed, picked, and a legacy quiz as an ask (decision 052)', async () => {

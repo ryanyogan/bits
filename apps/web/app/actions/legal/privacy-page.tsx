@@ -51,7 +51,7 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null; analytics: b
         <ul>
           <li>
             <strong>Account:</strong> your email, display name, handle, the goals you picked at sign-up, your time zone
-            (to count streak days) and when you joined.
+            (to count streak days), the lesson depth you picked (new to this or engineer) and when you joined.
           </li>
           <li>
             <strong>Progress:</strong> lessons you finished and when, neurons earned per exercise, quiz and lesson, your
@@ -82,7 +82,7 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null; analytics: b
         <h2>If you don't have an account</h2>
         <p>
           You can take lessons signed out. Your browser then gets the same session cookie, and the session holds your
-          finished lessons and a random visitor id. Prompts you run are journalled under that visitor id with a hash of
+          finished lessons, the lesson depth you picked and a random visitor id. Prompts you run are journalled under that visitor id with a hash of
           your IP address, which is how the hourly limits work. Quick-check answers are kept the same way. A daily
           clean-up deletes signed-out runs and answers after 7 days.
           If you sign in, your progress, recent runs and answers move into your account.

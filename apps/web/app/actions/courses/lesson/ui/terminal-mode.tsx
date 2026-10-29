@@ -55,12 +55,14 @@ export function TerminalMode(handle: Handle<{ view: LessonView }>) {
         flush={!!code}
       />
     )
-    if (!code) return <div mix={soloStyle}>{log}</div>
+    // A depth switch rebuilds the session log from the other depth’s entries (decision 053).
+    let depthKey = view.depths.length ? `depth-${view.depth}` : undefined
+    if (!code) return <div data-rmx-key={depthKey} mix={soloStyle}>{log}</div>
     let editor = codeEditorProps(view, code)
     // The workspace is a row of ruled cells (decision 047): session | editor
     // (+ its output), sharing one hairline, flush with the column's rails.
     return (
-      <div mix={workspaceStyle}>
+      <div data-rmx-key={depthKey} mix={workspaceStyle}>
         <div mix={logCell}>{log}</div>
         <section aria-label="Code editor" mix={editorColumn}>
           <div mix={editorFill}>

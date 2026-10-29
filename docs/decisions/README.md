@@ -58,4 +58,5 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 050 | [Sections breathe: framed plates with the ground between them](050-sections-breathe.md) |
 | 051 | [One field spec, one row of phone lesson chrome](051-shared-field-spec.md) |
 | 052 | [Quick checks in the prompt window: the `:::ask` block](052-ask-block.md) |
+| 053 | [Two reading depths in one lesson: `:::new` and `:::engineer`](053-lesson-depth.md) |
 | 054 | [One object for the published catalog, shared per colo](054-one-object-catalog.md) |

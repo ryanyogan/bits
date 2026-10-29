@@ -17,6 +17,13 @@ export interface LessonBarProps {
   segments: SegmentState[]
   progressLabel: string
   modes: SegmentedTabItem[]
+  /**
+   * The lesson's reading depths ("New to this" / "Engineer", decision 053)
+   * as URL tabs, a cell before the mode tabs. Pass them only when the lesson
+   * has depth blocks. In the shell they show from 1024px; under it the page
+   * puts them in its outline (sidebar or phone disclosure).
+   */
+  depths?: SegmentedTabItem[]
   /** The viewer's neurons, shown as an XpPill at the row's end (hidden at ≤480px). */
   neurons?: number
   /**
@@ -56,6 +63,7 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
       segments,
       progressLabel,
       modes,
+      depths,
       neurons,
       xp,
       titleAs = 'span',
@@ -79,7 +87,10 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
             <SegmentedTabs label="Lesson format" items={modes} />
           </div>
         ) : (
-          <SegmentedTabs label="Lesson format" items={modes} />
+          <>
+            {depths?.length ? <SegmentedTabs label="Lesson depth" items={depths} keepPlace /> : null}
+            <SegmentedTabs label="Lesson format" items={modes} />
+          </>
         )}
         {xp !== undefined ? <div mix={[xpSlot, lessonBarXpStyle]}>{xp}</div> : neurons !== undefined ? <XpPill neurons={neurons} mix={lessonBarXpStyle} /> : null}
       </>
@@ -107,6 +118,11 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
             <div data-lesson-progress mix={phoneProgress}>
               <SegmentedProgress segments={segments} label={progressLabel} />
             </div>
+            {depths?.length ? (
+              <div data-lesson-depth mix={depthCell}>
+                <SegmentedTabs label="Lesson depth" items={depths} keepPlace />
+              </div>
+            ) : null}
             <div mix={[tabsCell, wideOnly]}>
               <SegmentedTabs label="Lesson format" items={modes} />
             </div>
@@ -221,6 +237,17 @@ const tabsCell = css({
   '&:last-child': { paddingRight: 'var(--space-3)' },
   // Repeated from wideOnly: this mixin is declared later, so its layer wins.
   [SHELL_NARROW]: { display: 'none' },
+})
+// The depth tabs (decision 053): a cell like the mode tabs', from 1024px.
+// Narrower, the row has no room left for the title, so the page puts them
+// in the outline (or above the terminal) instead.
+const depthCell = css({
+  alignSelf: 'stretch',
+  display: 'flex',
+  alignItems: 'center',
+  paddingInline: 'var(--space-4)',
+  borderLeft: 'var(--border-w) solid var(--line-cell)',
+  '@media (max-width: 1023.98px)': { display: 'none' },
 })
 // The neurons cell: last in the row, pushed to the end when the tabs hide (<760px).
 const xpCell = css({
