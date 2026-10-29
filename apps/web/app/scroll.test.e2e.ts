@@ -177,11 +177,15 @@ describe('scroll restoration', () => {
       let root = await page.evaluate(() => {
         let html = document.documentElement
         let style = getComputedStyle(html)
-        let frame = [...document.querySelectorAll('body *')].find((el) => {
-          let s = getComputedStyle(el)
-          let r = el.getBoundingClientRect()
-          return s.borderLeftStyle === 'solid' && s.borderRightStyle === 'solid' && r.width > innerWidth / 2 && r.height > innerHeight / 2
-        })
+        // The widest railed block: a section plate, or a frame with rails
+        // (decision 050). Anything inside a plate is narrower than it.
+        let frame = [...document.querySelectorAll('body *')]
+          .filter((el) => {
+            let s = getComputedStyle(el)
+            let r = el.getBoundingClientRect()
+            return s.borderLeftStyle === 'solid' && s.borderRightStyle === 'solid' && r.width > innerWidth / 2 && r.height > 100
+          })
+          .sort((a, b) => b.getBoundingClientRect().width - a.getBoundingClientRect().width)[0]
         let rect = frame?.getBoundingClientRect()
         return {
           gutter: style.scrollbarGutter,

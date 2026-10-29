@@ -69,7 +69,7 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
         canonicalPath={own ? undefined : routes.profile.index.href({ handle: profile.handle })}
         bleed
       >
-        <PageFrame mix={frameStyle}>
+        <PageFrame>
           <RuledSection aria-label="Profile" rule={false} pad="none">
             <div mix={splitStyle}>
               <div mix={identityCell}>
@@ -230,9 +230,6 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
               </aside>
             </div>
           </RuledSection>
-
-          {/* The closing rule: the rails end on it, with their + marks. */}
-          <RuledSection as="div" pad="none" />
         </PageFrame>
       </Layout>
     )
@@ -252,7 +249,6 @@ const MOBILE = '@media (max-width: 480px)'
 const FORCED = '@media (forced-colors: active)'
 const line = 'var(--border-w) solid var(--line-cell)'
 
-const frameStyle = css({ marginBottom: 'var(--space-16)', [MOBILE]: { marginBottom: 'var(--space-10)' } })
 
 // Two columns at 3:1 from 1024px, so the column line falls on the border
 // between the third and fourth stat cells; stacked below that.

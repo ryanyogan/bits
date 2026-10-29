@@ -158,16 +158,19 @@ content/fixtures/         deliberately broken folders for tests
    303 on success. See `app/actions/login/` for the pattern.
 6. Existing placeholder pages: replace `PlaceholderPage` in that area's
    controller with the real page.
-7. Grid layout (decision 047): the page brings its own `<PageFrame>` as a
-   top-level child of `Layout` (Layout detects it and gives `<main>` the
-   framed style, so no `bleed` is needed). Inside it, start with
+7. Grid layout (decisions 047, 050): the page brings its own `<PageFrame>`
+   as a top-level child of `Layout` (Layout detects it and gives `<main>`
+   the framed style, so no `bleed` is needed). Inside it, start with
    `PageHead` (`app/ui/page-head.tsx`: strip, `<h1>`, lead) and lay the
-   rest out as `RuledSection`s with `CellGrid`s and `Panel`s; close the
-   rails with an empty `<RuledSection as="div" pad="none" />`. A 4xx with
-   nothing else to show uses `StatusPage` (`app/ui/not-found-page.tsx`).
-   Use the shared strip (`RuledSection label` + `labelAs="h2"`, or
-   `Panel`) instead of a local copy, and keep the 12px phone inset: no
-   page drops the frame's gutter or rails.
+   rest out as `RuledSection`s with `CellGrid`s and `Panel`s. Each
+   section is a framed plate (its own rails, a rule above and below, `+`
+   marks at the corners) with `--section-gap` of ground above it; give a
+   section `rule={false}` to join it to the block above (the band under
+   the app bar, a grid under its toolbar). No closing section is needed.
+   A 4xx with nothing else to show uses `StatusPage`
+   (`app/ui/not-found-page.tsx`). Use the shared strip (`RuledSection
+   label` + `labelAs="h2"`, or `Panel`) instead of a local copy, and keep
+   the 12px phone inset: no page drops the frame's gutter or the rails.
 
 ## Client navigation (decision 020)
 
@@ -342,8 +345,8 @@ Rationale: `docs/decisions/010-component-library.md`.
 | CodeInput | code-input.tsx | name, length, error, autoSubmit, autoFocus, value | island (one input without JS) |
 | Switch | switch.tsx | name, legend, options, value | static (native radios) |
 | QuizChoice | quiz-choice.tsx | name, question, options, multiple, explanation, action, formAction, label (header strip, default "quick check") | static (POST form) |
-| PageFrame | page-frame.tsx | as div/main, id, rails (the ruled column: `--frame-max` wide, hairline rails; decision 047) | static |
-| RuledSection | ruled-section.tsx | as, id, aria-labelledby, index, label, labelAs p/h2/h3 + labelId (the strip label is the section's heading and labels it), aside, tone, pad default/tight/none, rule, marks (full-bleed rule + `+` marks + `02 / label` strip; the strip draws the hairline under itself) | static |
+| PageFrame | page-frame.tsx | as div/main, id, rails (the centred column, `--frame-max` wide, `--section-gap` under its last plate; `rails` only for a sectionless workspace like the lesson page; decisions 047, 050) | static |
+| RuledSection | ruled-section.tsx | as, id, aria-labelledby, index, label, labelAs p/h2/h3 + labelId (the strip label is the section's heading and labels it), aside, tone, pad default/tight/none, rule (off: joins the block above, no gap or top rule), marks (a framed plate: own rails, full-bleed rules above and below, `+` marks at the corners, `02 / label` strip; the strip draws the hairline under itself) | static |
 | Panel / panelLinkStyle / panelListStyle | panel.tsx | id, title, level 2/3, aside, flush (a block inside a grid cell: the strip with a real heading, then a padded or flush body; stacked panels share a hairline) / aside link / flush list rows | static |
 | CellGrid / cellLinkStyle | cell-grid.tsx | cols, colsMid, colsPhone, edge flush/boxed, fill none/ink, top (`false` right under a strip, which already draws that line), pad, as ul/ol/div (cells share 1px borders) / mixin for a whole-cell `<a>` | static |
 | Crosshair | crosshair.tsx | placement top-start/top-end/bottom-start/bottom-end (the `+` where a rule meets a rail) | static |

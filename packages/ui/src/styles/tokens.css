@@ -360,6 +360,11 @@
        contrast on the ground is unchanged. No blur (047). */
     --cell-fill-veil: rgb(7 8 13 / 0.55);
     --cell-pad-lg: var(--space-16); /* a cell holding display type; --section-pad-x under 1024px */
+    /* Decision 050: sections are framed plates (own rails, a rule above and
+       below, marks at the four corners) with the page's ground showing
+       between them. The gap is the stripe of ground between two plates, and
+       the room under the last one. 80, mid 56, phones 40. */
+    --section-gap: var(--space-20);
     --track-cell-min: 300px; /* landing path: a track cell's height from 760px */
     --mode-art-h: 200px; /* landing modes: the art well (phones 120) */
     --control-xs: 34px; /* "Type it" tool toggle (44px hit area via ::before) */
@@ -531,6 +536,7 @@
       --frame-inset: var(--space-3);
       --section-pad-y: var(--space-16);
       --section-pad-x: var(--space-5);
+      --section-gap: var(--space-10);
       --mode-art-h: var(--space-30);
     }
   }
@@ -546,6 +552,7 @@
   @media (min-width: 480.02px) and (max-width: 1023.98px) {
     :root {
       --section-pad-x: var(--space-8);
+      --section-gap: var(--space-14);
     }
   }
 }

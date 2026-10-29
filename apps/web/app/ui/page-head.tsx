@@ -22,12 +22,13 @@ export interface PageHeadProps {
 }
 
 /**
- * The first band of an app page in the squared grid (decision 047): a
- * `RuledSection` with no rule of its own (the AppBar's rule closes it from
- * above), a mono strip, then the page's `<h1>` and lead at the section
- * inset. The same title size and spacing on every app page, so moving
- * between them doesn't shift the heading. Put it first inside the page's
- * `PageFrame`; the page's next `RuledSection` draws the rule under it.
+ * The first band of an app page in the squared grid (decisions 047, 050): a
+ * `RuledSection` that hangs from the AppBar (no gap or rule of its own; the
+ * bar's rule closes it from above), a mono strip, then the page's `<h1>`
+ * and lead at the section inset. The same title size and spacing on every
+ * app page, so moving between them doesn't shift the heading. Put it first
+ * inside the page's `PageFrame`; the page's next `RuledSection` sits
+ * `--section-gap` below it.
  */
 export function PageHead(handle: Handle<PageHeadProps>) {
   return () => {

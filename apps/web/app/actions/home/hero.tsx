@@ -1,5 +1,6 @@
 import { css, type Handle } from 'remix/component'
 import { SuggestionChip } from '@bits/ui/chip'
+import { RuledSection } from '@bits/ui/ruled-section'
 
 import { agentLessonHref, lessonOneHref } from './links.ts'
 import { FieldMotionToggle } from './public/field-motion-toggle.tsx'
@@ -33,6 +34,9 @@ const suggestions = [
  */
 export function Hero(handle: Handle<{ signedIn?: boolean }>) {
   return () => (
+    // The hero continues the header's block (decision 050): no gap above it,
+    // the header's rule closes it from above, its own rule closes the fold.
+    <RuledSection as="div" rule={false} pad="none">
     <section aria-labelledby="hero-title" mix={heroStyle}>
       <h1 id="hero-title" mix={h1Style}>
         Learn AI by <span mix={voltText}>typing</span> to it.
@@ -91,6 +95,7 @@ export function Hero(handle: Handle<{ signedIn?: boolean }>) {
         <FieldMotionToggle />
       </div>
     </section>
+    </RuledSection>
   )
 }
 

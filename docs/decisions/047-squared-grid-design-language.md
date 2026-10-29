@@ -2,7 +2,10 @@
 
 Status: Accepted (2026-10-28). Amends 010 (component library), 040
 (landing polish) and 042 (design-system consistency). Phase 1 of 2: the
-design system and the landing. Phase 2 converts the other pages.
+design system and the landing. Phase 2 converts the other pages. Amended
+by 050: each section is a framed plate of its own, with the ground showing
+between plates, so the frame no longer draws continuous rails and a
+section draws its bottom rule itself.
 
 ## Context
 

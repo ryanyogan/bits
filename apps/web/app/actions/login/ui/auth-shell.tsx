@@ -51,10 +51,13 @@ export function AuthShell(handle: Handle<AuthShellProps>) {
             spot the app bar puts it (decision 044): an --appbar-h row,
             top-left, at the section inset. It is the only href="/" here.
           */}
-          <header mix={brandRowStyle}>
-            <Logo brand={APP_NAME} href={routes.home.href()} variant="app" />
-          </header>
-          <RuledSection as="div" pad="none" mix={bodyStyle}>
+          <RuledSection as="header" rule={false} pad="none">
+            <div mix={brandRowStyle}>
+              <Logo brand={APP_NAME} href={routes.home.href()} variant="app" />
+            </div>
+          </RuledSection>
+          {/* One block with the brand row (decision 050): its rule closes the row. */}
+          <RuledSection as="div" rule={false} pad="none" mix={bodyStyle}>
             <div mix={cellsStyle}>
               <BrainPane />
               <main id="main" tabIndex={-1} mix={[skipTargetStyle, formPaneStyle]}>

@@ -111,6 +111,9 @@ const sectionLinkStyle = css({
 const headerStyle = css({
   position: 'relative',
   zIndex: 5,
+  // Its own rails (decision 050): the frame draws none, so the bar and the
+  // hero plate under it share one pair of lines.
+  borderInline: 'var(--border-w) solid var(--line-rail)',
   // The bar's ground and rule run the full width of the screen, past the rails.
   '&::before': {
     content: '""',
@@ -130,7 +133,7 @@ const headerStyle = css({
     animationTimeline: 'scroll(root)',
     animationRange: '0 var(--space-30)',
   },
-  [FORCED]: { background: 'Canvas' },
+  [FORCED]: { background: 'Canvas', borderColor: 'GrayText' },
 })
 
 const innerStyle = css({
