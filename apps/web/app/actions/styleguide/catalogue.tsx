@@ -8,13 +8,14 @@ import { BackButton } from '@bits/ui/back-button'
 import { BrandMark } from '@bits/ui/brand-mark'
 import { Callout } from '@bits/ui/callout'
 import { Card } from '@bits/ui/card'
+import { CellGrid } from '@bits/ui/cell-grid'
 import { CheckChip, checkListStyle } from '@bits/ui/check-chip'
 import { Chip, ChoiceChip, SuggestionChip } from '@bits/ui/chip'
 import { CodeEditor } from '@bits/ui/code-editor'
 import { CodeInput } from '@bits/ui/code-input'
 import { ComparePanel } from '@bits/ui/compare-panel'
 import { ContinueBanner } from '@bits/ui/continue-banner'
-import { CourseCard, WriteCourseCard, courseGridStyle } from '@bits/ui/course-card'
+import { CourseCard, WriteCourseCard } from '@bits/ui/course-card'
 import { CourseCover, coverPatterns } from '@bits/ui/course-cover'
 import { EmptyState } from '@bits/ui/empty-state'
 import { Eyebrow, MonoHeading } from '@bits/ui/eyebrow'
@@ -723,7 +724,7 @@ export function Catalogue(handle: Handle) {
               ]}
             />
           </Specimen>
-          <Specimen caption="EmptyState" wide>
+          <Specimen caption="EmptyState — boxed (default: flat hairline, mono ∅) · bare (fills a cell or band)" wide>
             <EmptyState
               title="0 results for “quantum”"
               hint="Try a track filter or a shorter word."
@@ -733,13 +734,14 @@ export function Catalogue(handle: Handle) {
                 </Keycap>
               }
             />
+            <EmptyState variant="bare" title="No open invites." hint="Invites you send show here until they’re accepted." />
           </Specimen>
         </div>
       </Section>
 
       <Section id="sg-courses" title="Courses">
-        <ul mix={courseGridStyle}>
-          <li>
+        <CellGrid as="ul" cols={2} colsMid={2} edge="boxed" fill="ink">
+          <li mix={cardCell}>
             <CourseCard
               href="#sg-courses"
               title="Tokens & temperature"
@@ -753,9 +755,10 @@ export function Catalogue(handle: Handle) {
               pattern="stripes-115"
               formats={['text', 'video']}
               pct={62}
+              variant="cell"
             />
           </li>
-          <li>
+          <li mix={cardCell}>
             <CourseCard
               href="#sg-courses"
               title="What is an LLM, really?"
@@ -769,9 +772,10 @@ export function Catalogue(handle: Handle) {
               pattern="dots"
               formats={['text']}
               pct={100}
+              variant="cell"
             />
           </li>
-          <li>
+          <li mix={cardCell}>
             <CourseCard
               href="#sg-courses"
               title="Give your model tools"
@@ -785,13 +789,14 @@ export function Catalogue(handle: Handle) {
               pattern="rings"
               formats={['text', 'code']}
               forceState="hover"
+              variant="cell"
             />
           </li>
-          <li>
-            <WriteCourseCard href="#sg-courses" />
+          <li mix={cardCell}>
+            <WriteCourseCard href="#sg-courses" variant="cell" />
           </li>
-        </ul>
-        <span mix={note}>CourseCard: started (bar) · done (DoneTag) · hover (lift, tilt, sigil scale) · WriteCourseCard</span>
+        </CellGrid>
+        <span mix={note}>CourseCard variant cell in a CellGrid: started (bar) · done (DoneTag) · hover (fill step, sigil scale) · WriteCourseCard. The default card variant keeps its own hairline box.</span>
         <Specimen caption="CourseCover — the 8 named patterns">
           <ul mix={coverGrid}>
             {coverPatterns.map((pattern, index) => (
@@ -1076,6 +1081,7 @@ export function Catalogue(handle: Handle) {
   )
 }
 
+const cardCell = css({ display: 'flex' })
 const note = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-11)', color: 'var(--dim)' })
 const iconGrid = css({
   listStyle: 'none',
