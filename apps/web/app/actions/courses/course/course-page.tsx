@@ -13,7 +13,6 @@ import { Layout } from '../../../ui/layout.tsx'
 import type { CourseView } from './course-data.ts'
 import { CourseAside } from './ui/course-aside.tsx'
 import { CourseHero } from './ui/course-hero.tsx'
-import { stripHeading } from './ui/strip.ts'
 import { Syllabus } from './ui/syllabus.tsx'
 import { toneStyles } from './ui/tone.ts'
 
@@ -50,11 +49,8 @@ export function CoursePage(handle: Handle<CoursePageProps>) {
         <PageFrame mix={toneStyles[course.tone]}>
           <CourseHero view={view} coursesHref={coursesHref} trackHref={trackHref} />
 
-          <RuledSection aria-labelledby="outcomes-heading" pad="none">
-            <h2 id="outcomes-heading" mix={[stripHeading, openStrip]}>
-              By the end you'll be able to
-            </h2>
-            <CellGrid as="ol" cols={outcomeCols(course.outcomes.length)}>
+          <RuledSection label="By the end you'll be able to" labelAs="h2" labelId="outcomes-heading" pad="none">
+            <CellGrid as="ol" cols={outcomeCols(course.outcomes.length)} top={false}>
               {course.outcomes.map((outcome, index) => (
                 <li key={index} mix={outcomeCell}>
                   <span aria-hidden="true" mix={outcomeN}>
@@ -87,8 +83,6 @@ function outcomeCols(n: number): CellGridCols {
   return n % 4 === 0 ? 4 : n <= 2 ? 2 : 3
 }
 
-// The cells draw their own top hairlines, so the strip draws none.
-const openStrip = css({ borderBottom: 0 })
 const outcomeCell = css({
   fontSize: 'var(--fs-15)',
   lineHeight: 1.5,

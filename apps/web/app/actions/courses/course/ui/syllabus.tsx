@@ -2,10 +2,10 @@ import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 import { Keycap } from '@bits/ui/keycap'
 import { LessonNode } from '@bits/ui/lesson-node'
+import { Panel } from '@bits/ui/panel'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import { kindLabels, type SyllabusLesson, type SyllabusModuleView } from '../course-data.ts'
-import { stripHeading } from './strip.ts'
 
 const stateText = { done: 'completed', current: 'in progress', next: 'not started' } as const
 
@@ -18,10 +18,7 @@ const stateText = { done: 'completed', current: 'in progress', next: 'not starte
  */
 export function Syllabus(handle: Handle<{ modules: SyllabusModuleView[] }>) {
   return () => (
-    <section aria-labelledby="syllabus-heading" mix={sectionStyle}>
-      <h2 id="syllabus-heading" mix={stripHeading}>
-        Syllabus
-      </h2>
+    <Panel id="syllabus-heading" title="Syllabus" flush>
       {handle.props.modules.map((module) => (
         <div key={module.n} mix={moduleStyle}>
           <h3 mix={moduleHeader}>
@@ -36,7 +33,7 @@ export function Syllabus(handle: Handle<{ modules: SyllabusModuleView[] }>) {
           </ol>
         </div>
       ))}
-    </section>
+    </Panel>
   )
 }
 
@@ -112,7 +109,6 @@ const MOBILE = '@media (max-width: 480px)'
 const SLOT_LEFT = 'var(--section-pad-x)'
 const NODE_CENTRE_Y = 'calc(var(--space-3) + 20px)'
 
-const sectionStyle = css({ display: 'flex', flexDirection: 'column', minWidth: 0 })
 const moduleStyle = css({
   display: 'flex',
   flexDirection: 'column',

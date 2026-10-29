@@ -22,7 +22,7 @@ const badges = [
 export function Progress(_handle: Handle) {
   return () => (
     <RuledSection aria-labelledby="you-title" index="04" label="You" pad="none">
-      <CellGrid cols={2} fill="ink" pad={false}>
+      <CellGrid cols={2} fill="ink" pad={false} top={false}>
         <div mix={copyCell}>
           <div mix={introStyle}>
             <h2 id="you-title" mix={h2Style}>

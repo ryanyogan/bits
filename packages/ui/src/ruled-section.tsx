@@ -3,6 +3,7 @@ import { css } from 'remix/component'
 
 import { Crosshair } from './crosshair.tsx'
 import { FORCED_COLORS } from './lib/states.ts'
+import { stripAsideStyle, stripLabelStyle, stripStyle } from './lib/strip.ts'
 
 export type RuledSectionTone = 'volt' | 'ion' | 'synapse' | 'muted'
 export type RuledSectionPad = 'default' | 'tight' | 'none'
@@ -20,6 +21,15 @@ export interface RuledSectionProps {
   index?: string
   /** A short mono name for the section, after the index: `02 / How it works`. */
   label?: RemixNode
+  /**
+   * The strip label's element: `p` (default) when the section's heading is
+   * elsewhere, or `h2` / `h3` when the label *is* the heading. A heading
+   * label takes `labelId`, and the section is labelled by it unless
+   * `aria-labelledby` says otherwise.
+   */
+  labelAs?: 'p' | 'h2' | 'h3'
+  /** id of the strip label, for `aria-labelledby`. */
+  labelId?: string
   /** Right-hand end of the header strip: a count, a link, a status. */
   aside?: RemixNode
   /** Colour of the index (default `volt`). */
@@ -45,7 +55,9 @@ export interface RuledSectionProps {
  * with an `aside` at the far end) and a padded body.
  *
  * Use it inside a `PageFrame`, one after another; the next section's rule
- * closes the one before, so sections never draw a bottom border. Static.
+ * closes the one before, so sections never draw a bottom border. The strip
+ * draws the hairline under itself, so a flush `CellGrid` right under it
+ * takes `top={false}`. Static.
  */
 export function RuledSection(handle: Handle<RuledSectionProps>) {
   return () => {
@@ -54,6 +66,8 @@ export function RuledSection(handle: Handle<RuledSectionProps>) {
       id,
       index,
       label,
+      labelAs = 'p',
+      labelId,
       aside,
       tone = 'volt',
       pad = 'default',
@@ -63,6 +77,27 @@ export function RuledSection(handle: Handle<RuledSectionProps>) {
       children,
     } = handle.props
     let hasHead = index !== undefined || label !== undefined || aside !== undefined
+    let labelContent = (
+      <>
+        {index !== undefined ? (
+          <>
+            <span mix={toneStyles[tone]}>{index}</span>
+            <span aria-hidden="true" mix={slashStyle}>
+              {' / '}
+            </span>
+          </>
+        ) : null}
+        {label}
+      </>
+    )
+    let labelEl =
+      labelAs === 'h2' ? (
+        <h2 id={labelId} mix={stripLabelStyle}>{labelContent}</h2>
+      ) : labelAs === 'h3' ? (
+        <h3 id={labelId} mix={stripLabelStyle}>{labelContent}</h3>
+      ) : (
+        <p id={labelId} mix={stripLabelStyle}>{labelContent}</p>
+      )
     let content = (
       <>
         {rule && marks ? (
@@ -72,26 +107,17 @@ export function RuledSection(handle: Handle<RuledSectionProps>) {
           </>
         ) : null}
         {hasHead ? (
-          <div mix={headStyle}>
-            <p mix={headLabelStyle}>
-              {index !== undefined ? (
-                <>
-                  <span mix={toneStyles[tone]}>{index}</span>
-                  <span aria-hidden="true" mix={slashStyle}>
-                    {' / '}
-                  </span>
-                </>
-              ) : null}
-              {label}
-            </p>
-            {aside !== undefined ? <div mix={asideStyle}>{aside}</div> : null}
+          <div mix={stripStyle}>
+            {labelEl}
+            {aside !== undefined ? <div mix={stripAsideStyle}>{aside}</div> : null}
           </div>
         ) : null}
         <div mix={padStyles[pad]}>{children}</div>
       </>
     )
     let styles = [sectionStyle, rule ? ruleStyle : undefined, mix]
-    let a11y = { id, 'aria-labelledby': handle.props['aria-labelledby'], 'aria-label': handle.props['aria-label'] }
+    let labelledBy = handle.props['aria-labelledby'] ?? (labelAs !== 'p' ? labelId : undefined)
+    let a11y = { id, 'aria-labelledby': labelledBy, 'aria-label': handle.props['aria-label'] }
     if (as === 'div') return <div {...a11y} mix={styles}>{content}</div>
     if (as === 'header') return <header {...a11y} mix={styles}>{content}</header>
     if (as === 'footer') return <footer {...a11y} mix={styles}>{content}</footer>
@@ -119,25 +145,6 @@ const ruleStyle = css({
   [FORCED_COLORS]: { '&::before': { forcedColorAdjust: 'none', background: 'GrayText' } },
 })
 
-const headStyle = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 'var(--space-4)',
-  minHeight: 'var(--touch-target)',
-  padding: 'var(--space-2) var(--section-pad-x)',
-  boxSizing: 'border-box',
-  borderBottom: 'var(--border-w) solid var(--line-cell)',
-})
-
-const headLabelStyle = css({
-  margin: 0,
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-12)',
-  lineHeight: 1.4,
-  color: 'var(--muted)',
-})
-
 const slashStyle = css({ color: 'var(--dim)' })
 
 const toneStyles: Record<RuledSectionTone, ReturnType<typeof css>> = {
@@ -146,15 +153,6 @@ const toneStyles: Record<RuledSectionTone, ReturnType<typeof css>> = {
   synapse: css({ color: 'var(--synapse)' }),
   muted: css({ color: 'var(--muted)' }),
 }
-
-const asideStyle = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: 'var(--space-3)',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-12)',
-  color: 'var(--dim)',
-})
 
 const padStyles: Record<RuledSectionPad, ReturnType<typeof css>> = {
   default: css({ padding: 'var(--section-pad-y) var(--section-pad-x)' }),
