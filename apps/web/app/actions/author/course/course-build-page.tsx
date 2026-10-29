@@ -49,7 +49,7 @@ export function CourseBuildPage(handle: Handle<CourseBuildPageProps>) {
           <RuledSection as="div" pad="none">
             <details mix={blocksDetails}>
               <summary mix={blocksSummary}>
-                <MonoHeading level={2}>THE BLOCKS</MonoHeading>
+                <MonoHeading level={2}>The blocks</MonoHeading>
                 <span aria-hidden="true" mix={chevron}>
                   ▾
                 </span>

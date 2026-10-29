@@ -5,9 +5,9 @@ import { Callout, type CalloutTone } from '@bits/ui/callout'
 import { CellGrid } from '@bits/ui/cell-grid'
 import { ChoiceChip } from '@bits/ui/chip'
 import { EmptyState } from '@bits/ui/empty-state'
-import { MonoHeading } from '@bits/ui/eyebrow'
 import { Keycap } from '@bits/ui/keycap'
 import { PageFrame } from '@bits/ui/page-frame'
+import { Panel } from '@bits/ui/panel'
 import { RuledSection } from '@bits/ui/ruled-section'
 import { inputStyle, TextField } from '@bits/ui/text-field'
 
@@ -16,7 +16,6 @@ import { APP_NAME } from '../../../config.ts'
 import { routes } from '../../../routes.ts'
 import { Layout } from '../../../ui/layout.tsx'
 import { PageHead } from '../../../ui/page-head.tsx'
-import { cellPad } from '../../author/ui/shell.tsx'
 
 export type AdminSection = 'invite' | 'invites' | 'people' | 'courses'
 
@@ -176,18 +175,21 @@ interface SectionProps {
   children?: RemixNode
 }
 
+/**
+ * One cell of the 2-up grid (decision 047): a `Panel`, whose strip heading
+ * carries the section's id (the redirects land on `#invites` and so on),
+ * then the description and the section's controls.
+ */
 function Section(handle: Handle<SectionProps>) {
   return () => {
     let { id, title, description, children } = handle.props
-    let headingId = `${id}-heading`
     return (
-      <section aria-labelledby={headingId} mix={[cellPad, sectionStyle]}>
-        <div mix={sectionHeadStyle} id={id}>
-          <MonoHeading id={headingId}>{title}</MonoHeading>
+      <Panel id={id} title={title}>
+        <div mix={sectionStyle}>
           <p mix={descriptionStyle}>{description}</p>
+          {children}
         </div>
-        {children}
-      </section>
+      </Panel>
     )
   }
 }
@@ -311,7 +313,6 @@ function CourseAuthors(handle: Handle<{ course: CourseAuthorList; people: Author
 const noticeSlotStyle = css({ width: '100%', '&:not(:empty)': { paddingTop: 'var(--space-2)' } })
 // Each section is a cell of a 2-up grid sharing hairlines (decision 047).
 const sectionStyle = css({ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-4_5)' })
-const sectionHeadStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' })
 const descriptionStyle = css({ margin: 0, fontSize: 'var(--fs-14)', lineHeight: 1.55, color: 'var(--muted)' })
 const formStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-4_5)' })
 const fieldsetStyle = css({ margin: 0, padding: 0, border: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-2_5)', minWidth: 0 })
