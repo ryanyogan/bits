@@ -225,7 +225,9 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
   it('code and terminal blocks never widen a 360px page (tabs, long lines, type mode)', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.setViewportSize({ width: 360, height: 800 })
-    let overflow = () => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    // Measured on body: html clips sideways overflow and reserves the
+    // scrollbar gutter (decision 049), so the root's own widths never show it.
+    let overflow = () => page.evaluate(() => document.body.scrollWidth - document.body.clientWidth)
     for (let href of [lesson('first-agent-loop', 'the-loop'), lesson('first-agent-loop', 'the-loop', 'terminal')]) {
       await page.goto(href)
       await settled(page)

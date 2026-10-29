@@ -33,7 +33,14 @@ export function CardPage(handle: Handle<{ card: CardContent; title: string }>) {
       <Document
         assets={platform.assets}
         title={title}
-        head={<meta name="robots" content="noindex" />}
+        head={
+          <>
+            <meta name="robots" content="noindex" />
+            {/* The card fills the 1200px screenshot exactly: no reserved scrollbar
+                gutter here (base.css reserves one on every other page; decision 049). */}
+            <style>{'html { scrollbar-gutter: auto; }'}</style>
+          </>
+        }
       >
         <div mix={cardStyle} data-og-card="">
           <div mix={textCol}>
