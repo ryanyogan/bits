@@ -330,7 +330,6 @@
     --form-width: 420px;
     --measure: 68ch;
     --touch-target: 44px; /* minimum hit area */
-    --hero-min-height: 820px; /* Main hero (tokens.md "Layout"); capped by the viewport where used */
 
     /* Strokes and control sizes (decision 042). Every border, divider and
      * underline uses one of the two widths; colour comes from the --line-*

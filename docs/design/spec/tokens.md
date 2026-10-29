@@ -226,13 +226,15 @@ All sizes in px unless clamp. `lh` = line-height (unitless). `ls` = letter-spaci
 | Role | Weight | Size | lh | ls | Extras | Where |
 |---|---|---|---|---|---|---|
 | `display-xl` | 800 | `clamp(46px, 8.4vw, 124px)` | .94 | -0.045em | `text-wrap: balance; max-width: 1100px` | Main hero h1. System sample: 88px / .95 |
-| `display-cta` | 800 | `clamp(42px, 7vw, 104px)` | .96 | -0.045em | `max-width: 1000px; text-wrap: balance` | Main closing CTA h2 |
+| `display-cta` | 800 | `clamp(38px, 5.6vw, 80px)` (decision 048; was `clamp(42px, 7vw, 104px)`) | .96 | -0.045em | `max-width: 1000px; text-wrap: balance` | Main closing CTA h2 (`--type-display-cta-size`) |
+| `display-cert` | 800 | `clamp(42px, 7vw, 104px)` | .96 | -0.045em | | Certificate course title (`--type-display-cert-size`, decision 048) |
 | `display-course` | 800 | `clamp(40px, 5.6vw, 76px)` | .98 | -0.045em | | Course hero h1 |
 | `display-l` | 800 | `clamp(36px, 5vw, 64px)` | 1 | -0.04em | | Catalog h1, Authoring h1 |
 | `display-profile` | 800 | `clamp(36px, 4.6vw, 60px)` | 1 | -0.04em | | Profile name h1 |
 | `display-auth` | 800 | `clamp(36px, 4.4vw, 60px)` | .98 | -0.04em | | Auth left h2 |
 | `display-system` | 800 | 56 | 1 | -0.04em | | System h1 |
-| `h2-section` | 700 | `clamp(36px, 4.6vw, 64px)` | 1.02 | -0.035em | `text-wrap: balance` | Main section h2s. System sample: 52px |
+| `h2-section` | 700 | `clamp(36px, 4.6vw, 64px)` | 1.02 | -0.035em | `text-wrap: balance` | `PageHead` h1/h2 on app pages (`--type-h2-size`). System sample: 52px |
+| `h2-landing` | 700 | `clamp(30px, 3.9vw, 56px)` | 1.02 | -0.035em | `text-wrap: balance` | Main section h2s in a half-width cell (`--type-h2-landing-size`, decision 048) |
 | `h1-form` | 700 | 34 | normal | -0.03em | | Auth "Welcome back." / "Make it yours." |
 | `h1-form-sent` | 700 | 32 | normal | -0.03em | | Auth "Check your inbox." |
 | `title-banner` | 700 | 28 | normal | -0.03em | | Catalog continue banner title |
@@ -464,8 +466,8 @@ Scripted timing: hero placeholder typewriter ticks every `55ms` (types 1 char/ti
 | Page | Padding |
 |---|---|
 | Main nav | `22px 32px` |
-| Main hero | `104px 32px 72px`, `min-height: 820px` |
-| Main sections | `120px 32px`; closing CTA `160px 32px 140px` |
+| Main hero | `64px --section-pad-x 32px`, `min-height: calc(100svh - --appbar-h)` (one fold; phones `40px … 32px`, auto height). Decision 048 replaced `104px 32px 72px` / 820px |
+| Main sections | `--section-pad-y` bands; display-type cells inset `--cell-pad-lg`; closing CTA `120px` top and bottom (phones `80px / 64px`; decision 048, was `160px 32px 140px`) |
 | Main footer | `36px 32px` |
 | App bar inner (Catalog/Course/Profile/Authoring) | `14px 32px` |
 | Lesson/Code bar inner | `12px 24px` |
@@ -476,6 +478,15 @@ Scripted timing: hero placeholder typewriter ticks every `55ms` (types 1 char/ti
 | Code workspace | `16px` |
 | Auth left / right | `32px` / `48px 24px` |
 | System | `64px 32px 80px` |
+
+### 7.2a Landing grid tokens (decision 048)
+
+| Token | Value | Use |
+|---|---|---|
+| `--cell-fill-veil` | `rgb(7 8 13 / 0.55)` | A copy cell over the field (headline + lead); `--cell-fill` (0.9) stays for object cells (preview card, mode art, tracks, showcase). `CellGrid fill="veil"`, or `cellVeilStyle` / `cellInkStyle` per cell |
+| `--cell-pad-lg` | `64px`; `--section-pad-x` under 1024px | Inset of a cell that holds display type |
+| `--track-cell-min` | `300px` | A landing path track cell's height from 760px |
+| `--mode-art-h` | `200px`; phones `120px` | A landing mode card's art well |
 
 ### 7.3 Grids in use
 
