@@ -41,7 +41,8 @@ describe('/login', () => {
     assert.equal(html.match(/href="\/"/g)?.length, 1, 'one logo, linking home')
     assert.equal(html.match(/data-rmx-reset-focus="manual"/g)?.length, 2)
     assert.match(html, /data-rmx-key="email"/)
-    assert.match(html, /href="\/terms"/)
+    assert.match(html, /href="\/terms" data-rmx-prefetch="intent"/)
+    assert.match(html, /href="\/privacy" data-rmx-prefetch="intent"/)
     assert.doesNotMatch(html, /href="#terms"/)
   })
 

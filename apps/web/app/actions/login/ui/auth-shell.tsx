@@ -85,8 +85,8 @@ export function AuthShell(handle: Handle<AuthShellProps>) {
                       Just exploring? Start lesson 1 without an account →
                     </a>
                     <p mix={legalStyle}>
-                      By continuing you agree to the <a href={routes.legal.terms.href()}>Terms</a> and{' '}
-                      <a href={routes.legal.privacy.href()}>Privacy Policy</a>.
+                      By continuing you agree to the <a href={routes.legal.terms.href()} data-rmx-prefetch={prefetchFor(routes.legal.terms.href())}>Terms</a> and{' '}
+                      <a href={routes.legal.privacy.href()} data-rmx-prefetch={prefetchFor(routes.legal.privacy.href())}>Privacy Policy</a>.
                     </p>
                   </footer>
                 </div>
