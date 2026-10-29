@@ -1,4 +1,7 @@
-// Layout and type styles shared by the landing page sections (Main.md).
+// Layout and type styles shared by the landing page sections (Main.md,
+// squared grid: decision 047). The grid itself (frame, rules, cells) comes
+// from @bits/ui's PageFrame / RuledSection / CellGrid; this file only has
+// the landing's type roles.
 import { css } from 'remix/component'
 
 export const PHONE = '@media (max-width: 480px)'
@@ -12,34 +15,6 @@ export const FORCED = '@media (forced-colors: active)'
  */
 export const dotBreak = css({ [PHONE]: { display: 'block', height: 0, overflow: 'hidden', fontSize: 0 } })
 
-/** `max-width:1280px; margin:0 auto; padding:120px 32px` → 72px 16px on phones. */
-export const sectionStyle = css({
-  maxWidth: 'var(--page-max)',
-  margin: '0 auto',
-  padding: 'var(--space-30) var(--page-gutter)',
-  boxSizing: 'border-box',
-  [PHONE]: { paddingTop: 'var(--space-18)', paddingBottom: 'var(--space-18)' },
-})
-
-/** Section column used by #path and the modes section. */
-export const stackSection = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--space-14)',
-  [PHONE]: { gap: 'var(--space-10)' },
-})
-
-/** Two-up grid that collapses at `min` width. */
-export function splitGrid(min: string) {
-  return css({
-    display: 'grid',
-    gridTemplateColumns: `repeat(auto-fit, minmax(min(${min}, 100%), 1fr))`,
-    gap: 'var(--space-16)',
-    alignItems: 'center',
-    [PHONE]: { gap: 'var(--space-10)' },
-  })
-}
-
 /** `h2-section`: Unbounded 700 clamp(36px, 4.6vw, 64px) / 1.02, -0.035em. */
 export const h2Style = css({
   margin: 0,
@@ -49,15 +24,20 @@ export const h2Style = css({
   lineHeight: 'var(--type-h2-leading)',
   letterSpacing: 'var(--type-h2-tracking)',
   textWrap: 'balance',
+  // Inside the rails a phone column is ~280px: Unbounded at 36px broke
+  // "conversation." mid-word.
+  [PHONE]: { fontSize: 'var(--fs-30)' },
 })
 
-/** Section lead: 19/1.6 `--text-lead`. */
+/** Section lead: 18/1.6 `--text-lead`. */
 export const leadStyle = css({
   margin: 0,
-  fontSize: 'var(--fs-19)',
+  maxWidth: '56ch',
+  fontSize: 'var(--fs-18)',
   lineHeight: 1.6,
   color: 'var(--text-lead)',
   textWrap: 'pretty',
+  [PHONE]: { fontSize: 'var(--fs-17)' },
 })
 
 export const voltText = css({ color: 'var(--volt)' })
@@ -70,11 +50,12 @@ export const monoNote = css({
   color: 'var(--dim)',
 })
 
-/** Frosted glass over the field (components §8.4). */
-export const glass = css({
-  WebkitBackdropFilter: 'blur(var(--blur-glass))',
-  backdropFilter: 'blur(var(--blur-glass))',
-  border: '1px solid var(--line-glass)',
+/** A section's intro: heading and lead stacked, left-aligned. */
+export const introStyle = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'var(--space-5)',
+  maxWidth: 'var(--read-width)',
 })
 
 /** Small card title: Unbounded 500 22px, -0.02em. */
@@ -83,6 +64,7 @@ export const cardTitle = css({
   fontFamily: 'var(--font-display)',
   fontWeight: 500,
   fontSize: 'var(--fs-22)',
+  lineHeight: 1.15,
   letterSpacing: 'var(--tracking-title)',
 })
 
@@ -92,4 +74,13 @@ export const cardDesc = css({
   fontSize: 'var(--fs-15)',
   lineHeight: 1.55,
   color: 'var(--muted)',
+})
+
+/** A mono label inside a cell: "TEXT · ALWAYS", a track name. */
+export const cellLabel = css({
+  margin: 0,
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-12)',
+  letterSpacing: 'var(--tracking-eyebrow-s)',
+  textTransform: 'uppercase',
 })

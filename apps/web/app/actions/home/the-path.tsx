@@ -1,9 +1,10 @@
 import { css, type Handle } from 'remix/component'
-import { Eyebrow } from '@bits/ui/eyebrow'
+import { CellGrid, cellLinkStyle } from '@bits/ui/cell-grid'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
+import { RuledSection } from '@bits/ui/ruled-section'
 
 import { trackHref } from './links.ts'
-import { cardDesc, cardTitle, h2Style, leadStyle, PHONE, REDUCED, sectionStyle, stackSection } from './styles.ts'
+import { cardDesc, cardTitle, cellLabel, FORCED, h2Style, introStyle, leadStyle, REDUCED } from './styles.ts'
 
 type TrackKey = 'foundations' | 'prompting' | 'tools' | 'agents'
 
@@ -14,154 +15,133 @@ const tracks: {
   title: string
   desc: string
   color: string
-  ring: string
   courses: string[]
 }[] = [
-  { key: 'foundations', n: '01', track: 'Foundations', title: 'How LLMs think', desc: 'Tokens, next-word prediction, temperature and the context window — no math degree required.', color: 'var(--volt)', ring: 'var(--volt-a55)', courses: ['What is an LLM, really?', 'Tokens & temperature'] },
-  { key: 'prompting', n: '02', track: 'Prompting', title: 'Talk like you mean it', desc: 'Roles, examples, structure and how to tell if a prompt actually got better.', color: 'var(--ion)', ring: 'var(--ion-a55)', courses: ['Prompting that works', 'Context is everything'] },
-  { key: 'tools', n: '03', track: 'Tools & context', title: 'Give the model hands', desc: 'Tool calls, retrieval and memory — the pieces every agent is built from.', color: 'var(--synapse)', ring: 'var(--syn-a60)', courses: ['Give your model tools', 'Retrieval without tears'] },
-  { key: 'agents', n: '04', track: 'Agents', title: 'Close the loop', desc: 'Plan, act, observe, repeat. Then ship your agent to the edge.', color: 'var(--volt)', ring: 'var(--volt-a55)', courses: ['Your first agent loop', 'Ship an agent to the edge'] },
+  { key: 'foundations', n: '01', track: 'Foundations', title: 'How LLMs think', desc: 'Tokens, next-word prediction, temperature and the context window — no math degree required.', color: 'var(--volt)', courses: ['What is an LLM, really?', 'Tokens & temperature'] },
+  { key: 'prompting', n: '02', track: 'Prompting', title: 'Talk like you mean it', desc: 'Roles, examples, structure and how to tell if a prompt actually got better.', color: 'var(--ion)', courses: ['Prompting that works', 'Context is everything'] },
+  { key: 'tools', n: '03', track: 'Tools & context', title: 'Give the model hands', desc: 'Tool calls, retrieval and memory — the pieces every agent is built from.', color: 'var(--synapse)', courses: ['Give your model tools', 'Retrieval without tears'] },
+  { key: 'agents', n: '04', track: 'Agents', title: 'Close the loop', desc: 'Plan, act, observe, repeat. Then ship your agent to the edge.', color: 'var(--volt)', courses: ['Your first agent loop', 'Ship an agent to the edge'] },
 ]
 
-/** "03 — The path" (Main.md §4): four TrackCards on a dashed trace. */
+/**
+ * "03 / The path" (Main.md §4): four tracks in a row of linked cells. A volt
+ * trace draws along the row's top edge as it scrolls in: the path, in order.
+ */
 export function ThePath(_handle: Handle) {
   return () => (
-    <section id="path" aria-labelledby="path-title" mix={[sectionStyle, stackSection, timeline]}>
-      <div mix={introStyle}>
-        <Eyebrow tone="synapse" as="p">
-          03 — The path
-        </Eyebrow>
-        <h2 id="path-title" mix={h2Style}>
-          From one prompt to a team of agents.
-        </h2>
-        <p mix={leadStyle}>
-          Four tracks, each one building on the last. Start at the beginning or jump to wherever
-          you're curious — every course is free.
-        </p>
+    <RuledSection id="path" aria-labelledby="path-title" index="03" label="The path" tone="synapse" pad="none" mix={timeline}>
+      <div mix={introCell}>
+        <div mix={introStyle}>
+          <h2 id="path-title" mix={h2Style}>
+            From one prompt to a team of agents.
+          </h2>
+          <p mix={leadStyle}>
+            Four tracks, each one building on the last. Start at the beginning or jump to wherever
+            you're curious — every course is free.
+          </p>
+        </div>
       </div>
       <div mix={trackWrap}>
         <div aria-hidden="true" mix={traceStyle} />
-        <ol mix={gridStyle}>
+        <CellGrid as="ol" cols={4} fill="ink">
           {tracks.map((t) => (
             <li key={t.key} mix={itemStyle}>
-              <a href={trackHref(t.key)} style={{ '--track': t.color, '--ring': t.ring }} data-rmx-prefetch={prefetchFor(trackHref(t.key))} mix={cardLink}>
-                <span aria-hidden="true" mix={discStyle}>
-                  {t.n}
+              <a
+                href={trackHref(t.key)}
+                style={{ '--track': t.color }}
+                data-rmx-prefetch={prefetchFor(trackHref(t.key))}
+                mix={[cellLinkStyle, cardLink]}
+              >
+                <span mix={topRow}>
+                  <span aria-hidden="true" mix={numberStyle}>
+                    {t.n}
+                  </span>
+                  <span mix={[cellLabel, trackName]}>{t.track}</span>
                 </span>
-                <div mix={bodyStyle}>
-                  <span mix={trackName}>{t.track}</span>
-                  <h3 mix={[cardTitle, titleStyle]}>{t.title}</h3>
-                  <span mix={cardDesc}>{t.desc}</span>
-                  <div mix={coursesStyle}>
-                    {t.courses.map((c) => (
-                      <span key={c} mix={courseRow}>
-                        <span aria-hidden="true" mix={dotStyle} />
-                        {c}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                <h3 mix={cardTitle}>{t.title}</h3>
+                <span mix={cardDesc}>{t.desc}</span>
+                <span mix={coursesStyle}>
+                  {t.courses.map((c) => (
+                    <span key={c} mix={courseRow}>
+                      <span aria-hidden="true" mix={dotStyle} />
+                      {c}
+                    </span>
+                  ))}
+                </span>
               </a>
             </li>
           ))}
-        </ol>
+        </CellGrid>
       </div>
-    </section>
+    </RuledSection>
   )
 }
 
 // Names the view timeline the header's "The path" link follows (decision 040).
 const timeline = css({ viewTimelineName: '--path' })
 
-const introStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', maxWidth: 'var(--read-width)' })
+const introCell = css({ padding: 'var(--section-pad-y) var(--section-pad-x) calc(var(--section-pad-y) / 2)' })
+
 const trackWrap = css({ position: 'relative' })
+
+// The trace sits on the row's top border and draws itself left to right as
+// the cells scroll into view: tied to the reader's scroll, never
+// autonomous (decision 040). Without view timelines it is simply drawn.
 const traceStyle = css({
   position: 'absolute',
-  left: '36px',
-  right: '36px',
-  top: '35px',
-  height: 0,
-  borderTop: '1px dashed var(--volt-a40)',
+  zIndex: 1,
+  left: 0,
+  right: 0,
+  top: 0,
+  height: 'var(--border-w)',
+  background: 'var(--volt-a60)',
   transformOrigin: 'left',
-  // The trace draws itself left to right as the cards scroll into view:
-  // tied to the reader's scroll, never autonomous (decision 040).
   '@supports (animation-timeline: view())': {
     animation: 'landing-trace linear both',
     animationTimeline: 'view()',
-    animationRange: 'entry 10% cover 50%',
+    animationRange: 'entry 10% cover 45%',
   },
   [REDUCED]: { animation: 'none' },
-  '@media (max-width: 820px)': { display: 'none' },
+  [FORCED]: { display: 'none' },
 })
-const gridStyle = css({
-  position: 'relative',
-  listStyle: 'none',
-  margin: 0,
-  padding: 0,
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))',
-  gap: 'var(--space-5)',
-})
+
 const itemStyle = css({ display: 'flex' })
+
+// The cell lights its top edge in the track's colour on hover and focus.
 const cardLink = css({
-  flex: 1,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--space-4_5)',
-  color: 'var(--text)',
-  textDecoration: 'none',
-  borderRadius: 'var(--radius-xl)',
-  transition: 'transform var(--duration-card) var(--ease)',
-  '&:hover, &:focus-visible': {
-    color: 'var(--text)',
-    transform: 'translateY(-4px)',
-    '--card-line': 'var(--volt-a35)',
-    '--card-shadow': 'var(--shadow-card-hover)',
-  },
-  [REDUCED]: { transition: 'none', '&:hover, &:focus-visible': { transform: 'none' } },
+  gap: 'var(--space-4)',
+  minHeight: '300px',
+  boxShadow: 'inset 0 0 0 0 transparent',
+  transition: 'background-color var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease)',
+  '&:hover, &:focus-visible': { boxShadow: 'inset 0 var(--border-w-strong) 0 var(--track)' },
+  '@media (max-width: 759.98px)': { minHeight: 'auto' },
+  [REDUCED]: { transition: 'none' },
 })
-const discStyle = css({
-  width: '72px',
-  height: '72px',
-  borderRadius: 'var(--radius-pill)',
-  display: 'grid',
+
+const topRow = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' })
+
+// The track's number: a square tile with a hairline in the track colour.
+const numberStyle = css({
+  display: 'inline-grid',
   placeItems: 'center',
-  background: 'var(--ink)',
-  border: '1px solid var(--ring)',
-  boxShadow: 'var(--ring-sigil)',
-  fontFamily: 'var(--font-display)',
-  fontWeight: 700,
-  fontSize: 'var(--fs-20)',
+  width: 'var(--control-compact)',
+  height: 'var(--control-compact)',
+  border: 'var(--border-w) solid var(--track)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-14)',
+  fontWeight: 500,
   color: 'var(--track)',
+  [FORCED]: { borderColor: 'CanvasText' },
 })
-const bodyStyle = css({
-  flex: 1,
+const trackName = css({ color: 'var(--track)' })
+const coursesStyle = css({
+  marginTop: 'auto',
+  paddingTop: 'var(--space-4)',
+  borderTop: 'var(--border-w) solid var(--line-hair)',
   display: 'flex',
   flexDirection: 'column',
-  gap: 'var(--space-3_5)',
-  padding: 'var(--space-6)',
-  borderRadius: 'var(--radius-xl)',
-  background: 'var(--glass)',
-  WebkitBackdropFilter: 'blur(var(--blur-glass))',
-  backdropFilter: 'blur(var(--blur-glass))',
-  // The link sets --card-line on hover (each css() mixin is its own cascade
-  // sublayer, so a descendant rule on the link would lose to this one).
-  border: '1px solid var(--card-line, var(--line-glass))',
-  minHeight: '260px',
-  boxSizing: 'border-box',
-  boxShadow: 'var(--card-shadow, none)',
-  transition: 'border-color var(--duration-card) var(--ease), box-shadow var(--duration-card) var(--ease)',
-  [PHONE]: { minHeight: 'auto' },
+  gap: 'var(--space-1_5)',
 })
-const trackName = css({
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-12)',
-  letterSpacing: 'var(--tracking-eyebrow-s)',
-  textTransform: 'uppercase',
-  color: 'var(--track)',
-})
-const titleStyle = css({ lineHeight: 1.15 })
-const coursesStyle = css({ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 'var(--space-1_5)' })
 const courseRow = css({
   display: 'flex',
   alignItems: 'center',
@@ -169,4 +149,4 @@ const courseRow = css({
   fontSize: 'var(--fs-14)',
   color: 'var(--text-body)',
 })
-const dotStyle = css({ flex: 'none', width: '5px', height: '5px', borderRadius: '99px', background: 'var(--track)' })
+const dotStyle = css({ flex: 'none', width: '5px', height: '5px', background: 'var(--track)' })

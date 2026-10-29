@@ -57,6 +57,7 @@ import { VideoPlayer } from '@bits/ui/video-player'
 import { XpPill } from '@bits/ui/xp-pill'
 
 import { APP_NAME } from '../../config.ts'
+import { GridSection } from './grid.tsx'
 import { Section, Specimen, State, column, row, specimenGrid } from './layout.tsx'
 import {
   agentFile,
@@ -634,6 +635,8 @@ export function Catalogue(handle: Handle) {
           </Specimen>
         </div>
       </Section>
+
+      <GridSection />
 
       <Section id="sg-layout" title="Labels & layout">
         <div mix={specimenGrid}>

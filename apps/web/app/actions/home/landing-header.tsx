@@ -1,5 +1,6 @@
 import { css, type Handle, type RemixNode } from 'remix/component'
 import { AppBarMenu, type AppBarLink } from '@bits/ui/app-bar-menu'
+import { Crosshair } from '@bits/ui/crosshair'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
 import { Logo } from '@bits/ui/logo'
 
@@ -20,18 +21,19 @@ export interface LandingHeaderProps {
 }
 
 /**
- * The landing page's header (Main.md §1; decision 022 keeps the landing's
- * bar apart from the app shell, decision 040 restyles it).
+ * The landing page's header (Main.md §1; decisions 022, 040, 047).
  *
- * - Logo left, actions right, and the primary nav truly centred between
- *   them (a 1fr/auto/1fr grid, not space-between) in a glass capsule, with
- *   44px pill links that fill on hover.
+ * It lives inside the page's `PageFrame`, so the rails run through it. The
+ * nav is a row of cells, each a full-height 44px+ link between hairlines,
+ * truly centred between the logo and the actions (a 1fr/auto/1fr grid).
+ * A full-bleed rule closes the bar, with `+` marks on the rails.
+ *
  * - Transparent over the hero. Where scroll-driven animations exist it
- *   sticks, and frosts over the first 120px of scroll (no JS; it follows the
- *   reader's own scroll, so it isn't autonomous motion). Elsewhere it stays
- *   static and scrolls away, as before.
+ *   sticks and fills with ink over the first 120px of scroll (no JS; it
+ *   follows the reader's own scroll). Flat: no blur (047).
  * - The section links light up while their section is on screen (view
- *   timelines on #how and #path, scoped on the page root).
+ *   timelines on #how and #path, scoped on the page root): text colour
+ *   and a volt underline.
  * - Under 760px the nav folds into `AppBarMenu`'s sheet, which drops from
  *   `--appbar-h`, so the bar is exactly that tall.
  */
@@ -65,29 +67,30 @@ export function LandingHeader(handle: Handle<LandingHeaderProps>) {
             <AppBarMenu links={[...links, ...menuExtras]} label="Primary" id="landing-nav-sheet" />
           </div>
         </div>
+        <Crosshair placement="bottom-start" />
+        <Crosshair placement="bottom-end" />
       </header>
     )
   }
 }
 
-/** The pill link style, shared with the header's Sign in link. */
+/** A nav cell's link, shared with the header's Sign in link. */
 export const navLinkStyle = css({
   display: 'inline-flex',
   alignItems: 'center',
   minHeight: 'var(--touch-target)',
   // The nav narrows this on mid-size screens (a custom property: a
   // descendant rule on the nav's mixin would lose to this mixin's layer).
-  padding: '0 var(--landing-link-pad, var(--space-4))',
+  padding: '0 var(--landing-link-pad, var(--space-5))',
   boxSizing: 'border-box',
-  borderRadius: 'var(--radius-pill)',
   color: 'var(--text-lead)',
-  fontSize: 'var(--landing-link-fs, var(--fs-15))',
+  fontSize: 'var(--landing-link-fs, var(--fs-14))',
   whiteSpace: 'nowrap',
   textDecoration: 'none',
-  transition: 'color var(--duration-fast), background-color var(--duration-fast)',
-  '&:hover': { color: 'var(--text)', background: 'var(--fill-ghost-hover)' },
+  transition: 'color var(--duration-fast), background-color var(--duration-fast), box-shadow var(--duration-fast)',
+  '&:hover': { color: 'var(--text)', background: 'var(--fill-hover)' },
   '&:active': { background: 'var(--fill-btn)' },
-  '&:focus-visible': { outline: '2px solid var(--focus-ring-color)', outlineOffset: '2px' },
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
   [REDUCED]: { transition: 'none' },
   // Hover fills vanish in forced colours; underline instead.
   [FORCED]: { '&:hover': { textDecoration: 'underline' } },
@@ -108,7 +111,18 @@ const sectionLinkStyle = css({
 const headerStyle = css({
   position: 'relative',
   zIndex: 5,
-  borderBottom: 'var(--border-w) solid transparent',
+  // The bar's ground and rule run the full width of the screen, past the rails.
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    inset: '0 auto 0 50%',
+    width: '100vw',
+    transform: 'translateX(-50%)',
+    borderBottom: 'var(--border-w) solid var(--line-section)',
+    background: 'var(--landing-bar-bg, transparent)',
+    zIndex: -1,
+    pointerEvents: 'none',
+  },
   '@supports (animation-timeline: scroll())': {
     position: 'sticky',
     top: 0,
@@ -120,48 +134,43 @@ const headerStyle = css({
 })
 
 const innerStyle = css({
-  maxWidth: 'var(--page-max)',
-  height: 'calc(var(--appbar-h) - 1px)',
-  margin: '0 auto',
-  padding: '0 var(--page-gutter)',
+  height: 'var(--appbar-h)',
+  paddingBottom: 'var(--border-w)',
   boxSizing: 'border-box',
   display: 'grid',
   gridTemplateColumns: '1fr auto 1fr',
-  alignItems: 'center',
+  alignItems: 'stretch',
   gap: 'var(--space-5)',
-  // 760–1023px: tighter links so logo, nav and actions fit without overlap
-  // (the 1fr columns would otherwise squeeze the actions under the nav).
+  // 760–1023px: tighter links so logo, nav and actions fit without overlap.
   '@media (max-width: 1023.98px)': {
     gridTemplateColumns: 'auto 1fr auto',
     gap: 'var(--space-3)',
-    '--landing-link-pad': 'var(--space-2_5)',
-    '--landing-link-fs': 'var(--fs-14)',
+    '--landing-link-pad': 'var(--space-3)',
+    '--landing-link-fs': 'var(--fs-13)',
   },
   '@media (max-width: 759.98px)': { gridTemplateColumns: '1fr auto' },
 })
 
-const logoStyle = css({ justifySelf: 'start' })
+const logoStyle = css({ justifySelf: 'start', alignSelf: 'center', marginLeft: 'var(--section-pad-x)' })
 
+// The nav is a row of cells: each link fills the bar's height between
+// hairlines, so the header reads as part of the grid.
 const navStyle = css({
   justifySelf: 'center',
   display: 'flex',
-  alignItems: 'center',
-  gap: 'var(--space-0_5)',
-  padding: 'var(--space-1)',
-  borderRadius: 'var(--radius-pill)',
-  border: 'var(--border-w) solid var(--line-glass)',
-  background: 'var(--ink-a60)',
-  WebkitBackdropFilter: 'blur(var(--blur-glass))',
-  backdropFilter: 'blur(var(--blur-glass))',
-  boxShadow: 'inset 0 1px 0 var(--fill-hover)',
+  alignItems: 'stretch',
+  '& > a': { borderLeft: 'var(--border-w) solid var(--line-cell)' },
+  '& > a:last-child': { borderRight: 'var(--border-w) solid var(--line-cell)' },
   '@media (max-width: 759.98px)': { display: 'none' },
-  [FORCED]: { border: '1px solid CanvasText' },
+  [FORCED]: { '& > a': { borderColor: 'GrayText' } },
 })
 
 const actionsStyle = css({
   justifySelf: 'end',
+  alignSelf: 'center',
   display: 'flex',
   alignItems: 'center',
   gap: 'var(--space-2)',
   minWidth: 0,
+  marginRight: 'var(--space-3)',
 })

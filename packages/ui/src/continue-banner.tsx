@@ -72,7 +72,7 @@ const bannerStyle = css({
   background: 'var(--surface)',
   transition: 'border-color var(--duration-card) var(--ease)',
   '&:hover, &[data-force="hover"]': { color: 'var(--text)', borderColor: 'var(--ion-a50)' },
-  '&:hover .key, &[data-force="hover"] .key': { transform: 'translateY(-1px)', background: 'var(--volt-hover)' },
+  '&:hover .key, &[data-force="hover"] .key': { background: 'var(--volt-hover)' },
   '&:focus-visible, &[data-force="focus"]': focusOutline,
 })
 const bodyStyle = css({

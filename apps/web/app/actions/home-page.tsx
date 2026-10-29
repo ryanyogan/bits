@@ -5,6 +5,8 @@ import { Document } from '@bits/ui/document'
 import { Footer } from '@bits/ui/footer'
 import { Keycap } from '@bits/ui/keycap'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
+import { PageFrame } from '@bits/ui/page-frame'
+import { RuledSection } from '@bits/ui/ruled-section'
 import { XpPill } from '@bits/ui/xp-pill'
 
 import { platform } from '#platform'
@@ -51,6 +53,10 @@ const footerLinks = [
  * server-rendered and reads with JS off; the sticky 3D field and the hero
  * typewriter placeholder are the only islands. It renders its own shell
  * (marketing app bar, full-bleed sections, footer) rather than `Layout`.
+ *
+ * Squared grid (decision 047): the field fills the screen behind one
+ * `PageFrame`; the header, every section and the footer are bands of that
+ * frame, divided by full-bleed rules with `+` marks on the rails.
  */
 export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
   return () => {
@@ -79,7 +85,7 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
             Skip to content
           </a>
           <NeuralField />
-          <div mix={contentStyle}>
+          <PageFrame mix={contentStyle}>
             <LandingHeader
               brand={APP_NAME}
               homeHref={routes.home.href()}
@@ -111,13 +117,16 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
               <Progress />
               <ClosingCta />
             </main>
-            <Footer
-              brand={APP_NAME}
-              homeHref={routes.home.href()}
-              links={footerLinks}
-              copyright={`© 2026 ${brandName}`}
-            />
-          </div>
+            <RuledSection as="div" pad="none">
+              <Footer
+                brand={APP_NAME}
+                homeHref={routes.home.href()}
+                links={footerLinks}
+                copyright={`© 2026 ${brandName}`}
+                mix={footerStyle}
+              />
+            </RuledSection>
+          </PageFrame>
         </div>
       </Document>
     )
@@ -132,12 +141,15 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
 // (decision 040)
 const pageCss = [
   '@keyframes bits-cue{0%{transform:scaleY(0);transform-origin:top}45%{transform:scaleY(1);transform-origin:top}55%{transform:scaleY(1);transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}',
-  '@keyframes landing-bar{from{background-color:transparent;border-bottom-color:transparent}to{background-color:var(--appbar-bg);border-bottom-color:var(--line-bar);-webkit-backdrop-filter:blur(var(--blur-glass));backdrop-filter:blur(var(--blur-glass))}}',
-  '@keyframes landing-here{from,to{color:var(--text);background-color:var(--fill-ghost-hover)}}',
+  '@keyframes landing-bar{from{--landing-bar-bg:transparent}to{--landing-bar-bg:var(--ink)}}',
+  '@keyframes landing-here{from,to{color:var(--text);box-shadow:inset 0 calc(-1 * var(--border-w-strong)) 0 var(--volt)}}',
   '@keyframes landing-trace{from{transform:scaleX(0)}to{transform:scaleX(1)}}',
 ]
   .map((rule) => `@layer app{${rule}}`)
-  .join('')
+  .join('') +
+  // Registered so the header's ground (drawn by its full-bleed ::before)
+  // fades instead of flipping halfway (decision 047). @property is global.
+  '@property --landing-bar-bg{syntax:"<color>";inherits:true;initial-value:transparent}'
 
 const rootStyle = css({
   position: 'relative',
@@ -158,7 +170,6 @@ const skipLinkStyle = css({
   top: '-100px',
   zIndex: 10,
   padding: 'var(--space-3) var(--space-4)',
-  borderRadius: 'var(--radius-sm)',
   background: 'var(--volt)',
   color: 'var(--on-volt)',
   '&:focus': { top: 'var(--space-4)' },
@@ -171,6 +182,8 @@ const signInStyle = css({ '@media (max-width: 420px)': { display: 'none' } })
 const startFreeStyle = css({
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-4_5)',
-  borderRadius: 'var(--radius-md)',
   [PHONE]: { padding: '0 var(--space-4)' },
 })
+
+// The footer is the frame's last band: the band's rule replaces its border.
+const footerStyle = css({ borderTop: 0, background: 'var(--cell-fill)' })

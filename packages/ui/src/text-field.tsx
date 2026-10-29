@@ -119,7 +119,8 @@ export const inputStyle = css({
   '&:focus, &[data-force="focus"]': {
     ...hiddenOutline,
     borderColor: 'var(--focus-border)',
-    boxShadow: 'var(--focus-ring)',
+    // 047: the border doubles to 2px instead of a glow.
+    boxShadow: 'var(--focus-ring-soft)',
   },
   '&[aria-invalid="true"]': { borderColor: 'var(--danger-line)' },
   '&[aria-invalid="true"]:focus': { borderColor: 'var(--danger)', boxShadow: 'var(--focus-ring-danger)' },

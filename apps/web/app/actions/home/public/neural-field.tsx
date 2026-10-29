@@ -251,11 +251,15 @@ const canvasStyle = css({
   '&[data-live="true"]': { opacity: 1 },
 })
 
+// Graph paper under the field (decision 047): a faint square grid, centred
+// so a line runs down the middle, fading out from the hero's centre.
 const dotGridStyle = css({
   position: 'absolute',
   inset: 0,
-  backgroundImage: 'radial-gradient(var(--dot-grid-field) 1px, transparent 1px)',
-  backgroundSize: '28px 28px',
+  backgroundImage:
+    'linear-gradient(var(--field-grid) var(--border-w), transparent var(--border-w)), linear-gradient(90deg, var(--field-grid) var(--border-w), transparent var(--border-w))',
+  backgroundSize: 'var(--field-grid-step) var(--field-grid-step)',
+  backgroundPosition: 'center top',
   WebkitMaskImage: 'radial-gradient(ellipse at 50% 40%, #000 0%, transparent 75%)',
   maskImage: 'radial-gradient(ellipse at 50% 40%, #000 0%, transparent 75%)',
 })
@@ -269,7 +273,8 @@ const vignetteStyle = css({
 
 const hudStyle = css({
   position: 'absolute',
-  right: 'var(--space-8)',
+  // Inside the page frame's right rail (decision 047), not across it.
+  right: 'calc(max(var(--frame-inset), (100% - var(--frame-max)) / 2) + var(--space-6))',
   top: '50%',
   transform: 'translateY(-50%)',
   display: 'flex',
@@ -306,3 +311,4 @@ const hudBar = css({
   transition: 'transform 500ms var(--ease), background-color 500ms',
   '&[data-on="true"]': { transform: 'none', background: 'var(--volt)' },
 })
+

@@ -270,6 +270,11 @@ the new page into the old DOM. Write for that:
   on, from `src/styles/tokens.css`. If the design needs a value with no token,
   add the token (sourced from `docs/design/artboards/System.dc.html` /
   `docs/design/spec/`). Do not inline the literal.
+- Squared grid (decision 047): corners are 0 (`--radius-round` only for
+  dots, rings and avatars), with no shadows, glows, blur or hover lifts.
+  Depth is a hairline plus a fill step, and accents are signals. Lay
+  pages out as `PageFrame` > `RuledSection` > `CellGrid`. The decision
+  has the page-conversion checklist.
 - Cascade layers: `reset, tokens, base, rmx-reset, rmx, app`. Your `css()`
   lands in `rmx` and beats base styles. Never use `!important`.
 - Focus: rely on the global `:focus-visible` ring. If a component sets
@@ -327,6 +332,10 @@ Rationale: `docs/decisions/010-component-library.md`.
 | CodeInput | code-input.tsx | name, length, error, autoSubmit, autoFocus, value | island (one input without JS) |
 | Switch | switch.tsx | name, legend, options, value | static (native radios) |
 | QuizChoice | quiz-choice.tsx | name, question, options, multiple, explanation, action | static (POST form) |
+| PageFrame | page-frame.tsx | as div/main, id, rails (the ruled column: `--frame-max` wide, hairline rails; decision 047) | static |
+| RuledSection | ruled-section.tsx | as, id, aria-labelledby, index, label, aside, tone, pad default/tight/none, rule, marks (full-bleed rule + `+` marks + `02 / label` strip) | static |
+| CellGrid / cellLinkStyle | cell-grid.tsx | cols, colsMid, colsPhone, edge flush/boxed, fill none/ink, pad, as ul/ol/div (cells share 1px borders) / mixin for a whole-cell `<a>` | static |
+| Crosshair | crosshair.tsx | placement top-start/top-end/bottom-start/bottom-end (the `+` where a rule meets a rail) | static |
 | Card | card.tsx | variant default/page/compact/dashed/glass, as, label | static |
 | Callout | callout.tsx | tone ok/warning/danger/info, role, title, compact | static |
 | Eyebrow / MonoHeading | eyebrow.tsx | tone, size, as / level, id | static |

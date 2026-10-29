@@ -108,13 +108,12 @@ const barStyle = css({
   zIndex: 5,
 })
 
+// Flat (decision 047): a nearly opaque ink ground and a hairline, no blur.
 const stickyStyle = css({
   position: 'sticky',
   top: 0,
   background: 'var(--appbar-bg)',
-  WebkitBackdropFilter: 'blur(var(--blur-glass))',
-  backdropFilter: 'blur(var(--blur-glass))',
-  borderBottom: 'var(--border-w) solid var(--line-bar)',
+  borderBottom: 'var(--border-w) solid var(--line-section)',
 })
 
 const staticStyle = css({ background: 'transparent' })

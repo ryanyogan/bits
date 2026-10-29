@@ -204,14 +204,19 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await page.keyboard.press('Escape')
     await page.locator('#landing-nav-sheet:popover-open').waitFor({ state: 'detached' })
 
-    // Past the 120px frost range the header is sticky, opaque and blurred
-    // (a scroll-driven animation, so it follows the scroll position).
+    // Past the 120px range the header is sticky and its full-bleed ground
+    // (::before, decision 047) is opaque ink (a scroll-driven animation, so
+    // it follows the scroll position).
     for (let width of [360, 1440]) {
       await page.setViewportSize({ width, height: width === 360 ? 800 : 900 })
       await page.evaluate(() => window.scrollTo(0, 600))
       await page.waitForFunction(() => {
         let bar = document.querySelector('header')
-        return bar != null && bar.getBoundingClientRect().top === 0 && getComputedStyle(bar).backgroundColor !== 'rgba(0, 0, 0, 0)'
+        return (
+          bar != null &&
+          bar.getBoundingClientRect().top === 0 &&
+          getComputedStyle(bar, '::before').backgroundColor !== 'rgba(0, 0, 0, 0)'
+        )
       })
       await expectClean(page, `landing header scrolled @ ${width}`, width)
     }

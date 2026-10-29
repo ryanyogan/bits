@@ -102,18 +102,18 @@ const cardStyle = css({
   background: 'var(--surface)',
   border: 'var(--border-w) solid var(--line)',
   transition:
-    'transform var(--duration-card) var(--ease), border-color var(--duration-card) var(--ease), box-shadow var(--duration-card) var(--ease)',
+    'background-color var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease)',
+  // Flat (decision 047): no lift or tilt; the border turns volt and the
+  // ground lightens a step. The sigil still nudges, for a bit of fun.
   [LIFT]: {
     color: 'var(--text)',
-    transform: 'translateY(-6px) rotate(-0.4deg)',
     borderColor: 'var(--volt-a40)',
-    boxShadow: 'var(--shadow-card-hover)',
+    background: 'var(--raised)',
   },
-  '&:hover .sigil, &:focus-visible .sigil, &[data-force] .sigil': { transform: 'scale(1.08) translateY(-4px)' },
+  '&:hover .sigil, &:focus-visible .sigil, &[data-force] .sigil': { transform: 'scale(1.06)' },
   '&:focus-visible, &[data-force="focus"]': {
     outline: 'var(--focus-outline)',
     outlineOffset: 'var(--focus-offset)',
-    boxShadow: 'var(--shadow-card-hover), var(--focus-ring)',
   },
   '@media (prefers-reduced-motion: reduce)': {
     '&, &:hover, &:focus-visible, &[data-force]': { transform: 'none' },

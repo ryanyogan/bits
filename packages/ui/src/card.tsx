@@ -69,11 +69,10 @@ const variantStyles: Record<CardVariant, ReturnType<typeof css>> = {
     background: 'none',
     border: 'var(--border-w) dashed var(--line-dashed)',
   }),
+  // Over a canvas (sign-in brain, landing field). 047: flat ink, no blur.
   glass: css({
     borderRadius: 'var(--radius-20)',
-    background: 'var(--glass)',
-    WebkitBackdropFilter: 'blur(var(--blur-glass))',
-    backdropFilter: 'blur(var(--blur-glass))',
+    background: 'var(--cell-fill)',
     border: 'var(--border-w) solid var(--line-glass)',
   }),
 }

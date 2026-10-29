@@ -155,7 +155,6 @@ const coverVariants = {
     aspectRatio: '1',
     borderRadius: 'var(--radius-28)',
     border: `var(--border-w) solid ${toneAlpha(30)}`,
-    boxShadow: `0 40px 120px ${toneAlpha(12)}`,
   }),
   thumb: css({ flex: 'none', width: '64px', height: '64px', borderRadius: 'var(--radius-lg)' }),
 }
