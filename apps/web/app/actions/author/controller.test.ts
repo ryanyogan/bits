@@ -52,7 +52,7 @@ describe('/author and /author/:course', () => {
     assert.match(html, /enctype="multipart\/form-data"/)
     assert.match(html, /webkitdirectory/)
     assert.match(html, new RegExp(`action="${routes.author.repo.href()}"`))
-    assert.match(html, /id="your-courses">Your courses</)
+    assert.match(html, /<h2 id="your-courses"[^>]*>Your courses<\/h2>/)
     assert.match(html, /href="\/author\/tokens-and-temperature"/)
     assert.match(html, /v1 live/)
     assert.match(html, /role="region" aria-label="Block reference"/)
