@@ -136,10 +136,11 @@ describe('lesson page and author preview', () => {
     // Warm the isolate's live catalog; after that, a page doesn't read it from D1.
     await page(lessonHref(temperature))
     let signedOut = await page(lessonHref(temperature))
-    assert.equal(signedOut.headers.get('Server-Timing'), null)
+    // No D1 at all: only the catalog entry, from the memo, and no R2 read (the lesson is memoised too).
+    assert.match(signedOut.headers.get('Server-Timing') ?? '', /^catalog;dur=\d+;desc="memo"$/)
     // Session, user, completed lessons and the lesson's drafts come back in one batch.
     let signedIn = await page(lessonHref(temperature), user.cookie)
     assert.equal(signedIn.status, 200)
-    assert.match(signedIn.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="3 queries, 1 round trips"$/)
+    assert.match(signedIn.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="3 queries, 1 round trips", catalog;dur=\d+;desc="memo"$/)
   })
 })

@@ -30,7 +30,7 @@ export function loadDatabase(d1: D1Database): Middleware<{
     if (meter.ms >= SLOW_DB_MS) {
       log('warn', 'Slow D1 request', { method: context.method, path: context.url.pathname, ...meter })
     }
-    return withServerTiming(response, meter)
+    return appendServerTiming(response, [serverTiming(meter)])
   }
 }
 
@@ -39,14 +39,16 @@ export function serverTiming(meter: D1Meter): string {
   return `db;dur=${meter.ms};desc="${meter.queries} queries, ${meter.waves} round trips"`
 }
 
-function withServerTiming(response: Response, meter: D1Meter): Response {
+/** Appends `Server-Timing` entries, copying the response when its headers are immutable. */
+export function appendServerTiming(response: Response, entries: string[]): Response {
+  if (entries.length === 0) return response
   try {
-    response.headers.append('Server-Timing', serverTiming(meter))
+    for (let entry of entries) response.headers.append('Server-Timing', entry)
     return response
   } catch {
     // Immutable headers (Response.redirect): copy.
     let headers = new Headers(response.headers)
-    headers.append('Server-Timing', serverTiming(meter))
+    for (let entry of entries) headers.append('Server-Timing', entry)
     return new Response(response.body, { status: response.status, statusText: response.statusText, headers })
   }
 }

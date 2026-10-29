@@ -431,6 +431,7 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   one `db.batch`, never as sequential awaits. The session read already
   brings the user (`readSessionWithUser`) and, on `GET /courses…`, the
   completed lessons, so a signed-in lesson page is one round trip.
+  A response that resolved the catalog adds `catalog;dur=…;desc="memo|stale|cold"` and, if it read R2, `r2;dur=…;desc="N reads"`.
 - Several reads about one user or course go in one `db.batch`, keyed by a
   subquery (decision 035): `queries/profile.ts` (`UserRef`) for `/me`,
   `/u/:handle` and certificates, and `readAuthorCourses` for `/author`. A
@@ -548,6 +549,7 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   `catalog.getCourse/listCourses/getLesson/getContinue` and
   `await catalog.lessonContent(course, lesson)`. Never read R2 directly in
   a page; `store.ts` memoises immutable versions per isolate.
+  Its cost is metered per request (`content/meter.ts`) into the `catalog` and `r2` Server-Timing entries; pass a meter down, never keep request state in `store.ts`.
 - The build (`app/content/compile/`) is pure and runs in the CLI, tests and
   the Worker. Errors are `report.error(text, line)` with a source line;
   add a case to `compile/build.test.ts` for each new check. (The folder

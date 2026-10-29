@@ -23,6 +23,7 @@ import type { LessonContent } from '../actions/courses/lesson/content.ts'
 import { errorFields, log } from '../log.ts'
 import type { CourseBuild } from './compile/index.ts'
 import { Catalog } from './catalog.ts'
+import type { ContentMeter } from './meter.ts'
 import type { CourseManifest } from './types.ts'
 
 /** R2 prefix of one built version. */
@@ -50,7 +51,12 @@ interface VersionRef {
   n: number
 }
 
-async function readVersionJson<T>(bucket: R2Bucket, version: VersionRef, key: string): Promise<T | undefined> {
+async function readVersionJson<T>(
+  bucket: R2Bucket,
+  version: VersionRef,
+  key: string,
+  meter?: ContentMeter,
+): Promise<T | undefined> {
   let memoKey = `${version.id}:${key}`
   if (memo.has(memoKey)) {
     let value = memo.get(memoKey) as T
@@ -58,12 +64,15 @@ async function readVersionJson<T>(bucket: R2Bucket, version: VersionRef, key: st
     memo.set(memoKey, value)
     return value
   }
-  let object = await bucket.get(key)
-  if (!object) {
+  let read = async () => {
+    let object = await bucket.get(key)
+    return object ? await object.json<T>() : undefined
+  }
+  let value = meter ? await meter.timeRead(read) : await read()
+  if (value === undefined) {
     console.error(JSON.stringify({ message: 'content object missing from R2', key, version: version.id }))
     return undefined
   }
-  let value = await object.json<T>()
   remember(memoKey, value)
   return value
 }
@@ -80,20 +89,20 @@ function catalogOf(bucket: R2Bucket, entries: { version: VersionRef; manifest: C
   let versions = new Map(entries.map((entry) => [entry.manifest.slug, entry.version]))
   return new Catalog(
     entries.map((entry) => entry.manifest),
-    async (course, lesson) => {
+    async (course, lesson, meter) => {
       let version = versions.get(course.slug)
-      return version ? readVersionJson<LessonContent>(bucket, version, lessonKey(version.slug, version.n, lesson)) : undefined
+      return version ? readVersionJson<LessonContent>(bucket, version, lessonKey(version.slug, version.n, lesson), meter) : undefined
     },
   )
 }
 
-/** The published catalog: every live course at its live version. */
-export async function loadCatalog(db: D1DataTableDatabase, bucket: R2Bucket): Promise<Catalog> {
+/** The published catalog: every live course at its live version. `meter` counts its R2 reads. */
+export async function loadCatalog(db: D1DataTableDatabase, bucket: R2Bucket, meter?: ContentMeter): Promise<Catalog> {
   let live = await listLiveCourses(db)
   let entries = await Promise.all(
     live.map(async (row) => {
       let version = { id: row.version_id, slug: row.slug, n: row.n }
-      let manifest = await readVersionJson<CourseManifest>(bucket, version, manifestKey(row.slug, row.n))
+      let manifest = await readVersionJson<CourseManifest>(bucket, version, manifestKey(row.slug, row.n), meter)
       if (!manifest) return undefined
       let updated = row.published_at ? new Date(row.published_at).toISOString().slice(0, 10) : undefined
       return { version, manifest: updated ? { ...manifest, updated } : manifest }
@@ -128,10 +137,10 @@ export function forgetLiveCatalog() {
   liveGeneration++
 }
 
-async function refreshLiveCatalog(db: D1DataTableDatabase, bucket: R2Bucket): Promise<Catalog> {
+async function refreshLiveCatalog(db: D1DataTableDatabase, bucket: R2Bucket, meter?: ContentMeter): Promise<Catalog> {
   let generation = liveGeneration
   let at = Date.now()
-  let catalog = await loadCatalog(db, bucket)
+  let catalog = await loadCatalog(db, bucket, meter)
   // Don't let a slow read overwrite a newer one, or outlive a publish.
   if (generation === liveGeneration && (!live || live.at <= at)) live = { catalog, at }
   return catalog
@@ -139,16 +148,23 @@ async function refreshLiveCatalog(db: D1DataTableDatabase, bucket: R2Bucket): Pr
 
 /**
  * The published catalog, from the isolate's memo when it is recent enough.
- * `waitUntil` keeps a background refresh alive past the response.
+ * `waitUntil` keeps a background refresh alive past the response. `meter`
+ * records which path was taken and the R2 reads the request waits for; a
+ * background refresh is not metered, since the request doesn't wait for it.
  */
 export function liveCatalog(
   db: D1DataTableDatabase,
   bucket: R2Bucket,
   waitUntil: (promise: Promise<unknown>) => void,
+  meter?: ContentMeter,
 ): Promise<Catalog> {
   let age = live ? Date.now() - live.at : Infinity
-  if (live && age < LIVE_FRESH_MS) return Promise.resolve(live.catalog)
+  if (live && age < LIVE_FRESH_MS) {
+    if (meter) meter.catalog = 'memo'
+    return Promise.resolve(live.catalog)
+  }
   if (live && age < LIVE_MAX_AGE_MS) {
+    if (meter) meter.catalog = 'stale'
     if (!liveRefreshing) {
       liveRefreshing = true
       waitUntil(
@@ -161,7 +177,8 @@ export function liveCatalog(
     }
     return Promise.resolve(live.catalog)
   }
-  return refreshLiveCatalog(db, bucket)
+  if (meter) meter.catalog = 'cold'
+  return refreshLiveCatalog(db, bucket, meter)
 }
 
 /** A catalog holding just one built version of a course (the author's draft preview). */

@@ -4,7 +4,7 @@ import { after, before, describe, it } from 'remix/test'
 import { disposePlatform, platform } from '#platform'
 
 import type { Catalog } from '../../content/catalog.ts'
-import { loadCatalog } from '../../content/store.ts'
+import { clearContentMemo, loadCatalog } from '../../content/store.ts'
 import type { CourseManifest } from '../../content/types.ts'
 import { routes } from '../../routes.ts'
 import { answerAsk, completeLesson, fetchAs, runAt, signIn, testDb } from '../../test/auth.ts'
@@ -78,6 +78,16 @@ describe('catalog and course pages', () => {
     }
   })
   after(() => disposePlatform())
+
+  it('times the catalog load: cold with one R2 read per live course, then from the memo', async () => {
+    clearContentMemo()
+    let cold = (await fetchAs(null, '/courses')).headers.get('Server-Timing') ?? ''
+    assert.match(cold, /(^|, )catalog;dur=\d+;desc="cold"(,|$)/)
+    assert.match(cold, new RegExp(`(^|, )r2;dur=\\d+;desc="${courses.length} reads"(,|$)`))
+    let memo = (await fetchAs(null, '/courses')).headers.get('Server-Timing') ?? ''
+    assert.match(memo, /(^|, )catalog;dur=\d+;desc="memo"(,|$)/)
+    assert.doesNotMatch(memo, /r2;/)
+  })
 
   it('parses track and q from the URL and ignores unknown tracks', () => {
     let query = parseCatalogQuery(new URL('http://x/courses?track=Agents&q=%20rag%20'))

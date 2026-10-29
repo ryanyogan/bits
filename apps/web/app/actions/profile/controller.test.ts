@@ -96,12 +96,12 @@ describe('/me and /u/:handle', () => {
     // Session, user and the six profile reads come back in one batch.
     let me = await getSignedIn(routes.me.index.href())
     assert.equal(me.status, 200)
-    assert.match(me.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="7 queries, 1 round trips"$/)
+    assert.match(me.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="7 queries, 1 round trips", catalog;dur=\d+;desc="memo"$/)
     await me.text()
     // Signed out: the user by handle and the same six reads, one batch.
     let profile = await get(routes.profile.index.href({ handle: 'jamie_park' }))
     assert.equal(profile.status, 200)
-    assert.match(profile.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="7 queries, 1 round trips"$/)
+    assert.match(profile.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="7 queries, 1 round trips", catalog;dur=\d+;desc="memo"$/)
     await profile.text()
   })
 

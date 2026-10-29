@@ -12,9 +12,14 @@ import {
   type LessonInfo,
   type LessonSummary,
 } from './types.ts'
+import type { ContentMeter } from './meter.ts'
 
-/** Loads one lesson body of a catalog course, or undefined when it's missing. */
-export type LessonLoader = (course: CourseManifest, lessonSlug: string) => Promise<LessonContent | undefined>
+/** Loads one lesson body of a catalog course, or undefined when it's missing; `meter` counts R2 reads. */
+export type LessonLoader = (
+  course: CourseManifest,
+  lessonSlug: string,
+  meter?: ContentMeter,
+) => Promise<LessonContent | undefined>
 
 export interface FoundLesson {
   course: CourseDetail
@@ -29,13 +34,20 @@ export class Catalog {
   readonly courses: readonly CourseManifest[]
   #bySlug: Map<string, CourseManifest>
   #load: LessonLoader
+  #meter: ContentMeter | undefined
 
-  constructor(courses: readonly CourseManifest[], load: LessonLoader) {
+  constructor(courses: readonly CourseManifest[], load: LessonLoader, meter?: ContentMeter) {
     // Manifests built before decision 048 have no `access`: they are free.
     courses = courses.map((course) => (course.access ? course : { ...course, access: 'free' }))
     this.courses = courses
     this.#bySlug = new Map(courses.map((course) => [course.slug, course]))
     this.#load = load
+    this.#meter = meter
+  }
+
+  /** This catalog for one request: its lesson reads go to `meter` (the memoised catalog is shared; decision 026). */
+  withMeter(meter: ContentMeter): Catalog {
+    return new Catalog(this.courses, this.#load, meter)
   }
 
   has(slug: string): boolean {
@@ -109,7 +121,7 @@ export class Catalog {
     let course = this.#bySlug.get(courseSlug)
     if (!course || !course.modules.some((m) => m.lessons.some((l) => l.slug === lessonSlug))) return undefined
     // Builds before decision 052 stored `quiz` blocks; read them as asks.
-    let content = await this.#load(course, lessonSlug)
+    let content = await this.#load(course, lessonSlug, this.#meter)
     return content && upgradeLessonContent(content)
   }
 }

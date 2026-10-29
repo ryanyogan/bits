@@ -54,7 +54,7 @@ describe('certificates and the badge toast', () => {
     assert.doesNotMatch(html, /name="robots" content="noindex"/)
     // The holder and their progress come back in one batch (decision 035).
     let timed = await fetchAs(null, href)
-    assert.match(timed.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="2 queries, 1 round trips"$/)
+    assert.match(timed.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="2 queries, 1 round trips", catalog;dur=\d+;desc="memo"$/)
     await timed.text()
 
     // /me and the public profile link to it from the finished course row.

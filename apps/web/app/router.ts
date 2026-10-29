@@ -36,6 +36,7 @@ import { loadAuth } from './auth/identity.ts'
 import { loadSession } from './auth/session.ts'
 import { profileReadOptions } from './actions/profile/data.ts'
 import { errorFields, log } from './log.ts'
+import { contentTiming } from './middleware/content-timing.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { cspNonce } from './middleware/csp-nonce.tsx'
 import { responseHeaders } from './middleware/headers.ts'
@@ -61,6 +62,8 @@ export const router = createRouter({
     // CSP reports come from the browser's reporting machinery, which may not
     // look same-origin, and only get logged (decision 027).
     cop({ insecureBypassPatterns: ['POST /webhooks/{provider}', 'POST /csp-report'] }),
+    // Server-Timing `catalog` and `r2` after `db` (decision 026).
+    contentTiming(),
     loadDatabase(platform.env.DB),
     // Course pages show progress: a GET there reads the viewer's completed
     // lessons with the session, in one D1 round trip (decision 026).
