@@ -1,10 +1,11 @@
 import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
+import { cellLinkStyle } from './cell-grid.tsx'
 import { CourseCover, type CoverPattern } from './course-cover.tsx'
 import { prefetchFor, type PrefetchProp } from './lib/prefetch.ts'
 import { focusOutline, type ForcedState } from './lib/states.ts'
-import { toneVars, type Tone } from './lib/tone.ts'
+import { toneAlpha, toneVars, type Tone } from './lib/tone.ts'
 import { ProgressBar } from './progress-bar.tsx'
 import { Tag } from './tag.tsx'
 
@@ -27,6 +28,12 @@ export interface CourseCardProps {
   pct?: number
   /** Heading level of the title inside the card. */
   headingLevel?: 2 | 3
+  /**
+   * `card` (default): a bordered card on its own. `cell`: the whole cell of
+   * a `CellGrid` (decision 047): no box of its own, the cover framed by a
+   * hairline, a fill step and a top edge in the course tone on hover.
+   */
+  variant?: 'card' | 'cell'
   /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
   prefetch?: PrefetchProp
   forceState?: ForcedState
@@ -40,14 +47,15 @@ export interface CourseCardProps {
  */
 export function CourseCard(handle: Handle<CourseCardProps>) {
   return () => {
-    let { href, title, desc, track, level, lessons, mins, sigil, tone, pattern, formats, pct = 0, headingLevel = 3, prefetch, forceState, mix } =
+    let { href, title, desc, track, level, lessons, mins, sigil, tone, pattern, formats, pct = 0, headingLevel = 3, variant = 'card', prefetch, forceState, mix } =
       handle.props
+    let cell = variant === 'cell'
     let done = pct >= 100
     let started = pct > 0 && !done
     let heading = headingLevel === 2 ? <h2 mix={titleStyle}>{title}</h2> : <h3 mix={titleStyle}>{title}</h3>
     return (
-      <a href={href} data-rmx-prefetch={prefetchFor(href, prefetch)} data-force={forceState} mix={[cardStyle, toneVars[tone], mix]}>
-        <CourseCover pattern={pattern} tone={tone} sigil={sigil}>
+      <a href={href} data-rmx-prefetch={prefetchFor(href, prefetch)} data-force={forceState} mix={[cell ? [cellLinkStyle, cellStyle] : cardStyle, toneVars[tone], mix]}>
+        <CourseCover pattern={pattern} tone={tone} sigil={sigil} mix={cell ? cellCover : undefined}>
           <Tag variant="cover" color="var(--tone)" mix={coverTagPos}>
             {track}
           </Tag>
@@ -57,7 +65,7 @@ export function CourseCard(handle: Handle<CourseCardProps>) {
             </Tag>
           ) : null}
         </CourseCover>
-        <div mix={bodyStyle}>
+        <div mix={[bodyStyle, cell ? cellBody : undefined]}>
           {heading}
           <p mix={descStyle}>{desc}</p>
           <p mix={metaStyle}>
@@ -121,6 +129,29 @@ const cardStyle = css({
   },
 })
 
+// In a cell: the cell is the box. The tone lights the cell's top edge and
+// the cover's frame on hover and focus; the sigil still nudges.
+const TONE_LIT = '&:hover, &:focus-visible, &[data-force="hover"], &[data-force="focus"]'
+const cellStyle = css({
+  gap: 0,
+  boxShadow: 'inset 0 0 0 0 transparent',
+  transition: 'background-color var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease)',
+  [TONE_LIT]: { boxShadow: 'inset 0 var(--border-w-strong) 0 var(--tone)' },
+  '&:hover .cover, &:focus-visible .cover, &[data-force] .cover': { borderColor: toneAlpha(40) },
+  '&:hover .sigil, &:focus-visible .sigil, &[data-force] .sigil': { transform: 'scale(1.06)' },
+  '&[data-force="hover"]': { background: 'var(--cell-fill-hover)' },
+  '&[data-force="focus"]': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
+  '@media (prefers-reduced-motion: reduce)': {
+    transition: 'none',
+    '&:hover .sigil, &:focus-visible .sigil, &[data-force] .sigil': { transform: 'none' },
+  },
+})
+const cellCover = css({
+  border: 'var(--border-w) solid var(--line-cell)',
+  transition: 'border-color var(--duration-fast) var(--ease)',
+})
+const cellBody = css({ flex: 1, padding: 'var(--space-5) 0 0' })
+
 const coverTagPos = css({ position: 'absolute', top: 'var(--space-3)', left: 'var(--space-3)' })
 const doneTagPos = css({ position: 'absolute', top: 'var(--space-3)', right: 'var(--space-3)' })
 
@@ -162,6 +193,8 @@ export const courseGridStyle = css({
 
 export interface WriteCourseCardProps {
   href: string
+  /** `card` (default, dashed box) or `cell` (the whole cell of a `CellGrid`). */
+  variant?: 'card' | 'cell'
   /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
   prefetch?: PrefetchProp
   forceState?: ForcedState
@@ -170,7 +203,7 @@ export interface WriteCourseCardProps {
 /** The dashed "+ .md Write a course" last grid item (components §9.3). Static. */
 export function WriteCourseCard(handle: Handle<WriteCourseCardProps>) {
   return () => (
-    <a href={handle.props.href} data-rmx-prefetch={prefetchFor(handle.props.href, handle.props.prefetch)} data-force={handle.props.forceState} mix={writeStyle}>
+    <a href={handle.props.href} data-rmx-prefetch={prefetchFor(handle.props.href, handle.props.prefetch)} data-force={handle.props.forceState} mix={handle.props.variant === 'cell' ? [cellLinkStyle, writeCellStyle] : writeStyle}>
       <span aria-hidden="true" mix={writeMark}>
         + .md
       </span>
@@ -197,3 +230,22 @@ const writeStyle = css({
   '@media (max-width: 480px)': { minHeight: 'auto' },
 })
 const writeMark = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-28)', color: 'var(--volt)' })
+
+// In a cell: centred in the cell's own box; a dashed square frames the
+// "+ .md" mark and turns volt on hover.
+const writeCellStyle = css({
+  justifyContent: 'center',
+  gap: 'var(--space-3_5)',
+  minHeight: '320px',
+  '& > :first-child': {
+    alignSelf: 'flex-start',
+    padding: 'var(--space-2) var(--space-3)',
+    border: 'var(--border-w) dashed var(--line-dashed-strong)',
+    fontSize: 'var(--fs-22)',
+    transition: 'border-color var(--duration-fast) var(--ease)',
+  },
+  '&:hover > :first-child, &:focus-visible > :first-child, &[data-force] > :first-child': { borderColor: 'var(--volt-a60)' },
+  '&[data-force="hover"]': { background: 'var(--cell-fill-hover)' },
+  '&[data-force="focus"]': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
+  '@media (max-width: 759.98px)': { minHeight: 'auto' },
+})

@@ -204,6 +204,35 @@ describe('course components', () => {
     assert.doesNotMatch(html, /DONE/)
   })
 
+  it('keeps the same markup in the grid cell variants (decision 047)', async () => {
+    let card = await renderToString(
+      <CourseCard
+        href="/c"
+        title="Cell"
+        desc="d"
+        track="Tools"
+        level="Beginner"
+        lessons={1}
+        mins={1}
+        sigil="fn"
+        tone="synapse"
+        pattern="rings"
+        formats={['text']}
+        variant="cell"
+      />,
+    )
+    assert.equal((card.match(/<a /g) ?? []).length, 1)
+    assert.match(card, /<h3[^>]*>Cell<\/h3>/)
+    let pill = await renderToString(
+      <FilterPill href="?track=tools" count={2} selected variant="cell">
+        Tools
+      </FilterPill>,
+    )
+    assert.match(pill, /<a[^>]*aria-current="true"/)
+    let search = await renderToString(<SearchField action="/courses" shortcut={false} variant="cell" />)
+    assert.match(search, /role="search"[^>]*data-rmx-reset-focus="manual"|data-rmx-reset-focus="manual"[^>]*role="search"/)
+  })
+
   it('shows the done tag and no bar at 100%', async () => {
     let html = await renderToString(
       <CourseCard

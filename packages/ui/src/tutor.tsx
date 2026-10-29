@@ -9,24 +9,38 @@ export interface TutorAvatarProps {
   mix?: MixInput<HTMLElement>
 }
 
-/** The volt tutor tile (components §10.5). Decorative. Static. */
+/**
+ * The tutor tile (components §10.5): a square with a volt hairline and the
+ * volt glyph on a faint tint (decision 047: the accent as a signal, not a
+ * fill, since it repeats down every lesson). Decorative. Static.
+ */
 export function TutorAvatar(handle: Handle<TutorAvatarProps>) {
   return () => {
     let { size = 32, mix } = handle.props
     return (
       <span aria-hidden="true" mix={[avatarStyle, avatarSizes[size], mix]}>
-        {size === 26 ? null : <Icon name="tutor" size={18} color="var(--on-volt)" />}
+        {size === 26 ? null : <Icon name="tutor" size={18} color="var(--volt)" />}
       </span>
     )
   }
 }
 
 // The brand glyph (decorative) keeps its colours in forced colours; otherwise it vanishes.
-const avatarStyle = css({ flex: 'none', display: 'grid', placeItems: 'center', background: 'var(--volt)', color: 'var(--on-volt)', forcedColorAdjust: 'none' })
+const avatarStyle = css({
+  flex: 'none',
+  boxSizing: 'border-box',
+  display: 'grid',
+  placeItems: 'center',
+  background: 'var(--volt-a14)',
+  border: 'var(--border-w) solid var(--volt-a45)',
+  color: 'var(--volt)',
+  forcedColorAdjust: 'none',
+})
 const avatarSizes = {
-  32: css({ width: '32px', height: '32px', borderRadius: 'var(--radius-10)', '@media (max-width: 480px)': { width: '28px', height: '28px' } }),
-  30: css({ width: '30px', height: '30px', borderRadius: 'var(--radius-9)' }),
-  26: css({ width: '26px', height: '26px', borderRadius: 'var(--radius-sm)' }),
+  32: css({ width: '32px', height: '32px', '@media (max-width: 480px)': { width: '28px', height: '28px' } }),
+  30: css({ width: '30px', height: '30px' }),
+  // The authoring preview's tile has no glyph: a solid volt square.
+  26: css({ width: '26px', height: '26px', background: 'var(--volt)' }),
 }
 
 export interface TutorMessageProps {
@@ -106,8 +120,9 @@ const bubbleStyle = css({
   alignSelf: 'flex-end',
   maxWidth: '82%',
   padding: 'var(--space-3) var(--space-4)',
-  borderRadius: '16px 16px 4px 16px',
+  borderRadius: 'var(--radius-bubble)',
   background: 'var(--bubble)',
+  border: 'var(--border-w) solid var(--line-panel)',
   color: 'var(--text)',
   overflowWrap: 'anywhere',
   '@media (max-width: 480px)': { maxWidth: '90%' },

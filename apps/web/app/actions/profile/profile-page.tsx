@@ -1,13 +1,14 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 import { ActivityGrid } from '@bits/ui/activity-grid'
-import { Card } from '@bits/ui/card'
+import { CellGrid } from '@bits/ui/cell-grid'
 import { EmptyState } from '@bits/ui/empty-state'
-import { BadgeTile, badgeGridStyle } from '@bits/ui/hex-badge'
-import { MonoHeading } from '@bits/ui/eyebrow'
+import { BadgeTile } from '@bits/ui/hex-badge'
 import { Keycap } from '@bits/ui/keycap'
 import { KeyValueList } from '@bits/ui/key-value-list'
+import { PageFrame } from '@bits/ui/page-frame'
 import { ProgressBar } from '@bits/ui/progress-bar'
+import { RuledSection } from '@bits/ui/ruled-section'
 import { StatTile } from '@bits/ui/stat-tile'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
 
@@ -17,9 +18,10 @@ import { busyCaret } from '../../ui/busy-caret.ts'
 import { Layout } from '../../ui/layout.tsx'
 import { activityTitles, RECENT_JOURNAL, type Profile } from './data.ts'
 import { ShareButton } from './public/share-button.tsx'
-import { GeneratedAvatar } from './ui/generated-avatar.tsx'
 import { CourseRow } from './ui/course-row.tsx'
+import { GeneratedAvatar } from './ui/generated-avatar.tsx'
 import { JournalList } from './ui/journal-entry.tsx'
+import { Panel, panelLinkStyle, panelListStyle } from './ui/panel.tsx'
 
 export interface ProfilePageProps {
   profile: Profile
@@ -35,10 +37,18 @@ export interface ProfilePageProps {
 }
 
 /**
- * Profile (docs/design/spec/pages/Profile.md): identity band, then stats,
- * activity, courses and the prompt journal beside badges and the account
- * card. The public variant drops Edit, the journal, the account card and the
- * email. Server-rendered; Share is the only island.
+ * Profile (docs/design/spec/pages/Profile.md) on the squared grid (decision
+ * 047). One `PageFrame`, ruled into bands that share a 3:1 column line:
+ *
+ * 1. identity (avatar, name, handle) | level and actions;
+ * 2. the four stats, a flush row of cells (the column line falls on a cell
+ *    border);
+ * 3. activity, courses and the prompt journal | badges and the account.
+ *
+ * The public variant drops Edit, the journal, the account panel and the
+ * email. Server-rendered; Share is the only island. No region refreshes on
+ * its own (the data comes in the session's one D1 batch, decision 035), so
+ * there's no `<Frame>`: a frame would add a request and a round trip.
  */
 export function ProfilePage(handle: Handle<ProfilePageProps>) {
   return () => {
@@ -47,7 +57,9 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
     let earned = profile.badges.filter((b) => b.earned).length
     let activeDays = profile.activity.filter((level) => level > 0).length
     let journalHref = routes.me.index.href(undefined, { searchParams: { tab: 'journal' } })
+    let settingsHref = routes.settings.index.href()
     let showJournal = own && tab === 'journal'
+    let firstName = profile.name.split(' ')[0]!
 
     return (
       <Layout
@@ -57,137 +69,172 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
         canonicalPath={own ? undefined : routes.profile.index.href({ handle: profile.handle })}
         bleed
       >
-        <section aria-label="Profile" mix={bandStyle}>
-          <div mix={bandInner}>
-            <GeneratedAvatar seed={profile.handle} name={profile.name.split(' ')[0]!} />
-            <div mix={identityStyle}>
-              <span mix={levelStyle}>
-                LEVEL {profile.level} · {profile.levelName.toUpperCase()}
-              </span>
-              <h1 mix={nameStyle}>{profile.name}</h1>
-              <p mix={handleStyle}>
-                @{profile.handle} · learning since {profile.since}
-                {profile.goal ? <> · wants to “{profile.goal}”</> : null}
-              </p>
-              <div mix={levelRow}>
-                <ProgressBar
-                  pct={profile.levelPct}
-                  variant="level"
-                  label={`Level ${profile.level}: ${profile.levelPct}% of the way to level ${profile.level + 1}`}
-                  mix={levelBar}
-                />
-                <span mix={levelNext}>
-                  {profile.toNextLevel} to level {profile.level + 1}
-                </span>
+        <div mix={clipStyle}>
+          <PageFrame mix={frameStyle}>
+            <RuledSection aria-label="Profile" rule={false} pad="none">
+              <div mix={splitStyle}>
+                <div mix={identityCell}>
+                  <GeneratedAvatar seed={profile.handle} name={firstName} />
+                  <div mix={identityText}>
+                    <p mix={handleStyle}>@{profile.handle}</p>
+                    <h1 mix={nameStyle}>{profile.name}</h1>
+                    <p mix={sinceStyle}>
+                      Learning since {profile.since}
+                      {profile.goal ? <> · wants to “{profile.goal}”</> : null}
+                    </p>
+                  </div>
+                </div>
+                <div mix={levelCell}>
+                  <div mix={levelBlock}>
+                    <p mix={levelLabel}>
+                      <span mix={levelNumber}>Level {profile.level}</span>
+                      <span aria-hidden="true" mix={levelDot}>
+                        {' · '}
+                      </span>
+                      {profile.levelName}
+                    </p>
+                    <ProgressBar
+                      pct={profile.levelPct}
+                      variant="level"
+                      label={`Level ${profile.level}: ${profile.levelPct}% of the way to level ${profile.level + 1}`}
+                      mix={levelBar}
+                    />
+                    <p mix={levelNext}>
+                      {profile.toNextLevel.toLocaleString('en-US')} neurons to level {profile.level + 1}
+                    </p>
+                  </div>
+                  <div mix={actionsStyle}>
+                    {own ? (
+                      <Keycap variant="ghost-mono" href={settingsHref} mix={actionKey}>
+                        Edit profile
+                      </Keycap>
+                    ) : null}
+                    <ShareButton url={shareUrl} title={`${profile.name} on bits`} />
+                  </div>
+                </div>
               </div>
-            </div>
-            <div mix={actionsStyle}>
-              {own ? (
-                <Keycap variant="ghost-mono" href={routes.settings.index.href()} mix={editStyle}>
-                  Edit profile
-                </Keycap>
-              ) : null}
-              <ShareButton url={shareUrl} title={`${profile.name} on bits`} grow={own} />
-            </div>
-          </div>
-        </section>
+            </RuledSection>
 
-        <div mix={bodyStyle}>
-          <div mix={mainColumn}>
-            {showJournal ? (
-              <section aria-labelledby="journal-heading" mix={sectionStyle}>
-                <div mix={sectionHeader}>
-                  <MonoHeading id="journal-heading">PROMPT JOURNAL · {profile.journal.length} PROMPTS</MonoHeading>
-                  <a href={routes.me.index.href()} data-rmx-prefetch={prefetchFor(routes.me.index.href())} mix={headerLink}>
-                    ← Overview
-                  </a>
-                </div>
-                <JournalList entries={profile.journal} />
-              </section>
-            ) : (
-              <>
-                <section aria-label="Stats" mix={statsGrid}>
-                  <StatTile value={profile.neurons.toLocaleString('en-US')} label="neurons" color="var(--volt)" mix={statMix} />
-                  <StatTile value={profile.streak} label={`day streak · best ${profile.bestStreak}`} color="var(--ion)" mix={statMix} />
-                  <StatTile value={profile.lessonsFinished} label="lessons finished" mix={statMix} />
-                  <StatTile value={profile.promptsWritten} label="prompts written" mix={statMix} />
-                </section>
+            <RuledSection aria-label="Stats" pad="none">
+              <CellGrid cols={4} colsMid={4} colsPhone={2} pad={false} mix={statsGrid}>
+                <StatTile value={profile.neurons.toLocaleString('en-US')} label="neurons" color="var(--volt)" />
+                <StatTile value={profile.streak} label={`day streak · best ${profile.bestStreak}`} color="var(--ion)" />
+                <StatTile value={profile.lessonsFinished} label="lessons finished" color="var(--synapse)" />
+                <StatTile value={profile.promptsWritten} label="prompts written" color="var(--muted)" />
+              </CellGrid>
+            </RuledSection>
 
-                <ActivityGrid
-                  levels={profile.activity}
-                  headingLevel={2}
-                  titles={activityTitles(profile.activity, profile.activityEnd)}
-                  label={`Activity heatmap: active ${activeDays} of the last 182 days; current streak ${profile.streak} ${profile.streak === 1 ? 'day' : 'days'}`}
-                />
-
-                <section aria-labelledby="courses-heading" mix={sectionStyle}>
-                  <MonoHeading id="courses-heading">COURSES</MonoHeading>
-                  {profile.courses.length ? (
-                    <ul mix={listStyle}>
-                      {profile.courses.map((course) => (
-                        <li key={course.slug}>
-                          <CourseRow course={course} own={own} handle={profile.handle} />
-                        </li>
-                      ))}
-                    </ul>
+            <RuledSection as="div" pad="none">
+              <div mix={splitStyle}>
+                <div mix={columnStyle}>
+                  {showJournal ? (
+                    <Panel
+                      id="journal-heading"
+                      title={`Prompt journal · ${profile.journal.length} prompts`}
+                      aside={
+                        <a href={routes.me.index.href()} data-rmx-prefetch={prefetchFor(routes.me.index.href())} mix={panelLinkStyle}>
+                          ← Overview
+                        </a>
+                      }
+                      flush
+                    >
+                      <JournalList entries={profile.journal} />
+                    </Panel>
                   ) : (
-                    <EmptyCourses />
+                    <>
+                      <Panel id="activity-heading" title="Activity" aside="Last 26 weeks">
+                        <ActivityGrid
+                          variant="bare"
+                          levels={profile.activity}
+                          end={profile.activityEnd}
+                          titles={activityTitles(profile.activity, profile.activityEnd)}
+                          label={`Activity heatmap: active ${activeDays} of the last 182 days; current streak ${profile.streak} ${profile.streak === 1 ? 'day' : 'days'}`}
+                          caption={`Active ${activeDays} of 182 days · best streak ${profile.bestStreak}`}
+                        />
+                      </Panel>
+
+                      <Panel
+                        id="courses-heading"
+                        title="Courses"
+                        aside={profile.courses.length ? `${profile.courses.length} started` : undefined}
+                        flush={profile.courses.length > 0}
+                      >
+                        {profile.courses.length ? (
+                          <ul mix={panelListStyle}>
+                            {profile.courses.map((course) => (
+                              <li key={course.slug}>
+                                <CourseRow course={course} own={own} handle={profile.handle} />
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <EmptyCourses />
+                        )}
+                      </Panel>
+
+                      {own ? (
+                        <Panel
+                          id="journal-heading"
+                          title="Prompt journal"
+                          aside={
+                            <a
+                              href={journalHref}
+                              data-rmx-prefetch={prefetchFor(journalHref)}
+                              mix={panelLinkStyle}
+                              aria-label={`All ${profile.journal.length} journal entries`}
+                            >
+                              All {profile.journal.length} →
+                            </a>
+                          }
+                          flush
+                        >
+                          <JournalList entries={profile.journal.slice(0, RECENT_JOURNAL)} />
+                        </Panel>
+                      ) : null}
+                    </>
                   )}
-                </section>
-
-                {own ? (
-                  <section aria-labelledby="journal-heading" mix={sectionStyle}>
-                    <div mix={sectionHeader}>
-                      <MonoHeading id="journal-heading">PROMPT JOURNAL</MonoHeading>
-                      <a href={journalHref} data-rmx-prefetch={prefetchFor(journalHref)} mix={headerLink} aria-label={`All ${profile.journal.length} journal entries`}>
-                        All {profile.journal.length} →
-                      </a>
-                    </div>
-                    <JournalList entries={profile.journal.slice(0, RECENT_JOURNAL)} />
-                  </section>
-                ) : null}
-              </>
-            )}
-          </div>
-
-          <aside aria-label={own ? 'Badges and account' : 'Badges'} mix={asideStyle}>
-            <Card variant="compact" as="section" labelledBy="badges-heading" mix={badgesCard}>
-              <MonoHeading id="badges-heading">
-                BADGES · {earned} OF {profile.badges.length}
-              </MonoHeading>
-              <ul mix={badgeGridStyle}>
-                {profile.badges.map((badge) => (
-                  <BadgeTile key={badge.name} name={badge.name} glyph={badge.glyph} color={badge.color} locked={!badge.earned} />
-                ))}
-              </ul>
-            </Card>
-
-            {own ? (
-              <Card variant="compact" as="section" labelledBy="account-heading">
-                <MonoHeading id="account-heading">ACCOUNT</MonoHeading>
-                <KeyValueList
-                  items={[
-                    { term: 'Email', value: profile.email, mono: true },
-                    { term: 'Sign-in', value: profile.signIn },
-                    { term: 'Profile', value: profile.isPublic ? 'Public' : 'Private' },
-                  ]}
-                />
-                <div mix={accountLinks}>
-                  <a href={`${routes.settings.index.href()}#export`} data-rmx-prefetch={prefetchFor(`${routes.settings.index.href()}#export`)} mix={accountLink}>
-                    Download my data
-                  </a>
-                  <a href={routes.settings.index.href()} data-rmx-prefetch={prefetchFor(routes.settings.index.href())} mix={[accountLink, quietLink]}>
-                    Settings →
-                  </a>
-                  <form method="post" action={routes.logout.action.href()} mix={signOutForm}>
-                    <button type="submit" mix={[accountLink, quietLink, signOutButton, busyCaret]}>
-                      Sign out
-                    </button>
-                  </form>
                 </div>
-              </Card>
-            ) : null}
-          </aside>
+
+                <aside aria-label={own ? 'Badges and account' : 'Badges'} mix={columnStyle}>
+                  <Panel id="badges-heading" title="Badges" aside={`${earned} of ${profile.badges.length}`} flush>
+                    <CellGrid as="ul" cols={3} colsMid={4} colsPhone={3} pad={false} aria-labelledby="badges-heading">
+                      {profile.badges.map((badge) => (
+                        <BadgeTile key={badge.name} name={badge.name} glyph={badge.glyph} color={badge.color} locked={!badge.earned} />
+                      ))}
+                    </CellGrid>
+                  </Panel>
+
+                  {own ? (
+                    <Panel id="account-heading" title="Account">
+                      <KeyValueList
+                        items={[
+                          { term: 'Email', value: profile.email, mono: true },
+                          { term: 'Sign-in', value: profile.signIn },
+                          { term: 'Profile', value: profile.isPublic ? 'Public' : 'Private' },
+                        ]}
+                      />
+                      <div mix={accountLinks}>
+                        <a href={`${settingsHref}#export`} data-rmx-prefetch={prefetchFor(`${settingsHref}#export`)} mix={accountLink}>
+                          Download my data
+                        </a>
+                        <a href={settingsHref} data-rmx-prefetch={prefetchFor(settingsHref)} mix={[accountLink, quietLink]}>
+                          Settings →
+                        </a>
+                        <form method="post" action={routes.logout.action.href()} mix={signOutForm}>
+                          <button type="submit" mix={[accountLink, quietLink, signOutButton, busyCaret]}>
+                            Sign out
+                          </button>
+                        </form>
+                      </div>
+                    </Panel>
+                  ) : null}
+                </aside>
+              </div>
+            </RuledSection>
+
+            {/* The closing rule: the rails end on it, with their + marks. */}
+            <RuledSection as="div" pad="none" />
+          </PageFrame>
         </div>
       </Layout>
     )
@@ -200,25 +247,54 @@ function EmptyCourses() {
   )
 }
 
+const WIDE = '@media (min-width: 1024px)'
+const NARROW = '@media (max-width: 1023.98px)'
+const MID = '@media (min-width: 760px) and (max-width: 1023.98px)'
 const MOBILE = '@media (max-width: 480px)'
+const FORCED = '@media (forced-colors: active)'
+const line = 'var(--border-w) solid var(--line-cell)'
 
-const bandStyle = css({
-  borderBottom: 'var(--border-w) solid var(--line-bar)',
-  backgroundImage: 'radial-gradient(var(--dot-grid) 1px, transparent 1px)',
-  backgroundSize: '24px 24px',
+// The full-bleed rules are 100vw wide; beside a classic scrollbar that is
+// wider than the page, so clip them here, as the landing's root does.
+const clipStyle = css({ overflowX: 'clip' })
+const frameStyle = css({ marginBottom: 'var(--space-16)', [MOBILE]: { marginBottom: 'var(--space-10)' } })
+
+// Two columns at 3:1 from 1024px, so the column line falls on the border
+// between the third and fourth stat cells; stacked below that.
+const splitStyle = css({
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr)',
+  [WIDE]: {
+    gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 1fr)',
+    '& > :first-child': { borderRight: line },
+  },
+  [NARROW]: { '& > * + *': { borderTop: line } },
+  [FORCED]: { '& > *': { borderColor: 'GrayText' } },
 })
-const bandInner = css({
-  maxWidth: 'var(--page-max)',
-  margin: '0 auto',
-  padding: 'var(--space-14) var(--page-gutter) var(--space-12)',
+const columnStyle = css({ minWidth: 0, display: 'flex', flexDirection: 'column' })
+
+// The section's rule already draws the line above the first row of stats.
+const statsGrid = css({
+  [WIDE]: { '& > :nth-child(-n + 4)': { borderTop: 0 } },
+  [MID]: { '& > :nth-child(-n + 4)': { borderTop: 0 } },
+  '@media (max-width: 759.98px)': { '& > :nth-child(-n + 2)': { borderTop: 0 } },
+})
+
+// Graph paper under the identity, the landing field's grid at half its step.
+const identityCell = css({
   display: 'flex',
-  flexWrap: 'wrap',
-  gap: 'var(--space-9)',
   alignItems: 'center',
-  [MOBILE]: { padding: 'var(--space-8) var(--space-4)', gap: 'var(--space-5)' },
+  gap: 'var(--space-8)',
+  minWidth: 0,
+  padding: 'var(--space-14) var(--cell-pad) var(--space-12)',
+  backgroundImage:
+    'linear-gradient(var(--field-grid) var(--border-w), transparent var(--border-w)), linear-gradient(90deg, var(--field-grid) var(--border-w), transparent var(--border-w))',
+  backgroundSize: 'calc(var(--field-grid-step) / 2) calc(var(--field-grid-step) / 2)',
+  backgroundPosition: 'calc(var(--border-w) * -1) calc(var(--border-w) * -1)',
+  [MOBILE]: { flexDirection: 'column', alignItems: 'flex-start', gap: 'var(--space-5)', padding: 'var(--space-8) var(--cell-pad)' },
 })
-const identityStyle = css({ flex: '1 1 360px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' })
-const levelStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--volt)' })
+const identityText = css({ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' })
+const handleStyle = css({ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--volt)' })
 // Type role `display-profile` (tokens.md): Unbounded 800, clamp(36px, 4.6vw, 60px), lh 1, -0.04em.
 const nameStyle = css({
   margin: 0,
@@ -228,87 +304,43 @@ const nameStyle = css({
   lineHeight: 1,
   letterSpacing: 'var(--tracking-tight)',
   overflowWrap: 'anywhere',
+  textWrap: 'balance',
+  // Inside the rails a phone column is ~280px (decision 047, step 7).
+  [MOBILE]: { fontSize: 'var(--fs-30)' },
 })
-const handleStyle = css({ margin: 0, fontSize: 'var(--fs-16)', lineHeight: 1.5, color: 'var(--muted)' })
-const levelRow = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: 'var(--space-3)',
-  maxWidth: '420px',
-  paddingTop: 'var(--space-1_5)',
-  [MOBILE]: { maxWidth: 'none' },
-})
-const levelBar = css({ flex: 1 })
-const levelNext = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--muted)', whiteSpace: 'nowrap' })
-const actionsStyle = css({
-  display: 'flex',
-  gap: 'var(--space-2_5)',
-  flexWrap: 'wrap',
-  [MOBILE]: { width: '100%', flexWrap: 'nowrap' },
-})
-// Profile draws "Edit profile" at 16px side padding and radius 12 (spec §2.3).
-const editStyle = css({
-  padding: '0 var(--space-4)',
-  borderRadius: 'var(--radius-12)',
-  [MOBILE]: { flex: '1 1 0' },
-})
+const sinceStyle = css({ margin: 0, fontSize: 'var(--fs-16)', lineHeight: 1.5, color: 'var(--muted)' })
 
-const bodyStyle = css({
-  maxWidth: 'var(--page-max)',
-  margin: '0 auto',
-  padding: 'var(--space-10) var(--page-gutter) var(--space-24)',
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 'var(--space-8)',
-  alignItems: 'flex-start',
-  [MOBILE]: { padding: 'var(--space-6) var(--space-4) var(--space-16)', gap: 'var(--space-6)' },
-})
-const mainColumn = css({
-  flex: '999 1 600px',
-  minWidth: 0,
+const levelCell = css({
   display: 'flex',
   flexDirection: 'column',
+  justifyContent: 'space-between',
   gap: 'var(--space-8)',
+  minWidth: 0,
+  padding: 'var(--space-8) var(--cell-pad)',
   [MOBILE]: { gap: 'var(--space-6)' },
 })
-const asideStyle = css({ flex: '1 1 320px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' })
-
-const statsGrid = css({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))',
-  gap: 'var(--space-3)',
-  // At 360px two tiles share a row (each ≈158px), so 30px values shrink.
-  '@media (max-width: 400px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
-})
-const statMix = css({ [MOBILE]: { '& > span:first-child': { fontSize: '26px' /* Profile spec §Responsive: 30 → 26px at 360 */ } } })
-
-const sectionStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-3_5)', minWidth: 0 })
-const sectionHeader = css({
+const levelBlock = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' })
+const levelLabel = css({ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--text-quiet)' })
+const levelNumber = css({ color: 'var(--volt)' })
+const levelDot = css({ color: 'var(--dim)' })
+const levelBar = css({ maxWidth: 'none' })
+const levelNext = css({ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
+const actionsStyle = css({
   display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'baseline',
-  gap: 'var(--space-3)',
+  gap: 'var(--space-2)',
+  flexWrap: 'wrap',
+  '& > *': { flex: '1 1 auto' },
 })
-const headerLink = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  minHeight: 'var(--touch-target)',
-  margin: 'calc((var(--touch-target) - 1lh) / -2) 0',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-13)',
-  textDecoration: 'none',
-  '&:hover': { textDecoration: 'underline' },
-})
-const listStyle = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-3_5)' })
-
-const badgesCard = css({ gap: 'var(--space-4)' })
+const actionKey = css({ padding: '0 var(--space-4)' })
 
 const accountLinks = css({
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--space-1)',
+  marginTop: 'var(--space-4)',
   paddingTop: 'var(--space-2)',
-  borderTop: 'var(--border-w) solid var(--line-bar)',
+  borderTop: line,
+  [FORCED]: { borderColor: 'GrayText' },
 })
 // Drawn at 40px; raised to the 44px touch target (spec a11y).
 const accountLink = css({

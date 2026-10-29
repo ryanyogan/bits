@@ -15,7 +15,7 @@ export interface ProgressRingProps {
   mix?: MixInput<SVGSVGElement>
 }
 
-/** SVG ring (components §9.7). `pct = 0` omits the fill circle (a round cap would draw a dot). Static. */
+/** SVG ring (components §9.7). Square caps (decision 047): the arc ends flat, like the grid. `pct = 0` omits the fill circle. Static. */
 export function ProgressRing(handle: Handle<ProgressRingProps>) {
   return () => {
     let { pct, size = 96, caption, label, mix } = handle.props
@@ -44,7 +44,7 @@ export function ProgressRing(handle: Handle<ProgressRingProps>) {
             style={{ stroke: color }}
             stroke-width={stroke}
             fill="none"
-            stroke-linecap="round"
+            stroke-linecap="butt"
             stroke-dasharray={`${((circumference * value) / 100).toFixed(1)} ${circumference.toFixed(1)}`}
             transform={`rotate(-90 ${half} ${half})`}
           />

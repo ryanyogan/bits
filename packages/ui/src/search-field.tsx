@@ -18,6 +18,12 @@ export interface SearchFieldProps {
   /** Show the ⌘K hint; the hint is an island that focuses the field on ⌘K / Ctrl K. */
   shortcut?: boolean
   id?: string
+  /**
+   * `field` (default): a bordered input. `cell`: borderless, filling a cell
+   * of a ruled toolbar (decision 047); focus fills it a step and draws a
+   * 2px volt underline inside.
+   */
+  variant?: 'field' | 'cell'
   forceFocus?: boolean
   mix?: MixInput<HTMLElement>
 }
@@ -38,17 +44,18 @@ export function SearchField(handle: Handle<SearchFieldProps>) {
       hidden,
       shortcut = true,
       id = 'course-search',
+      variant = 'field',
       forceFocus,
       mix,
     } = handle.props
     return (
       // Enter re-renders the results in place: keep focus in the field
       // (the navigation's default focus reset would drop it on <body>).
-      <form method="get" action={action} role="search" data-rmx-reset-focus="manual" mix={[formStyle, mix]}>
+      <form method="get" action={action} role="search" data-rmx-reset-focus="manual" mix={[formStyle, variant === 'cell' ? cellFormStyle : undefined, mix]}>
         {hidden
           ? Object.entries(hidden).map(([key, val]) => <input key={key} type="hidden" name={key} value={val} />)
           : null}
-        <label data-force={forceFocus ? 'focus' : undefined} mix={fieldStyle}>
+        <label data-force={forceFocus ? 'focus' : undefined} mix={[fieldStyle, variant === 'cell' ? cellFieldStyle : undefined]}>
           <Icon name="search" />
           <span class="sr-only">{label}</span>
           <input
@@ -102,4 +109,23 @@ const inputStyle = css({
   '&::placeholder': { color: 'var(--dim)', opacity: 1 },
   '&:focus, &:focus-visible': { outline: 'none', boxShadow: 'none' },
   '&::-webkit-search-cancel-button': { filter: 'invert(0.6)' },
+})
+
+const cellFormStyle = css({ maxWidth: 'none', display: 'flex' })
+
+const cellFieldStyle = css({
+  flex: 1,
+  padding: '0 var(--space-4) 0 var(--section-pad-x)',
+  border: 0,
+  background: 'transparent',
+  transition: 'background-color var(--duration-focus), box-shadow var(--duration-focus)',
+  '&:hover': { background: 'var(--fill-hover)' },
+  '&:focus-within, &[data-force="focus"]': {
+    ...hiddenOutline,
+    background: 'var(--fill-hover)',
+    boxShadow: 'inset 0 calc(-1 * var(--border-w-strong)) 0 var(--volt)',
+  },
+  '@media (forced-colors: active)': {
+    '&:focus-within, &[data-force="focus"]': { outline: 'var(--focus-outline-w) solid Highlight', outlineOffset: '-2px' },
+  },
 })

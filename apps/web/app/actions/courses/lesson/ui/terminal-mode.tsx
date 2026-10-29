@@ -49,18 +49,25 @@ export function TerminalMode(handle: Handle<{ view: LessonView }>) {
         entries={terminalEntries(blocks)}
         replies={view.content.replies}
         prompt={prompt ? terminalPrompt(view, prompt) : undefined}
+        flush={!!code}
       />
     )
     if (!code) return <div mix={soloStyle}>{log}</div>
     let editor = codeEditorProps(view, code)
+    // The workspace is a row of ruled cells (decision 047): session | editor
+    // (+ its output), sharing one hairline, flush with the column's rails.
     return (
       <div mix={workspaceStyle}>
-        {log}
+        <div mix={logCell}>{log}</div>
         <section aria-label="Code editor" mix={editorColumn}>
           <div mix={editorFill}>
-            <CodeEditor {...editor} />
+            <CodeEditor {...editor} flush />
           </div>
-          {code.run ? <OutputPanel command={code.run.cmd} lines={runLines(code.run)} /> : null}
+          {code.run ? (
+            <div mix={outputCell}>
+              <OutputPanel command={code.run.cmd} lines={runLines(code.run)} flush />
+            </div>
+          ) : null}
         </section>
       </div>
     )
@@ -287,20 +294,28 @@ function rabbitHoleEntry(block: RabbitHoleBlock): TerminalEntry {
 }
 
 // Block, not flex: the log's own `flex: 1 1 460px` must not become a height.
-const soloStyle = css({ width: '100%', maxWidth: '900px', margin: '0 auto' })
-const workspaceStyle = css({
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 'var(--space-4)',
-  alignItems: 'stretch',
-  '@media (max-width: 759px)': { gap: 'var(--space-3)' },
+// A lesson with no code keeps the boxed terminal, centred in the column.
+const soloStyle = css({
+  width: '100%',
+  maxWidth: '900px',
+  margin: '0 auto',
+  boxSizing: 'border-box',
+  padding: 'var(--space-8) var(--section-pad-x) var(--space-10)',
+  '@media (max-width: 759px)': { padding: 'var(--space-4) var(--space-3) var(--space-6)' },
 })
-const editorColumn = css({
-  flex: '1.35 1 580px',
-  minWidth: 0,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--space-4)',
-})
+// Each cell draws its top and leading hairline and tucks it 1px outside
+// itself; the workspace clips what lands on its own edges. Side by side
+// that leaves one line between the cells, wrapped one line above the editor,
+// and never a doubled line on the rails.
+const workspaceStyle = css({ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', overflow: 'hidden' })
+const cellEdges = {
+  marginTop: 'calc(-1 * var(--border-w))',
+  marginLeft: 'calc(-1 * var(--border-w))',
+  borderTop: 'var(--border-w) solid var(--line-cell)',
+  borderLeft: 'var(--border-w) solid var(--line-cell)',
+} as const
+const logCell = css({ ...cellEdges, flex: '1 1 460px', minWidth: 0, display: 'flex', '& > *': { flex: '1 1 auto' } })
+const editorColumn = css({ ...cellEdges, flex: '1.35 1 580px', minWidth: 0, display: 'flex', flexDirection: 'column' })
 // Grow to the row height, never below the code's own height (the editor clips overflow).
 const editorFill = css({ flex: '1 0 auto', display: 'flex', flexDirection: 'column', minWidth: 0, '& > *': { flex: '1 0 auto' } })
+const outputCell = css({ borderTop: 'var(--border-w) solid var(--line-cell)' })

@@ -5,18 +5,21 @@ import { LessonNode } from '@bits/ui/lesson-node'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import { kindLabels, type SyllabusLesson, type SyllabusModuleView } from '../course-data.ts'
+import { stripHeading } from './strip.ts'
 
 const stateText = { done: 'completed', current: 'in progress', next: 'not started' } as const
 
 /**
  * Course.md §3a Syllabus / components §10.2–10.3: one `<ol>` per module, a
  * trace line through the nodes, and the ResumeCallout under the current
- * lesson. Static.
+ * lesson. On the grid (decision 047) it is one cell: a mono strip heading,
+ * then each module as a header row and lesson rows between hairlines, with
+ * the trace running down through the square nodes. Static.
  */
 export function Syllabus(handle: Handle<{ modules: SyllabusModuleView[] }>) {
   return () => (
     <section aria-labelledby="syllabus-heading" mix={sectionStyle}>
-      <h2 id="syllabus-heading" mix={headingStyle}>
+      <h2 id="syllabus-heading" mix={stripHeading}>
         Syllabus
       </h2>
       {handle.props.modules.map((module) => (
@@ -105,31 +108,26 @@ function SyllabusRow(handle: Handle<{ lesson: SyllabusLesson }>) {
 }
 
 const MOBILE = '@media (max-width: 480px)'
-// Node centre: 10px row padding + half the 40px slot.
-const NODE_CENTRE = '30px'
+// The node slot's left edge, and its centre: the row's inset plus half the 40px slot.
+const SLOT_LEFT = 'var(--section-pad-x)'
+const NODE_CENTRE_Y = 'calc(var(--space-3) + 20px)'
 
-const sectionStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' })
-const headingStyle = css({
-  margin: '0 0 var(--space-2)',
-  fontFamily: 'var(--font-mono)',
-  fontWeight: 500,
-  fontSize: 'var(--fs-13)',
-  letterSpacing: 'var(--tracking-eyebrow)',
-  textTransform: 'uppercase',
-  color: 'var(--muted)',
-  lineHeight: 'normal',
+const sectionStyle = css({ display: 'flex', flexDirection: 'column', minWidth: 0 })
+const moduleStyle = css({
+  display: 'flex',
+  flexDirection: 'column',
+  '& + &': { borderTop: 'var(--border-w) solid var(--line-cell)' },
 })
-const moduleStyle = css({ display: 'flex', flexDirection: 'column', paddingBottom: 'var(--space-5)' })
 const moduleHeader = css({
   margin: 0,
   display: 'flex',
   alignItems: 'baseline',
   gap: 'var(--space-3_5)',
-  padding: 'var(--space-3_5) 0 var(--space-2_5)',
+  padding: 'var(--space-6) var(--section-pad-x) var(--space-3)',
   fontWeight: 'inherit',
   lineHeight: 'normal',
 })
-const moduleN = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--dim)' })
+const moduleN = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--tone)' })
 const moduleTitle = css({
   fontFamily: 'var(--font-display)',
   fontWeight: 500,
@@ -137,19 +135,26 @@ const moduleTitle = css({
   letterSpacing: 'var(--tracking-title)',
 })
 const listStyle = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column' })
-const itemStyle = css({ position: 'relative', display: 'flex', flexDirection: 'column' })
+const itemStyle = css({
+  position: 'relative',
+  display: 'flex',
+  flexDirection: 'column',
+  borderTop: 'var(--border-w) solid var(--line-cell)',
+})
 
 // The trace: one segment per lesson, from its node centre to the next node's
 // centre, so it stays exact even when the resume callout sits between rows.
 const traceStyle = css({
   position: 'absolute',
-  left: '19px',
-  top: NODE_CENTRE,
-  bottom: `calc(${NODE_CENTRE} * -1)`,
-  width: '2px',
+  zIndex: 1,
+  left: `calc(${SLOT_LEFT} + 19px)`,
+  top: NODE_CENTRE_Y,
+  bottom: `calc(${NODE_CENTRE_Y} * -1)`,
+  width: 'var(--border-w-strong)',
   background: 'var(--line-strong)',
-  '&[data-trace="done"]': { background: 'var(--volt)' },
-  '&[data-trace="tail"]': { bottom: '22px' },
+  pointerEvents: 'none',
+  '&[data-trace="done"]': { background: 'var(--volt-a60)' },
+  '&[data-trace="tail"]': { bottom: 'var(--space-6)' },
 })
 
 const rowStyle = css({
@@ -157,17 +162,22 @@ const rowStyle = css({
   display: 'flex',
   alignItems: 'center',
   gap: 'var(--space-4)',
-  padding: 'var(--space-2_5) var(--space-3) var(--space-2_5) 0',
-  borderRadius: 'var(--radius-12)',
+  padding: `var(--space-3) var(--section-pad-x) var(--space-3) ${SLOT_LEFT}`,
   textDecoration: 'none',
   color: 'var(--text)',
   transition: 'background-color var(--duration-fast)',
   '&:hover': { color: 'var(--text)', background: 'var(--fill-row-hover)' },
-  '&[data-state="current"]': { background: 'var(--ion-a06)' },
-  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: '2px' },
+  // The current lesson: a faint ion ground and an ion edge inside the cell.
+  '&[data-state="current"]': {
+    background: 'var(--ion-a06)',
+    boxShadow: 'inset var(--border-w-strong) 0 0 var(--ion)',
+  },
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
+  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
   [MOBILE]: { flexWrap: 'wrap', rowGap: 'var(--space-1)' },
 })
-const slotStyle = css({ flex: 'none', width: '40px', height: '40px', display: 'grid', placeItems: 'center' })
+// Above the trace, so the line stops at each node's edge.
+const slotStyle = css({ position: 'relative', zIndex: 2, flex: 'none', width: '40px', height: '40px', display: 'grid', placeItems: 'center' })
 const bodyStyle = css({ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' })
 const titleStyle = css({
   fontSize: 'var(--fs-16)',
@@ -193,15 +203,17 @@ const xpStyle = css({
 })
 
 const calloutStyle = css({
-  margin: 'var(--space-1_5) 0 var(--space-3_5) calc(40px + var(--space-4))',
+  position: 'relative',
+  zIndex: 2,
+  margin: `var(--space-1_5) var(--section-pad-x) var(--space-4) calc(${SLOT_LEFT} + 40px + var(--space-4))`,
   padding: 'var(--space-4_5)',
-  borderRadius: 'var(--radius-16)',
   background: 'var(--surface)',
-  border: 'var(--border-w) solid var(--ion-a30)',
+  border: 'var(--border-w) solid var(--line-cell)',
+  boxShadow: 'inset 0 var(--border-w-strong) 0 var(--ion)',
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--space-3_5)',
-  [MOBILE]: { marginLeft: 0 },
+  [MOBILE]: { marginLeft: SLOT_LEFT },
 })
 const calloutText = css({ margin: 0, fontSize: 'var(--fs-15)', lineHeight: 1.55, color: 'var(--text-body)' })
 const calloutEm = css({ color: 'var(--text)' })

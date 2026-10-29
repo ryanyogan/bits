@@ -3,16 +3,25 @@ import { css } from 'remix/component'
 import { EmptyState } from '@bits/ui/empty-state'
 
 import type { JournalEntry } from '../data.ts'
+import { panelListStyle } from './panel.tsx'
 
-/** A list of JournalEntry cards (components §11.4). Private: never on the public profile. */
+/**
+ * The prompt journal (components §11.4) as rows of a ruled panel (decision
+ * 047): the prompt in mono, then where it was written and how it went.
+ * Private: never on the public profile.
+ */
 export function JournalList(handle: Handle<{ entries: JournalEntry[] }>) {
   return () => {
     let { entries } = handle.props
     if (!entries.length) {
-      return <EmptyState title="Prompts you write in lessons land here." />
+      return (
+        <div mix={emptyStyle}>
+          <EmptyState title="Prompts you write in lessons land here." />
+        </div>
+      )
     }
     return (
-      <ol mix={listStyle}>
+      <ol mix={panelListStyle}>
         {entries.map((entry, index) => (
           <li key={index} mix={entryStyle}>
             <p mix={promptStyle}>
@@ -32,15 +41,15 @@ export function JournalList(handle: Handle<{ entries: JournalEntry[] }>) {
   }
 }
 
-const listStyle = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-3_5)' })
+const emptyStyle = css({
+  padding: 'var(--space-6) var(--cell-pad)',
+  borderTop: 'var(--border-w) solid var(--line-cell)',
+})
 const entryStyle = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: 'var(--space-2_5)',
-  padding: 'var(--space-4) var(--space-4_5)',
-  borderRadius: 'var(--radius-lg)',
-  background: 'var(--well)',
-  border: 'var(--border-w) solid var(--line-bar)',
+  gap: 'var(--space-2)',
+  padding: 'var(--space-4) var(--cell-pad)',
 })
 const promptStyle = css({
   margin: 0,

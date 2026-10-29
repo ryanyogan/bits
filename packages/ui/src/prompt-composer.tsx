@@ -10,6 +10,7 @@ import { FOCUS_WITHIN, focusOutline, FORCED_COLORS, forcedSelected } from './lib
 import { TEMPERATURE_EVENT } from './odds-bars.tsx'
 import { announceReward, RewardToast, type RewardNext } from './reward-toast.tsx'
 import { Tag } from './tag.tsx'
+import { toyHeaderStyle, toyPanelStyle } from './toy-panel.tsx'
 import { LearnerBubble, ModelOutput } from './tutor.tsx'
 
 /** A regex as plain data, so it can cross the island boundary. */
@@ -249,7 +250,13 @@ export const PromptComposer = clientEntry(
       // A server run can be rerun mid-stream (the old one is aborted); a canned one can't.
       let locked = running && !handle.props.run
       return (
-        <div mix={wrapStyle}>
+        <div mix={[toyPanelStyle, wrapStyle]}>
+          <div mix={[toyHeaderStyle, headerStyle]}>
+            <Tag variant="your-turn">Your turn</Tag>
+            <label for={fieldId} mix={taskStyle}>
+              {task}
+            </label>
+          </div>
           <section
             aria-label="Your runs"
             tabIndex={0}
@@ -287,12 +294,6 @@ export const PromptComposer = clientEntry(
               }),
             ]}
           >
-            <div mix={headerStyle}>
-              <Tag variant="your-turn">Your turn</Tag>
-              <label for={fieldId} mix={taskStyle}>
-                {task}
-              </label>
-            </div>
             <textarea
               id={fieldId}
               name="prompt"
@@ -368,21 +369,24 @@ export const PromptComposer = clientEntry(
   },
 )
 
-const wrapStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', minWidth: 0 })
+// One ruled panel (decision 047): the task strip, the runs window and the
+// composer, stacked and split by hairlines, so the exercise reads as one block.
+const wrapStyle = css({ background: 'var(--well)', borderColor: 'var(--volt-a40)' })
 // Fixed height whatever arrives: the window scrolls, the page doesn't.
 const runWindowStyle = css({
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--space-4)',
   height: 'var(--run-log-height)',
-  padding: 'var(--space-1) var(--space-1) var(--space-2) 0',
-  borderRadius: 'var(--radius-xl)',
-  // Always 1px, only coloured while empty, so the first run doesn't resize it.
-  border: 'var(--border-w) dashed transparent',
+  boxSizing: 'border-box',
+  padding: 'var(--space-4) var(--space-4) var(--space-3)',
+  background: 'var(--surface)',
+  borderBottom: 'var(--border-w) solid var(--line-cell)',
   // Empty: just the hint. The first run (always the learner's own action)
   // grows it to --run-log-height once; after that the height never changes.
-  '&[data-empty]': { height: 'var(--run-log-empty-height)', borderColor: 'var(--line-dashed)' },
-  '&:focus-visible': { outlineOffset: 'var(--focus-offset-wide)' },
+  '&[data-empty]': { height: 'var(--run-log-empty-height)', paddingBlock: 'var(--space-2)' },
+  '&:focus-visible': { outlineOffset: 'var(--focus-offset-inset)' },
+  '@media (max-width: 480px)': { paddingInline: 'var(--space-3)' },
 })
 const emptyStyle = css({
   margin: 'auto',
@@ -409,14 +413,13 @@ const composerStyle = css({
   flexDirection: 'column',
   gap: 'var(--space-3)',
   padding: 'var(--space-4)',
-  borderRadius: 'var(--radius-xl)',
-  background: 'var(--well)',
-  border: 'var(--border-w) solid var(--volt-a40)',
-  transition: 'border-color var(--duration-focus), box-shadow var(--duration-focus)',
-  [FOCUS_WITHIN]: { borderColor: 'var(--volt-a75)', boxShadow: 'var(--focus-ring)' },
+  transition: 'box-shadow var(--duration-focus)',
+  // Flat focus: a 2px ring drawn inside the composer's cell.
+  [FOCUS_WITHIN]: { boxShadow: 'inset 0 0 0 var(--focus-outline-w) var(--focus-ring-color)' },
+  '@media (max-width: 480px)': { padding: 'var(--space-3_5) var(--space-3)' },
 })
-const headerStyle = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-2_5)', flexWrap: 'wrap' })
-const taskStyle = css({ fontSize: 'var(--fs-14)', color: 'var(--muted)' })
+const headerStyle = css({ justifyContent: 'flex-start', gap: 'var(--space-1) var(--space-2_5)', paddingInline: 'var(--space-4)', '@media (max-width: 480px)': { paddingInline: 'var(--space-3)' } })
+const taskStyle = css({ fontSize: 'var(--fs-14)', color: 'var(--text-quiet)' })
 const textareaStyle = css({
   resize: 'vertical',
   minHeight: '84px',
@@ -442,26 +445,28 @@ const footerStyle = css({
 })
 const tempsStyle = css({ margin: 0, padding: 0, border: 0, minWidth: 0, display: 'flex', alignItems: 'center', gap: 'var(--space-2_5)', paddingTop: 'var(--space-2_5)' })
 const runAtStyle = css({ float: 'left', padding: 0, marginRight: 'var(--space-2_5)', fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--dim)' })
-const tempOptions = css({ display: 'flex', gap: 'var(--space-1_5)' })
+// The temperatures are one segmented control: cells sharing hairlines.
+const tempOptions = css({ display: 'flex' })
 const tempStyle = css({
   position: 'relative',
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  minHeight: '40px',
+  minHeight: 'var(--control-compact)',
   minWidth: '52px',
   padding: '0 var(--space-2_5)',
-  borderRadius: 'var(--radius-9)',
   border: 'var(--border-w) solid var(--line-control)',
   color: 'var(--text-quiet)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-13)',
   cursor: 'pointer',
   transition: 'background-color var(--duration-fast), border-color var(--duration-fast)',
+  '& + &': { marginLeft: 'calc(-1 * var(--border-w))' },
   '&::before': { content: '""', position: 'absolute', inset: '-2px 0' },
-  '&:hover': { borderColor: 'var(--line-node-next)' },
-  '&:has(:checked)': { background: 'var(--ion)', borderColor: 'var(--ion)', color: 'var(--ink)' },
-  '&:has(:focus-visible)': focusOutline,
+  '&:hover': { zIndex: 1, borderColor: 'var(--line-node-next)', background: 'var(--fill-hover)' },
+  // The pick: an ion tint and border, the accent as a signal.
+  '&:has(:checked)': { zIndex: 1, background: 'var(--ion-a16)', borderColor: 'var(--ion)', color: 'var(--text)' },
+  '&:has(:focus-visible)': { ...focusOutline, zIndex: 2 },
   // Forced colours drop the fill, so the picked temperature looked like the others.
   [FORCED_COLORS]: { '&:has(:checked)': forcedSelected },
 })

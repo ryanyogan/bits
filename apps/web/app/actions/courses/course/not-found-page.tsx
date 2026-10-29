@@ -2,11 +2,12 @@ import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 import { Eyebrow } from '@bits/ui/eyebrow'
 import { Keycap } from '@bits/ui/keycap'
+import { PageFrame } from '@bits/ui/page-frame'
+import { RuledSection } from '@bits/ui/ruled-section'
 
 import type { Viewer } from '../../../auth/identity.ts'
 import { routes } from '../../../routes.ts'
 import { Layout } from '../../../ui/layout.tsx'
-import { pageShell } from '../../../ui/page-shell.ts'
 
 export interface CourseNotFoundPageProps {
   slug: string
@@ -14,43 +15,50 @@ export interface CourseNotFoundPageProps {
   coursesHref: string
 }
 
-/** 404 for an unknown `/courses/:course`, in the catalog's empty-state style. */
+/** 404 for an unknown `/courses/:course`: one open band of the ruled frame (decision 047), then a closing rule. */
 export function CourseNotFoundPage(handle: Handle<CourseNotFoundPageProps>) {
   return () => {
     let { slug, viewer, coursesHref } = handle.props
     return (
       <Layout title="Course not found" viewer={viewer} currentPath={routes.courses.index.href()} bleed>
         <div mix={pageStyle}>
-          <div mix={boxStyle}>
-            <Eyebrow tone="ion">404 · no such course</Eyebrow>
-            <h1 mix={h1Style}>That course isn't here.</h1>
-            <p mix={hintStyle}>
-              Nothing lives at <code mix={codeStyle}>{`/courses/${slug}`}</code>. It may have been renamed, or the link
-              has a typo.
-            </p>
-            <div mix={actionsStyle}>
-              <Keycap size="lg" href={coursesHref}>
-                Browse courses →
-              </Keycap>
-            </div>
-          </div>
+          <PageFrame>
+            <RuledSection as="div" rule={false} pad="none">
+              <div mix={boxStyle}>
+                <Eyebrow tone="ion">404 · no such course</Eyebrow>
+                <h1 mix={h1Style}>That course isn't here.</h1>
+                <p mix={hintStyle}>
+                  Nothing lives at <code mix={codeStyle}>{`/courses/${slug}`}</code>. It may have been renamed, or the link
+                  has a typo.
+                </p>
+                <div mix={actionsStyle}>
+                  <Keycap size="lg" href={coursesHref}>
+                    Browse courses →
+                  </Keycap>
+                </div>
+              </div>
+            </RuledSection>
+            <RuledSection as="div" pad="none">
+              <div mix={tailStyle} />
+            </RuledSection>
+          </PageFrame>
         </div>
       </Layout>
     )
   }
 }
 
-const pageStyle = pageShell
+// Clips the rules' 100vw overflow (see course-page.tsx).
+const pageStyle = css({ overflowX: 'clip' })
+const tailStyle = css({ height: 'var(--space-16)' })
 const boxStyle = css({
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   gap: 'var(--space-4)',
-  padding: 'var(--space-16) var(--space-12)',
-  borderRadius: 'var(--radius-20)',
-  border: 'var(--border-w) dashed var(--line-dashed)',
+  padding: 'var(--space-24) var(--section-pad-x)',
   textAlign: 'center',
-  '@media (max-width: 480px)': { padding: 'var(--space-10) var(--space-5)' },
+  '@media (max-width: 480px)': { padding: 'var(--space-16) var(--section-pad-x)' },
 })
 const h1Style = css({
   margin: 0,

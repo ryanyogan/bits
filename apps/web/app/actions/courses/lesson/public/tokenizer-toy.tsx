@@ -47,7 +47,7 @@ export const TokenizerToy = clientEntry(
               }),
             ]}
           />
-          <div aria-live="polite">
+          <div aria-live="polite" mix={panelJoin}>
             <TokenizerPanel tokens={shown} illustrative={illustrative} />
           </div>
         </div>
@@ -92,17 +92,21 @@ function fakeId(piece: string): number {
   return (hash >>> 0) % 50000
 }
 
-const toyStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' })
-const labelStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
+// The input and the panel are one ruled block (decision 047): the panel
+// tucks its top hairline under the input's bottom one.
+const toyStyle = css({ display: 'flex', flexDirection: 'column' })
+const labelStyle = css({ marginBottom: 'var(--space-2)', fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
 const inputStyle = css({
-  minHeight: '50px',
-  padding: '0 var(--space-4)',
-  borderRadius: 'var(--radius-12)',
-  border: 'var(--border-w) solid var(--line-strong)',
+  position: 'relative',
+  minHeight: 'var(--control-field)',
+  padding: '0 var(--space-5)',
+  border: 'var(--border-w) solid var(--line-panel)',
   background: 'var(--well)',
   color: 'var(--text)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-16)',
-  transition: 'border-color var(--duration-focus), box-shadow var(--duration-focus)',
-  '&:focus-visible': { borderColor: 'var(--volt-a70)', boxShadow: 'var(--focus-ring)' },
+  transition: 'border-color var(--duration-focus)',
+  '&:focus-visible': { zIndex: 1, borderColor: 'var(--volt-a70)', outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
+  '@media (max-width: 480px)': { paddingInline: 'var(--space-4)' },
 })
+const panelJoin = css({ marginTop: 'calc(-1 * var(--border-w))' })

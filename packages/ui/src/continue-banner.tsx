@@ -20,6 +20,12 @@ export interface ContinueBannerProps {
   sigil: string
   tone: Tone
   pattern: CoverPattern
+  /**
+   * `boxed` (default): its own hairline box. `flush`: fills a ruled band of
+   * a `PageFrame` rail to rail (decision 047), on the flat `--cell-fill`,
+   * with a hairline between the art and the text.
+   */
+  edge?: 'boxed' | 'flush'
   /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
   prefetch?: PrefetchProp
   forceState?: ForcedState
@@ -33,9 +39,9 @@ export interface ContinueBannerProps {
  */
 export function ContinueBanner(handle: Handle<ContinueBannerProps>) {
   return () => {
-    let { href, courseTitle, eyebrow, nextLesson, mins, pct, sigil, tone, pattern, prefetch, forceState, mix } = handle.props
+    let { href, courseTitle, eyebrow, nextLesson, mins, pct, sigil, tone, pattern, edge = 'boxed', prefetch, forceState, mix } = handle.props
     return (
-      <a href={href} data-rmx-prefetch={prefetchFor(href, prefetch)} data-force={forceState} mix={[bannerStyle, toneVars[tone], mix]}>
+      <a href={href} data-rmx-prefetch={prefetchFor(href, prefetch)} data-force={forceState} mix={[bannerStyle, edge === 'flush' ? flushStyle : undefined, toneVars[tone], mix]}>
         <CourseCover pattern={pattern} tone={tone} sigil={sigil} variant="banner" mix={artNarrow} />
         <div mix={bodyStyle}>
           <Eyebrow tone="ion" size="sm">
@@ -63,25 +69,40 @@ export function ContinueBanner(handle: Handle<ContinueBannerProps>) {
 
 const bannerStyle = css({
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
+  gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 3fr)',
   textDecoration: 'none',
   color: 'var(--text)',
   borderRadius: 'var(--radius-2xl)',
   overflow: 'hidden',
-  border: 'var(--border-w) solid var(--ion-a30)',
+  border: 'var(--border-w) solid var(--line-cell)',
   background: 'var(--surface)',
   transition: 'border-color var(--duration-card) var(--ease)',
-  '&:hover, &[data-force="hover"]': { color: 'var(--text)', borderColor: 'var(--ion-a50)' },
+  '&:hover, &[data-force="hover"]': { color: 'var(--text)', borderColor: 'var(--ion-a50)', background: 'var(--raised)' },
   '&:hover .key, &[data-force="hover"] .key': { background: 'var(--volt-hover)' },
   '&:focus-visible, &[data-force="focus"]': focusOutline,
+  // The art and the text are two cells: a hairline between them, on the
+  // side or (stacked) underneath.
+  '& > .cover': { borderRight: 'var(--border-w) solid var(--line-cell)' },
+  '@media (max-width: 759.98px)': {
+    gridTemplateColumns: 'minmax(0, 1fr)',
+    '& > .cover': { borderRight: 0, borderBottom: 'var(--border-w) solid var(--line-cell)' },
+  },
+})
+const flushStyle = css({
+  border: 0,
+  background: 'var(--cell-fill)',
+  transition: 'background-color var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease)',
+  '&:hover, &[data-force="hover"]': { background: 'var(--cell-fill-hover)', boxShadow: 'inset 0 var(--border-w-strong) 0 var(--ion)' },
+  '&:focus-visible, &[data-force="focus"]': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
+  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
 })
 const bodyStyle = css({
-  padding: 'var(--space-7) var(--space-8)',
+  padding: 'var(--space-7) var(--cell-pad)',
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'center',
   gap: 'var(--space-3_5)',
-  '@media (max-width: 480px)': { padding: 'var(--space-5)' },
+  '@media (max-width: 480px)': { padding: 'var(--space-5) var(--cell-pad)' },
 })
 const titleStyle = css({
   fontFamily: 'var(--font-display)',

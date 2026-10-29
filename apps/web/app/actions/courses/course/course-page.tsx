@@ -1,5 +1,8 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
+import { CellGrid, type CellGridCols } from '@bits/ui/cell-grid'
+import { PageFrame } from '@bits/ui/page-frame'
+import { RuledSection } from '@bits/ui/ruled-section'
 
 import type { Viewer } from '../../../auth/identity.ts'
 import { APP_TITLE } from '../../../config.ts'
@@ -10,9 +13,9 @@ import { Layout } from '../../../ui/layout.tsx'
 import type { CourseView } from './course-data.ts'
 import { CourseAside } from './ui/course-aside.tsx'
 import { CourseHero } from './ui/course-hero.tsx'
+import { stripHeading } from './ui/strip.ts'
 import { Syllabus } from './ui/syllabus.tsx'
 import { toneStyles } from './ui/tone.ts'
-import { pageShell } from '../../../ui/page-shell.ts'
 
 export interface CoursePageProps {
   view: CourseView
@@ -23,7 +26,12 @@ export interface CoursePageProps {
   trackHref: string
 }
 
-/** `/courses/:course` (docs/design/spec/pages/Course.md). */
+/**
+ * `/courses/:course` (docs/design/spec/pages/Course.md), on the squared
+ * grid (decision 047): one `PageFrame` in three bands. The hero (text |
+ * art), the outcomes as a row of numbered cells, then the syllabus beside
+ * the progress aside.
+ */
 export function CoursePage(handle: Handle<CoursePageProps>) {
   return () => {
     let { view, viewer, reward, coursesHref, trackHref } = handle.props
@@ -39,86 +47,77 @@ export function CoursePage(handle: Handle<CoursePageProps>) {
         canonicalPath={routes.courses.course.index.href({ course: course.slug })}
         bleed
       >
-        <div mix={toneStyles[course.tone]}>
-          <CourseHero view={view} coursesHref={coursesHref} trackHref={trackHref} />
-          <div mix={bodyStyle}>
-            <div mix={mainCol}>
-              <section aria-labelledby="outcomes-heading" mix={outcomesSection}>
-                <h2 id="outcomes-heading" mix={monoHeading}>
-                  By the end you'll be able to
-                </h2>
-                <ol mix={outcomeGrid}>
-                  {course.outcomes.map((outcome, index) => (
-                    <li key={index} mix={outcomeCard}>
-                      <span aria-hidden="true" mix={outcomeN}>
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-                      {outcome}
-                    </li>
-                  ))}
-                </ol>
-              </section>
-              <Syllabus modules={view.modules} />
-            </div>
-            <CourseAside view={view} sourceHref={routes.author.course.index.href({ course: course.slug })} />
-          </div>
+        <div mix={clipStyle}>
+          <PageFrame mix={toneStyles[course.tone]}>
+            <CourseHero view={view} coursesHref={coursesHref} trackHref={trackHref} />
+
+            <RuledSection aria-labelledby="outcomes-heading" pad="none">
+              <h2 id="outcomes-heading" mix={[stripHeading, openStrip]}>
+                By the end you'll be able to
+              </h2>
+              <CellGrid as="ol" cols={outcomeCols(course.outcomes.length)}>
+                {course.outcomes.map((outcome, index) => (
+                  <li key={index} mix={outcomeCell}>
+                    <span aria-hidden="true" mix={outcomeN}>
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    {outcome}
+                  </li>
+                ))}
+              </CellGrid>
+            </RuledSection>
+
+            <RuledSection as="div" pad="none">
+              <div mix={bodyStyle}>
+                <Syllabus modules={view.modules} />
+                <CourseAside view={view} sourceHref={routes.author.course.index.href({ course: course.slug })} />
+              </div>
+            </RuledSection>
+            <RuledSection as="div" pad="none">
+              <div mix={tailStyle} />
+            </RuledSection>
+          </PageFrame>
         </div>
       </Layout>
     )
   }
 }
 
-const MOBILE = '@media (max-width: 480px)'
+// A RuledSection's rule is 100vw wide, which counts a classic scrollbar;
+// body's clip propagates to the viewport, where it no longer stops a
+// scroll, so the page clips its own sideways overflow (as the landing does).
+const clipStyle = css({ overflowX: 'clip' })
 
-const bodyStyle = [
-  pageShell,
-  css({
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: 'var(--space-10)',
-    alignItems: 'flex-start',
-    [MOBILE]: { gap: 'var(--space-7)' },
-  }),
-]
-const mainCol = css({
-  flex: '999 1 560px',
-  minWidth: 0,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--space-10)',
-})
-const outcomesSection = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' })
-const monoHeading = css({
-  margin: 0,
-  fontFamily: 'var(--font-mono)',
-  fontWeight: 500,
-  fontSize: 'var(--fs-13)',
-  letterSpacing: 'var(--tracking-eyebrow)',
-  textTransform: 'uppercase',
-  color: 'var(--muted)',
-  lineHeight: 'normal',
-})
-const outcomeGrid = css({
-  listStyle: 'none',
-  margin: 0,
-  padding: 0,
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))',
-  gap: 'var(--space-3)',
-})
-const outcomeCard = css({
-  padding: 'var(--space-4_5)',
-  borderRadius: 'var(--radius-lg)',
-  background: 'var(--surface)',
-  border: 'var(--border-w) solid var(--line-bar)',
+/** Four outcomes in one row of four; otherwise rows of three. */
+function outcomeCols(n: number): CellGridCols {
+  return n % 4 === 0 ? 4 : n <= 2 ? 2 : 3
+}
+
+// The cells draw their own top hairlines, so the strip draws none.
+const openStrip = css({ borderBottom: 0 })
+const outcomeCell = css({
   fontSize: 'var(--fs-15)',
   lineHeight: 1.5,
   color: 'var(--text-body)',
+  textWrap: 'pretty',
 })
 const outcomeN = css({
   display: 'block',
-  marginBottom: 'var(--space-2)',
+  marginBottom: 'var(--space-3)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',
-  color: 'var(--volt)',
+  color: 'var(--tone)',
 })
+
+// The syllabus and the aside: two cells side by side from 1024px, with a
+// hairline between them; stacked below that.
+const bodyStyle = css({
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 380px)',
+  '& > :first-child': { borderRight: 'var(--border-w) solid var(--line-cell)' },
+  '@media (max-width: 1023.98px)': {
+    gridTemplateColumns: 'minmax(0, 1fr)',
+    '& > :first-child': { borderRight: 0, borderBottom: 'var(--border-w) solid var(--line-cell)' },
+  },
+})
+const tailStyle = css({ height: 'var(--space-16)' })
