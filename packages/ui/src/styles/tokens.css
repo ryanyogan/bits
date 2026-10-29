@@ -326,7 +326,6 @@
     --page-gutter: 32px; /* desktop horizontal padding */
     --gutter-mobile: 16px; /* ≤480px */
     --read-width: 760px;
-    --watch-width: 1040px;
     --form-width: 420px;
     --measure: 68ch;
     --touch-target: 44px; /* minimum hit area */

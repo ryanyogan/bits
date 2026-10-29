@@ -400,7 +400,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | TerminalLog | terminal.tsx | path, entries, replies, placeholder, flush (no outer border inside a ruled cell); a Run/Send Keycap inside the field frame; fixed height (`--terminal-height`, capped below the header; all the room under it on phones), log scrolls inside | island |
 | TerminalOutput | terminal.tsx | lines | static |
 | OutputPanel | terminal.tsx | command, lines (replayed), flush; a Ghost holds the full size, scrolls past `--output-panel-height` | island |
-| VideoPlayer | video-player.tsx | title, duration, chapters, cues, transcriptOpen, source {src} (plain `<video>`, MP4), initialTime, persist (position); on lesson pages it sits at the top of the lesson (decision 055) | island (simulated clock without `source`) |
+| VideoPlayer | video-player.tsx | title, duration, chapters, cues, transcriptOpen (default closed), source {src} (plain `<video>`, MP4), initialTime, persist (position); on lesson pages it sits at the top of the lesson (decision 055) | island (simulated clock without `source`) |
 Helpers (decision 023): `lib/stable.tsx` has `createFollower()` (a `ref`
 mixin that keeps a fixed-height scroll window at the bottom while the reader
 is there; pair it with `scrollWindowStyle`) and `stackStyle` + `<Ghost>`

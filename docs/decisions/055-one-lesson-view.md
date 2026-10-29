@@ -23,9 +23,12 @@ every link, form and redirect, and a picker in the chrome.
   save, the ask redirect and the course page no longer carry it.
 - **Video is a block at the top.** A lesson with a linked video (029)
   opens with the `VideoPlayer` above its first block, at the read
-  column's width, with the transcript under the player as one ruled box.
-  Chapters, captions, the transcript and the resume position (the `video`
-  draft key) work as before. "Watch the intro" on the course page links
+  column's width. The transcript starts closed at every width, so the
+  first block stays above the fold; the player's transcript button opens
+  it under the player as one ruled box, and it follows along from there
+  (`transcriptOpen` still opens it up front, as the styleguide does).
+  Chapters, captions and the resume position (the `video` draft key) work
+  as before. "Watch the intro" on the course page links
   to the lesson itself.
 - **The depth tabs take the picker's place** (053): a cell in the lesson
   sub-bar from 760px, and the first cell of the page's one chrome row
@@ -46,4 +49,4 @@ every link, form and redirect, and a picker in the chrome.
   terminal mode or a Watch tab.
 - The lesson frontmatter's `replies` (canned Terminal-mode replies) is
   still accepted by the build but no longer shown; dropping it is a
-  content-schema change for later. `--watch-width` has no user left.
+  content-schema change for later. The `--watch-width` token is removed.

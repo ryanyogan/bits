@@ -457,7 +457,6 @@ Scripted timing: hero placeholder typewriter ticks every `55ms` (types 1 char/ti
 | `--gutter` | `32px` (desktop horizontal padding) | All 1280 containers. Lesson/Code bars and lesson main use `24px`; Code workspace `16px`; Auth form column `24px` |
 | `--gutter-mobile` | `16px` (proposed ≤ 480px) | Not in artboards; required to fit 360px (see page specs) |
 | `--read-width` | `760px` | Lesson read column; hero prompt bar; Main path intro; suggestions row |
-| `--watch-width` | `1040px` | Lesson watch column |
 | `--form-width` | `420px` | Auth form |
 | `--measure` | `68ch` | Lesson body max (System) |
 

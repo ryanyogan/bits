@@ -222,7 +222,10 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await page.goto(lesson('tokens-and-temperature', 'temperature'))
     await settled(page)
     let transcript = page.getByRole('button', { name: 'Transcript' })
-    if ((await transcript.getAttribute('aria-pressed')) !== 'true') await transcript.click()
+    // Closed at first (decision 055): the lesson's first block stays in view.
+    assert.equal(await transcript.getAttribute('aria-pressed'), 'false')
+    await transcript.click()
+    await page.getByRole('region', { name: 'Transcript' }).waitFor()
     await page.getByRole('button', { name: 'CC: captions' }).click()
     await expectClean(page, 'lesson video: transcript + captions toggled')
 

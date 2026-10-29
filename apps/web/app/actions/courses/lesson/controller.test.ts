@@ -71,9 +71,10 @@ describe('lesson page and author preview', () => {
     assert.ok(video > 0, 'the player renders')
     assert.ok(video < html.indexOf('Last lesson you saw'), 'above the first block')
     assert.match(html, /aria-label="Video: Temperature &amp; randomness"/)
-    // Chapters and the transcript come with it.
+    // Chapters come with it; the transcript starts closed, one button away.
     assert.match(html, /Sharpening the odds/)
-    assert.match(html, /aria-label="Transcript"/)
+    assert.match(html, /<button[^>]*aria-label="Transcript"[^>]*aria-pressed="false"|<button[^>]*aria-pressed="false"[^>]*aria-label="Transcript"/)
+    assert.doesNotMatch(html, /<section aria-label="Transcript"/)
     // Without a video there is no player.
     assert.doesNotMatch((await page(lessonHref(theLoop))).html, /data-lesson-video=""/)
   })

@@ -1087,6 +1087,7 @@ export function Catalogue(handle: Handle) {
             chapters={chapters}
             cues={cues}
             initialTime={112}
+            transcriptOpen
           />
         </Specimen>
       </Section>

@@ -35,7 +35,7 @@ export interface VideoPlayerProps {
   cues?: TranscriptCue[]
   /** Starting position in seconds (style guide: 112 → "1:52"). */
   initialTime?: number
-  /** Show the transcript panel beside the player initially. */
+  /** Show the transcript panel under the player initially (default closed: the lesson text follows the player; decision 055). */
   transcriptOpen?: boolean
   source?: VideoSource
   /** Keep the watch position (localStorage, plus the server when signed in). */
@@ -67,7 +67,7 @@ export const VideoPlayer = clientEntry(
     let playing = false
     let speedIndex = 0
     let captions = false
-    let transcript = handle.props.transcriptOpen ?? true
+    let transcript = handle.props.transcriptOpen ?? false
     let timer: ReturnType<typeof setInterval> | undefined
     let hydrated = false
     let media: HTMLVideoElement | undefined
