@@ -214,7 +214,11 @@ function hasPageFrame(node: RemixNode): boolean {
   return element.type === Fragment ? hasPageFrame(element.props?.children) : false
 }
 
-const skipTargetStyle = css({ '&:focus': { outline: 'none' } })
+// Every Layout <main> clips sideways overflow. A RuledSection's rule is
+// 100vw wide, and beside a classic scrollbar 100vw is wider than the page,
+// so without this every ruled page scrolled ~7px sideways. `clip` (not
+// `hidden`) makes no scroll container, so sticky children still stick.
+const skipTargetStyle = css({ overflowX: 'clip', '&:focus': { outline: 'none' } })
 const mainStyle = [pageShell, css({ display: 'block' })]
 // The frame grows to fill the screen under the bar, so its rails reach the
 // bottom even on a short page.

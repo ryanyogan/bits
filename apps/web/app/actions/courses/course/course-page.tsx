@@ -47,46 +47,40 @@ export function CoursePage(handle: Handle<CoursePageProps>) {
         canonicalPath={routes.courses.course.index.href({ course: course.slug })}
         bleed
       >
-        <div mix={clipStyle}>
-          <PageFrame mix={toneStyles[course.tone]}>
-            <CourseHero view={view} coursesHref={coursesHref} trackHref={trackHref} />
+        <PageFrame mix={toneStyles[course.tone]}>
+          <CourseHero view={view} coursesHref={coursesHref} trackHref={trackHref} />
 
-            <RuledSection aria-labelledby="outcomes-heading" pad="none">
-              <h2 id="outcomes-heading" mix={[stripHeading, openStrip]}>
-                By the end you'll be able to
-              </h2>
-              <CellGrid as="ol" cols={outcomeCols(course.outcomes.length)}>
-                {course.outcomes.map((outcome, index) => (
-                  <li key={index} mix={outcomeCell}>
-                    <span aria-hidden="true" mix={outcomeN}>
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                    {outcome}
-                  </li>
-                ))}
-              </CellGrid>
-            </RuledSection>
+          <RuledSection aria-labelledby="outcomes-heading" pad="none">
+            <h2 id="outcomes-heading" mix={[stripHeading, openStrip]}>
+              By the end you'll be able to
+            </h2>
+            <CellGrid as="ol" cols={outcomeCols(course.outcomes.length)}>
+              {course.outcomes.map((outcome, index) => (
+                <li key={index} mix={outcomeCell}>
+                  <span aria-hidden="true" mix={outcomeN}>
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  {outcome}
+                </li>
+              ))}
+            </CellGrid>
+          </RuledSection>
 
-            <RuledSection as="div" pad="none">
-              <div mix={bodyStyle}>
-                <Syllabus modules={view.modules} />
-                <CourseAside view={view} sourceHref={routes.author.course.index.href({ course: course.slug })} />
-              </div>
-            </RuledSection>
-            <RuledSection as="div" pad="none">
-              <div mix={tailStyle} />
-            </RuledSection>
-          </PageFrame>
-        </div>
+          <RuledSection as="div" pad="none">
+            <div mix={bodyStyle}>
+              <Syllabus modules={view.modules} />
+              <CourseAside view={view} sourceHref={routes.author.course.index.href({ course: course.slug })} />
+            </div>
+          </RuledSection>
+          <RuledSection as="div" pad="none">
+            <div mix={tailStyle} />
+          </RuledSection>
+        </PageFrame>
       </Layout>
     )
   }
 }
 
-// A RuledSection's rule is 100vw wide, which counts a classic scrollbar;
-// body's clip propagates to the viewport, where it no longer stops a
-// scroll, so the page clips its own sideways overflow (as the landing does).
-const clipStyle = css({ overflowX: 'clip' })
 
 /** Four outcomes in one row of four; otherwise rows of three. */
 function outcomeCols(n: number): CellGridCols {

@@ -21,35 +21,31 @@ export function CourseNotFoundPage(handle: Handle<CourseNotFoundPageProps>) {
     let { slug, viewer, coursesHref } = handle.props
     return (
       <Layout title="Course not found" viewer={viewer} currentPath={routes.courses.index.href()} bleed>
-        <div mix={pageStyle}>
-          <PageFrame>
-            <RuledSection as="div" rule={false} pad="none">
-              <div mix={boxStyle}>
-                <Eyebrow tone="ion">404 · no such course</Eyebrow>
-                <h1 mix={h1Style}>That course isn't here.</h1>
-                <p mix={hintStyle}>
-                  Nothing lives at <code mix={codeStyle}>{`/courses/${slug}`}</code>. It may have been renamed, or the link
-                  has a typo.
-                </p>
-                <div mix={actionsStyle}>
-                  <Keycap size="lg" href={coursesHref}>
-                    Browse courses →
-                  </Keycap>
-                </div>
+        <PageFrame>
+          <RuledSection as="div" rule={false} pad="none">
+            <div mix={boxStyle}>
+              <Eyebrow tone="ion">404 · no such course</Eyebrow>
+              <h1 mix={h1Style}>That course isn't here.</h1>
+              <p mix={hintStyle}>
+                Nothing lives at <code mix={codeStyle}>{`/courses/${slug}`}</code>. It may have been renamed, or the link
+                has a typo.
+              </p>
+              <div mix={actionsStyle}>
+                <Keycap size="lg" href={coursesHref}>
+                  Browse courses →
+                </Keycap>
               </div>
-            </RuledSection>
-            <RuledSection as="div" pad="none">
-              <div mix={tailStyle} />
-            </RuledSection>
-          </PageFrame>
-        </div>
+            </div>
+          </RuledSection>
+          <RuledSection as="div" pad="none">
+            <div mix={tailStyle} />
+          </RuledSection>
+        </PageFrame>
       </Layout>
     )
   }
 }
 
-// Clips the rules' 100vw overflow (see course-page.tsx).
-const pageStyle = css({ overflowX: 'clip' })
 const tailStyle = css({ height: 'var(--space-16)' })
 const boxStyle = css({
   display: 'flex',

@@ -68,7 +68,7 @@ export function TooManyRequestsPage(handle: Handle<{ viewer: Viewer | null }>) {
   )
 }
 
-interface StatusPageProps {
+export interface StatusPageProps {
   title: string
   /** The HTTP status, shown as the band's index. */
   code: string
@@ -76,13 +76,20 @@ interface StatusPageProps {
   heading: string
   hint: RemixNode
   viewer: Viewer | null
+  /** Marks the bar's nav link for the area the missing page belongs to. */
+  currentPath?: string
 }
 
-function StatusPage(handle: Handle<StatusPageProps>) {
+/**
+ * A ruled status page (decision 047): one PageHead band with the HTTP status
+ * as its index, the message, and the way back (courses, home). For any 4xx
+ * that has nothing else to show.
+ */
+export function StatusPage(handle: Handle<StatusPageProps>) {
   return () => {
-    let { title, code, eyebrow, heading, hint, viewer } = handle.props
+    let { title, code, eyebrow, heading, hint, viewer, currentPath } = handle.props
     return (
-      <Layout title={title} viewer={viewer}>
+      <Layout title={title} viewer={viewer} currentPath={currentPath}>
         <PageFrame>
           <PageHead index={code} tone="ion" label={eyebrow} title={heading} titleId="status-title" lead={hint}>
             <div mix={actionsStyle}>

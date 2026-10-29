@@ -122,11 +122,13 @@ const barStyle = css({
   zIndex: 5,
 })
 
-// Flat (decision 047): a nearly opaque ink ground and a hairline, no blur.
+// Flat (decision 047): an opaque ink ground and a hairline, no blur, so
+// the rails and rules scrolling under it never show through (and it
+// matches the lesson sub-bar below it).
 const stickyStyle = css({
   position: 'sticky',
   top: 0,
-  background: 'var(--appbar-bg)',
+  background: 'var(--ink)',
   borderBottom: 'var(--border-w) solid var(--line-section)',
 })
 
