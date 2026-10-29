@@ -69,7 +69,7 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
         image={ogImage('home', HOME_ALT)}
         url={canonicalUrl(routes.home.href())}
         siteName={APP_NAME}
-        description={`${APP_TAGLINE} Free, hands-on courses from “what's a token?” to shipping your first agent.`}
+        description={`${APP_TAGLINE} Hands-on AI courses, free to start: from “what's a token?” to shipping your first agent.`}
         head={
           <>
             {/* The hero h1 (the LCP element) is Unbounded 800, outside the global preloads. */}

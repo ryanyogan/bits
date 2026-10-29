@@ -264,11 +264,13 @@ const dotGridStyle = css({
   maskImage: 'radial-gradient(ellipse at 50% 40%, #000 0%, transparent 75%)',
 })
 
+// Wide enough that the ribbon and galaxy reach the rails; the edges still
+// fall to ink so text at the rails stays clean (decision 048).
 const vignetteStyle = css({
   position: 'absolute',
   inset: 0,
   background:
-    'radial-gradient(ellipse 70% 60% at 50% 45%, rgb(7 8 13 / 0) 0%, rgb(7 8 13 / 0.35) 60%, rgb(7 8 13 / 0.94) 100%)',
+    'radial-gradient(ellipse 85% 75% at 50% 45%, rgb(7 8 13 / 0) 0%, rgb(7 8 13 / 0.22) 65%, rgb(7 8 13 / 0.82) 100%)',
 })
 
 const hudStyle = css({
@@ -292,8 +294,6 @@ const hudItem = css({
   gap: 'var(--space-3)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-11)',
-  letterSpacing: 'var(--tracking-eyebrow)',
-  textTransform: 'uppercase',
   color: 'var(--dim)',
   transition: 'color 400ms',
   '&[data-on="true"]': { color: 'var(--volt)' },

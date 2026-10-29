@@ -39,7 +39,7 @@ describe('landing page', () => {
     ]) {
       assert.ok(html.includes(heading), heading)
     }
-    assert.match(html, /Read it\. Watch it\. <span[^>]*>Run it\.<\/span>/)
+    assert.ok(html.includes("Read it. Watch it. Run it."), "modes heading")
     assert.match(html, /© 2026 Bits/)
     assert.doesNotMatch(html, /latent/i)
   })
@@ -66,6 +66,19 @@ describe('landing page', () => {
     assert.ok(html.includes(`href="${escape(agent)}"`))
     let lesson = await page(lessonOneHref('hello'))
     assert.equal(lesson.status, 200)
+  })
+
+  it('tags every path course free, claims "free to start" and never a price (decision 048)', async () => {
+    let { html } = await page(routes.home.href())
+    assert.equal(count(html, />Free<\/span>/), 8)
+    assert.doesNotMatch(html, />Pro<\/span>/)
+    assert.doesNotMatch(html, /\$\d/)
+    assert.doesNotMatch(html, /every course is free|Free forever|no trial, no catch/)
+    assert.equal(count(html, /Free to start/), 2)
+    // The hero badge is gone: the h1 is the first thing in the hero.
+    assert.doesNotMatch(html, /from zero to your first agent/)
+    // The phone chip row scrolls sideways, so it is focusable and named.
+    assert.match(html, /<ul aria-label="Try asking" tabindex="0"/i)
   })
 
   it('links each track to the filtered catalog', async () => {

@@ -15,12 +15,12 @@ export const FORCED = '@media (forced-colors: active)'
  */
 export const dotBreak = css({ [PHONE]: { display: 'block', height: 0, overflow: 'hidden', fontSize: 0 } })
 
-/** `h2-section`: Unbounded 700 clamp(36px, 4.6vw, 64px) / 1.02, -0.035em. */
+/** `h2-section`: Unbounded 700, 56px at 1440 (`--type-h2-landing-size`, decision 048) / 1.02, -0.035em. */
 export const h2Style = css({
   margin: 0,
   fontFamily: 'var(--font-display)',
   fontWeight: 700,
-  fontSize: 'var(--type-h2-size)',
+  fontSize: 'var(--type-h2-landing-size)',
   lineHeight: 'var(--type-h2-leading)',
   letterSpacing: 'var(--type-h2-tracking)',
   textWrap: 'balance',
@@ -32,7 +32,7 @@ export const h2Style = css({
 /** Section lead: 18/1.6 `--text-lead`. */
 export const leadStyle = css({
   margin: 0,
-  maxWidth: '56ch',
+  maxWidth: '52ch',
   fontSize: 'var(--fs-18)',
   lineHeight: 1.6,
   color: 'var(--text-lead)',
@@ -76,11 +76,9 @@ export const cardDesc = css({
   color: 'var(--muted)',
 })
 
-/** A mono label inside a cell: "TEXT · ALWAYS", a track name. */
+/** A mono label inside a cell: "Text · always", a track name. Sentence case, like the strips (047, 048). */
 export const cellLabel = css({
   margin: 0,
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',
-  letterSpacing: 'var(--tracking-eyebrow-s)',
-  textTransform: 'uppercase',
 })

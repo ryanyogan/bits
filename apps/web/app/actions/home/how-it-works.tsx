@@ -1,5 +1,5 @@
 import { css, type Handle } from 'remix/component'
-import { CellGrid } from '@bits/ui/cell-grid'
+import { CellGrid, cellInkStyle, cellVeilStyle } from '@bits/ui/cell-grid'
 import { RuledSection } from '@bits/ui/ruled-section'
 import { StaticTabs } from '@bits/ui/segmented-tabs'
 import { TokenizerPanel } from '@bits/ui/token-pill'
@@ -8,9 +8,9 @@ import { LearnerBubble, TutorMessage } from '@bits/ui/tutor'
 import { h2Style, introStyle, leadStyle, PHONE } from './styles.ts'
 
 const features = [
-  ['READ', "Chat-style lessons you can skim, or switch to terminal mode if that's more your speed."],
-  ['TYPE', "Prompt exercises with live checks — you can't skip ahead by scrolling."],
-  ['RUN', 'Real code in a real editor. Copy it, change it, break it on purpose.'],
+  ['Read', "Chat-style lessons you can skim, or switch to terminal mode if that's more your speed."],
+  ['Type', "Prompt exercises with live checks — you can't skip ahead by scrolling."],
+  ['Run', 'Real code in a real editor. Copy it, change it, break it on purpose.'],
 ] as const
 
 const sampleTokens: [string, string][] = [
@@ -25,14 +25,16 @@ const sampleTokens: [string, string][] = [
 ]
 
 /**
- * "02 / How it works" (Main.md §3): the pitch and a picture of a lesson in
- * two cells, then the three verbs (read, type, run) as a row of cells.
+ * "How it works" (Main.md §3): the pitch and a picture of a lesson in two
+ * cells, then the three verbs (read, type, run) as a row of cells. Copy sits
+ * on the veil so the field reads through; the preview card is an object and
+ * keeps the ink slab (decision 048).
  */
 export function HowItWorks(_handle: Handle) {
   return () => (
-    <RuledSection id="how" aria-labelledby="how-title" index="02" label="How it works" tone="ion" pad="none" mix={timeline}>
-      <CellGrid cols={2} fill="ink" pad={false} top={false}>
-        <div mix={copyCell}>
+    <RuledSection id="how" aria-labelledby="how-title" label="How it works" pad="none" mix={timeline}>
+      <CellGrid cols={2} pad={false} top={false}>
+        <div mix={[cellVeilStyle, copyCell]}>
           <div mix={introStyle}>
             <h2 id="how-title" mix={h2Style}>
               Every lesson is a conversation.
@@ -43,11 +45,11 @@ export function HowItWorks(_handle: Handle) {
             </p>
           </div>
         </div>
-        <div mix={previewCell}>
+        <div mix={[cellInkStyle, previewCell]}>
           <LessonPreview />
         </div>
       </CellGrid>
-      <CellGrid as="ul" cols={3} fill="ink" aria-label="What you do in a lesson">
+      <CellGrid as="ul" cols={3} fill="veil" aria-label="What you do in a lesson">
         {features.map(([key, text]) => (
           <li key={key} mix={featureCell}>
             <span mix={featureKey}>{key}</span>
@@ -117,16 +119,15 @@ const copyCell = css({
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'center',
-  padding: 'var(--section-pad-y) var(--section-pad-x)',
+  padding: 'var(--section-pad-y) var(--cell-pad-lg)',
   [PHONE]: { padding: 'var(--space-12) var(--section-pad-x)' },
 })
-const previewCell = css({ padding: 'var(--section-pad-x)' })
+const previewCell = css({ padding: 'var(--cell-pad-lg)' })
 
 const featureCell = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' })
 const featureKey = css({
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',
-  letterSpacing: 'var(--tracking-eyebrow-s)',
   color: 'var(--volt)',
 })
 const featureText = css({ fontSize: 'var(--fs-16)', lineHeight: 1.5, color: 'var(--text-body)' })
