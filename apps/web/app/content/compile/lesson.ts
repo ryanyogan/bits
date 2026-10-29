@@ -14,25 +14,27 @@ import remarkParse from 'remark-parse'
 import { unified } from 'unified'
 import type { TerminalPart, TerminalTone } from '@bits/ui/terminal'
 
-import type {
-  AttentionBlock,
-  Block,
-  CodeBlock,
-  CodeBlockFile,
-  CompareBlock,
-  Inline,
-  LessonContent,
-  LessonVideo,
-  MarkdownBlock,
-  NextTokenBlock,
-  OddsBlock,
-  Paragraph,
-  PromptBlock,
-  QuizBlock,
-  RabbitHoleBlock,
-  TerminalBlock,
-  TokenizerBlock,
-  TrainingBlock,
+import {
+  quizAsAsk,
+  type AskBlock,
+  type AttentionBlock,
+  type Block,
+  type CodeBlock,
+  type CodeBlockFile,
+  type CompareBlock,
+  type Inline,
+  type LessonContent,
+  type LessonVideo,
+  type MarkdownBlock,
+  type NextTokenBlock,
+  type OddsBlock,
+  type Paragraph,
+  type PromptBlock,
+  type QuizBlock,
+  type RabbitHoleBlock,
+  type TerminalBlock,
+  type TokenizerBlock,
+  type TrainingBlock,
 } from '../../actions/courses/lesson/content.ts'
 import { approximateTokens } from '../../actions/courses/lesson/public/tokenizer-toy.tsx'
 import { temperatureLabel } from '../../actions/courses/lesson/ui/exercise.ts'
@@ -180,6 +182,7 @@ const normalize = (text: string) => text.replace(/\r\n?/g, '\n')
 const BLOCK_NAMES = [
   'prompt',
   'code',
+  'ask',
   'quiz',
   'odds',
   'tokenizer',
@@ -333,6 +336,8 @@ function compileDirective(
       return compilePrompt(node, body, report, stats)
     case 'code':
       return compileCode(node, body, report)
+    case 'ask':
+      return compileAsk(node, body, report, stats)
     case 'quiz':
       return compileQuiz(node, report)
     case 'odds':
@@ -659,9 +664,12 @@ function compileCode(node: Directive, raw: RawBody, report: FileReport): CodeBlo
 
 // ---- :::quiz -----------------------------------------------------------------
 
-function compileQuiz(node: Directive, report: FileReport): QuizBlock | undefined {
+// A `:::quiz` compiles to an ask with only choices (decision 052): the
+// learner types an answer, or taps an option chip to fill it in, and a typed
+// letter or option text counts as picking that option.
+function compileQuiz(node: Directive, report: FileReport): AskBlock | undefined {
   let line = node.position?.start.line ?? 1
-  let attrs = attributes(node, ['id', 'xp', 'multiple'], report)
+  let attrs = attributes(node, ['id', 'xp', 'multiple', 'gate'], report)
   let id = attrs.string('id')
   if (!id) report.error(':::quiz needs an id, like :::quiz{id="common-words" xp=10}', line)
   let multiple = attrs.flag('multiple')
@@ -704,9 +712,151 @@ function compileQuiz(node: Directive, report: FileReport): QuizBlock | undefined
   let correct = options.filter((option) => option.correct).length
   if (options.length >= 2 && correct === 0) report.error(':::quiz has no right answer: mark it - [x]', line)
   if (correct > 1 && !multiple) report.error(`:::quiz has ${correct} right answers: add multiple to allow several`, line)
+  if (options.length > MAX_CHOICES) report.error(`:::quiz has ${options.length} options: ${MAX_CHOICES} at most`, line)
   if (!id) return undefined
   let block: QuizBlock = { type: 'quiz', id, xp: blockXp(attrs.number('xp', 10)!, report, line), question, options }
   if (multiple) block.multiple = true
+  let ask = quizAsAsk(block)
+  ask.gate = attrs.flag('gate', true)
+  return ask
+}
+
+// ---- :::ask ------------------------------------------------------------------
+
+const MAX_CHOICES = 10
+
+/**
+ * `:::ask{id xp gate multiple}`: the question as paragraphs, then item
+ * lines read from the raw source (so regexes stay as written):
+ * placeholder, accept, reject, hint, choice and explain.
+ */
+function compileAsk(node: Directive, body: RawBody, report: FileReport, stats: CompiledLesson['stats']): AskBlock | undefined {
+  let line = node.position?.start.line ?? 1
+  let attrs = attributes(node, ['id', 'xp', 'gate', 'multiple'], report)
+  let id = attrs.string('id')
+  if (!id) report.error(':::ask needs an id, like :::ask{id="strawberry" xp=20}', line)
+  else if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) report.error(`id "${id}" should be lowercase letters, digits and dashes`, line)
+  let multiple = attrs.flag('multiple')
+
+  let question: Paragraph = []
+  if (node.type === 'containerDirective') {
+    let listSeen = false
+    for (let child of node.children) {
+      let at = child.position?.start.line ?? line
+      if (child.type === 'list') listSeen = true
+      else if (child.type === 'paragraph' && !listSeen) {
+        if (question.length) question.push(' ')
+        question.push(...inline(child.children, report, at))
+      } else if (child.type === 'paragraph') {
+        report.error('the question goes first, before the - lines', at)
+      }
+    }
+  }
+
+  let accept: AskBlock['accept'] = []
+  let reject: AskBlock['reject'] = []
+  let choices: AskBlock['choices'] = []
+  let placeholder: string | undefined
+  let hint: string | undefined
+  let explain: string | undefined
+  let quoted = (rest: string) => new RegExp(`^${QUOTED}$`).exec(rest)?.[1]
+
+  body.lines.forEach((raw, i) => {
+    let at = body.first + i
+    let item = /^[-*]\s+(\w+)\b\s*(.*)$/.exec(raw.trim())
+    if (!item) return // question text (read above) or a blank line
+    let [, keyword, rest = ''] = item
+    switch (keyword) {
+      case 'accept':
+      case 'reject': {
+        let match =
+          keyword === 'accept'
+            ? new RegExp(`^${QUOTED}\\s+\\/(.*)\\/([a-z]*)$`).exec(rest)
+            : new RegExp(`^${QUOTED}\\s+\\/(.*?)\\/([a-z]*)\\s+${QUOTED}$`).exec(rest)
+        if (!match) {
+          report.error(
+            keyword === 'accept'
+              ? 'accept lines look like: - accept "Mentions tokens" /token|chunk/i'
+              : 'reject lines look like: - reject "Not about memory" /never seen/i "It has seen it often. What does it get instead?"',
+            at,
+          )
+          return
+        }
+        let [, label = '', source = '', flags = '', feedback = ''] = match
+        stats.patterns++
+        let problem = checkPattern(source, flags)
+        if (problem) {
+          report.error(`${keyword} “${unquote(label)}”: /${source}/ ${problem}`, at)
+          return
+        }
+        let pattern = flags ? { source, flags } : { source }
+        if (keyword === 'accept') {
+          let existing = accept.find((check) => check.label === unquote(label))
+          if (existing) existing.patterns.push(pattern)
+          else accept.push({ label: unquote(label), patterns: [pattern] })
+        } else {
+          let existing = reject.find((check) => check.label === unquote(label))
+          if (existing) existing.patterns.push(pattern)
+          else reject.push({ label: unquote(label), patterns: [pattern], feedback: unquote(feedback) })
+        }
+        return
+      }
+      case 'choice': {
+        let match = new RegExp(`^${QUOTED}(\\s+correct)?(?:\\s+${QUOTED})?$`).exec(rest)
+        if (!match || !unquote(match[1]!).trim()) {
+          report.error('choice lines look like: - choice "It sees chunks, not letters" correct "Why it’s right (optional)"', at)
+          return
+        }
+        let label = unquote(match[1]!).trim()
+        if (choices.some((choice) => choice.label === label)) report.error(`choice “${label}” is listed twice`, at)
+        choices.push({
+          key: String.fromCharCode(97 + choices.length),
+          label,
+          correct: Boolean(match[2]),
+          explanation: match[3] ? unquote(match[3]) : '',
+        })
+        return
+      }
+      case 'placeholder':
+      case 'hint':
+      case 'explain': {
+        let text = quoted(rest)
+        if (text === undefined) {
+          report.error(`${keyword} lines look like: - ${keyword} "…"`, at)
+          return
+        }
+        if (keyword === 'placeholder') placeholder = unquote(text)
+        else if (keyword === 'hint') hint = unquote(text)
+        else explain = unquote(text)
+        return
+      }
+      default:
+        report.error(`unknown ask line "- ${keyword}" (use accept, reject, choice, hint, explain or placeholder)`, at)
+    }
+  })
+
+  if (!question.length) report.error(':::ask needs the question before its - lines', line)
+  let correct = choices.filter((choice) => choice.correct).length
+  if (!accept.length && !correct) report.error(':::ask needs an accept line or a correct choice', line)
+  if (choices.length === 1 && !accept.length) report.error(':::ask needs at least two choices (or an accept line)', line)
+  if (choices.length > MAX_CHOICES) report.error(`:::ask has ${choices.length} choices: ${MAX_CHOICES} at most`, line)
+  if (correct > 1 && !multiple) report.error(`:::ask has ${correct} right choices: add multiple to allow several`, line)
+  if (multiple && accept.length) report.error(':::ask multiple grades choices only: drop the accept lines or multiple', line)
+  if (!id) return undefined
+  let block: AskBlock = {
+    type: 'ask',
+    id,
+    xp: blockXp(attrs.number('xp', 10)!, report, line),
+    gate: attrs.flag('gate', true),
+    question,
+    accept,
+    reject,
+    choices,
+  }
+  if (multiple) block.multiple = true
+  if (placeholder) block.placeholder = placeholder
+  if (hint) block.hint = hint
+  if (explain) block.explain = explain
   return block
 }
 

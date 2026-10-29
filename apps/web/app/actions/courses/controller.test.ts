@@ -7,7 +7,7 @@ import type { Catalog } from '../../content/catalog.ts'
 import { loadCatalog } from '../../content/store.ts'
 import type { CourseManifest } from '../../content/types.ts'
 import { routes } from '../../routes.ts'
-import { completeLesson, fetchAs, runAt, signIn, testDb } from '../../test/auth.ts'
+import { answerAsk, completeLesson, fetchAs, runAt, signIn, testDb } from '../../test/auth.ts'
 import { catalogHref, filterCourses as filter, parseCatalogQuery, resultLabel } from './catalog.ts'
 
 let cookie: string | null = null
@@ -71,7 +71,7 @@ describe('catalog and course pages', () => {
           cookie = await runAt(cookie, { course, lesson, exercise: prompt[0], prompt: prompt[1] }, [100])
           fields[`prompt.${prompt[0]}`] = prompt[1]
         }
-        if (quiz) fields[`quiz.${quiz[0]}`] = quiz[1]
+        if (quiz) ({ cookie } = await answerAsk(cookie, course, lesson, quiz[0], quiz[1]))
         let response = await completeLesson(cookie, course, lesson, fields)
         assert.equal(response.status, 303, lesson)
       }

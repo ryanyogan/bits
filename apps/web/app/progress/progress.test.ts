@@ -5,7 +5,7 @@ import { after, describe, it } from 'remix/test'
 import { disposePlatform } from '#platform'
 
 import { routes } from '../routes.ts'
-import { completeLesson, fetchAs, form, requestCode, runAt, sessionCookieFrom, signIn, testDb } from '../test/auth.ts'
+import { answerAsk, completeLesson, fetchAs, form, requestCode, runAt, sessionCookieFrom, signIn, testDb } from '../test/auth.ts'
 import { addDays, currentStreak, localDay } from './days.ts'
 import { levelFor } from './levels.ts'
 
@@ -80,13 +80,42 @@ describe('progress', () => {
     assert.match(lesson, /aria-label="40 neurons"|>40</)
   })
 
-  it('grades quizzes on the server: a right answer earns its xp, a wrong one only the lesson', async () => {
-    let { user: right, cookie: rightCookie } = await signIn('quiz-right@example.com')
-    await completeLesson(rightCookie, COURSE, 'what-is-a-token', { 'quiz.common-words': 'a' })
-    assert.equal(await xpOf(right.id), 30)
-    let { user: wrong, cookie: wrongCookie } = await signIn('quiz-wrong@example.com')
-    await completeLesson(wrongCookie, COURSE, 'what-is-a-token', { 'quiz.common-words': ['a', 'b'] })
-    assert.equal(await xpOf(wrong.id), 20)
+  it('a quick check gates the lesson, and only a journalled right answer opens it (decision 052)', async () => {
+    let { user, cookie } = await signIn('quiz-right@example.com')
+    // Posting "correct" with the save, in any field, earns nothing.
+    let forged = await completeLesson(cookie, COURSE, 'what-is-a-token', {
+      'quiz.common-words': 'a',
+      'answer.common-words': 'a',
+      'asks.common-words': 'true',
+    })
+    assert.equal(forged.status, 422)
+    assert.match(await forged.text(), /Not saved: answer the quick check first\./)
+    assert.equal(await xpOf(user.id), 0)
+
+    // A wrong answer is journalled, earns nothing and keeps the gate shut.
+    let wrong = await answerAsk(cookie, COURSE, 'what-is-a-token', 'common-words', 'b')
+    assert.equal(wrong.verdict.correct, false)
+    assert.equal(wrong.verdict.xp, 0)
+    assert.equal((await completeLesson(cookie, COURSE, 'what-is-a-token')).status, 422)
+
+    // A right one (its letter, or its text) earns the ask's share at once, once.
+    let right = await answerAsk(cookie, COURSE, 'what-is-a-token', 'common-words', 'a')
+    assert.deepEqual([right.verdict.correct, right.verdict.xp, right.verdict.saved], [true, 10, true])
+    assert.equal(await xpOf(user.id), 10)
+    let again = await answerAsk(cookie, COURSE, 'what-is-a-token', 'common-words', '“ the”')
+    assert.deepEqual([again.verdict.correct, again.verdict.xp], [true, 0])
+    assert.equal(
+      await count('select count(*) as n from ask_attempts where user_id = ? and ask_id = ?', user.id, 'common-words'),
+      3,
+    )
+
+    // Now the save goes through and earns the rest of the lesson. The next page
+    // shows the first lesson's badge (a badge beats the plain neurons notice).
+    let saved = await completeLesson(cookie, COURSE, 'what-is-a-token')
+    assert.equal(saved.status, 303)
+    assert.equal(await xpOf(user.id), 30)
+    let next = await (await fetchAs(cookie, saved.headers.get('Location')!)).text()
+    assert.match(next, /Badge earned: First token/)
   })
 
   it('signed out: progress is kept in the session and merged at sign-in', async () => {

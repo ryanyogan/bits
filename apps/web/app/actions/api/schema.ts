@@ -7,6 +7,17 @@ import { MAX_PROMPT_LENGTH } from '../../progress/check.ts'
 
 const slug = s.string().pipe(checks.minLength(1), checks.maxLength(120))
 
+/**
+ * POST /api/ask: course, lesson and ask ids, plus `mode` for the native
+ * form's redirect. The answer itself is `answer.<ask>` (read separately).
+ */
+export const askForm = f.object({
+  course: f.field(slug),
+  lesson: f.field(slug),
+  ask: f.field(slug),
+  mode: f.field(s.defaulted(s.enum_(['read', 'watch', 'terminal'] as const), 'read')),
+})
+
 /** POST /api/run: what the PromptComposer sends (as FormData). */
 export const runForm = f.object({
   course: f.field(slug),

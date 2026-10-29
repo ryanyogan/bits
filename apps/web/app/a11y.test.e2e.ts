@@ -137,17 +137,32 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     })
   }
 
-  it('quiz after answering, and the composer after a run', async (t) => {
+  it('quick check wrong and right (decision 052), and the composer after a run', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.goto(lesson('tokens-and-temperature', 'what-is-a-token'))
     await settled(page)
-    let quiz = page.locator('form:has(input[type="radio"])').first()
-    // The radio is visually hidden under its drawn mark: check it the way a keyboard would.
-    await quiz.locator('input[type="radio"]').nth(1).check({ force: true })
-    await quiz.locator('button[type="submit"]').click()
-    await page.getByText('Not quite').first().waitFor()
+    // Unanswered is the public "tokenizer + quiz" page above.
+    let ask = page.locator('form[id^="ask-"]').first()
+    await ask.getByRole('button', { name: /Unbelievably/ }).click()
+    await ask.getByRole('button', { name: /Check/ }).click()
+    let answers = ask.getByRole('list', { name: 'Your answers' })
+    await answers.locator('[data-correct="false"]').waitFor()
     await settled(page)
-    await expectClean(page, 'quiz answered')
+    await expectClean(page, 'quick check wrong')
+    await ask.getByRole('textbox').fill('a')
+    await ask.getByRole('textbox').press('Enter')
+    await answers.locator('[data-correct="true"]').waitFor()
+    await settled(page)
+    await expectClean(page, 'quick check right')
+
+    // Terminal mode: the quick check is a log entry with its options.
+    await page.goto(lesson('first-agent-loop', 'agents-are-loops', 'terminal'))
+    await settled(page)
+    await page.getByRole('button', { name: /Translate every product/ }).click()
+    await page.locator('form[id^="ask-"]').getByRole('textbox').press('Enter')
+    await page.getByText('✗ not quite').waitFor()
+    await settled(page)
+    await expectClean(page, 'terminal quick check wrong')
 
     await page.goto(lesson('what-is-an-llm', 'say-hi-to-claude'))
     await settled(page)

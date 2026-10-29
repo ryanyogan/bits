@@ -13,11 +13,10 @@ import { routes } from '../../../routes.ts'
 import { ogImage } from '../../../ui/og.ts'
 import { Layout } from '../../../ui/layout.tsx'
 import { exercisesOf, hasCode, hasVideo } from './content.ts'
-import { lessonAward, type LessonMode, type LessonView } from './lesson-view.ts'
+import { lessonAward, openAsks, type LessonMode, type LessonView } from './lesson-view.ts'
 import { LessonComplete } from './public/lesson-complete.tsx'
 import { PASSED_ROOT } from './public/lesson-state.ts'
 import { LessonXp } from './public/lesson-xp.tsx'
-import { fieldNames } from './ui/exercise.ts'
 import { OutlineDisclosure, OutlineNav } from './ui/outline.tsx'
 import { ReadMode } from './ui/read-mode.tsx'
 import { TerminalMode } from './ui/terminal-mode.tsx'
@@ -43,7 +42,9 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
     )
     let done = view.lessons.filter((l) => l.state === 'done').length
     let award = lesson.state === 'done' ? 0 : lessonAward(view)
-    let gated = exercisesOf(content).length > 0
+    // "Complete lesson" waits for the prompt exercises and the quick checks
+    // not yet answered (decision 052; an ask with gate=false never waits).
+    let gated = exercisesOf(content).length > 0 || openAsks(view).length > 0
     let modeItems = modes.map((m) => ({ label: modeLabels[m], href: view.href.mode(m), current: m === mode }))
     let progressLabel = `Lesson ${view.index + 1} of ${view.total}, ${done} complete`
 
@@ -129,11 +130,9 @@ function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean; issues?
   return () => {
     let { view, gated, issues, width } = handle.props
     let { prev, next } = view
-    // Quiz answers live in the URL (GET forms); carry them into the save.
-    let fields = Object.entries(view.answers).flatMap(([quiz, keys]) =>
-      keys.map((key): [string, string] => [fieldNames.quiz(quiz), key]),
-    )
-    if (view.mode !== 'read') fields.push(['mode', view.mode])
+    // Prompts join the save with form=; asks are read from the journal (decision 052).
+    let fields: [string, string][] = view.mode !== 'read' ? [['mode', view.mode]] : []
+    let asks = openAsks(view)
     return (
       <nav aria-label="Lesson navigation" mix={footerBand}>
         <Crosshair placement="top-start" mix={phoneHidden} />
@@ -148,6 +147,8 @@ function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean; issues?
           ) : null}
           <LessonComplete
             gated={gated}
+            prompts={exercisesOf(view.content).length > 0}
+            asks={asks}
             form={view.completeForm ? { ...view.completeForm, fields } : undefined}
             issues={issues}
             passed={view.lesson.state === 'done'}

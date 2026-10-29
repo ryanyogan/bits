@@ -4,7 +4,7 @@ import { after, before, describe, it } from 'remix/test'
 
 import { disposePlatform } from '#platform'
 
-import { fetchAs, form, signIn, testDb } from '../../test/auth.ts'
+import { answerAsk, fetchAs, form, signIn, testDb } from '../../test/auth.ts'
 import { routes } from '../../routes.ts'
 
 after(() => disposePlatform())
@@ -105,13 +105,18 @@ describe('/settings', () => {
     assert.match(passkey.headers.get('Location')!, /saved=passkey-needs-js/)
   })
 
-  it('downloads a JSON export of the real account', async () => {
+  it('downloads a JSON export of the real account, quick-check answers included', async () => {
+    await answerAsk(cookie, 'tokens-and-temperature', 'what-is-a-token', 'common-words', 'b')
     let response = await fetchAs(cookie, routes.settings.export.href())
     assert.equal(response.status, 200)
     assert.match(response.headers.get('Content-Disposition') ?? '', /attachment; filename="bits-jamie-p\.json"/)
     let body = await response.json()
     assert.equal(body.account.handle, 'jamie-p')
     assert.equal(body.account.email, 'jamie@example.com')
+    assert.deepEqual(
+      body.answers.map((row: { ask: string; answer: string; correct: boolean }) => [row.ask, row.answer, row.correct]),
+      [['common-words', 'b', false]],
+    )
   })
 
   it('signs out everywhere: every session of the user stops working', async () => {

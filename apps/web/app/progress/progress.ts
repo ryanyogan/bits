@@ -7,6 +7,8 @@
 // startUserSession replays it through the same checks into the account.
 import {
   awardBadges,
+  claimVisitorAsks,
+  listRightAsks,
   findUserById,
   listCompletedLessons,
   listPassedExercises,
@@ -19,7 +21,7 @@ import {
 import type { RequestContext } from 'remix/router'
 import { Session } from 'remix/session'
 
-import { exercisesOf } from '../actions/courses/lesson/content.ts'
+import { asksOf, exercisesOf, type AskBlock } from '../actions/courses/lesson/content.ts'
 import { currentUser } from '../auth/identity.ts'
 import { completedLoadedWith } from '../auth/session.ts'
 import type { Catalog } from '../content/catalog.ts'
@@ -27,7 +29,7 @@ import { contentBucket, getCatalog } from '../content/request.ts'
 import { loadCatalog } from '../content/store.ts'
 import type { Completed } from '../content/types.ts'
 import { getDatabase } from '../middleware/database.ts'
-import { claimRuns, journalledTemperatures } from '../runs/run.ts'
+import { claimRuns, journalledTemperatures, runOwner, VISITOR_KEY } from '../runs/run.ts'
 import { badgeDefinitions, earnedBadgeIds, type BadgeDefinition } from './badges.ts'
 import { checkLesson, type CheckedLesson, type LessonSubmission } from './check.ts'
 import { addDays, localDay } from './days.ts'
@@ -54,8 +56,11 @@ function readAnonymous(session: Session | undefined): AnonymousProgress {
   let progress: AnonymousProgress = {}
   for (let [key, lesson] of Object.entries(value as Record<string, Partial<AnonymousLesson>>)) {
     if (typeof lesson?.at !== 'number' || !lesson.submission || typeof lesson.submission !== 'object') continue
-    let { prompts = {}, ran = {}, quizzes = {} } = lesson.submission
-    progress[key] = { at: lesson.at, submission: { prompts, ran, quizzes } }
+    let { prompts = {}, ran = {}, quizzes, asks } = lesson.submission
+    let submission: LessonSubmission = { prompts, ran }
+    if (asks && typeof asks === 'object') submission.asks = asks
+    if (quizzes && typeof quizzes === 'object') submission.quizzes = quizzes
+    progress[key] = { at: lesson.at, submission }
   }
   return progress
 }
@@ -74,7 +79,8 @@ export async function loadCompleted(context: ProgressContext): Promise<Completed
 }
 
 export type CompletionResult =
-  | { ok: true; checked: CheckedLesson; badges: BadgeDefinition[] }
+  /** `newXp`: neurons this save added (signed in: new ledger rows; signed out: the lesson's awards, held until sign-in). */
+  | { ok: true; checked: CheckedLesson; badges: BadgeDefinition[]; newXp: number }
   | { ok: false; checked: CheckedLesson }
 
 /**
@@ -90,33 +96,68 @@ export async function completeLesson(
   let catalog = await getCatalog(context)
   let content = await catalog.lessonContent(courseSlug, lessonSlug)
   if (!content) return undefined
-  // "Ran at 0 and 1.0" counts journalled runs (/api/run), never form fields.
-  for (let block of exercisesOf(content)) {
-    submission.ran[block.id] = await journalledTemperatures(context, {
-      courseId: courseSlug,
-      lessonSlug,
-      exerciseId: block.id,
-    })
-  }
+  // "Ran at 0 and 1.0" counts journalled runs (/api/run), and an ask counts
+  // when the journal has a right answer (/api/ask); never form fields.
+  let [ran, rightAsks] = await Promise.all([
+    Promise.all(
+      exercisesOf(content).map(
+        async (block) =>
+          [block.id, await journalledTemperatures(context, { courseId: courseSlug, lessonSlug, exerciseId: block.id })] as const,
+      ),
+    ),
+    asksOf(content).length ? journalledRightAsks(context, { courseId: courseSlug, lessonSlug }) : Promise.resolve([]),
+  ])
+  for (let [id, temperatures] of ran) submission.ran[id] = temperatures
+  submission.asks = Object.fromEntries(asksOf(content).map((ask) => [ask.id, rightAsks.includes(ask.id)]))
   let checked = checkLesson(courseSlug, lessonSlug, content, submission)
   if (!checked.ok) return { ok: false, checked }
 
   let user = currentUser(context)
   if (user) {
-    let badges = await recordForUser(getDatabase(context), catalog, user, courseSlug, lessonSlug, checked, Date.now())
-    return { ok: true, checked, badges }
+    let { badges, newXp } = await recordForUser(getDatabase(context), catalog, user, courseSlug, lessonSlug, checked, Date.now())
+    return { ok: true, checked, badges, newXp }
   }
 
   let session = context.get(Session)
+  let key = `${courseSlug}/${lessonSlug}`
+  let anonymous = readAnonymous(session)
+  // A quick check announced its own neurons when it was answered (/api/ask).
+  let newXp = anonymous[key] ? 0 : checked.awards.filter((award) => award.kind !== 'quiz').reduce((sum, award) => sum + award.xp, 0)
   if (session) {
-    let anonymous = readAnonymous(session)
-    anonymous[`${courseSlug}/${lessonSlug}`] = { at: Date.now(), submission }
+    anonymous[key] = { at: Date.now(), submission }
     let kept = Object.entries(anonymous)
       .sort((a, b) => b[1].at - a[1].at)
       .slice(0, MAX_ANONYMOUS_LESSONS)
     session.set(PROGRESS_KEY, Object.fromEntries(kept))
   }
-  return { ok: true, checked, badges: [] }
+  return { ok: true, checked, badges: [], newXp }
+}
+
+/** Ids of the lesson's asks the viewer has a right answer for in the journal (/api/ask). */
+async function journalledRightAsks(context: ProgressContext, lesson: { courseId: string; lessonSlug: string }): Promise<string[]> {
+  let owner = runOwner(context)
+  return owner ? listRightAsks(getDatabase(context), owner, lesson) : []
+}
+
+/** At sign-in: the visitor's answers move into the account, like their runs. */
+async function claimAnswers(db: D1DataTableDatabase, session: Session, userId: string): Promise<void> {
+  let visitor = session.get(VISITOR_KEY)
+  if (typeof visitor === 'string') await claimVisitorAsks(db, visitor, userId)
+}
+
+/**
+ * A signed-out visitor answered an ask right after saving its lesson: the
+ * saved lesson now counts it, so the merge at sign-in awards its xp
+ * (decision 052). Lessons saved before asks existed record it as a quiz.
+ */
+export function recordLateAnswer(session: Session | undefined, courseSlug: string, lessonSlug: string, ask: AskBlock): void {
+  if (!session) return
+  let anonymous = readAnonymous(session)
+  let lesson = anonymous[`${courseSlug}/${lessonSlug}`]
+  if (!lesson) return
+  if (lesson.submission.asks) lesson.submission.asks[ask.id] = true
+  else (lesson.submission.quizzes ??= {})[ask.id] = ask.choices.filter((choice) => choice.correct).map((choice) => choice.key)
+  session.set(PROGRESS_KEY, anonymous)
 }
 
 async function recordForUser(
@@ -127,9 +168,9 @@ async function recordForUser(
   lessonSlug: string,
   checked: CheckedLesson,
   at: number,
-): Promise<BadgeDefinition[]> {
-  await record(db, user, courseSlug, lessonSlug, checked, at)
-  return awardNewBadges(db, catalog, user.id, Date.now())
+): Promise<{ badges: BadgeDefinition[]; newXp: number }> {
+  let { newXp } = await record(db, user, courseSlug, lessonSlug, checked, at)
+  return { badges: await awardNewBadges(db, catalog, user.id, Date.now()), newXp }
 }
 
 /** One batch: progress, journal, once-only awards, activity, streak. */
@@ -180,7 +221,7 @@ async function awardNewBadges(db: D1DataTableDatabase, catalog: Catalog, userId:
  * from the journal when the lesson was completed (the session is server-side).
  */
 export async function mergeAnonymousProgress(db: D1DataTableDatabase, session: Session, user: User): Promise<void> {
-  await claimRuns(db, session, user.id)
+  await Promise.all([claimRuns(db, session, user.id), claimAnswers(db, session, user.id)])
   let anonymous = readAnonymous(session)
   let lessons = Object.entries(anonymous).sort((a, b) => a[1].at - b[1].at)
   if (lessons.length === 0) return

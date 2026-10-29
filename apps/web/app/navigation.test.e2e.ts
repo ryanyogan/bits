@@ -200,15 +200,51 @@ describe('client navigation', () => {
     assert.equal(await page.locator('[aria-busy="true"]').count(), 0, 'pending cleared')
   })
 
-  it('keeps focus on the quiz Check key and announces the explanation', async (t) => {
+  it('answers a quick check in place through /api/ask, then opens the save (decision 052)', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.goto(firstLesson)
-    let quiz = page.locator('form[data-rmx-reset-focus]:has(fieldset)').first()
-    await quiz.locator('label').first().click()
-    await quiz.getByRole('button', { name: 'Check' }).click()
-    await quiz.getByRole('button', { name: 'Check again' }).waitFor()
-    assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Check again')
-    assert.notEqual((await quiz.getByRole('status').textContent())?.trim(), '')
+    await page.waitForLoadState('networkidle')
+    let ask = page.locator('form[id^="ask-"]').first()
+    let save = page.getByRole('navigation', { name: 'Lesson navigation' })
+    await save.getByText('Answer the quick check to finish').waitFor()
+    let posts: string[] = []
+    page.on('request', (request) => {
+      if (request.method() === 'POST') posts.push(new URL(request.url()).pathname)
+    })
+    let field = ask.getByRole('textbox')
+    await field.fill('b')
+    await field.press('Enter')
+    let answers = ask.getByRole('list', { name: 'Your answers' })
+    await answers.locator('[data-correct="false"]').waitFor()
+    // No navigation: the verdict joins the log, focus stays in the field, the gate stays shut.
+    assert.equal(new URL(page.url()).pathname, firstLesson)
+    assert.equal(await page.evaluate(() => document.activeElement?.tagName), 'TEXTAREA')
+    assert.equal(await field.inputValue(), 'b', 'a wrong answer stays to edit')
+    assert.ok(await save.getByText('Answer the quick check to finish').isVisible())
+
+    await field.fill('a')
+    await field.press('Enter')
+    await answers.locator('[data-correct="true"]').waitFor()
+    await save.getByRole('button', { name: /^Next:/ }).waitFor()
+    assert.deepEqual(posts, ['/api/ask', '/api/ask'])
+  })
+
+  it('answers a quick check in Terminal mode: a picked option, a verdict in the log', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    let href = routes.courses.lesson.index.href(
+      { course: 'first-agent-loop', lesson: 'agents-are-loops' },
+      { searchParams: { mode: 'terminal' } },
+    )
+    await page.goto(href)
+    await page.waitForLoadState('networkidle')
+    await page.getByRole('button', { name: /Find why last night/ }).click()
+    let field = page.locator('form[id^="ask-"]').getByRole('textbox')
+    assert.match(await field.inputValue(), /Find why last night/)
+    await field.press('Enter')
+    await page.getByText(/✓ right · \+10 neurons/).waitFor()
+    assert.equal(new URL(page.url()).search, '?mode=terminal')
+    // The canned "Good thinking" reply is gone: answers get a real verdict only.
+    assert.equal(await page.getByText(/Good thinking/).count(), 0)
   })
 
   it('opens the run window on the first run without moving the composer (decision 025)', async (t) => {

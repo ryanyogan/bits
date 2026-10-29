@@ -99,22 +99,23 @@ describe('scroll restoration', () => {
     assert.ok(await marked(page), 'navigated on the client')
   })
 
-  it('keeps the quiz where it is when a check re-renders it', async (t) => {
+  it('keeps the quick check where it is when an answer is checked', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.setViewportSize({ width: 1280, height: 720 })
     await page.goto(firstLesson)
     await page.waitForLoadState('networkidle')
-    let quiz = page.locator('form[data-rmx-reset-focus]:has(fieldset)').first()
-    await quiz.evaluate((form) => form.scrollIntoView({ block: 'center' }))
-    let before = await quiz.evaluate((form) => form.getBoundingClientRect().top)
-    let y = await scrollY(page)
-    assert.ok(y > 0, 'the quiz is below the fold')
+    let ask = page.locator('form[id^="ask-"]').first()
 
-    await quiz.locator('label').first().click()
-    await quiz.getByRole('button', { name: 'Check' }).click()
-    await quiz.getByRole('button', { name: 'Check again' }).waitFor()
-    let afterTop = await quiz.evaluate((form) => form.getBoundingClientRect().top)
-    assert.ok(Math.abs(afterTop - before) <= 1, `the quiz stays put (moved ${afterTop - before}px)`)
+    // Pick first (focusing the field may scroll it into view), then measure.
+    await ask.getByRole('button', { name: /Unbelievably/ }).click()
+    await ask.evaluate((form) => form.scrollIntoView({ block: 'center' }))
+    let before = await ask.evaluate((form) => form.getBoundingClientRect().top)
+    let y = await scrollY(page)
+    assert.ok(y > 0, 'the quick check is below the fold')
+    await ask.getByRole('button', { name: /Check/ }).click()
+    await ask.locator('[data-correct="false"]').waitFor()
+    let afterTop = await ask.evaluate((form) => form.getBoundingClientRect().top)
+    assert.ok(Math.abs(afterTop - before) <= 1, `the quick check stays put (moved ${afterTop - before}px)`)
     assert.ok(Math.abs((await scrollY(page)) - y) <= 1, 'no jump to the top or the anchor')
   })
 

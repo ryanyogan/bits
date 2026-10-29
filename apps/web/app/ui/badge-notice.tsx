@@ -16,15 +16,22 @@ const BADGE_TOAST_MS = 8000
 export function BadgeNotice(handle: Handle<{ reward: RewardNotice }>) {
   return () => {
     let { reward } = handle.props
+    let badge = Boolean(reward.glyph && reward.color)
     return (
-      <div data-rmx-key={`reward-${reward.id}`} data-badge-notice="" mix={contentsStyle}>
+      <div
+        data-rmx-key={`reward-${reward.id}`}
+        data-badge-notice={badge ? '' : undefined}
+        data-saved-notice={badge ? undefined : ''}
+        mix={contentsStyle}
+      >
         <RewardRegion
           dismissAfter={BADGE_TOAST_MS}
           initial={{
             xp: 0,
             title: reward.title,
             message: reward.message,
-            badge: { name: reward.title, glyph: reward.glyph, color: reward.color },
+            // A plain "+N neurons" notice (a saved lesson, decision 052) keeps the check icon.
+            badge: reward.glyph && reward.color ? { name: reward.title, glyph: reward.glyph, color: reward.color } : undefined,
             next: reward.next,
           }}
         />

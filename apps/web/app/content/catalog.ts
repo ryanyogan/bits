@@ -2,7 +2,7 @@
 // demand. Built per request by app/content/store.ts from the published
 // manifests (or from one draft build for the author preview); lesson bodies
 // load lazily through `lessonContent`.
-import type { LessonContent } from '../actions/courses/lesson/content.ts'
+import { upgradeLessonContent, type LessonContent } from '../actions/courses/lesson/content.ts'
 import {
   NO_PROGRESS,
   type Completed,
@@ -108,6 +108,8 @@ export class Catalog {
   async lessonContent(courseSlug: string, lessonSlug: string): Promise<LessonContent | undefined> {
     let course = this.#bySlug.get(courseSlug)
     if (!course || !course.modules.some((m) => m.lessons.some((l) => l.slug === lessonSlug))) return undefined
-    return this.#load(course, lessonSlug)
+    // Builds before decision 052 stored `quiz` blocks; read them as asks.
+    let content = await this.#load(course, lessonSlug)
+    return content && upgradeLessonContent(content)
   }
 }

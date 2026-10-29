@@ -395,7 +395,52 @@ describe('content build', () => {
       '05-rabbithole.md:12 → a rabbit hole needs its author: by="3Blue1Brown"',
       '05-rabbithole.md:13 → a rabbit hole needs a title',
       '05-rabbithole.md:14 → unknown rabbit hole kind "podcast" (use video or read)',
+      '06-ask.md:10 → :::ask needs an accept line or a correct choice',
+      '06-ask.md:16 → :::ask needs an accept line or a correct choice',
+      '06-ask.md:18 → accept “Repeats”: /a+/ uses repetition (*, + or {n}), which isn’t allowed in checks; list the alternatives instead, like /words?|short/',
+      '06-ask.md:19 → reject lines look like: - reject "Not about memory" /never seen/i "It has seen it often. What does it get instead?"',
+      '06-ask.md:20 → unknown ask line "- banana" (use accept, reject, choice, hint, explain or placeholder)',
+      '06-ask.md:23 → :::ask has 2 right choices: add multiple to allow several',
     ])
+  })
+
+  it('builds quick checks: typed, picked, and a legacy quiz as an ask (decision 052)', async () => {
+    let dir = path.join(coursesDir, '../fixtures/toys')
+    let result = buildCourse(await readCourseFolder(dir), { folder: 'toys' })
+    let asks = result.lessons!.get('ask')!.blocks.filter((block) => block.type === 'ask')
+    assert.deepEqual(
+      asks.map((ask) => ask.type === 'ask' && [ask.id, ask.xp, ask.gate, ask.multiple ?? false]),
+      [
+        ['typed', 10, true, false],
+        ['picked', 10, false, false],
+        ['legacy', 10, true, true],
+      ],
+    )
+    let [typed, picked, legacy] = asks
+    assert.ok(typed?.type === 'ask')
+    assert.equal(typed.placeholder, 'In a sentence')
+    assert.deepEqual(typed.accept, [{ label: 'Mentions tokens', patterns: [{ source: 'token|chunk|piece', flags: 'i' }] }])
+    assert.deepEqual(typed.reject, [
+      {
+        label: 'Blames memory',
+        patterns: [{ source: 'memor', flags: 'i' }],
+        feedback: 'It isn’t a memory problem. What does it see instead of letters?',
+      },
+    ])
+    assert.equal(typed.hint, 'Think about what the model reads.')
+    assert.ok(picked?.type === 'ask')
+    assert.deepEqual(
+      picked.choices.map((choice) => [choice.key, choice.correct]),
+      [
+        ['a', true],
+        ['b', false],
+        ['c', false],
+      ],
+    )
+    assert.equal(picked.choices[1]?.explanation, 'Rare words split into pieces.')
+    assert.ok(legacy?.type === 'ask')
+    assert.deepEqual(legacy.choices.filter((choice) => choice.correct).map((choice) => choice.key), ['a', 'b'])
+    assert.deepEqual(legacy.accept, [])
   })
 
   it('checks the toy bodies: missing lines, javascript: links, weights that add up past 1', () => {

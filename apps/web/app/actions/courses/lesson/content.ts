@@ -81,6 +81,11 @@ export interface CodeBlock {
   run?: { cmd: string; lines: TerminalPart[][]; ask?: string; summary?: string }
 }
 
+/**
+ * A `:::quiz` as builds before decision 052 stored it. The build now
+ * compiles `:::quiz` into an `AskBlock` with only choices;
+ * `upgradeLessonContent` maps stored ones the same way when they're read.
+ */
 export interface QuizBlock {
   type: 'quiz'
   id: string
@@ -88,6 +93,44 @@ export interface QuizBlock {
   multiple?: boolean
   question: Paragraph
   options: { key: string; label: string; correct: boolean; explanation: string }[]
+}
+
+/** One option of an ask: offered as a chip that fills the answer field. */
+export interface AskChoice {
+  /** "a", "b", …: a typed letter counts as picking it. */
+  key: string
+  label: string
+  correct: boolean
+  /** Shown once it is picked. */
+  explanation: string
+}
+
+/**
+ * `:::ask` (decision 052): a question the learner answers by typing in the
+ * prompt window, graded on the server. It passes when the answer picks the
+ * right choice(s), or when every `accept` check matches and no `reject`
+ * does. Its patterns and explanations never reach the browser: `askProps`
+ * sends the question, placeholder, hint and choice labels only.
+ */
+export interface AskBlock {
+  type: 'ask'
+  id: string
+  xp: number
+  /** Gates "Complete lesson" (default true; `gate=false` makes it optional). */
+  gate: boolean
+  question: Paragraph
+  placeholder?: string
+  /** Every one must match the answer. */
+  accept: PromptCheckSource[]
+  /** None may match; each says why the answer misses. */
+  reject: (PromptCheckSource & { feedback: string })[]
+  /** Shown after a wrong answer that no choice or reject explains. */
+  hint?: string
+  choices: AskChoice[]
+  /** Several choices are right; the answer must name all of them. */
+  multiple?: boolean
+  /** Shown after a right answer (picked choices' explanations come first). */
+  explain?: string
 }
 
 /** `:::odds`: next-token probabilities with a temperature slider. */
@@ -168,7 +211,7 @@ export interface RabbitHoleBlock {
 
 export type ToyBlock = NextTokenBlock | TrainingBlock | AttentionBlock | CompareBlock | RabbitHoleBlock
 
-export type Block = MarkdownBlock | PromptBlock | CodeBlock | QuizBlock | OddsBlock | TokenizerBlock | TerminalBlock | ToyBlock
+export type Block = MarkdownBlock | PromptBlock | CodeBlock | AskBlock | QuizBlock | OddsBlock | TokenizerBlock | TerminalBlock | ToyBlock
 
 export interface LessonVideo {
   /** The uploaded MP4 (/media/videos/:id.mp4), linked by the build once it is ready (decision 029). */
@@ -188,8 +231,12 @@ export interface LessonContent {
   xp: number
   video?: LessonVideo
   blocks: Block[]
-  /** Canned replies for the Terminal-mode input until the tutor model is wired up. */
-  replies?: { hint: string; fallback: string }
+  /**
+   * Terminal mode's input when the lesson has nothing to answer: `hint` is
+   * the authored reply to “hint”. A `fallback` stored by older builds is
+   * never shown: a canned reply to a typed answer faked a result (052).
+   */
+  replies?: { hint: string; fallback?: string }
 }
 
 /**
@@ -203,6 +250,41 @@ export function hasVideo(content: LessonContent): content is LessonContent & { v
 /** Lesson exercises that gate "lesson complete". */
 export function exercisesOf(content: LessonContent): PromptBlock[] {
   return content.blocks.filter((block): block is PromptBlock => block.type === 'prompt')
+}
+
+/** The lesson's asks (stored `:::quiz` blocks included, upgraded). */
+export function asksOf(content: LessonContent): AskBlock[] {
+  return upgradeLessonContent(content).blocks.filter((block): block is AskBlock => block.type === 'ask')
+}
+
+/** Asks that must be answered before "Complete lesson" opens. */
+export function gatingAsksOf(content: LessonContent): AskBlock[] {
+  return asksOf(content).filter((ask) => ask.gate)
+}
+
+/** A stored `:::quiz` as the ask the build now makes of it: choices only. */
+export function quizAsAsk(block: QuizBlock): AskBlock {
+  let ask: AskBlock = {
+    type: 'ask',
+    id: block.id,
+    xp: block.xp,
+    gate: true,
+    question: block.question,
+    accept: [],
+    reject: [],
+    choices: block.options.map((option) => ({ ...option })),
+  }
+  if (block.multiple) ask.multiple = true
+  return ask
+}
+
+/**
+ * Content as this code reads it: `quiz` blocks stored by builds before
+ * decision 052 become asks. Returns the same object when there are none.
+ */
+export function upgradeLessonContent(content: LessonContent): LessonContent {
+  if (!content.blocks.some((block) => block.type === 'quiz')) return content
+  return { ...content, blocks: content.blocks.map((block) => (block.type === 'quiz' ? quizAsAsk(block) : block)) }
 }
 
 export function hasCode(content: LessonContent): boolean {

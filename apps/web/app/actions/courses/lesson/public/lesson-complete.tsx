@@ -3,11 +3,15 @@ import { clientEntry, css, on } from 'remix/component'
 import { Keycap } from '@bits/ui/keycap'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
 
-import { whenPassed } from './lesson-state.ts'
+import { onAskAnswered, whenPassed } from './lesson-state.ts'
 
 export interface LessonCompleteProps {
-  /** The lesson has exercises whose checks must pass first. */
+  /** The lesson has exercises or quick checks that must pass first. */
   gated: boolean
+  /** The lesson has prompt exercises (their `bits:reward` opens one gate). */
+  prompts?: boolean
+  /** Ids of the quick checks still to answer (each `bits:gate` opens one). */
+  asks?: string[]
   /** Already completed (saved on the server). */
   passed: boolean
   /** Where finishing leads: the next lesson, or back to the course. */
@@ -16,7 +20,7 @@ export interface LessonCompleteProps {
   /**
    * The native form that saves the lesson (absent in the author preview).
    * Exercises add their prompt and runs to it with `form=`; `fields` are
-   * extra hidden fields (quiz answers).
+   * extra hidden fields (the mode).
    */
   form?: { id: string; action: string; fields: [name: string, value: string][] }
   /** Why the server refused the last save (422). */
@@ -59,16 +63,41 @@ export const LessonComplete = clientEntry(
       window.addEventListener('pageshow', settle, { signal: handle.signal })
     })
 
+    // Two gates (decision 052): the prompts' checks (one `bits:reward`) and
+    // each open quick check (its own `bits:gate`, sent once the server
+    // journalled a right answer).
+    let promptsDone = !handle.props.prompts
+    let remaining = new Set(handle.props.asks ?? [])
+    let settleGates = () => {
+      if (passedNow || !promptsDone || remaining.size > 0) return
+      passedNow = true
+    }
     handle.queueTask(() => {
       if (handle.props.passed || !handle.props.gated) return
-      whenPassed(handle.signal, () => {
-        passedNow = true
+      if (!promptsDone) {
+        whenPassed(handle.signal, () => {
+          promptsDone = true
+          settleGates()
+          handle.update()
+        })
+      }
+      onAskAnswered(handle.signal, (id) => {
+        if (!remaining.delete(id)) return
+        settleGates()
         handle.update()
       })
     })
 
     return () => {
       let { gated, passed, href, label, form, issues, loginHref } = handle.props
+      let hint =
+        remaining.size === 0
+          ? 'Pass every check to finish'
+          : promptsDone
+            ? remaining.size === 1
+              ? 'Answer the quick check to finish'
+              : `Answer the ${remaining.size} quick checks to finish`
+            : 'Pass every check and answer the quick check to finish'
       let open = passed || passedNow || !gated
       let hintId = `${handle.id}-hint`
       let issuesId = `${handle.id}-issues`
@@ -95,7 +124,7 @@ export const LessonComplete = clientEntry(
           </span>
           {!open ? (
             <span id={hintId} mix={hintStyle}>
-              Pass every check to finish
+              {hint}
             </span>
           ) : null}
           {passed || !form ? (
