@@ -39,7 +39,7 @@ describe('landing page', () => {
     ]) {
       assert.ok(html.includes(heading), heading)
     }
-    assert.ok(html.includes("Read it. Watch it. Run it."), "modes heading")
+    assert.ok(html.includes('Read\u00a0it. Watch\u00a0it. Run\u00a0it.'), 'modes heading')
     assert.match(html, /© 2026 Bits/)
     assert.doesNotMatch(html, /latent/i)
   })

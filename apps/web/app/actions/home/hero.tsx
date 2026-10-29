@@ -108,8 +108,9 @@ const rise = [0, 1, 2, 3, 4].map((i) =>
 
 const heroStyle = css({
   // One full fold (decision 048): the scroll cue and pause control sit on
-  // its bottom edge (they take `margin-top: auto`). Phones size to content.
-  padding: 'var(--space-20) var(--section-pad-x) var(--space-8)',
+  // its bottom edge (they take `margin-top: auto`); at 1440×900 the content
+  // just fits (64 top, 32 bottom). Phones size to content.
+  padding: 'var(--space-16) var(--section-pad-x) var(--space-8)',
   minHeight: 'calc(100svh - var(--appbar-h))',
   boxSizing: 'border-box',
   display: 'flex',
@@ -281,11 +282,11 @@ const noteStyle = css({ marginTop: 'var(--space-1_5)' })
 
 const cueStyle = css({
   marginTop: 'auto',
-  paddingTop: 'var(--space-10)',
+  paddingTop: 'var(--space-6)',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
-  gap: 'var(--space-5)',
+  gap: 'var(--space-4)',
   [PHONE]: { paddingTop: 'var(--space-6)', gap: 'var(--space-4)' },
 })
 
@@ -302,7 +303,7 @@ const cueTextStyle = css({
 const cueLine = css({
   display: 'block',
   width: 'var(--border-w)',
-  height: 'var(--space-12)',
+  height: 'var(--space-10)',
   background: 'var(--volt)',
   animation: 'bits-cue 2.4s ease-in-out infinite',
   [REDUCED]: { animation: 'none' },

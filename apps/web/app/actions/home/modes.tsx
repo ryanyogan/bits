@@ -15,7 +15,8 @@ export function Modes(_handle: Handle) {
       <div mix={introCell}>
         <div mix={introStyle}>
           <h2 id="modes-title" mix={h2Style}>
-            Read it. Watch it. Run it.
+            {/* No-break spaces keep each "… it." whole when the line wraps. */}
+            Read{'\u00a0'}it. Watch{'\u00a0'}it. Run{'\u00a0'}it.
           </h2>
           <p mix={leadStyle}>
             Every lesson works as text. Some come with a video. The coding ones hand you a real
