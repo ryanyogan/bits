@@ -52,4 +52,7 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 044 | [Sign-in polish: steady tabs, one logo, deferred brain](044-login-polish.md) |
 | 045 | [No ETag on HTML; polish-wave leftovers](045-no-etag-on-html.md) |
 | 046 | [Keyed head links; a tree-shaken three.js in production](046-keyed-head-and-slim-three.md) |
+| 047 | [Squared grid design language](047-squared-grid-design-language.md) |
+| 048 | [Landing premium pass: air, a visible field, honest "free"](048-landing-premium-pass.md) |
 | 049 | [Scroll restoration and the scrollbar gutter](049-scroll-restoration-and-gutter.md) |
+| 050 | [Sections breathe: framed plates with the ground between them](050-sections-breathe.md) |

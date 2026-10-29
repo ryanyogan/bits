@@ -139,7 +139,8 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
               </div>
             </RuledSection>
 
-            <RuledSection aria-labelledby="courses-heading" pad="none">
+            {/* The grid continues the toolbar's block (decision 050): the toolbar heads it. */}
+            <RuledSection aria-labelledby="courses-heading" pad="none" rule={false}>
               <h2 id="courses-heading" class="sr-only">
                 Courses
               </h2>
@@ -181,9 +182,6 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
                   <WriteCourseCard href={routes.author.index.href()} variant="cell" />
                 </li>
               </CellGrid>
-            </RuledSection>
-            <RuledSection as="div" pad="none">
-              <div mix={tailStyle} />
             </RuledSection>
           </PageFrame>
         </div>
@@ -255,4 +253,3 @@ const pillRow = css({
 
 const emptyCell = css({ borderTop: 'var(--border-w) solid var(--line-cell)', background: 'var(--cell-fill)' })
 const cellStyle = css({ display: 'flex' })
-const tailStyle = css({ height: 'var(--space-16)' })

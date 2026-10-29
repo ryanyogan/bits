@@ -37,16 +37,12 @@ export function CourseNotFoundPage(handle: Handle<CourseNotFoundPageProps>) {
               </div>
             </div>
           </RuledSection>
-          <RuledSection as="div" pad="none">
-            <div mix={tailStyle} />
-          </RuledSection>
         </PageFrame>
       </Layout>
     )
   }
 }
 
-const tailStyle = css({ height: 'var(--space-16)' })
 const boxStyle = css({
   display: 'flex',
   flexDirection: 'column',

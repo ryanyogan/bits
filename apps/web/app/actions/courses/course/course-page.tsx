@@ -68,9 +68,6 @@ export function CoursePage(handle: Handle<CoursePageProps>) {
               <CourseAside view={view} sourceHref={routes.author.course.index.href({ course: course.slug })} />
             </div>
           </RuledSection>
-          <RuledSection as="div" pad="none">
-            <div mix={tailStyle} />
-          </RuledSection>
         </PageFrame>
       </Layout>
     )
@@ -108,4 +105,3 @@ const bodyStyle = css({
     '& > :first-child': { borderRight: 0, borderBottom: 'var(--border-w) solid var(--line-cell)' },
   },
 })
-const tailStyle = css({ height: 'var(--space-16)' })

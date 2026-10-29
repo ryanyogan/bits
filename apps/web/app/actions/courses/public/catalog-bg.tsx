@@ -92,12 +92,16 @@ const gridStyle = css({
  * centre, so it reads as looking down a square shaft at an angle.
  */
 const holeStyle = css({
-  '--rim': 'min(640px, 80vw)',
+  // Scales with the screen above 760px, as the title band does, so the rim
+  // never outgrows the band (640 at 1440, 450 at 1024).
+  '--rim': 'min(640px, 44vw)',
   position: 'absolute',
   width: 'var(--rim)',
   height: 'calc(var(--rim) * 0.42)',
   left: '72%',
-  top: '24%',
+  // High enough that the rim's bottom edge stays inside the title band: the
+  // ground shows under that band now (decision 050), so nothing hides it.
+  top: '21%',
   translate: '-50% -50%',
   '@media (max-width: 760px)': {
     '--rim': '110vw',

@@ -16,16 +16,17 @@ import { Section, Specimen } from './layout.tsx'
 import { outputLines } from './samples.tsx'
 
 /**
- * The squared-grid primitives (decision 047): a PageFrame with two ruled
- * sections, a flush CellGrid (one cell a link), and a boxed grid inside
- * padding. The specimen clips the sections' full-bleed rules at its edge.
+ * The squared-grid primitives (decisions 047, 050): a PageFrame with two
+ * ruled sections, a flush CellGrid (one cell a link), and a boxed grid
+ * inside padding. The specimen clips the sections' full-bleed rules at its
+ * edge.
  */
 export function GridSection(_handle: Handle) {
   return () => (
     <Section
       id="sg-grid"
       title="Grid"
-      intro="PageFrame draws the rails, RuledSection a full-bleed rule with + marks and an optional 02 / label strip, CellGrid cells that share 1px borders (cols, colsMid, colsPhone; flush or boxed), Panel a block inside a cell. A strip draws the hairline under itself, so a grid right under it takes top={false}. Decision 047."
+      intro="PageFrame is the centred column. Each RuledSection is a framed plate on it: its own rails, a full-bleed rule above and below with + marks at the corners, and an optional 02 / label strip; plates sit --section-gap apart so the ground shows between them, and rule={false} joins a section to the block above. CellGrid cells share 1px borders (cols, colsMid, colsPhone; flush or boxed), Panel is a block inside a cell. A strip draws the hairline under itself, so a grid right under it takes top={false}. Decisions 047, 050."
     >
       <Specimen caption="PageFrame · RuledSection (index, label, aside) · CellGrid flush, top={false}, ink fill, a cellLinkStyle link" wide>
         <div mix={stage}>

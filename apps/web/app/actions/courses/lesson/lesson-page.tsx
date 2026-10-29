@@ -90,7 +90,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
           </p>
         ) : null}
         {mode === 'terminal' ? (
-          <PageFrame>
+          <PageFrame rails>
             <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, workspaceMain]}>
               <LessonModes segments={segments} progressLabel={progressLabel} modes={modeItems} mix={modesStrip} />
               <TerminalMode view={view} />
@@ -98,7 +98,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
             </main>
           </PageFrame>
         ) : (
-          <PageFrame>
+          <PageFrame rails>
             <div mix={bodyStyle}>
               <OutlineNav view={view} />
               <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, mainStyle]}>

@@ -63,7 +63,7 @@ export function CertificatePage(handle: Handle<CertificatePageProps>) {
         }
         bleed
       >
-        <PageFrame mix={frameStyle}>
+        <PageFrame>
           {certificate.isPrivate ? (
             <RuledSection as="div" rule={false} pad="tight" mix={noPrint}>
               <Callout tone="info" title="Only you can see this.">
@@ -146,9 +146,6 @@ export function CertificatePage(handle: Handle<CertificatePageProps>) {
               </p>
             </div>
           </RuledSection>
-
-          {/* The closing rule: the rails end on it, with their + marks. */}
-          <RuledSection as="div" pad="none" />
         </PageFrame>
       </Layout>
     )
@@ -172,7 +169,6 @@ const MOBILE = '@media (max-width: 480px)'
 const FORCED = '@media (forced-colors: active)'
 const line = 'var(--border-w) solid var(--line-cell)'
 
-const frameStyle = css({ marginBottom: 'var(--space-16)', [MOBILE]: { marginBottom: 'var(--space-10)' } })
 const noPrint = css({ '@media print': { display: 'none' } })
 
 const certStyle = css({ position: 'relative', [FORCED]: { '& *': { borderColor: 'GrayText' } } })
