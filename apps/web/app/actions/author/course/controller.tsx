@@ -16,7 +16,6 @@ import { ForbiddenPage } from '../../../ui/not-found-page.tsx'
 import { canManageCourse, counts, getAuthoredCourse, plural, type AuthorCourse } from '../data.ts'
 import { CourseBuildPage } from './course-build-page.tsx'
 import { versionForm } from './schema.ts'
-import { LessonPage } from '../../courses/lesson/lesson-page.tsx'
 import { buildLessonView } from '../../courses/lesson/lesson-view.ts'
 
 // Every action needs a signed-in user who manages this course (owner or
@@ -86,6 +85,7 @@ export default createController(routes.author.course, {
           viewer: toViewer(user),
         }))
       if (!view) return notFound(context, user)
+      let { LessonPage } = await import('../../courses/lesson/lesson-page.tsx')
       return context.render(<LessonPage view={view} />)
     },
   },

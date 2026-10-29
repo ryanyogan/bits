@@ -264,9 +264,10 @@ the new page into the old DOM. Write for that:
   046): client navigation pairs unkeyed head siblings by position and
   rewrites them in place.
 - The Worker is code-split (decision 026): wrangler uploads `build/worker`
-  as built (`no_bundle`), one module per chunk. Code that only a rare route
-  or action needs (the content compiler, the Anthropic SDK, the
-  styleguide) is loaded with `await import()` where it's used, so it
+  as built (`no_bundle`), one module per chunk. Code that only some routes
+  or actions need (the content compiler, the Anthropic SDK, the
+  styleguide, the lesson page and its islands; decision 052) is loaded with
+  `await import()` where it's used, so it
   stays out of startup. `pnpm build` prints the startup size; check it
   when you add a heavy dependency.
 

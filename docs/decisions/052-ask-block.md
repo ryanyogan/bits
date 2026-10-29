@@ -87,6 +87,16 @@ That is "+N neurons · saved" signed in, or "+N neurons · sign in to keep
 them" signed out (`savedNotice`). A new badge replaces it. A verdict shows
 the neurons it earned the same way.
 
+**Startup size (026).** The quick check code (AskPanel, the Terminal
+asks, the grader, the journal queries) took the Worker's startup from
+780 to 802 KiB, because the lesson page and its islands loaded at isolate
+startup. The lesson controller and the author preview now
+`await import('./lesson-page.tsx')`, as the styleguide does. The lesson
+page, the terminal, the editor, the video player and AskPanel load on an
+isolate's first lesson request. Startup is now 709 KiB, in 23 modules
+instead of 16. The grader stays static: lazy-loading only `/api/ask`
+saved under 2 KiB and added chunks.
+
 ## Consequences
 
 - Phase 1 is regex and choices only. Grading free text with Claude is

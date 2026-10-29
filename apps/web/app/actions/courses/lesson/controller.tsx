@@ -10,9 +10,12 @@ import { loadDrafts } from '../../../progress/drafts.ts'
 import { completeLesson, loadCompleted } from '../../../progress/progress.ts'
 import { flashReward, rewardNotice, savedNotice, takeReward } from '../../../progress/reward.ts'
 import { routes } from '../../../routes.ts'
-import { LessonPage } from './lesson-page.tsx'
 import { buildLessonView } from './lesson-view.ts'
 import { LessonNotFoundPage } from './ui/not-found.tsx'
+
+// The lesson page (its islands, the terminal, the editor, the video player)
+// loads on the first lesson request, not at isolate startup (decision 026).
+const lessonPage = () => import('./lesson-page.tsx')
 
 export default createController(routes.courses.lesson, {
   actions: {
@@ -33,6 +36,7 @@ export default createController(routes.courses.lesson, {
           { status: 404 },
         )
       }
+      let { LessonPage } = await lessonPage()
       return context.render(<LessonPage view={view} reward={takeReward(context)} />)
     },
 
@@ -75,6 +79,7 @@ export default createController(routes.courses.lesson, {
                 ]
               : []),
           ]
+          let { LessonPage } = await lessonPage()
           return context.render(<LessonPage view={view} issues={issues} />, { status: 422 })
         }
 
