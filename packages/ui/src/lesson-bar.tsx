@@ -268,7 +268,7 @@ const titleStyle = css({
   textWrap: 'balance',
   display: '-webkit-box',
   WebkitBoxOrient: 'vertical',
-  WebkitLineClamp: 2,
+  WebkitLineClamp: '2',
   // Phones: context (11/1.3) + two lines at 15/1.15 fit the 56px bar; ≤480px
   // the context hides and the two lines sit alone.
   [SHELL_NARROW]: { fontSize: 'var(--fs-15)' },
