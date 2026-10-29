@@ -154,8 +154,8 @@ const stickyStyle = css({
   position: 'sticky',
   top: 0,
   zIndex: 5,
-  WebkitBackdropFilter: 'blur(var(--blur-glass))',
-  backdropFilter: 'blur(var(--blur-glass))',
+  // Flat (decision 047): an opaque ground instead of glass blur.
+  background: 'var(--ink)',
 })
 // A full-bleed hairline separates the AppBar's row from this one.
 // Opaque: with no blur, lesson text scrolling under a translucent row reads

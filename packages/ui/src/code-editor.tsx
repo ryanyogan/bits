@@ -403,7 +403,7 @@ const syntax: Record<SyntaxKind, ReturnType<typeof css>> = {
   punct: css({ color: 'var(--text-quiet)' }),
 }
 const typedChar = css({ color: 'var(--text)' })
-const wrongChar = css({ color: 'var(--warn)', background: 'var(--warn-tint)', borderRadius: '2px' })
+const wrongChar = css({ color: 'var(--warn)', background: 'var(--warn-tint)', borderRadius: 'var(--radius-tiny)' })
 const restStyle = css({ color: 'var(--dim)' })
 const caretStyle = css({
   color: 'var(--volt)',
