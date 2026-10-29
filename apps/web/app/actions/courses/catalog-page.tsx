@@ -130,6 +130,7 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
                       count={counts[filter.slug ?? 'all']}
                       selected={filter.slug === query.track}
                       variant="cell"
+                      keepPlace
                     >
                       {filter.label}
                     </FilterPill>

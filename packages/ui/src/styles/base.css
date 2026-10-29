@@ -58,6 +58,18 @@
     /* The sticky header stack must not cover anchors or focused elements
      * (components §3.1, decision 022). */
     scroll-padding-top: calc(var(--shell-h) + var(--space-2));
+    /* Decision 049: always reserve the classic scrollbar's gutter, so a
+     * short page (no scrollbar) and a long one centre the frame at the same
+     * x and nothing jumps sideways between them. Overlay scrollbars reserve
+     * nothing. Nothing in the app locks scrolling with `overflow: hidden`
+     * on html or body; if something ever does, the gutter stays. */
+    scrollbar-gutter: stable;
+    /* Clip sideways overflow at the root. The full-bleed rules are 100vw,
+     * which counts the gutter, so they always reach past the content box.
+     * A non-visible value here also stops body's clip from propagating to
+     * the viewport (where it turns into a scrollable `hidden`), so body
+     * clips itself and focus or scrollIntoView can't shift the page. */
+    overflow-x: clip;
   }
 
   body {
