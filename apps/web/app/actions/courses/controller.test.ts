@@ -79,11 +79,10 @@ describe('catalog and course pages', () => {
   })
   after(() => disposePlatform())
 
-  it('times the catalog load: cold with one R2 read per live course, then from the memo', async () => {
+  it('times the catalog load: cold from the one catalog object (one R2 read, no D1), then from the memo', async () => {
     clearContentMemo()
     let cold = (await fetchAs(null, '/courses')).headers.get('Server-Timing') ?? ''
-    assert.match(cold, /(^|, )catalog;dur=\d+;desc="cold"(,|$)/)
-    assert.match(cold, new RegExp(`(^|, )r2;dur=\\d+;desc="${courses.length} reads"(,|$)`))
+    assert.match(cold, /^catalog;dur=\d+;desc="cold", r2;dur=\d+;desc="1 reads"$/)
     let memo = (await fetchAs(null, '/courses')).headers.get('Server-Timing') ?? ''
     assert.match(memo, /(^|, )catalog;dur=\d+;desc="memo"(,|$)/)
     assert.doesNotMatch(memo, /r2;/)

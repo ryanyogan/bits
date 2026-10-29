@@ -1,8 +1,11 @@
 // Content for the current request: the published catalog, resolved at most
 // once per request. It usually comes from the isolate's stale-while-
-// revalidate memo with no D1 query at all (store.ts, decision 026);
-// manifests come from the per-isolate memo or R2.
+// revalidate memo (decision 026); a cold isolate reads the colo cache or the
+// one catalog/live.json object in R2, with no D1 query (store.ts, decision
+// 054). Lesson bodies come from the per-isolate memo or R2.
 import type { RequestContext } from 'remix/router'
+
+import { createD1Database } from '@bits/db'
 
 import { platform } from '#platform'
 
@@ -25,7 +28,14 @@ export function getCatalog(context: RequestContext<any, any>): Promise<Catalog> 
   if (!catalog) {
     let meter = new ContentMeter()
     let started = Date.now()
-    catalog = liveCatalog(getDatabase(context), contentBucket(), platform.waitUntil, meter).then((live) => {
+    let sources = {
+      db: getDatabase(context),
+      backgroundDb: createD1Database(platform.env.DB),
+      bucket: contentBucket(),
+      cache: platform.sharedCache,
+      waitUntil: platform.waitUntil,
+    }
+    catalog = liveCatalog(sources, meter).then((live) => {
       meter.catalogMs = Date.now() - started
       return live.withMeter(meter)
     })

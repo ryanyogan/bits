@@ -4,7 +4,7 @@ import { env, waitUntil } from 'cloudflare:workers'
 import type { Middleware } from 'remix/router'
 
 import { unpackManifest, type PackedManifest } from './packed-manifest.ts'
-import type { AppAssets, Platform } from './types.ts'
+import type { AppAssets, Platform, SharedCache } from './types.ts'
 
 /** Injected by scripts/build.ts (esbuild `define`) from the asset build, packed. */
 declare const __BITS_ASSET_MANIFEST__: PackedManifest
@@ -31,6 +31,39 @@ const assets: AppAssets = {
   },
 }
 
+// The Workers Cache API (decision 054): per data centre, shared by every
+// isolate there, and a no-op on workers.dev (Previews). Keys are synthetic
+// GET URLs on the canonical origin, which nothing else serves; `put` needs a
+// Cache-Control. Failures are misses: the caller falls back to R2.
+const cacheOrigin = env.CANONICAL_ORIGIN || 'https://bits.internal'
+const cacheUrl = (key: string) => `${cacheOrigin}/_cache/${key}`
+type WorkersCache = { match(url: string): Promise<Response | undefined>; put(url: string, response: Response): Promise<void>; delete(url: string): Promise<boolean> }
+const colo = () => (globalThis as unknown as { caches: { default: WorkersCache } }).caches.default
+
+const sharedCache: SharedCache = {
+  async get(key) {
+    try {
+      let response = await colo().match(cacheUrl(key))
+      return response ? await response.text() : undefined
+    } catch {
+      return undefined
+    }
+  },
+  async put(key, body, maxAgeSeconds) {
+    try {
+      await colo().put(
+        cacheUrl(key),
+        new Response(body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${maxAgeSeconds}` } }),
+      )
+    } catch {}
+  },
+  async delete(key) {
+    try {
+      await colo().delete(cacheUrl(key))
+    } catch {}
+  },
+}
+
 const passThrough: Middleware = (_context, next) => next()
 
 export const platform: Platform = {
@@ -40,6 +73,7 @@ export const platform: Platform = {
   csp: { reportOnly: false, connectSrc: [] },
   middleware: passThrough,
   waitUntil,
+  sharedCache,
 }
 
 export async function disposePlatform(): Promise<void> {}

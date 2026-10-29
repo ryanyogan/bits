@@ -1,6 +1,6 @@
 # 026. Server performance: fewer D1 round trips, a smaller startup bundle
 
-Status: Accepted (2026-10-27). Amends 018 (catalog loading) and 020 (D1 round trips).
+Status: Accepted (2026-10-27). Amends 018 (catalog loading) and 020 (D1 round trips). The live catalog is amended by 054 (one R2 object, the colo cache, no blocking refresh).
 
 ## Context
 

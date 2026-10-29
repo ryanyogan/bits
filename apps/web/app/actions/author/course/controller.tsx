@@ -5,6 +5,8 @@ import { EmptyState } from '@bits/ui/empty-state'
 
 import type { User } from '@bits/db'
 
+import { platform } from '#platform'
+
 import type { AppContext } from '../../../router.ts'
 import { requireUser, toViewer } from '../../../auth/identity.ts'
 import { contentBucket } from '../../../content/request.ts'
@@ -53,7 +55,7 @@ export default createController(routes.author.course, {
             : `v${n} can’t go live: it didn’t build cleanly.`
         return renderBuildPage(context, item, { tone: 'error', text }, 422)
       }
-      await publishVersion(getDatabase(context), item.course.slug, n)
+      await publishVersion(getDatabase(context), contentBucket(), item.course.slug, n, { cache: platform.sharedCache })
       return redirect(routes.author.course.index.href({ course: item.course.slug }, { searchParams: { done: 'published' } }), 303)
     },
 
@@ -66,7 +68,7 @@ export default createController(routes.author.course, {
       if (!n || !target || target.failed) {
         return redirect(routes.author.course.index.href({ course: item.course.slug }), 303)
       }
-      await publishVersion(getDatabase(context), item.course.slug, n)
+      await publishVersion(getDatabase(context), contentBucket(), item.course.slug, n, { cache: platform.sharedCache })
       return redirect(routes.author.course.index.href({ course: item.course.slug }, { searchParams: { done: 'rolledback' } }), 303)
     },
 

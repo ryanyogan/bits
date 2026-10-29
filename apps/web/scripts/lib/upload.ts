@@ -75,7 +75,7 @@ export async function uploadCourseFolder(
       let version = { id: newest.id, n: newest.n, status: newest.status }
       if (newest.live) return { dir, build, version, outcome: 'unchanged', published: false, live: true }
       if (newest.published_at !== null) return { dir, build, version, outcome: 'rolled-back', published: false, live: false }
-      let published = options.publish ? await publishVersion(db, build.slug, newest.n) : false
+      let published = options.publish ? await publishVersion(db, bucket, build.slug, newest.n) : false
       return { dir, build, version, outcome: 'unchanged', published, live: published }
     }
   }
@@ -83,7 +83,7 @@ export async function uploadCourseFolder(
   // The CLI and the test platform hold the database already: trusted.
   let version = await saveBuild(db, build, { source: options.source, userId: options.userId, trusted: true }, bucket)
   if (!version) throw new Error(`${build.slug}: the build was not recorded`)
-  let published = options.publish && version.status === 'ready' ? await publishVersion(db, build.slug, version.n) : false
+  let published = options.publish && version.status === 'ready' ? await publishVersion(db, bucket, build.slug, version.n) : false
   // Later folders in the same run compare against this version.
   state.newest.set(build.slug, {
     slug: build.slug,

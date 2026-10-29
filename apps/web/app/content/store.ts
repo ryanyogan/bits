@@ -5,8 +5,9 @@
 // the live pointer (packages/db/src/queries/content.ts).
 //
 // Versions are immutable, so their JSON is memoised per isolate, keyed by
-// version id: a page costs one D1 query for the live pointers and touches R2
-// only the first time an isolate sees a version. Only resolved values are
+// version id: R2 is touched only the first time an isolate sees a version.
+// Which versions are live is one more R2 object, catalog/live.json, written
+// on every publish (decision 054). Only resolved values are
 // memoised, never promises, so no request waits on another request's I/O.
 import {
   deleteVersion,
@@ -16,11 +17,13 @@ import {
   recordCourseBuild,
   setLiveVersion,
   type CourseVersion,
+  type LiveCourse,
   type D1DataTableDatabase,
 } from '@bits/db'
 
 import type { LessonContent } from '../actions/courses/lesson/content.ts'
 import { errorFields, log } from '../log.ts'
+import type { SharedCache } from '../platform/types.ts'
 import type { CourseBuild } from './compile/index.ts'
 import { Catalog } from './catalog.ts'
 import type { ContentMeter } from './meter.ts'
@@ -96,9 +99,68 @@ function catalogOf(bucket: R2Bucket, entries: { version: VersionRef; manifest: C
   )
 }
 
-/** The published catalog: every live course at its live version. `meter` counts its R2 reads. */
+/** The published catalog, read from D1 and each live manifest (the authoritative path). `meter` counts its R2 reads. */
 export async function loadCatalog(db: D1DataTableDatabase, bucket: R2Bucket, meter?: ContentMeter): Promise<Catalog> {
-  let live = await listLiveCourses(db)
+  return catalogOf(bucket, (await buildLiveObject(db, bucket, meter)).courses)
+}
+
+// ---- The one-object catalog (decision 054) ----------------------------------
+//
+// Every publish writes the whole published catalog as one R2 object,
+// catalog/live.json: each live course's version ref and manifest. A cold
+// isolate reads that one object (one R2 read, no D1) instead of the live
+// pointers plus a manifest per course. Its `generation` names the live
+// pointers it was built from (slug@version id, in catalog order). After an
+// R2 read, a background check (waitUntil) compares it with D1, and rebuilds
+// and rewrites the object when they differ, so a lost or stale write heals
+// itself. Writes are compare-and-swap on the object's etag: a writer reads
+// D1 after it notes the etag, and a put whose etag moved is retried, so the
+// last write to land always holds the newest pointers.
+
+/** R2 key of the published catalog object. */
+export const LIVE_CATALOG_KEY = 'catalog/live.json'
+/** How long the colo cache keeps the object (seconds). */
+export const LIVE_CACHE_TTL_S = 55
+
+interface LiveEntry {
+  version: VersionRef
+  manifest: CourseManifest
+}
+
+export interface LiveCatalogObject {
+  format: 1
+  /** The live pointers this was built from: `slug@versionId,…` in catalog order. */
+  generation: string
+  /** Newest first-publish time among the live versions (ms), for people reading the object. */
+  published_at: number | null
+  /** When it was built (ms). */
+  written_at: number
+  courses: LiveEntry[]
+}
+
+/** Where the live catalog comes from. */
+export interface LiveSources {
+  db: D1DataTableDatabase
+  bucket: R2Bucket
+  /** The colo cache (platform.sharedCache); absent means none. */
+  cache?: SharedCache
+  /** Keeps background work alive past the response. */
+  waitUntil: (promise: Promise<unknown>) => void
+  /** For work after the response (an unmetered handle, so it stays out of the request's Server-Timing); `db` when absent. */
+  backgroundDb?: D1DataTableDatabase
+}
+
+function generationOf(rows: LiveCourse[]): string {
+  return rows.map((row) => `${row.slug}@${row.version_id}`).join(',')
+}
+
+async function buildLiveObject(
+  db: D1DataTableDatabase,
+  bucket: R2Bucket,
+  meter?: ContentMeter,
+  rows?: LiveCourse[],
+): Promise<LiveCatalogObject> {
+  let live = rows ?? (await listLiveCourses(db))
   let entries = await Promise.all(
     live.map(async (row) => {
       let version = { id: row.version_id, slug: row.slug, n: row.n }
@@ -108,24 +170,123 @@ export async function loadCatalog(db: D1DataTableDatabase, bucket: R2Bucket, met
       return { version, manifest: updated ? { ...manifest, updated } : manifest }
     }),
   )
-  return catalogOf(bucket, entries.filter((entry) => entry !== undefined))
+  let published = Math.max(0, ...live.map((row) => row.published_at ?? 0))
+  return {
+    format: 1,
+    generation: generationOf(live),
+    published_at: published || null,
+    written_at: Date.now(),
+    courses: entries.filter((entry) => entry !== undefined),
+  }
 }
 
-// ---- The live catalog, per isolate (decision 026) ----------------------------
+function parseLiveObject(text: string): LiveCatalogObject | undefined {
+  try {
+    let value = JSON.parse(text) as Partial<LiveCatalogObject> | null
+    if (value?.format === 1 && typeof value.generation === 'string' && Array.isArray(value.courses)) return value as LiveCatalogObject
+  } catch {}
+  return undefined
+}
+
+/** The object in R2 (undefined when missing or unreadable) and its etag, for a compare-and-swap rewrite. */
+async function readLiveObject(bucket: R2Bucket, meter?: ContentMeter): Promise<{ object?: LiveCatalogObject; etag: string | null }> {
+  let read = async () => {
+    let found = await bucket.get(LIVE_CATALOG_KEY)
+    return found ? { text: await found.text(), etag: found.etag } : undefined
+  }
+  let found = meter ? await meter.timeRead(read) : await read()
+  if (!found) return { etag: null }
+  return { object: parseLiveObject(found.text), etag: found.etag }
+}
+
+type R2OnlyIf = NonNullable<NonNullable<Parameters<R2Bucket['put']>[2]>['onlyIf']>
+
+/** Puts the object only if R2 still holds `etag` (null: only if there is none). False when another writer got there first. */
+async function putLiveObject(bucket: R2Bucket, object: LiveCatalogObject, etag: string | null): Promise<boolean> {
+  let written = await bucket.put(LIVE_CATALOG_KEY, JSON.stringify(object), {
+    httpMetadata: { contentType: 'application/json', cacheControl: 'no-cache' },
+    // R2Conditional has no "absent" case; the header form does (If-None-Match: *).
+    onlyIf: etag ? { etagMatches: etag } : (new Headers({ 'If-None-Match': '*' }) as unknown as R2OnlyIf),
+  })
+  return written !== null
+}
+
+/**
+ * Rebuilds catalog/live.json from D1 and swaps it in, retrying when another
+ * writer got there first, then drops this colo's cached copy. Every publish
+ * calls it after the D1 pointer flips (the web, the CLI, tests). Never
+ * throws: the publish has already happened.
+ */
+export async function writeLiveCatalog(db: D1DataTableDatabase, bucket: R2Bucket, cache?: SharedCache): Promise<void> {
+  try {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      let head = await bucket.head(LIVE_CATALOG_KEY)
+      // D1 after the etag: whoever swaps last read the newest pointers.
+      let object = await buildLiveObject(db, bucket)
+      if (await putLiveObject(bucket, object, head?.etag ?? null)) return
+    }
+    log('warn', 'Live catalog object kept losing the race; the newer writer holds it', {})
+  } catch (error) {
+    // Without the object, readers rebuild it from D1.
+    log('error', 'Live catalog object write failed', errorFields(error))
+    await bucket.delete(LIVE_CATALOG_KEY).catch(() => {})
+  } finally {
+    await cache?.delete(LIVE_CATALOG_KEY)
+  }
+}
+
+/**
+ * The catalog for an isolate with nothing memoised: the colo cache, else the
+ * one R2 object, else (missing or unreadable) D1 and the manifests, writing
+ * the object back. `keep` takes a newer catalog the background check finds.
+ */
+async function loadLiveCatalog(sources: LiveSources, meter: ContentMeter | undefined, keep: (catalog: Catalog) => void): Promise<Catalog> {
+  let { db, bucket, cache, waitUntil } = sources
+  let later = sources.backgroundDb ?? db
+  let cachedText = cache ? await cache.get(LIVE_CATALOG_KEY) : undefined
+  let cached = cachedText ? parseLiveObject(cachedText) : undefined
+  if (cached) {
+    if (meter) meter.catalog = 'cache'
+    return catalogOf(bucket, cached.courses)
+  }
+  let { object, etag } = await readLiveObject(bucket, meter)
+  if (object) {
+    let served = object
+    waitUntil(
+      (async () => {
+        // The generation check: do D1's pointers agree with what was served?
+        let rows = await listLiveCourses(later)
+        if (generationOf(rows) === served.generation) {
+          await cache?.put(LIVE_CATALOG_KEY, JSON.stringify(served), LIVE_CACHE_TTL_S)
+          return
+        }
+        let fresh = await buildLiveObject(later, bucket, undefined, rows)
+        keep(catalogOf(bucket, fresh.courses))
+        await putLiveObject(bucket, fresh, etag)
+        await cache?.delete(LIVE_CATALOG_KEY)
+      })().catch((error: unknown) => log('error', 'Live catalog check failed', errorFields(error))),
+    )
+    return catalogOf(bucket, object.courses)
+  }
+  if (meter) meter.catalog = 'rebuild'
+  let fresh = await buildLiveObject(db, bucket, meter)
+  waitUntil(putLiveObject(bucket, fresh, etag).catch((error: unknown) => log('error', 'Live catalog object write failed', errorFields(error))))
+  return catalogOf(bucket, fresh.courses)
+}
+
+// ---- The live catalog, per isolate (decisions 026, 054) ----------------------
 //
-// Which version of each course is live changes only on publish, yet reading
-// it was a D1 round trip on every page. The isolate keeps the last catalog
-// and serves it stale-while-revalidate: younger than LIVE_FRESH_MS it is used
-// as is; up to LIVE_MAX_AGE_MS it is used while one background refresh
-// (waitUntil) re-reads D1; older, the request waits for D1. So after a
-// publish elsewhere (another isolate, the CLI), an isolate shows the old
-// version for at most LIVE_FRESH_MS plus one request, never more than
-// LIVE_MAX_AGE_MS. A publish in this isolate forgets it at once. Versions are
-// immutable, so a stale catalog is still a consistent one. Learner progress
-// is never part of it.
+// The isolate keeps the last catalog and serves it stale-while-revalidate:
+// younger than LIVE_FRESH_MS it is used as is; older, it is still used while
+// one background refresh (waitUntil) reads the colo cache or the R2 object
+// again. Only an isolate with no catalog at all waits. Versions are
+// immutable, so a stale catalog is still a consistent one. After a publish
+// elsewhere (another isolate, the CLI), an isolate under traffic shows the
+// new version within LIVE_FRESH_MS plus the colo cache's LIVE_CACHE_TTL_S
+// (about a minute), plus one request; a publish in this isolate forgets the
+// memo at once. Learner progress is never part of it.
 
 const LIVE_FRESH_MS = 5_000
-const LIVE_MAX_AGE_MS = 60_000
 
 let live: { catalog: Catalog; at: number } | undefined
 let liveGeneration = 0
@@ -137,38 +298,34 @@ export function forgetLiveCatalog() {
   liveGeneration++
 }
 
-async function refreshLiveCatalog(db: D1DataTableDatabase, bucket: R2Bucket, meter?: ContentMeter): Promise<Catalog> {
+async function refreshLiveCatalog(sources: LiveSources, meter?: ContentMeter): Promise<Catalog> {
   let generation = liveGeneration
   let at = Date.now()
-  let catalog = await loadCatalog(db, bucket, meter)
   // Don't let a slow read overwrite a newer one, or outlive a publish.
-  if (generation === liveGeneration && (!live || live.at <= at)) live = { catalog, at }
+  let keep = (catalog: Catalog) => {
+    if (generation === liveGeneration && (!live || live.at <= at)) live = { catalog, at }
+  }
+  let catalog = await loadLiveCatalog(sources, meter, keep)
+  keep(catalog)
   return catalog
 }
 
 /**
- * The published catalog, from the isolate's memo when it is recent enough.
- * `waitUntil` keeps a background refresh alive past the response. `meter`
- * records which path was taken and the R2 reads the request waits for; a
- * background refresh is not metered, since the request doesn't wait for it.
+ * The published catalog, from the isolate's memo whenever there is one.
+ * `meter` records which path was taken and the R2 reads the request waits
+ * for; a background refresh is not metered, since the request doesn't wait.
  */
-export function liveCatalog(
-  db: D1DataTableDatabase,
-  bucket: R2Bucket,
-  waitUntil: (promise: Promise<unknown>) => void,
-  meter?: ContentMeter,
-): Promise<Catalog> {
-  let age = live ? Date.now() - live.at : Infinity
-  if (live && age < LIVE_FRESH_MS) {
-    if (meter) meter.catalog = 'memo'
-    return Promise.resolve(live.catalog)
-  }
-  if (live && age < LIVE_MAX_AGE_MS) {
+export function liveCatalog(sources: LiveSources, meter?: ContentMeter): Promise<Catalog> {
+  if (live) {
+    if (Date.now() - live.at < LIVE_FRESH_MS) {
+      if (meter) meter.catalog = 'memo'
+      return Promise.resolve(live.catalog)
+    }
     if (meter) meter.catalog = 'stale'
     if (!liveRefreshing) {
       liveRefreshing = true
-      waitUntil(
-        refreshLiveCatalog(db, bucket)
+      sources.waitUntil(
+        refreshLiveCatalog({ ...sources, db: sources.backgroundDb ?? sources.db })
           .catch((error: unknown) => log('error', 'Live catalog refresh failed', errorFields(error)))
           .finally(() => {
             liveRefreshing = false
@@ -178,7 +335,7 @@ export function liveCatalog(
     return Promise.resolve(live.catalog)
   }
   if (meter) meter.catalog = 'cold'
-  return refreshLiveCatalog(db, bucket, meter)
+  return refreshLiveCatalog(sources, meter)
 }
 
 /** A catalog holding just one built version of a course (the author's draft preview). */
@@ -289,9 +446,20 @@ export async function readBuildHash(bucket: R2Bucket, slug: string, n: number): 
   return object?.customMetadata?.[BUILD_HASH_KEY]
 }
 
-/** Makes version `n` live (publish) or live again (rollback). False if it can't go live. */
-export async function publishVersion(db: D1DataTableDatabase, slug: string, n: number, now = Date.now()): Promise<boolean> {
-  let published = await setLiveVersion(db, slug, n, now)
+/**
+ * Makes version `n` live (publish) or live again (rollback), then rewrites
+ * catalog/live.json and drops this colo's cached copy (decision 054). False
+ * if it can't go live.
+ */
+export async function publishVersion(
+  db: D1DataTableDatabase,
+  bucket: R2Bucket,
+  slug: string,
+  n: number,
+  options: { cache?: SharedCache; now?: number } = {},
+): Promise<boolean> {
+  let published = await setLiveVersion(db, slug, n, options.now ?? Date.now())
+  if (published) await writeLiveCatalog(db, bucket, options.cache)
   forgetLiveCatalog()
   return published
 }

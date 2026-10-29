@@ -8,8 +8,13 @@
 // R2 time is wall time while at least one read is in flight, so parallel
 // manifest reads are not double counted.
 
-/** How a request got the live catalog: fresh memo, stale memo (refresh in the background), or a load it waited for. */
-export type CatalogSource = 'memo' | 'stale' | 'cold'
+/**
+ * How a request got the live catalog: fresh memo, stale memo (refresh in the
+ * background), or a load it waited for: from the colo cache (`cache`), the
+ * one R2 object (`cold`), or D1 and every manifest when the object was
+ * missing (`rebuild`; decision 054).
+ */
+export type CatalogSource = 'memo' | 'stale' | 'cache' | 'cold' | 'rebuild'
 
 export class ContentMeter {
   catalog: CatalogSource | undefined

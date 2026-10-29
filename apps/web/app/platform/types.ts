@@ -28,6 +28,22 @@ export interface Platform {
    * holding it up: `waitUntil` on Workers; on Node the promise just runs.
    */
   waitUntil(promise: Promise<unknown>): void
+  /**
+   * The cache this Worker shares with the other isolates in its data centre
+   * (the Workers Cache API, `caches.default`; decision 054). A no-op on Node.
+   */
+  sharedCache: SharedCache
+}
+
+/**
+ * Text kept for a short while where every isolate of the colo can read it.
+ * Best effort: a miss, a failed write or a no-op runtime are all just misses.
+ * Keys are paths (`catalog/live.json`); the platform makes them URLs.
+ */
+export interface SharedCache {
+  get(key: string): Promise<string | undefined>
+  put(key: string, body: string, maxAgeSeconds: number): Promise<void>
+  delete(key: string): Promise<void>
 }
 
 /**

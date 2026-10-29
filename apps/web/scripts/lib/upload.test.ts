@@ -9,7 +9,7 @@ import { after, before, describe, it } from 'remix/test'
 import { getPlatformProxy } from 'wrangler'
 
 import { hasVideo } from '../../app/actions/courses/lesson/content.ts'
-import { publishVersion } from '../../app/content/store.ts'
+import { LIVE_CATALOG_KEY, publishVersion, type LiveCatalogObject } from '../../app/content/store.ts'
 import { seedTestVideo, testVideo } from '../../app/test/videos.ts'
 import { coursesDir } from './content-folder.ts'
 import { readConfigShape } from './preview-resources.ts'
@@ -56,12 +56,17 @@ describe('uploadCourseFolder', () => {
 
   let upload = (options: Partial<UploadOptions> = {}) => uploadCourseFolder(db, bucket, course, { source: 'test', publish: true, ...options })
   let versionCount = async () => (await listCourseVersions(db, slug)).length
+  /** The published catalog object every publish writes (decision 054). */
+  let liveObject = async () => (await (await bucket.get(LIVE_CATALOG_KEY))?.json<LiveCatalogObject>()) ?? null
 
   it('saves and publishes a new course, then skips it while nothing changes', async () => {
     let first = await upload()
     assert.equal(first.outcome, 'created')
     assert.equal(first.version.n, 1)
     assert.equal(first.published, true)
+    let object = await liveObject()
+    assert.equal(object?.generation, `${slug}@${first.version.id}`)
+    assert.deepEqual(object?.courses.map((entry) => [entry.version.n, entry.manifest.slug]), [[1, slug]])
 
     let again = await upload()
     assert.equal(again.outcome, 'unchanged')
@@ -100,7 +105,8 @@ describe('uploadCourseFolder', () => {
   })
 
   it('leaves a rollback alone until the course changes', async () => {
-    assert.equal(await publishVersion(db, slug, 2), true)
+    assert.equal(await publishVersion(db, bucket, slug, 2), true)
+    assert.deepEqual((await liveObject())?.courses.map((entry) => entry.version.n), [2])
     let result = await upload()
     assert.equal(result.outcome, 'rolled-back')
     assert.equal(result.published, false)

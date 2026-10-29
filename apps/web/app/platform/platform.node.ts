@@ -8,7 +8,7 @@ import { staticFiles } from 'remix/middleware/static'
 import { getPlatformProxy } from 'wrangler'
 
 import { appDir, assetAccess, entryFile, fontFiles, fontPreloads, stylesheets } from './asset-plan.ts'
-import type { AppAssets, Platform } from './types.ts'
+import type { AppAssets, Platform, SharedCache } from './types.ts'
 
 const nodeEnv = process.env.NODE_ENV ?? 'development'
 const isDevelopment = nodeEnv === 'development'
@@ -73,8 +73,19 @@ if (isTest) {
   }
 }
 
+// Node has no colo cache: every read is a miss (decision 054). Tests that
+// want one pass their own SharedCache to the content store.
+const noCache: SharedCache = {
+  async get() {
+    return undefined
+  },
+  async put() {},
+  async delete() {},
+}
+
 export const platform: Platform = {
   runtime: 'node',
+  sharedCache: noCache,
   env: Object.assign(
     Object.create(proxy.env) as Env,
     { APP_ENV: nodeEnv },

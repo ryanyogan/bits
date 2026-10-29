@@ -543,13 +543,21 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   patterns and right choices never reach the browser. Tests answer with
   `answerAsk(cookie, course, lesson, ask, answer)`.
 - Read published content with `const catalog = await getCatalog(context)`
-  (`app/content/request.ts`; an isolate memo, stale-while-revalidate, 5 s
-  fresh and 60 s at most, so usually no D1 query; change the live pointer
-  only through `publishVersion`, which drops the memo; decision 026), then
+  (`app/content/request.ts`), then
   `catalog.getCourse/listCourses/getLesson/getContinue` and
-  `await catalog.lessonContent(course, lesson)`. Never read R2 directly in
-  a page; `store.ts` memoises immutable versions per isolate.
-  Its cost is metered per request (`content/meter.ts`) into the `catalog` and `r2` Server-Timing entries; pass a meter down, never keep request state in `store.ts`.
+  `await catalog.lessonContent(course, lesson)`. An isolate memo serves it
+  (5 s fresh, then stale while one background refresh runs; only an empty
+  memo waits; decision 026). A cold isolate reads the colo cache
+  (`platform.sharedCache`, the Workers Cache API, a no-op on Node), else the
+  one R2 object `catalog/live.json`: no D1 (decision 054). Change the live
+  pointer only through `publishVersion(db, bucket, slug, n, { cache })`,
+  which rewrites that object (compare-and-swap on its etag), purges this
+  colo's copy and drops the memo; a publish elsewhere lands within about a
+  minute. Never read R2 directly in a page; `store.ts` memoises immutable
+  versions per isolate. Its cost is metered per request (`content/meter.ts`)
+  into the `catalog` (`memo`, `stale`, `cache`, `cold`, `rebuild`) and `r2`
+  Server-Timing entries; pass a meter down, never keep request state in
+  `store.ts`.
 - The build (`app/content/compile/`) is pure and runs in the CLI, tests and
   the Worker. Errors are `report.error(text, line)` with a source line;
   add a case to `compile/build.test.ts` for each new check. (The folder
