@@ -53,8 +53,10 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
         description={`Lesson ${view.index + 1} of ${view.total} in ${course.title}.`}
         canonicalPath={view.draft ? undefined : view.href.lesson(lesson.slug)}
         image={ogImage(`course-${course.slug}`, `${course.title}: a free ${APP_TITLE} course`)}
-        // The title in the sub-bar is Unbounded 500, the lesson's first big text.
-        preloadFonts={['unbounded-latin-500-normal.woff2']}
+        // The title in the sub-bar is Unbounded 500, the lesson's first big
+        // text. Geist 600 is the prose's **bold**: swapped in late, it rewrapped
+        // lines and shifted the lesson by a line (CLS 0.043, decision 051).
+        preloadFonts={['unbounded-latin-500-normal.woff2', 'geist-latin-600-normal.woff2']}
         currentPath={view.draft ? routes.author.index.href() : routes.courses.index.href()}
         head={<style innerHTML={unsafeHTML(pageStyles)} />}
         viewer={viewer}
