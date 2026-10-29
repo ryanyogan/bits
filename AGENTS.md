@@ -300,6 +300,11 @@ the new page into the old DOM. Write for that:
   islands by scanning for it), and the function must be named. Keep islands
   small: the server-rendered parent passes them props, as in
   `app-bar-menu.tsx`.
+- Text inputs (decision 051): build on `@bits/ui/lib/field` (`fieldFrameStyle`,
+  `fieldInputStyle`, `fieldMultiStyle`, `fieldFocus`, `--field-*` tokens): mono
+  16px for anything typed to Claude or answered, never under 16px (iOS zooms),
+  neutral hairline at rest, focus drawn on the frame. The styleguide's "Field"
+  specimen shows every host.
 - Links take `prefetch` and render `data-rmx-prefetch={prefetchFor(...)}`
   (`lib/prefetch.ts`, also `@bits/ui/lib/prefetch` for app code) after
   `aria-current`. Same-origin page links prefetch on intent; document,
@@ -339,8 +344,8 @@ Rationale: `docs/decisions/010-component-library.md`.
 | ChoiceChip / Chip / SuggestionChip | chip.tsx | name, value, type, defaultChecked / selected / href, prefetch | static |
 | FilterPill | filter-pill.tsx | href, dot, count, selected, prefetch, variant pill/cell (`cell`: a full-height cell of a ruled toolbar row) | static |
 | Tag | tag.tsx | variant, color | static |
-| TextField | text-field.tsx | name, label, type, value, error, hint, mono, compact, enterKeyHint, autoCapitalize, spellCheck | static |
-| SearchField | search-field.tsx | action, name, value, label, shortcut, variant field/cell (`cell`: no box, fills its grid cell) | static |
+| TextField | text-field.tsx | name, label, type, value, error, hint, mono, compact (every variant 16px, decision 051), enterKeyHint, autoCapitalize, spellCheck | static |
+| SearchField | search-field.tsx | action, name, value, label, shortcut, variant field/cell (`cell`: no box, fills its grid cell); built on the shared field mixins | static |
 | SearchShortcut | search-shortcut.tsx | target (input id; `/` and Cmd/Ctrl-K focus it) | island |
 | CodeInput | code-input.tsx | name, length, error, autoSubmit, autoFocus, value | island (one input without JS) |
 | Switch | switch.tsx | name, legend, options, value | static (native radios) |
@@ -366,7 +371,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | ProgressBar / SegmentedProgress | progress-bar.tsx | pct, variant card/banner/art/row/level, color, label / segments | static |
 | ProgressRing | progress-ring.tsx | pct, size 96/132, color, caption, label | static |
 | LessonNode / LessonNodeRow | lesson-node.tsx | state done/current/next, size, n, passed / state, badge | static |
-| LessonBar / LessonModes | lesson-bar.tsx | backHref, context, title, titleAs, segments, modes, neurons, xp, position shell/sticky/static (`shell` = AppBar `sub`) / segments, modes (<760px row) | static |
+| LessonBar / LessonModes | lesson-bar.tsx | backHref, context, title, titleAs, segments, modes, neurons, xp, position shell/sticky/static (`shell` = AppBar `sub`; two-line title, 3px progress strip on phones) / modes, aside (the <760px chrome row; `aside` holds the outline disclosure), mix | static |
 | TutorAvatar / TutorMessage / LearnerBubble / ModelOutput | tutor.tsx | size / variant / variant / temperature, tokens, state done/streaming/example/error, note | static |
 | CheckChip | check-chip.tsx | passed, compact | static |
 | TokenPill / TokenizerPanel | token-pill.tsx | text, id, index / tokens, illustrative | static |
@@ -384,7 +389,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | RabbitHole | rabbit-hole.tsx | links {kind video/read, title, by, url, mins, deep}, id (`:::rabbithole`) | static |
 | PromptComposer | prompt-composer.tsx | id, task, checks, temperatures, examples, reward, keepRuns, submit, run (/api/run); runs fill a fixed window (`--run-log-height`) that follows the newest reply; compact (`--run-log-empty-height`) until the first run, which grows it once and scrolls so the composer stays put | island (Enter runs, Shift+Enter newline) |
 | CodeEditor | code-editor.tsx | files, highlight, focusLine, typeMode, persist, flush (no outer border inside a ruled cell) | island (@remix-run/ui tabs) |
-| TerminalLog | terminal.tsx | path, entries, replies, placeholder, flush (no outer border inside a ruled cell); fixed height (`--terminal-height`, capped below the header; all the room under it on phones), log scrolls inside | island |
+| TerminalLog | terminal.tsx | path, entries, replies, placeholder, flush (no outer border inside a ruled cell); a Run/Send Keycap inside the field frame; fixed height (`--terminal-height`, capped below the header; all the room under it on phones), log scrolls inside | island |
 | TerminalOutput | terminal.tsx | lines | static |
 | OutputPanel | terminal.tsx | command, lines (replayed), flush; a Ghost holds the full size, scrolls past `--output-panel-height` | island |
 | VideoPlayer | video-player.tsx | title, duration, chapters, cues, transcriptOpen, source {src} (plain `<video>`, MP4), initialTime, persist (position) | island (simulated clock without `source`) |
