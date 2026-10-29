@@ -2,18 +2,21 @@ import type { AuthorPerson, AuthorsOverview, CourseAuthorList, OpenAuthorInvite 
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 import { Callout, type CalloutTone } from '@bits/ui/callout'
-import { Card } from '@bits/ui/card'
+import { CellGrid } from '@bits/ui/cell-grid'
 import { ChoiceChip } from '@bits/ui/chip'
 import { EmptyState } from '@bits/ui/empty-state'
 import { MonoHeading } from '@bits/ui/eyebrow'
 import { Keycap } from '@bits/ui/keycap'
+import { PageFrame } from '@bits/ui/page-frame'
+import { RuledSection } from '@bits/ui/ruled-section'
 import { inputStyle, TextField } from '@bits/ui/text-field'
 
 import type { Viewer } from '../../../auth/identity.ts'
 import { APP_NAME } from '../../../config.ts'
 import { routes } from '../../../routes.ts'
 import { Layout } from '../../../ui/layout.tsx'
-import { AuthorHeader, authorMain } from '../../author/ui/shell.tsx'
+import { PageHead } from '../../../ui/page-head.tsx'
+import { cellPad } from '../../author/ui/shell.tsx'
 
 export type AdminSection = 'invite' | 'invites' | 'people' | 'courses'
 
@@ -56,20 +59,21 @@ export function AdminAuthorsPage(handle: Handle<AdminAuthorsPageProps>) {
     let chosen = new Set(errors?.section === 'invite' ? (errors.values?.courses ?? []) : [])
 
     return (
-      <Layout title="Authors" description={`Who writes ${APP_NAME} courses.`} viewer={viewer} currentPath={currentPath} bleed>
-        <div mix={authorMain}>
-          <AuthorHeader
-            eyebrow="ADMIN"
+      <Layout title="Authors" description={`Who writes ${APP_NAME} courses.`} viewer={viewer} currentPath={currentPath}>
+        <PageFrame>
+          <PageHead
+            label="Admin"
             title="Authors"
             lead="Invite someone to write courses, and choose who works on which course. Invites go by email and only work for that address."
-          />
+          >
+            {/* Always rendered, so a notice that arrives with the page is in a live region (decision 031). */}
+            <div role="status" mix={noticeSlotStyle}>
+              {notice ? <Callout tone={notice.tone}>{notice.text}</Callout> : null}
+            </div>
+          </PageHead>
 
-          <div role="status" mix={noticeSlotStyle}>
-            {notice ? <Callout tone={notice.tone}>{notice.text}</Callout> : null}
-          </div>
-
-          <div mix={columnsStyle}>
-            <div mix={columnStyle}>
+          <RuledSection as="div" pad="none">
+          <CellGrid cols={2} colsMid={1} pad={false}>
               <Section id="invite" title="Invite an author" description="They get a link for 7 days. Accepting makes them an author; an admin stays an admin.">
                 {/* Keyed by the newest invite: after a send the client navigation gives a blank form, not the old values. */}
                 <form
@@ -127,9 +131,7 @@ export function AdminAuthorsPage(handle: Handle<AdminAuthorsPageProps>) {
                   <EmptyState title="No open invites." hint="Invites you send show here until they’re accepted." />
                 )}
               </Section>
-            </div>
 
-            <div mix={columnStyle}>
               <Section id="people" title="Authors and admins" description="Removing the author role also takes them off every course.">
                 {failed('people')}
                 {overview.people.length ? (
@@ -159,9 +161,9 @@ export function AdminAuthorsPage(handle: Handle<AdminAuthorsPageProps>) {
                   <EmptyState title="No courses yet." hint="Courses appear here after their first upload." />
                 )}
               </Section>
-            </div>
-          </div>
-        </div>
+          </CellGrid>
+          </RuledSection>
+        </PageFrame>
       </Layout>
     )
   }
@@ -179,13 +181,13 @@ function Section(handle: Handle<SectionProps>) {
     let { id, title, description, children } = handle.props
     let headingId = `${id}-heading`
     return (
-      <Card as="section" variant="page" labelledBy={headingId} mix={sectionStyle}>
+      <section aria-labelledby={headingId} mix={[cellPad, sectionStyle]}>
         <div mix={sectionHeadStyle} id={id}>
           <MonoHeading id={headingId}>{title}</MonoHeading>
           <p mix={descriptionStyle}>{description}</p>
         </div>
         {children}
-      </Card>
+      </section>
     )
   }
 }
@@ -306,17 +308,9 @@ function CourseAuthors(handle: Handle<{ course: CourseAuthorList; people: Author
   }
 }
 
-const noticeSlotStyle = css({
-  '&:empty': { display: 'none' },
-  marginBottom: 'calc(var(--space-6) * -1)',
-  '@media (max-width: 480px)': { marginBottom: 'calc(var(--space-3) * -1)' },
-})
-const columnsStyle = css({ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-4)', alignItems: 'flex-start' })
-const columnStyle = css({ flex: '1 1 480px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' })
-const sectionStyle = css({
-  padding: 'var(--space-6)',
-  '@media (max-width: 480px)': { padding: 'var(--space-4_5)' },
-})
+const noticeSlotStyle = css({ width: '100%', '&:not(:empty)': { paddingTop: 'var(--space-2)' } })
+// Each section is a cell of a 2-up grid sharing hairlines (decision 047).
+const sectionStyle = css({ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-4_5)' })
 const sectionHeadStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' })
 const descriptionStyle = css({ margin: 0, fontSize: 'var(--fs-14)', lineHeight: 1.55, color: 'var(--muted)' })
 const formStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-4_5)' })
@@ -324,27 +318,32 @@ const fieldsetStyle = css({ margin: 0, padding: 0, border: 0, display: 'flex', f
 const legendStyle = css({ padding: 0, marginBottom: 'var(--space-2_5)', fontSize: 'var(--fs-14)', color: 'var(--text-body)' })
 const labelStyle = css({ fontSize: 'var(--fs-13)', color: 'var(--muted)' })
 const chipsStyle = css({ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' })
-const footerStyle = css({ display: 'flex', justifyContent: 'flex-end' })
+const footerStyle = css({ display: 'flex' })
 const footerKeyStyle = css({ '@media (max-width: 480px)': { flex: '1 1 100%' } })
-const listStyle = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-2_5)' })
+// One box of rows sharing hairlines, not a stack of cards (decision 047).
+const listStyle = css({
+  listStyle: 'none',
+  margin: 0,
+  padding: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  border: 'var(--border-w) solid var(--line-cell)',
+  background: 'var(--well)',
+  '& > li + li': { borderTop: 'var(--border-w) solid var(--line-cell)' },
+  '@media (forced-colors: active)': { borderColor: 'GrayText', '& > li + li': { borderColor: 'GrayText' } },
+})
 const rowStyle = css({
   display: 'flex',
   alignItems: 'center',
   flexWrap: 'wrap',
   gap: 'var(--space-3)',
   padding: 'var(--space-3) var(--space-4)',
-  borderRadius: 'var(--radius-12)',
-  border: 'var(--border-w) solid var(--line)',
-  background: 'var(--surface)',
 })
 const courseStyle = css({
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--space-3)',
   padding: 'var(--space-4)',
-  borderRadius: 'var(--radius-12)',
-  border: 'var(--border-w) solid var(--line)',
-  background: 'var(--surface)',
 })
 const bodyStyle = css({ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' })
 // In the column-flex course card a flex-basis would become a height.
@@ -362,7 +361,6 @@ const selectStyle = css({
   minHeight: 'var(--touch-target)',
   minWidth: 0,
   padding: '0 var(--space-3)',
-  borderRadius: 'var(--radius-10)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-13)',
   // A select is :read-only to CSS; keep the solid border.

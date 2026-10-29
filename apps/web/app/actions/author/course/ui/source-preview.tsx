@@ -181,25 +181,29 @@ export function highlight(markdown: string): RemixNode[] {
   return out
 }
 
-const sectionStyle = css({ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-4)', alignItems: 'stretch' })
 const NARROW = '@media (max-width: 480px)'
+const MID = '@media (max-width: 1099.98px)'
+// Three cells sharing hairlines (decision 047): files | source | preview.
+// Under 1100px the preview drops to its own row; on phones all stack.
+const sectionStyle = css({
+  display: 'grid',
+  gridTemplateColumns: '260px minmax(0, 1fr) minmax(0, 1fr)',
+  alignItems: 'stretch',
+  [MID]: { gridTemplateColumns: '240px minmax(0, 1fr)' },
+  [NARROW]: { gridTemplateColumns: 'minmax(0, 1fr)' },
+})
 const wideOnly = css({ [NARROW]: { display: 'none' } })
 const narrowOnly = css({ display: 'none', [NARROW]: { display: 'block' } })
 
 const treeCard = css({
-  flex: '1 1 240px',
-  maxWidth: '300px',
-  padding: 'var(--space-5)',
-  borderRadius: 'var(--radius-xl)',
-  background: 'var(--well)',
-  border: 'var(--border-w) solid var(--line)',
+  minWidth: 0,
+  padding: 'var(--space-6) var(--section-pad-x)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-13)',
   lineHeight: 2,
   color: 'var(--text-quiet)',
-  [NARROW]: { maxWidth: 'none' },
 })
-const treeDetails = css({ padding: '0 var(--space-5)', '&[open]': { paddingBottom: 'var(--space-4)' } })
+const treeDetails = css({ padding: '0 var(--section-pad-x)', '&[open]': { paddingBottom: 'var(--space-4)' } })
 const summaryStyle = css({
   display: 'flex',
   alignItems: 'center',
@@ -217,28 +221,32 @@ const treeItem = css({
 })
 const treeSelected = css({
   marginLeft: 'var(--space-1_5)',
-  borderRadius: 'var(--radius-xs)',
   background: 'var(--volt-tint)',
   color: 'var(--text)',
 })
 
 const paneStyle = css({
-  flex: '999 1 420px',
   minWidth: 0,
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
-  borderRadius: 'var(--radius-xl)',
   background: 'var(--well)',
-  border: 'var(--border-w) solid var(--line)',
+  borderLeft: 'var(--border-w) solid var(--line-cell)',
+  [NARROW]: { borderLeft: 0, borderTop: 'var(--border-w) solid var(--line-cell)' },
+  '@media (forced-colors: active)': { borderColor: 'GrayText' },
 })
-const previewPane = css({ background: 'var(--ink)' })
+const previewPane = css({
+  background: 'var(--ink)',
+  [MID]: { gridColumn: '1 / -1', borderLeft: 0, borderTop: 'var(--border-w) solid var(--line-cell)' },
+})
 const paneHead = css({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  padding: 'var(--space-3) var(--space-4)',
-  borderBottom: 'var(--border-w) solid var(--line-bar)',
+  minHeight: 'var(--touch-target)',
+  padding: 'var(--space-2) var(--space-4)',
+  boxSizing: 'border-box',
+  borderBottom: 'var(--border-w) solid var(--line-cell)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',
   color: 'var(--muted)',

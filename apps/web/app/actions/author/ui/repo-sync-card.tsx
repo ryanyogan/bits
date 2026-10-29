@@ -63,11 +63,9 @@ const cardStyle = css({
   minWidth: 0,
   minHeight: '240px',
   margin: 0,
-  padding: 'var(--space-7)',
-  borderRadius: 'var(--radius-20)',
-  background: 'var(--surface)',
-  border: 'var(--border-w) solid var(--line)',
-  '@media (max-width: 480px)': { padding: 'var(--space-5)' },
+  // A cell of the upload band (decision 047): the grid draws the hairlines.
+  padding: 'var(--space-8) var(--section-pad-x)',
+  '@media (max-width: 480px)': { padding: 'var(--space-6) var(--section-pad-x)' },
 })
 const headStyle = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' })
 const titleStyle = css({
@@ -98,5 +96,6 @@ const statusStyle = css({
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',
   color: 'var(--volt)',
-  '&:empty': { display: 'none' },
+  // Out of the flow while empty, but still rendered so it can announce (decision 031).
+  '&:empty': { position: 'absolute' },
 })

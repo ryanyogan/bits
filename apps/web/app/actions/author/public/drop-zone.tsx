@@ -242,13 +242,12 @@ const zoneStyle = css({
   minHeight: '240px',
   margin: 0,
   padding: 'var(--space-7)',
-  borderRadius: 'var(--radius-20)',
-  border: '1.5px dashed var(--line-drop)',
+  border: 'var(--border-w) dashed var(--line-drop)',
   background: 'var(--well)',
   textAlign: 'center',
   transition: 'border-color 0.2s, background-color 0.2s',
   '&:hover, &[data-drag]': DROP_ACTIVE,
-  '&:has(:focus-visible)': { ...DROP_ACTIVE, boxShadow: 'var(--focus-ring)' },
+  '&:has(:focus-visible)': { ...DROP_ACTIVE, outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset)' },
   '@media (max-width: 480px)': { minHeight: '180px', padding: 'var(--space-5)' },
 })
 const targetStyle = css({
@@ -261,7 +260,7 @@ const targetStyle = css({
   flex: 1,
   cursor: 'pointer',
   // The label covers the card so a click anywhere opens the picker.
-  '&::after': { content: '""', position: 'absolute', inset: 0, borderRadius: 'inherit' },
+  '&::after': { content: '""', position: 'absolute', inset: 0 },
 })
 const titleStyle = css({
   fontFamily: 'var(--font-display)',

@@ -193,7 +193,8 @@ const rowStyle = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-
 const barStyle = css({ width: '120px', flex: 'none' })
 const pctStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--ion)' })
 const warnText = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--warn)' })
-const noteStyle = css({ flexBasis: '100%', fontSize: 'var(--fs-12)', color: 'var(--muted)', '&:empty': { display: 'none' } })
+// Out of the flow while empty, but still rendered so it can announce (decision 031).
+const noteStyle = css({ flexBasis: '100%', fontSize: 'var(--fs-12)', color: 'var(--muted)', '&:empty': { position: 'absolute' } })
 const errorStyle = css({ flexBasis: '100%', fontSize: 'var(--fs-12)', color: 'var(--danger)' })
 const doneText = css({ fontSize: 'var(--fs-13)', color: 'var(--text-body)' })
 const fileInput = css({
@@ -205,7 +206,6 @@ const fileInput = css({
     minHeight: 'var(--touch-target)',
     marginRight: 'var(--space-2)',
     padding: '0 var(--space-3)',
-    borderRadius: 'var(--radius-10)',
     border: 'var(--border-w) solid var(--line-control)',
     background: 'transparent',
     color: 'var(--text)',

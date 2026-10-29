@@ -4,8 +4,10 @@ import { css } from 'remix/component'
 import { blocks } from '../data.ts'
 
 /**
- * BlockTable (components §13.4): the `:::block` reference. Scrolls inside its
- * rounded wrapper below 760px, which is a focusable, labelled region.
+ * BlockTable (components §13.4): the `:::block` reference. Flush in its
+ * ruled band (decision 047): hairline rows, the first column at the section
+ * inset. Scrolls sideways inside its wrapper below 760px, which is a
+ * focusable, labelled region.
  */
 export function BlockTable(handle: Handle<{ label?: string }>) {
   return () => (
@@ -34,22 +36,29 @@ export function BlockTable(handle: Handle<{ label?: string }>) {
 
 const wrapStyle = css({
   overflowX: 'auto',
-  borderRadius: 'var(--radius-xl)',
-  border: 'var(--border-w) solid var(--line)',
-  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: '2px' },
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
 })
 const tableStyle = css({ width: '100%', minWidth: '760px', borderCollapse: 'collapse', fontSize: 'var(--fs-14)' })
-const headRow = css({ background: 'var(--surface)', textAlign: 'left' })
+const headRow = css({ textAlign: 'left', borderBottom: 'var(--border-w) solid var(--line-cell)' })
 const thStyle = css({
   padding: 'var(--space-3_5) var(--space-4_5)',
+  // The outer columns sit at the section inset, in line with the bands above.
+  '&:first-child': { paddingLeft: 'var(--section-pad-x)' },
+  '&:last-child': { paddingRight: 'var(--section-pad-x)' },
   fontFamily: 'var(--font-mono)',
   fontWeight: 500,
   fontSize: 'var(--fs-12)',
   color: 'var(--muted)',
   textAlign: 'left',
 })
-const bodyRow = css({ borderTop: 'var(--border-w) solid var(--line-bar)' })
-const tdStyle = css({ padding: 'var(--space-3_5) var(--space-4_5)', textAlign: 'left' })
+const bodyRow = css({ borderTop: 'var(--border-w) solid var(--line-cell)', '&:hover': { background: 'var(--fill-hover)' } })
+const tdStyle = css({
+  padding: 'var(--space-3_5) var(--space-4_5)',
+  textAlign: 'left',
+  '&:first-child': { paddingLeft: 'var(--section-pad-x)' },
+  '&:last-child': { paddingRight: 'var(--section-pad-x)' },
+})
+
 const nameStyle = css({ fontFamily: 'var(--font-mono)', fontWeight: 400, color: 'var(--volt)', whiteSpace: 'nowrap' })
 const attrsStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--synapse-soft)' })
 const whatStyle = css({ color: 'var(--text-body)', lineHeight: 1.5 })
