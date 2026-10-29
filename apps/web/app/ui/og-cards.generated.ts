@@ -16,6 +16,6 @@ export const ogCards: Record<string, string> = {
   'certificate-ship-an-agent-to-the-edge': '537d04996f',
   'course-tokens-and-temperature': 'c9bec9f2e0',
   'certificate-tokens-and-temperature': 'e26ec8aba2',
-  'course-what-is-an-llm': '7e57f42916',
+  'course-what-is-an-llm': 'dab6ae88c6',
   'certificate-what-is-an-llm': '4fa942b888',
 }

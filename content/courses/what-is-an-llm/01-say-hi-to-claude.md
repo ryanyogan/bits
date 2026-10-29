@@ -1,10 +1,11 @@
 ---
-# sources (checked 2026-10-26):
-# - Anthropic, Models overview (Claude Haiku 5.5: fastest current model; id claude-haiku-5-5)
+# sources (checked 2026-10-29):
+# - Anthropic, Models overview (Claude Haiku 5.5: fastest current model; id claude-haiku-5-5;
+#   Claude models take text and images)
 #   https://platform.claude.com/docs/en/models/overview
 # - Anthropic, Glossary ("LLM", "Pretraining", "Fine-tuning")
 #   https://platform.claude.com/docs/en/about-claude/glossary
-# - bits decision 019 (sandbox: only T=1.0 runs live, examples otherwise, hourly limits)
+# - bits decision 019 (sandbox: one fresh request per run, hourly limits, labelled examples past them)
 #   docs/decisions/019-live-prompts.md
 # Lessons can't hold raw HTML, so sources live in this YAML comment, not <!-- -->.
 title: "Say hi to Claude"
@@ -42,28 +43,30 @@ text. “Language model” because its job is predicting text.
 
 ---
 
-A few honest notes about this sandbox, so nothing surprises you later.
+Three words you'll hear everywhere, sorted out once. **AI** is the umbrella
+word: software doing things we used to think needed a person. An **LLM** is
+the kind of AI that reads and writes text. **Claude** is one LLM. The chat
+apps you may have used, like claude.ai or ChatGPT, are a window wrapped around
+a model like this one. Here you talk to the model with almost nothing in
+between.
 
-**It's real and it's free.** Runs here go live to **Claude Haiku 5.5**,
-Anthropic's fastest current model (as of October 2026). Answers are kept
-short on purpose.
-
-**Every run starts fresh.** The sandbox sends only the prompt in the box. It
-doesn't send your earlier runs, so Claude can't see them.
-
-**Only temperature 1.0 runs live.** That's how Claude really samples. When a
-lesson offers another setting, you'll see a saved example, labelled as an
-example.
-
-**Runs are rationed.** There's an hourly limit (higher if you sign in). Past
-it, you get a labelled example output instead of a live one, and you can keep
-going.
+Claude can look at images too. This course sticks to text, because text is
+where everything else starts.
 
 ---
 
-Here's a peek at what happened while it answered. Each step shows the word it
-picked and a few it didn't. These numbers are made up to show the idea; the
-next lesson explains them.
+One honest note about this sandbox. Runs go live to **Claude Haiku 5.5**,
+Anthropic's fastest current model (as of October 2026), for free, with an
+hourly limit that's higher if you sign in. Past the limit you get a saved
+example, labelled as one, and you can keep going. Answers are kept short on
+purpose. And each run sends only what's in the box, nothing from before. Why
+that matters is lesson 6.
+
+---
+
+Here's a peek at what happened while it answered: the word it picked at each
+step, and a few it didn't. The numbers are illustrative; the next lesson
+explains them.
 
 :::nexttoken{prompt="Hi Claude! In one sentence, what are you?" illustrative}
 "I'm" 0.88 | "Hi":0.07 "Hello":0.03

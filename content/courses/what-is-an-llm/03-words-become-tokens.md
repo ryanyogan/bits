@@ -1,5 +1,5 @@
 ---
-# sources (checked 2026-10-26):
+# sources (checked 2026-10-29):
 # - Anthropic, Glossary ("Tokens": words, subwords, characters or bytes; counts depend on
 #   model and language; Claude's tokenizer changed with Claude 4.7)
 #   https://platform.claude.com/docs/en/about-claude/glossary
@@ -20,8 +20,10 @@ Last lesson said the model guesses one **token** at a time. So what is a
 token?
 
 Before Claude sees your prompt, a **tokenizer** chops the text into pieces
-from a fixed vocabulary. Each piece has an id number, and the numbers are all
-the model ever sees. It doesn't see the letters inside them.
+from a fixed menu. The menu is big (modern models carry on the order of a
+hundred thousand pieces) but fixed, chosen so that any text can be written
+from it. Each piece has an id number, and the numbers are all the model ever
+sees. It doesn't see the letters inside them.
 
 :::tokenizer{sample="How many r's in strawberry?" illustrative}
 "How"     4438

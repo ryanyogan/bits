@@ -1,25 +1,23 @@
 ---
-# sources (checked 2026-10-26):
+# sources (checked 2026-10-29):
 # - Vaswani et al., Attention Is All You Need (2017): the transformer and its attention layers
 #   https://arxiv.org/abs/1706.03762
 # - 3Blue1Brown, Attention in transformers, step-by-step (Deep Learning Chapter 6):
-#   many heads per layer, many layers, causal masking (a token only looks back)
+#   many heads per layer, many layers, causal masking (a token only looks back), and the
+#   cost of attention growing with the length of the context
 #   https://www.youtube.com/watch?v=eMlx5fFNoYc
-# - Anthropic, Models overview (Claude Haiku 5.5 context window: 1M tokens)
-#   https://platform.claude.com/docs/en/models/overview
-# - Anthropic, Glossary ("Context window": the model's working memory)
-#   https://platform.claude.com/docs/en/about-claude/glossary
 # Toy: weights are illustrative, one made-up head; real ones are spread over many heads and layers.
 title: "Attention: how it keeps track"
-order: 6
+order: 7
 minutes: 6
 xp: 40
 module: How it got this way
 ---
 
-To guess the next token well, the model has to know what the earlier ones
-**mean here**. “Bank” by a river isn't “bank” with a vault. And “it” could be
-almost anything.
+Last lesson: everything the model can use is in one long text. This lesson:
+how it reads that text. To guess the next token well, the model has to know
+what the earlier ones **mean here**. “Bank” by a river isn't “bank” with a
+vault. And “it” could be almost anything.
 
 The part of the model that sorts this out is called **attention**. It's the
 big idea inside the **transformer**, the design almost every modern LLM uses,
@@ -60,9 +58,11 @@ each free to track something different (who did what, what a word refers to,
 which bracket is still open). Then it stacks many of these layers, so later
 layers build on what earlier ones worked out.
 
-Attention can only look back over a limited stretch of text, called the
-**context window**. Claude Haiku 5.5's is 1M tokens, per Anthropic's models
-overview (October 2026). Anything outside it, the model simply can't see.
+This is where the context window gets used. Attention is how the model reads
+across everything in it, your system prompt and old turns included. Every new
+token looks back over all the earlier ones, so the longer the text, the more
+looking there is to do. That's one reason long prompts cost more and run
+slower.
 
 Your turn. Write a sentence where a word like “it” could point two ways, and
 ask Claude what it refers to. Then swap one word and run it again.

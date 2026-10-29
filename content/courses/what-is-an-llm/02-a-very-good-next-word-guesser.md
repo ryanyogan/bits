@@ -1,10 +1,13 @@
 ---
-# sources (checked 2026-10-26):
+# sources (checked 2026-10-29):
 # - Anthropic, Glossary ("Pretraining": autoregressive models predict the next word; "Temperature")
 #   https://platform.claude.com/docs/en/about-claude/glossary
 # - Anthropic, Tracing the thoughts of a large language model (Claude plans rhymes ahead
 #   even though it writes one token at a time), 2025-03-27
 #   https://www.anthropic.com/research/tracing-thoughts-language-model
+# - 3Blue1Brown, Transformers (Deep Learning Chapter 5): one score per vocabulary entry,
+#   softmax turns the scores into a distribution, sample one, append, repeat
+#   https://www.youtube.com/watch?v=wjZofJX0v4M
 # - bits decision 019 (Claude samples at temperature 1.0)
 title: "A very good next-word guesser"
 order: 2
@@ -22,9 +25,14 @@ again. And again. Until it guesses that it's done.
 
 ---
 
-Each guess isn't a single word. It's a list of **odds**: every token the model
-knows gets a probability. Step through a reply below and watch the odds at
-each step. The numbers are illustrative, but the shape is real.
+Slow it right down and one reply is a loop of five moves. Read everything so
+far, your prompt included. Give every token it knows a score, and it knows
+tens of thousands. Turn the scores into **odds** that add up to 100%. Draw
+one. Add it to the text, and go back to the start. A reply is that loop
+running until the model draws the token that means “I'm done”.
+
+Step through a reply below and watch the odds at each draw. The numbers are
+illustrative, but the shape is real.
 
 :::nexttoken{prompt="Finish the sentence: The best thing about rainy days is" illustrative}
 " the" 0.41 | " curling":0.22 " staying":0.14

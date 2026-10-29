@@ -1,5 +1,5 @@
 ---
-# sources (checked 2026-10-26):
+# sources (checked 2026-10-29):
 # - Anthropic, Prompting best practices ("Be clear and direct" and the new-colleague test,
 #   "Add context to improve performance", "Use examples effectively")
 #   https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
@@ -9,7 +9,7 @@
 #   https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview
 # Toy: both outputs are illustrative.
 title: "Checkpoint: talk to it well"
-order: 8
+order: 9
 minutes: 8
 xp: 60
 module: Using it well
@@ -36,7 +36,11 @@ group. Same model. Very different answer.
 
 ---
 
-Five habits that do most of the work:
+Six habits that do most of the work:
+
+**Put the facts in the prompt.** Lesson 6's rule. If Claude needs a name, a
+date, a document or a decision you've already made, it's not there unless
+you type it.
 
 **Say exactly what you want.** Anthropic's test: would a colleague with no
 background understand your prompt? If not, neither will Claude.
@@ -75,7 +79,7 @@ Write a prompt for a real task, with who it's for, why, a shape and room to ask
 
 Finish this checkpoint and the course badge is yours. Two good next steps: **Tokens & temperature** goes
 deeper into tokens, odds and randomness, and **Prompting that works** turns
-these five habits into a toolkit.
+these six habits into a toolkit.
 
 :::rabbithole
 - read "Prompting best practices" by="Anthropic" url="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices"

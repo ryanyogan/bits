@@ -20,7 +20,8 @@ const LLM_LESSONS: { lesson: string; prompt?: [id: string, text: string]; quiz?:
   { lesson: 'a-very-good-next-word-guesser', prompt: ['finish-the-sentence', 'Finish this sentence with one word: The sky is ...'] },
   { lesson: 'words-become-tokens', quiz: ['strawberry', 'b'] },
   { lesson: 'where-it-learned-pretraining', quiz: ['what-pretraining-practises', 'a'] },
-  { lesson: 'from-autocomplete-to-assistant', quiz: ['constitutional-ai', 'b'] },
+  { lesson: 'from-autocomplete-to-assistant', quiz: ['knows-vs-behaves', 'a'] },
+  { lesson: 'your-prompt-is-all-it-sees', prompt: ['put-it-in-the-prompt', 'My dog is called Biscuit and he hates rain. Suggest a name for his raincoat.'] },
   { lesson: 'attention-how-it-keeps-track', prompt: ['what-does-it-mean', 'In "The dog chased the cat because it was hungry", what does it refer to?'] },
   { lesson: 'what-it-cant-do', prompt: ['catch-a-guess', 'Who wrote the 1923 novel The Glass Orchard? If you are not sure, say so.'] },
   {
