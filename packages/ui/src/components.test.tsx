@@ -230,8 +230,13 @@ describe('course components', () => {
       </FilterPill>,
     )
     assert.match(pill, /<a[^>]*aria-current="true"/)
+    assert.doesNotMatch(pill, /data-rmx-reset-scroll/)
+    let kept = await renderToString(<FilterPill href="?track=tools" keepPlace>Tools</FilterPill>)
+    assert.match(kept, /data-rmx-reset-focus="manual"/)
+    assert.match(kept, /data-rmx-reset-scroll="manual"/)
     let search = await renderToString(<SearchField action="/courses" shortcut={false} variant="cell" />)
     assert.match(search, /role="search"[^>]*data-rmx-reset-focus="manual"|data-rmx-reset-focus="manual"[^>]*role="search"/)
+    assert.match(search, /data-rmx-reset-scroll="manual"/)
   })
 
   it('shows the done tag and no bar at 100%', async () => {

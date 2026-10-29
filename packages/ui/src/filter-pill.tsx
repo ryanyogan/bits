@@ -20,6 +20,12 @@ export interface FilterPillProps {
   variant?: 'pill' | 'cell'
   /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
   prefetch?: PrefetchProp
+  /**
+   * Keep focus and scroll where they are when the filter is followed on the
+   * client (`data-rmx-reset-focus/scroll="manual"`): the catalog re-renders
+   * in place under the same toolbar (decision 049).
+   */
+  keepPlace?: boolean
   forceState?: ForcedState
   mix?: MixInput<HTMLElement>
   children?: RemixNode
@@ -31,13 +37,16 @@ export interface FilterPillProps {
  */
 export function FilterPill(handle: Handle<FilterPillProps>) {
   return () => {
-    let { href, dot, count, selected, variant = 'pill', prefetch, forceState, mix, children } = handle.props
+    let { href, dot, count, selected, variant = 'pill', prefetch, keepPlace, forceState, mix, children } = handle.props
+    let place = keepPlace ? ('manual' as const) : undefined
     return (
       <a
         href={href}
         aria-current={selected ? 'true' : undefined}
         data-rmx-prefetch={prefetchFor(href, prefetch)}
         data-force={forceState}
+        data-rmx-reset-focus={place}
+        data-rmx-reset-scroll={place}
         mix={[pillStyle, variant === 'cell' ? cellStyle : undefined, mix]}
       >
         <span

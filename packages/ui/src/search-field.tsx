@@ -50,8 +50,15 @@ export function SearchField(handle: Handle<SearchFieldProps>) {
     } = handle.props
     return (
       // Enter re-renders the results in place: keep focus in the field
-      // (the navigation's default focus reset would drop it on <body>).
-      <form method="get" action={action} role="search" data-rmx-reset-focus="manual" mix={[formStyle, variant === 'cell' ? cellFormStyle : undefined, mix]}>
+      // (the navigation's default focus reset would drop it on <body>) and
+      // the scroll where it is (the default would jump to the top; 049).
+      <form
+        method="get"
+        action={action}
+        role="search"
+        data-rmx-reset-focus="manual"
+        data-rmx-reset-scroll="manual"
+        mix={[formStyle, variant === 'cell' ? cellFormStyle : undefined, mix]}>
         {hidden
           ? Object.entries(hidden).map(([key, val]) => <input key={key} type="hidden" name={key} value={val} />)
           : null}
