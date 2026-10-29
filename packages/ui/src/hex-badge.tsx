@@ -1,6 +1,8 @@
 import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
+import { FORCED_COLORS } from './lib/states.ts'
+
 const HEX = 'M11 1.5 L19.2 6.25 L19.2 15.75 L11 20.5 L2.8 15.75 L2.8 6.25 Z'
 
 export interface HexBadgeProps {
@@ -82,13 +84,23 @@ export interface BadgeTileProps {
   locked?: boolean
 }
 
-/** Profile badge grid item: hex + name, lifts and tilts on hover. Static. */
+/**
+ * Profile badge grid item: hex + name, as one cell of a shared-border grid
+ * (`CellGrid as="ul"` or `badgeGridStyle`; decision 047). Flat: hover steps
+ * the fill, nothing lifts. An earned badge marks the cell's top edge with a
+ * short 2px tick in its colour; a locked one keeps its dashed outline and a
+ * quieter name. Static.
+ */
 export function BadgeTile(handle: Handle<BadgeTileProps>) {
   return () => {
     let { name, glyph, color, locked } = handle.props
     return (
-      <li data-locked={locked ? 'true' : undefined} mix={tileStyle}>
-        <HexBadge name={name} glyph={glyph} color={color} variant={locked ? 'locked' : 'earned'} />
+      <li
+        data-locked={locked ? 'true' : undefined}
+        mix={tileStyle}
+        style={locked ? undefined : { '--badge-tone': color ?? 'var(--volt)' }}
+      >
+        <HexBadge name={name} glyph={glyph} color={color} variant={locked ? 'locked' : 'earned'} mix={tileHex} />
         <span aria-hidden="true" mix={tileName}>
           {name}
         </span>
@@ -97,28 +109,61 @@ export function BadgeTile(handle: Handle<BadgeTileProps>) {
   }
 }
 
+const PHONE = '@media (max-width: 480px)'
+
+/**
+ * A boxed 3-up grid of `BadgeTile`s with shared hairlines, for a list that
+ * sits inside padding (the styleguide). On a ruled page, use
+ * `<CellGrid as="ul" pad={false}>` instead.
+ */
 export const badgeGridStyle = css({
   listStyle: 'none',
   margin: 0,
   padding: 0,
   display: 'grid',
   gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-  gap: 'var(--space-3_5) var(--space-2_5)',
+  borderInline: 'var(--border-w) solid var(--line-cell)',
+  borderBottom: 'var(--border-w) solid var(--line-cell)',
+  '& > *': {
+    borderTop: 'var(--border-w) solid var(--line-cell)',
+    borderRight: 'var(--border-w) solid var(--line-cell)',
+  },
+  '& > :nth-child(3n)': { borderRight: 0 },
+  [FORCED_COLORS]: { borderColor: 'GrayText', '& > *': { borderColor: 'GrayText' } },
 })
 const tileStyle = css({
+  position: 'relative',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
-  gap: 'var(--space-2)',
+  gap: 'var(--space-2_5)',
+  minWidth: 0,
+  padding: 'var(--space-5) var(--space-2) var(--space-4)',
   textAlign: 'center',
-  transition: 'transform var(--duration-card) var(--ease-spring)',
-  '&:hover': { transform: 'translateY(-4px) rotate(-3deg)' },
-  '@media (prefers-reduced-motion: reduce)': { '&:hover': { transform: 'none' } },
+  transition: 'background-color var(--duration-fast) var(--ease)',
+  '&:hover': { background: 'var(--cell-fill-hover)' },
+  // The earned colour as a signal: a short 2px tick on the cell's top edge.
+  '&:not([data-locked])::before': {
+    content: '""',
+    position: 'absolute',
+    top: 'calc(-1 * var(--border-w))',
+    left: '50%',
+    width: 'var(--space-6)',
+    height: 'var(--border-w-strong)',
+    transform: 'translateX(-50%)',
+    background: 'var(--badge-tone)',
+  },
+  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+  [FORCED_COLORS]: { '&:not([data-locked])::before': { display: 'none' } },
+  [PHONE]: { padding: 'var(--space-4) var(--space-1) var(--space-3_5)' },
 })
+// 48px (40px on phones) inside a cell; the bare HexBadge stays 56.
+const tileHex = css({ width: '48px', height: '48px', [PHONE]: { width: '40px', height: '40px' } })
 const tileName = css({
   fontSize: 'var(--fs-12)',
   lineHeight: 1.3,
   color: 'var(--text-quiet)',
+  overflowWrap: 'anywhere',
   '[data-locked] > &': { color: 'var(--muted)' },
 })
 

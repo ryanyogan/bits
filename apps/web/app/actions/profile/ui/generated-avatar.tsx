@@ -33,7 +33,7 @@ function hash(text: string): number {
 }
 
 /**
- * Deterministic constellation avatar (components §1.3): a volt hub joined to
+ * Deterministic constellation avatar (components §1.3), in a square frame: a volt hub joined to
  * six outer nodes. Each handle jitters the vertices by up to ±6px and picks
  * the outer dot colours; the design fixture ("jamie") renders exactly as
  * drawn. Server-rendered SVG, 148px, 96px at ≤480px.
@@ -60,7 +60,8 @@ export function GeneratedAvatar(handle: Handle<GeneratedAvatarProps>) {
         aria-label={`${name}'s generated avatar`}
         mix={avatarStyle}
       >
-        <rect x="1" y="1" width="146" height="146" rx="36" style={{ fill: 'var(--surface)', stroke: 'var(--volt-a45)' }} />
+        {/* Squared (decision 047): a hairline frame, the volt edge kept as the signal. */}
+        <rect x="0.5" y="0.5" width="147" height="147" style={{ fill: 'var(--surface)', stroke: 'var(--volt-a45)' }} />
         {/* fill="none": the artboard's outer path has no fill and renders black (README §E). */}
         <g fill="none" stroke-width="1.4" style={{ stroke: 'var(--avatar-edge)' }}>
           <path d={`M${a} L${b} L${c} L${d} L${e} L${f} Z`} />
