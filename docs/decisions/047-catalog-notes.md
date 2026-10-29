@@ -35,11 +35,11 @@ and `/courses/:course`.
   renders in a `<p>`, so the course page draws its strip headings with
   `stripHeading` (`course/ui/strip.ts`), which looks the same.
 
-## Follow-ups outside this lane
+## Follow-ups (done in phase 3, see 047 "Status")
 
-- `RuledSection` could take a `labelAs="h2"` (or an id for the label), so
-  pages don't need a local copy of the strip.
-- `Layout`'s bleed `<main>` (or `html` in `base.css`) should clip
-  `overflow-x`, so no page has to.
-- The `--radius-round` comment in `tokens.css` lists lesson nodes, which
-  are now squares.
+- `RuledSection` takes `labelAs="h2"` with a `labelId`. The course page's
+  `stripHeading` is gone: its strips are now `RuledSection` labels and
+  `Panel`s.
+- Every `Layout` `<main>` clips `overflow-x`.
+- The `--radius-round` comment in `tokens.css` now says lesson nodes are
+  squares.
