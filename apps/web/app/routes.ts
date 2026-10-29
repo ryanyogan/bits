@@ -12,6 +12,10 @@ export const routes = route({
   // Content-Security-Policy violation reports (decision 027), logged only.
   cspReport: post('/csp-report'),
   home: get('/'),
+  // Answered by router middleware before the session (decision 035):
+  // app/middleware/site-files.ts; the root controller keeps the map whole.
+  robots: get('/robots.txt'),
+  sitemap: get('/sitemap.xml'),
 
   // Catalog, course syllabus and lesson pages.
   courses: route('/courses', {

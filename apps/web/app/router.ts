@@ -41,6 +41,7 @@ import { loadDatabase } from './middleware/database.ts'
 import { cspNonce } from './middleware/csp-nonce.tsx'
 import { responseHeaders } from './middleware/headers.ts'
 import { serveMedia } from './middleware/media.ts'
+import { serveRobots, serveSitemap } from './middleware/site-files.ts'
 import { logServerErrors } from './middleware/server-errors.ts'
 import { webAnalytics } from './middleware/web-analytics.tsx'
 import { routes } from './routes.ts'
@@ -56,6 +57,8 @@ export const router = createRouter({
     // Lesson videos answer here, before cop, D1, the session and auth: every
     // Range request would otherwise read the session (decision 035).
     serveMedia(),
+    // /robots.txt: public, the same for everyone, no D1 (decision 035).
+    serveRobots(),
     platform.middleware,
     // Rejects cross-origin POSTs (Sec-Fetch-Site, then Origin). Webhooks are
     // server-to-server and verify their own signatures. See decision 015.
@@ -65,6 +68,8 @@ export const router = createRouter({
     // Server-Timing `catalog` and `r2` after `db` (decision 026).
     contentTiming(),
     loadDatabase(platform.env.DB),
+    // /sitemap.xml needs the catalog, so the db, but not the session (decision 035).
+    serveSitemap(),
     // Course pages show progress: a GET there reads the viewer's completed
     // lessons with the session, in one D1 round trip (decision 026).
     // A lesson page also brings the viewer's drafts in that lesson (decision 029).

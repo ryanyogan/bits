@@ -85,7 +85,7 @@ Deploys (decision 032) happen in CI (`.github/workflows/ci.yml`), after the
   checked build, `pnpm content upload --all --publish --remote` (decision
   036: only courses whose build changed get a version; a course with
   errors fails the job after the others are handled), then a smoke test
-  (`/health`, `/`, `/courses`, `/login` must be 200; it runs whenever the
+  (`/health`, `/`, `/courses`, `/login`, `/robots.txt`, `/sitemap.xml` must be 200; it runs whenever the
   deploy step succeeded). Deploys never overlap and are never cancelled.
   Migrations run before the code, so keep them additive.
 - **Same-repo pull request** → `preview` job (Environment `preview`): a
@@ -637,6 +637,8 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   so it never reads the session or D1 (decision 035). A public, immutable,
   non-HTML response that needs neither belongs there too, not after
   `loadSession`.
+  `/robots.txt` sits there; `/sitemap.xml` needs the catalog, so it is
+  answered right after `loadDatabase` (`app/middleware/site-files.ts`).
 - Builds link a lesson's `video:` path to the newest ready upload:
   callers pass `buildCourse(files, { videos: await loadVideoLinks(db) })`.
   No ready upload → a warning, no `content.video`, text-only. Check with

@@ -120,6 +120,42 @@ describe('router smoke test', () => {
     assert.equal((await response.json()).ok, true)
   })
 
+  it('GET /robots.txt allows the site, keeps crawlers out of private areas, names the sitemap', async () => {
+    let response = await request(routes.robots.href())
+    assert.equal(response.status, 200)
+    assert.match(response.headers.get('Content-Type') ?? '', /^text\/plain/)
+    assert.equal(response.headers.get('Cache-Control'), 'public, max-age=86400')
+    assert.equal(response.headers.get('Set-Cookie'), null, 'no session')
+    assert.equal(response.headers.get('Server-Timing'), null, 'no D1')
+    let text = await response.text()
+    assert.match(text, /^User-agent: \*\nAllow: \/\n/)
+    for (let path of ['/settings', '/me', '/auth', '/api', '/author', '/admin']) {
+      assert.match(text, new RegExp(`^Disallow: ${path}$`, 'm'))
+    }
+    assert.match(text, /^Sitemap: https?:\/\/[^/]+\/sitemap\.xml$/m)
+  })
+
+  it('GET /sitemap.xml lists the public pages, every published course and lesson, with lastmod', async () => {
+    let response = await request(routes.sitemap.href())
+    assert.equal(response.status, 200)
+    assert.match(response.headers.get('Content-Type') ?? '', /^application\/xml/)
+    assert.equal(response.headers.get('Cache-Control'), 'public, max-age=3600')
+    assert.equal(response.headers.get('Set-Cookie'), null, 'no session')
+    let xml = await response.text()
+    assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8"\?>\n<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/)
+    let locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname)
+    for (let path of ['/', '/courses', '/terms', '/privacy']) assert.ok(locs.includes(path), path)
+    let course = 'tokens-and-temperature'
+    assert.ok(locs.includes(routes.courses.course.index.href({ course })))
+    assert.ok(locs.includes(routes.courses.lesson.index.href({ course, lesson: 'temperature' })))
+    assert.equal(locs.length, new Set(locs).size, 'no duplicates')
+    assert.ok(!locs.some((path) => /^\/(settings|me|auth|api|author|admin)\b/.test(path)))
+    assert.match(
+      xml,
+      new RegExp(`<loc>https?://[^/]+/courses/${course}</loc><lastmod>\\d{4}-\\d{2}-\\d{2}</lastmod>`),
+    )
+  })
+
   it('POST /login redirects a valid email to /login/check', async () => {
     let response = await request(
       routes.login.action.href(),

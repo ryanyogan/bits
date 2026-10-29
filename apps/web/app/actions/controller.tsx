@@ -7,6 +7,7 @@ import { rateLimit } from '../middleware/rate-limit.tsx'
 import { routes } from '../routes.ts'
 import { getViewer } from '../auth/identity.ts'
 import { receiveCspReport } from './csp-report.ts'
+import { robotsResponse, sitemapResponse } from './site-files.ts'
 import { HomePage } from './home-page.tsx'
 import { NotFoundPage } from '../ui/not-found-page.tsx'
 
@@ -41,6 +42,13 @@ export default createController(routes, {
       handler(context) {
         return receiveCspReport(context.request)
       },
+    },
+    // Normally answered by serveRobots() / serveSitemap() in router.ts first.
+    robots(context) {
+      return robotsResponse(context.url)
+    },
+    sitemap(context) {
+      return sitemapResponse(context)
     },
     home(context) {
       return context.render(<HomePage viewer={getViewer(context)} />)

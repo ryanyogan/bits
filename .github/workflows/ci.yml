@@ -125,7 +125,7 @@ jobs:
         run: |
           set -euo pipefail
           base=https://bits.yogan.dev
-          for path in /health / /courses /login; do
+          for path in /health / /courses /login /robots.txt /sitemap.xml; do
             status=000
             for _ in 1 2 3 4 5; do
               status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$base$path" || echo 000)
@@ -232,7 +232,7 @@ jobs:
           URL: ${{ steps.preview.outputs.url }}
         run: |
           set -euo pipefail
-          for path in /health / /courses /login; do
+          for path in /health / /courses /login /robots.txt /sitemap.xml; do
             status=000
             for _ in 1 2 3 4 5; do
               status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "${URL%/}$path" || echo 000)
