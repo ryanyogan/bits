@@ -4,10 +4,11 @@ import { clientEntry, css, on, ref } from 'remix/component'
 import { CheckChip, checkListStyle } from './check-chip.tsx'
 import { Keycap } from './keycap.tsx'
 import { readDraft, writeDraft, type DraftPersist } from './lib/drafts.ts'
+import { fieldFrameStyle, fieldGlyphStyle, fieldGlyphTopStyle, fieldInputStyle, fieldMultiStyle } from './lib/field.ts'
 import { runNote, streamRun, type RunEndpoint } from './lib/run-stream.ts'
 import { createFollower, scrollWindowStyle } from './lib/stable.tsx'
-import { FOCUS_WITHIN, focusOutline, FORCED_COLORS, forcedSelected } from './lib/states.ts'
-import { TEMPERATURE_EVENT } from './odds-bars.tsx'
+import { focusOutline, FORCED_COLORS, forcedSelected } from './lib/states.ts'
+import { initialTemperature, TEMPERATURE_EVENT } from './odds-bars.tsx'
 import { announceReward, RewardToast, type RewardNext } from './reward-toast.tsx'
 import { Tag } from './tag.tsx'
 import { toyHeaderStyle, toyPanelStyle } from './toy-panel.tsx'
@@ -135,7 +136,7 @@ export const PromptComposer = clientEntry(
     let hydrated = false
     // The server's saved copy renders first (signed in); a newer local copy replaces it on hydration.
     let draft = handle.props.persist?.saved?.value ?? handle.props.defaultDraft ?? ''
-    let temperature = (handle.props.temperatures ?? DEFAULT_TEMPS)[0]!
+    let temperature = initialTemperature(handle.props.temperatures ?? DEFAULT_TEMPS)
     let runs: Run[] = []
     let ranAt = new Set<number>()
     let running = false
@@ -284,7 +285,6 @@ export const PromptComposer = clientEntry(
             </ol>
           </section>
           <form
-            data-force={forceFocus ? 'focus' : undefined}
             mix={[
               composerStyle,
               ref((node) => (composer = node)),
@@ -294,30 +294,37 @@ export const PromptComposer = clientEntry(
               }),
             ]}
           >
-            <textarea
-              id={fieldId}
-              name="prompt"
-              rows={3}
-              placeholder={placeholder}
-              value={draft}
-              readOnly={locked}
-              aria-describedby={`${id}-checks`}
-              mix={[
-                textareaStyle,
-                ref((node) => (textarea = node)),
-                on('input', (event) => {
-                  draft = event.currentTarget.value
-                  saveDraft()
-                  handle.update()
-                }),
-                on('keydown', (event) => {
-                  if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
-                    event.preventDefault()
-                    event.currentTarget.form?.requestSubmit()
-                  }
-                }),
-              ]}
-            />
+            {/* The shared field (decision 051): the volt › and the prompt in one frame that shows focus. */}
+            <div data-force={forceFocus ? 'focus' : undefined} mix={[fieldFrameStyle, promptFrameStyle]}>
+              <span aria-hidden="true" mix={[fieldGlyphStyle, fieldGlyphTopStyle]}>
+                ›
+              </span>
+              <textarea
+                id={fieldId}
+                name="prompt"
+                rows={3}
+                placeholder={placeholder}
+                value={draft}
+                readOnly={locked}
+                aria-describedby={`${id}-checks`}
+                mix={[
+                  fieldInputStyle,
+                  fieldMultiStyle,
+                  ref((node) => (textarea = node)),
+                  on('input', (event) => {
+                    draft = event.currentTarget.value
+                    saveDraft()
+                    handle.update()
+                  }),
+                  on('keydown', (event) => {
+                    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+                      event.preventDefault()
+                      event.currentTarget.form?.requestSubmit()
+                    }
+                  }),
+                ]}
+              />
+            </div>
             <ul id={`${id}-checks`} aria-label="Checks" mix={checkListStyle}>
               {checks.map((check) => (
                 <CheckChip key={check.label} passed={hydrated && checkPasses(check, draft, ranAt)}>
@@ -413,28 +420,12 @@ const composerStyle = css({
   flexDirection: 'column',
   gap: 'var(--space-3)',
   padding: 'var(--space-4)',
-  transition: 'box-shadow var(--duration-focus)',
-  // Flat focus: a 2px ring drawn inside the composer's cell.
-  [FOCUS_WITHIN]: { boxShadow: 'inset 0 0 0 var(--focus-outline-w) var(--focus-ring-color)' },
   '@media (max-width: 480px)': { padding: 'var(--space-3_5) var(--space-3)' },
 })
+// The frame holds a multi-line prompt: the › rides the first line.
+const promptFrameStyle = css({ alignItems: 'stretch' })
 const headerStyle = css({ justifyContent: 'flex-start', gap: 'var(--space-1) var(--space-2_5)', paddingInline: 'var(--space-4)', '@media (max-width: 480px)': { paddingInline: 'var(--space-3)' } })
 const taskStyle = css({ fontSize: 'var(--fs-14)', color: 'var(--text-quiet)' })
-const textareaStyle = css({
-  resize: 'vertical',
-  minHeight: '84px',
-  padding: 0,
-  background: 'transparent',
-  border: 0,
-  color: 'var(--text)',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-16)',
-  lineHeight: 1.6,
-  outline: 'none',
-  // The composer border shows focus (focus-within); no ring on the textarea itself.
-  '&:focus-visible': { outline: 'none', boxShadow: 'none' },
-  '&::placeholder': { color: 'var(--dim)' },
-})
 const footerStyle = css({
   display: 'flex',
   alignItems: 'center',

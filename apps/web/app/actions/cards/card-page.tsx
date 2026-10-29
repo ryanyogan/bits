@@ -159,7 +159,7 @@ const titleStyle = css({
   lineHeight: 1.08,
   letterSpacing: 'var(--tracking-display)',
   display: '-webkit-box',
-  WebkitLineClamp: 3,
+  WebkitLineClamp: '3',
   WebkitBoxOrient: 'vertical',
   overflow: 'hidden',
 })

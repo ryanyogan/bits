@@ -26,14 +26,18 @@ export function CatalogBackground(handle: Handle<CatalogBackgroundProps>) {
   return () => (
     <div aria-hidden="true" data-rmx-key={handle.props.replayKey} mix={layerStyle}>
       <div mix={gridStyle} />
-      <div mix={holeStyle}>
-        <div mix={coreStyle} />
-        {RINGS.map((i) => (
-          <span key={`r${i}`} mix={ringStyle} style={{ '--i': i }} />
-        ))}
-        {MOTES.map(([i, angle], n) => (
-          <i key={`m${n}`} mix={moteStyle} style={{ '--i': i, '--a': `${angle}deg` }} />
-        ))}
+      {/* The art stays inside the ruled column: the graph paper runs full
+       * bleed, the shaft (and its drop) is clipped at the rails. */}
+      <div mix={columnStyle}>
+        <div mix={holeStyle}>
+          <div mix={coreStyle} />
+          {RINGS.map((i) => (
+            <span key={`r${i}`} mix={ringStyle} style={{ '--i': i }} />
+          ))}
+          {MOTES.map(([i, angle], n) => (
+            <i key={`m${n}`} mix={moteStyle} style={{ '--i': i, '--a': `${angle}deg` }} />
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -87,6 +91,15 @@ const gridStyle = css({
   },
 })
 
+/** The PageFrame's column (rails included), as an absolute box over the full-bleed layer. */
+const columnStyle = css({
+  position: 'absolute',
+  top: 0,
+  bottom: 0,
+  insetInline: 'max(var(--frame-inset), calc((100% - var(--frame-max)) / 2))',
+  overflow: 'clip',
+})
+
 /**
  * The tunnel: a wide box whose frames shrink toward a point above its
  * centre, so it reads as looking down a square shaft at an angle.
@@ -98,14 +111,16 @@ const holeStyle = css({
   position: 'absolute',
   width: 'var(--rim)',
   height: 'calc(var(--rim) * 0.42)',
-  left: '72%',
+  // Of the column: where 72% of the full width put it at 1440, and the rim's
+  // right edge stays inside the right rail down to 760px.
+  left: '74%',
   // High enough that the rim's bottom edge stays inside the title band: the
   // ground shows under that band now (decision 050), so nothing hides it.
   top: '21%',
   translate: '-50% -50%',
   '@media (max-width: 760px)': {
     '--rim': '110vw',
-    left: '88%',
+    left: '91%',
     top: '84px',
     // Under the title on a phone: quieter, so the frames never fight the text.
     opacity: 0.6,

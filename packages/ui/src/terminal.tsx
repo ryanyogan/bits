@@ -2,8 +2,9 @@ import type { Handle, RemixNode } from 'remix/component'
 import { clientEntry, css, on, ref } from 'remix/component'
 
 import { Keycap } from './keycap.tsx'
-import { TEMPERATURE_EVENT } from './odds-bars.tsx'
+import { initialTemperature, TEMPERATURE_EVENT } from './odds-bars.tsx'
 import { readDraft, writeDraft, type DraftPersist } from './lib/drafts.ts'
+import { fieldFrameStyle, fieldGlyphStyle, fieldInputStyle, fieldKeyedStyle } from './lib/field.ts'
 import { prefetchFor } from './lib/prefetch.ts'
 import { runNote, streamRun, type RunEndpoint } from './lib/run-stream.ts'
 import { createFollower, Ghost, scrollWindowStyle, stackStyle } from './lib/stable.tsx'
@@ -136,7 +137,7 @@ export const TerminalLog = clientEntry(
     let count = 0
     let value = handle.props.prompt?.persist?.saved?.value ?? handle.props.prompt?.defaultDraft ?? ''
     let hydrated = false
-    let temperature = (handle.props.prompt?.temperatures ?? DEFAULT_TEMPS)[0]!
+    let temperature = initialTemperature(handle.props.prompt?.temperatures ?? DEFAULT_TEMPS)
     let ranAt = new Set<number>()
     let runs = 0
     let rewarded = false
@@ -273,8 +274,11 @@ export const TerminalLog = clientEntry(
               </fieldset>
             </div>
           ) : null}
+          {/* The shared field (decision 051): › prompt, mono 16px, an md key inside the frame. */}
           <form
             mix={[
+              fieldFrameStyle,
+              fieldKeyedStyle,
               inputRow,
               on('submit', (event) => {
                 event.preventDefault()
@@ -290,7 +294,7 @@ export const TerminalLog = clientEntry(
               }),
             ]}
           >
-            <span aria-hidden="true" mix={tones.volt}>
+            <span aria-hidden="true" mix={fieldGlyphStyle}>
               ›
             </span>
             <label class="sr-only" for={inputId}>
@@ -304,7 +308,7 @@ export const TerminalLog = clientEntry(
               aria-describedby={prompt ? `${inputId}-checks` : undefined}
               aria-keyshortcuts={prompt ? 'Enter' : undefined}
               mix={[
-                inputStyle,
+                fieldInputStyle,
                 on('input', (event) => {
                   value = event.currentTarget.value
                   if (!prompt) return
@@ -313,9 +317,9 @@ export const TerminalLog = clientEntry(
                 }),
               ]}
             />
-            <span aria-hidden="true" mix={enterHint}>
-              ↵
-            </span>
+            <Keycap type="submit" size="md" disabled={!hydrated} mix={sendKeyStyle}>
+              {prompt ? 'Run ↵' : 'Send ↵'}
+            </Keycap>
             {prompt ? submitFieldInputs(prompt.submit, value) : null}
           </form>
           {/* The note keeps its line once hydrated (as the keyboard hint), so nothing moves. */}
@@ -417,7 +421,8 @@ function TerminalEntryView(
 export function TerminalOutput(handle: Handle<{ lines: TerminalPart[][]; summary?: string }>) {
   return () => (
     // Wide output scrolls sideways, so the box takes focus for keyboard scrolling (decision 031).
-    <div role="region" aria-label="Command output" tabIndex={0} mix={outputBox}>
+    // A group, not a region: a log can hold several, and landmarks must have unique names.
+    <div role="group" aria-label="Command output" tabIndex={0} mix={outputBox}>
       {handle.props.lines.map((line, index) => (
         <div key={index} mix={preLine}>
           {line.map(([tone, text], i) => (
@@ -489,8 +494,10 @@ export const OutputPanel = clientEntry(
             </Keycap>
           </div>
           {/* The full output is a Ghost under the replay, so the panel is its
-           * final size from the start; past --output-panel-height it scrolls. */}
-          <div tabIndex={0} aria-label={`Output of ${command}`} role="region" mix={[panelBody, scrollWindowStyle, ref((node) => (body = node as HTMLElement))]}>
+           * final size from the start; past --output-panel-height it scrolls.
+           * A group, not a region: a lesson can run the same command twice,
+           * and two regions with one name fail axe's landmark-unique. */}
+          <div tabIndex={0} aria-label={`Output of ${command}`} role="group" mix={[panelBody, scrollWindowStyle, ref((node) => (body = node as HTMLElement))]}>
             <div mix={stackStyle}>
               <div aria-live="polite" data-live="">
                 <CommandLine command={command} />
@@ -629,31 +636,9 @@ const outputBox = css({
 })
 const preLine = css({ whiteSpace: 'pre' })
 const summaryStyle = css({ marginTop: 'var(--space-1_5)', color: 'var(--muted)' })
-const inputRow = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: 'var(--space-2_5)',
-  margin: 'var(--space-3)',
-  padding: '0 var(--space-2) 0 var(--space-3_5)',
-  borderRadius: 'var(--radius-12)',
-  background: 'var(--surface)',
-  border: 'var(--border-w) solid var(--volt-a35)',
-  // Flat focus: the border goes volt and thickens to 2px, inside the box.
-  '&:focus-within': { borderColor: 'var(--volt)', boxShadow: 'inset 0 0 0 var(--border-w) var(--volt)' },
-})
-const inputStyle = css({
-  flex: 1,
-  minWidth: 0,
-  height: '50px',
-  background: 'transparent',
-  border: 0,
-  outline: 'none',
-  color: 'var(--text)',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-14)',
-  '&::placeholder': { color: 'var(--dim)' },
-})
-const enterHint = css({ fontSize: 'var(--fs-12)', color: 'var(--dim)' })
+// The shared field (decision 051) sits in the panel's last row.
+const inputRow = css({ margin: 'var(--space-3)' })
+const sendKeyStyle = css({ flex: 'none' })
 const quizRow = css({ paddingLeft: 'var(--space-4_5)', display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' })
 const nextLink = css({ color: 'var(--volt)' })
 const promptTools = css({

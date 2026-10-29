@@ -86,7 +86,11 @@ export function OutlineNav(handle: Handle<{ view: LessonView }>) {
   }
 }
 
-/** Mobile (<760px, resolutions §8): a closed-by-default disclosure above the content. No JS. */
+/**
+ * Mobile (<760px, resolutions §8): a closed-by-default disclosure, the end
+ * cell of the page's one chrome row (`LessonModes`' `aside`, decision 051).
+ * Open, its list hangs under the whole row, over the lesson. No JS.
+ */
 export function OutlineDisclosure(handle: Handle<{ view: LessonView }>) {
   return () => {
     let { view } = handle.props
@@ -94,7 +98,10 @@ export function OutlineDisclosure(handle: Handle<{ view: LessonView }>) {
       <nav aria-label="Lessons" mix={disclosureNav}>
         <details mix={detailsStyle}>
           <summary mix={summaryStyle}>
-            <span>{`Lesson ${view.index + 1} of ${view.total} · In this course`}</span>
+            <span>
+              <span mix={wideWord}>Lesson </span>
+              {`${view.index + 1} of ${view.total}`}
+            </span>
             <span aria-hidden="true" mix={chevronStyle}>
               ▾
             </span>
@@ -177,29 +184,45 @@ const titleStyle = css({ minWidth: 0 })
 const pendingOnly = css({ display: 'contents', [PASSED]: { display: 'none' } })
 const passedOnly = css({ display: 'none', [PASSED]: { display: 'contents' } })
 
-const disclosureNav = css({ display: 'none', [MOBILE]: { display: 'block' } })
-// Phones: a strip of the column, closed by default; open, the rows hang under it.
+const disclosureNav = css({ display: 'none', [MOBILE]: { display: 'flex' } })
+// A cell at the row's end: a hairline on its leading edge, the row's height.
 const detailsStyle = css({
-  borderBottom: 'var(--border-w) solid var(--line-cell)',
-  '&[open] > summary': { borderBottom: 'var(--border-w) solid var(--line-cell)' },
+  display: 'flex',
+  '&[open] > summary': { background: 'var(--fill-hover)', color: 'var(--text)' },
   '&[open] > summary > span:last-child': { transform: 'rotate(180deg)' },
+  // The open list hangs under the whole row (LessonModes is the positioned
+  // box), over the lesson rather than pushing it down.
+  '& > ol': {
+    position: 'absolute',
+    zIndex: 3,
+    top: '100%',
+    insetInline: 0,
+    maxHeight: 'calc(100svh - var(--shell-h) - var(--control-lg))',
+    overflowY: 'auto',
+    overscrollBehavior: 'contain',
+    background: 'var(--ink)',
+    borderBlock: 'var(--border-w) solid var(--line-cell)',
+  },
   '& li:last-child > a': { borderBottom: 0 },
 })
 const summaryStyle = css({
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 'var(--space-3)',
+  gap: 'var(--space-2)',
   minHeight: 'var(--touch-target)',
-  padding: '0 var(--section-pad-x)',
+  padding: '0 var(--space-4)',
+  borderLeft: 'var(--border-w) solid var(--line-cell)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',
+  whiteSpace: 'nowrap',
   color: 'var(--muted)',
   cursor: 'pointer',
   listStyle: 'none',
   '&::-webkit-details-marker': { display: 'none' },
   '&:hover': { color: 'var(--text)', background: 'var(--fill-hover)' },
   '&:focus-visible': { outlineOffset: 'var(--focus-offset-inset)' },
-  '@media (max-width: 480px)': { paddingInline: 'var(--space-4)' },
+  '@media (forced-colors: active)': { borderColor: 'GrayText' },
 })
-const chevronStyle = css({ transition: 'transform var(--duration-fast)' })
+// "Lesson 3 of 8" → "3 of 8" where three mode tabs leave no room.
+const wideWord = css({ '@media (max-width: 400px)': { display: 'none' } })
+const chevronStyle = css({ transition: 'transform var(--duration-fast)', '@media (prefers-reduced-motion: reduce)': { transition: 'none' } })

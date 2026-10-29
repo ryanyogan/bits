@@ -1,7 +1,7 @@
 import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
-import { hiddenOutline } from './lib/states.ts'
+import { fieldBoxRules } from './lib/field.ts'
 
 export interface TextFieldProps {
   name: string
@@ -31,9 +31,9 @@ export interface TextFieldProps {
   maxLength?: number
   /** Focus on load, e.g. the first invalid field after a 422 re-render. */
   autoFocus?: boolean
-  /** Geist Mono 15px (emails, codes) instead of Geist 16px. */
+  /** Geist Mono (emails, handles, codes) instead of Geist; 16px either way (decision 051). */
   mono?: boolean
-  /** Authoring compact variant: 44px, label above in 13px muted. */
+  /** Authoring compact variant: 44px, label above in 13px muted; the text stays 16px. */
   compact?: boolean
   id?: string
   /** Style-guide only: show the focused look. */
@@ -81,7 +81,7 @@ export function TextField(handle: Handle<TextFieldProps>) {
           aria-invalid={error ? 'true' : undefined}
           aria-describedby={describedBy}
           data-force={forceFocus ? 'focus' : undefined}
-          mix={[inputStyle, mono ? monoStyle : undefined, compact ? compactInput : undefined]}
+          mix={[inputStyle, mono || compact ? monoStyle : undefined, compact ? compactInput : undefined]}
         />
         {hint ? (
           <p id={`${id}-hint`} mix={hintStyle}>
@@ -104,24 +104,15 @@ const compactField = css({ gap: 'var(--space-1_5)' })
 const labelStyle = css({ fontSize: 'var(--fs-14)', color: 'var(--text-body)' })
 const compactLabel = css({ fontSize: 'var(--fs-13)', color: 'var(--muted)' })
 
+/**
+ * The shared field (decision 051) as a lone input: `--field-*` box, 16px,
+ * volt caret, flat focus (047). Plain fields are sans; `mono` (emails,
+ * handles, codes) takes the field font at the same 16px. Exported for
+ * selects and custom inputs that should match (settings handle, admin).
+ */
 export const inputStyle = css({
-  width: '100%',
-  minHeight: 'var(--control-field)',
-  padding: '0 var(--space-4)',
-  borderRadius: 'var(--radius-12)',
-  border: 'var(--border-w) solid var(--line-strong)',
-  background: 'var(--well)',
-  color: 'var(--text)',
+  ...fieldBoxRules,
   fontFamily: 'var(--font-sans)',
-  fontSize: 'var(--fs-16)',
-  transition: 'border-color var(--duration-focus), box-shadow var(--duration-focus)',
-  '&::placeholder': { color: 'var(--dim)', opacity: 1 },
-  '&:focus, &[data-force="focus"]': {
-    ...hiddenOutline,
-    borderColor: 'var(--focus-border)',
-    // 047: the border doubles to 2px instead of a glow.
-    boxShadow: 'var(--focus-ring-soft)',
-  },
   '&[aria-invalid="true"]': { borderColor: 'var(--danger-line)' },
   '&[aria-invalid="true"]:focus': { borderColor: 'var(--danger)', boxShadow: 'var(--focus-ring-danger)' },
   '&:disabled': { color: 'var(--dim)', cursor: 'not-allowed', borderColor: 'var(--line)', borderStyle: 'solid' },
@@ -129,14 +120,11 @@ export const inputStyle = css({
   '&:read-only:not(:disabled)': { borderStyle: 'dashed' },
 })
 
-const monoStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-15)' })
+const monoStyle = css({ fontFamily: 'var(--field-font)' })
 
 const compactInput = css({
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-3)',
-  borderRadius: 'var(--radius-10)',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-13)',
 })
 
 const hintStyle = css({ fontSize: 'var(--fs-13)', lineHeight: 1.5, color: 'var(--dim)' })

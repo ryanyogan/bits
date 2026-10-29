@@ -563,9 +563,11 @@ describe('layout stability', () => {
     assert.match(await markup(<Crosshair placement="top-end" />), /^<span aria-hidden="true"/)
   })
 
-  it('OutputPanel is a scrolling region with the full output on the server', async () => {
+  it('OutputPanel is a named, focusable scrolling group (not a landmark) with the full output on the server', async () => {
     let html = await markup(<OutputPanel command="node run.js" lines={[[['text', 'one']], [['muted', 'two']]]} />)
-    assert.match(html, /role="region"[^>]*aria-label="Output of node run\.js"|aria-label="Output of node run\.js"[^>]*role="region"/)
+    // A group: a lesson can run one command twice, and landmarks need unique names (axe landmark-unique).
+    assert.match(html, /aria-label="Output of node run\.js" role="group"/)
+    assert.match(html, /tabindex="0" aria-label="Output of node run\.js"/)
     assert.match(html, /one.*two/s)
     assert.doesNotMatch(html, /<div aria-hidden="true"/, 'no Ghost until a replay starts')
   })

@@ -50,7 +50,7 @@ describe('PromptComposer', () => {
         id="t-composer"
         task="Write it"
         checks={[{ label: 'Asks for a tagline', patterns: [{ source: 'tagline', flags: 'i' }] }]}
-        examples={{ '0': ['Brew among the stars.'] }}
+        examples={{ '0': ['Brew among the stars.'], '70': ['Brew among the stars.'] }}
       />,
     )
     t.after(cleanup)

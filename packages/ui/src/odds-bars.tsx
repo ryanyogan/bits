@@ -7,6 +7,17 @@ import { OddsList } from './odds-list.tsx'
 import { toyBodyStyle, toyContextStyle, toyHeaderStyle, toyLabelStyle, toyPanelStyle } from './toy-panel.tsx'
 
 export const TEMPERATURE_EVENT = 'bits:temperature'
+/**
+ * Where temperature starts (T × 100): the odds slider without a `slider=`,
+ * and the run-at picker of the composer and the terminal when it offers this
+ * value, so a lesson's toy and its prompt agree before anyone touches them.
+ */
+export const DEFAULT_TEMPERATURE = 70
+
+/** The run-at option a picker starts on: `DEFAULT_TEMPERATURE` when offered, else the first. */
+export function initialTemperature<T extends { value: number }>(options: T[]): T {
+  return options.find((option) => option.value === DEFAULT_TEMPERATURE) ?? options[0]!
+}
 
 export interface OddsBarsProps {
   /** Context shown in the header, e.g. "Moon café tagline:". */
@@ -44,7 +55,7 @@ export function temperatureNote(t: number): string {
 export const OddsBars = clientEntry(
   import.meta.url,
   function OddsBars(handle: Handle<OddsBarsProps>) {
-    let value = handle.props.defaultValue ?? 70
+    let value = handle.props.defaultValue ?? DEFAULT_TEMPERATURE
 
     handle.queueTask(() => {
       window.addEventListener(

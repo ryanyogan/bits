@@ -159,6 +159,36 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await expectClean(page, 'composer after a run')
   })
 
+  it('shared field (decision 051): hosts focused, Type it typing, the phone outline open', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    await page.goto(lesson('what-is-an-llm', 'say-hi-to-claude'))
+    await settled(page)
+    await page.getByRole('textbox').first().focus()
+    await expectClean(page, 'composer field focused')
+
+    await page.goto(lesson('what-is-an-llm', 'say-hi-to-claude', 'terminal'))
+    await settled(page)
+    await page.locator('section[aria-label="Lesson"] form input:not([type="hidden"])').focus()
+    await expectClean(page, 'terminal field focused')
+
+    await page.goto(lesson('first-agent-loop', 'the-loop'))
+    await settled(page)
+    await page.getByRole('button', { name: /Type it/ }).first().click()
+    await page.keyboard.type('import Anth')
+    await expectClean(page, 'code editor: Type it, typing')
+
+    await page.goto(lesson('what-is-an-llm', 'attention-how-it-keeps-track'))
+    await settled(page)
+    await page.setViewportSize({ width: 360, height: 800 })
+    await page.locator('nav[aria-label="Lessons"] summary').last().click()
+    await expectClean(page, 'phone lesson chrome: outline open', 360)
+
+    await page.goto(`${routes.styleguide.index.href()}#field-specimen`)
+    await settled(page)
+    await page.locator('#field-specimen textarea').first().focus()
+    await expectClean(page, 'styleguide field specimen, a prompt focused', 1440)
+  })
+
   it('interactive states: mobile menu, attention pick, transcript, toy steps', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.setViewportSize({ width: 360, height: 800 })

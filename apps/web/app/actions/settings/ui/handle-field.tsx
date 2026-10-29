@@ -67,20 +67,20 @@ const groupStyle = css({ position: 'relative', display: 'flex', alignItems: 'cen
 
 const prefixStyle = css({
   position: 'absolute',
-  left: 'var(--space-4)',
+  left: 'calc(var(--field-pad-x) + var(--border-w))',
   fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-15)',
+  fontSize: 'var(--field-size)',
   color: 'var(--dim)',
   pointerEvents: 'none',
   '@media (max-width: 400px)': { display: 'none' },
 })
 
-// "bits.dev/u/" is 11 mono characters at 15px ≈ 99px, plus the 16px field padding.
+// "bits.dev/u/" is 11 mono characters (11ch at the field's 16px), plus the field padding.
 const handleInputStyle = css({
   fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-15)',
-  paddingLeft: 'calc(var(--space-4) + 11ch)',
-  '@media (max-width: 400px)': { paddingLeft: 'var(--space-4)' },
+  fontSize: 'var(--field-size)',
+  paddingLeft: 'calc(var(--field-pad-x) + 11ch)',
+  '@media (max-width: 400px)': { paddingLeft: 'var(--field-pad-x)' },
 })
 
 const hintStyle = css({ margin: 0, fontSize: 'var(--fs-13)', lineHeight: 1.5, color: 'var(--dim)' })

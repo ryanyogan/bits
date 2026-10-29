@@ -59,23 +59,49 @@ export function CourseCard(handle: Handle<CourseCardProps>) {
     let cell = variant === 'cell'
     let done = pct >= 100
     let started = pct > 0 && !done
+    let coverTags = (
+      <>
+        <Tag variant="cover" color="var(--tone)" mix={coverTagPos}>
+          {track}
+        </Tag>
+        {done ? (
+          <Tag variant="done" mix={doneTagPos}>
+            ✓ DONE
+          </Tag>
+        ) : null}
+      </>
+    )
     let heading = headingLevel === 2 ? <h2 mix={titleStyle}>{title}</h2> : <h3 mix={titleStyle}>{title}</h3>
     return (
-      <a href={href} data-rmx-prefetch={prefetchFor(href, prefetch)} data-force={forceState} mix={[cell ? [cellLinkStyle, cellStyle] : cardStyle, toneVars[tone], mix]}>
-        <CourseCover pattern={pattern} tone={tone} sigil={sigil} mix={cell ? cellCover : undefined}>
-          <Tag variant="cover" color="var(--tone)" mix={coverTagPos}>
-            {track}
-          </Tag>
-          {done ? (
-            <Tag variant="done" mix={doneTagPos}>
-              ✓ DONE
-            </Tag>
-          ) : null}
-        </CourseCover>
+      <a href={href} data-rmx-prefetch={prefetchFor(href, prefetch)} data-force={forceState} mix={[cell ? [cellLinkStyle, cellStyle, cellPhoneRow] : cardStyle, toneVars[tone], mix]}>
+        {cell ? (
+          // Phones get the 64px thumbnail cover (no tags), wider screens the
+          // card cover; each wrapper hides at the other width (decision 051).
+          <>
+            <div mix={wideCoverSlot}>
+              <CourseCover pattern={pattern} tone={tone} sigil={sigil} mix={cellCover}>
+                {coverTags}
+              </CourseCover>
+            </div>
+            <div mix={thumbSlot}>
+              <CourseCover variant="thumb" pattern={pattern} tone={tone} sigil={sigil} mix={cellThumb} />
+            </div>
+          </>
+        ) : (
+          <CourseCover pattern={pattern} tone={tone} sigil={sigil}>
+            {coverTags}
+          </CourseCover>
+        )}
         <div mix={[bodyStyle, cell ? cellBody : undefined]}>
           {heading}
-          <p mix={descStyle}>{desc}</p>
+          <p mix={[descStyle, cell ? cellDesc : undefined]}>{desc}</p>
           <p mix={metaStyle}>
+            {done && cell ? (
+              // Phones: the cover is a thumbnail, so "done" moves into the meta line.
+              <Tag variant="done" mix={phoneOnly}>
+                ✓ DONE
+              </Tag>
+            ) : null}
             <span>{level}</span>
             <span aria-hidden="true">·</span>
             <span>{`${lessons} lessons`}</span>
@@ -87,7 +113,7 @@ export function CourseCard(handle: Handle<CourseCardProps>) {
               </Tag>
             ) : null}
           </p>
-          <div mix={formatsStyle}>
+          <div mix={cell ? formatsCellStyle : formatsStyle}>
             {formats.map((format) => (
               <Tag key={format} variant="format">
                 {format}
@@ -158,11 +184,25 @@ const cellStyle = css({
     '&:hover .sigil, &:focus-visible .sigil, &[data-force] .sigil': { transform: 'none' },
   },
 })
+// Phones (<760px, decision 051): a compact row, the cover a 64px thumbnail
+// beside the text (the Profile thumb), so a screen shows about three
+// courses instead of one and a half. No track or format tags; the
+// description keeps two lines. Rules that hide something live in the same
+// mixin as the display they override (mixins layer in order of first use).
+const PHONE = '@media (max-width: 759.98px)'
 const cellCover = css({
   border: 'var(--border-w) solid var(--line-cell)',
   transition: 'border-color var(--duration-fast) var(--ease)',
 })
-const cellBody = css({ flex: 1, padding: 'var(--space-5) 0 0' })
+const cellThumb = css({ border: 'var(--border-w) solid var(--line-cell)', borderRadius: 0 })
+const wideCoverSlot = css({ [PHONE]: { display: 'none' } })
+const thumbSlot = css({ display: 'none', [PHONE]: { display: 'block', flex: 'none' } })
+const cellBody = css({ flex: 1, padding: 'var(--space-5) 0 0', [PHONE]: { minWidth: 0, padding: 0, gap: 'var(--space-2)' } })
+const cellDesc = css({
+  [PHONE]: { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: '2', overflow: 'hidden' },
+})
+const cellPhoneRow = css({ [PHONE]: { flexDirection: 'row', alignItems: 'flex-start', gap: 'var(--space-4)' } })
+const phoneOnly = css({ display: 'none', [PHONE]: { display: 'inline-flex' } })
 
 const coverTagPos = css({ position: 'absolute', top: 'var(--space-3)', left: 'var(--space-3)' })
 const doneTagPos = css({ position: 'absolute', top: 'var(--space-3)', right: 'var(--space-3)' })
@@ -175,6 +215,7 @@ const titleStyle = css({
   fontSize: 'var(--fs-19)',
   lineHeight: 1.2,
   letterSpacing: 'var(--tracking-title)',
+  [PHONE]: { fontSize: 'var(--fs-17)' },
 })
 const descStyle = css({ margin: 0, fontSize: 'var(--fs-14)', lineHeight: 1.55, color: 'var(--muted)' })
 const metaStyle = css({
@@ -188,9 +229,11 @@ const metaStyle = css({
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',
   color: 'var(--muted)',
+  [PHONE]: { gap: 'var(--space-1_5)', paddingTop: 0 },
 })
 const proTagPos = css({ marginLeft: 'auto' })
 const formatsStyle = css({ display: 'flex', gap: 'var(--space-1_5)', flexWrap: 'wrap' })
+const formatsCellStyle = css({ display: 'flex', gap: 'var(--space-1_5)', flexWrap: 'wrap', [PHONE]: { display: 'none' } })
 const progressRow = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-2_5)' })
 const pctStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--tone)' })
 

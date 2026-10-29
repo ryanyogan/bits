@@ -5,7 +5,7 @@ import { ContinueBanner } from '@bits/ui/continue-banner'
 import { CourseCard, WriteCourseCard } from '@bits/ui/course-card'
 import { EmptyState } from '@bits/ui/empty-state'
 import { Eyebrow } from '@bits/ui/eyebrow'
-import { FilterPill } from '@bits/ui/filter-pill'
+import { FilterPill, scrollRowFade } from '@bits/ui/filter-pill'
 import { Keycap } from '@bits/ui/keycap'
 import { PageFrame } from '@bits/ui/page-frame'
 import { RuledSection } from '@bits/ui/ruled-section'
@@ -121,7 +121,7 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
                   mix={searchCell}
                 />
                 <LiveSearch target={SEARCH_ID} />
-                <nav aria-label="Filter by track" mix={pillRow}>
+                <nav aria-label="Filter by track" mix={[pillRow, scrollRowFade]}>
                   {trackFilters.map((filter) => (
                     <FilterPill
                       key={filter.label}

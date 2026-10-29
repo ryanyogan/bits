@@ -377,6 +377,23 @@
     --control-lg: 56px; /* lg keycap, search field */
     --control-code: 60px; /* one-time-code boxes */
 
+    /* The shared field (decision 051, lib/field.ts): one spec for every box
+     * a learner types into (prompt windows, terminal, hero, tokenizer, text
+     * and search fields). Anything sent to Claude or answered is mono; the
+     * size never drops below 16px (iOS zooms on focus under it). */
+    --field-font: var(--font-mono);
+    --field-size: var(--fs-16); /* never below 16px */
+    --field-leading: 1.6;
+    --field-h: var(--control-field); /* one line, 50px */
+    --field-h-keyed: var(--control-lg); /* one line with an md Keycap inside: 46 + 2 × 4 + borders */
+    --field-min-h-multi: 84px; /* a multi-line prompt: three lines at 16/1.6, less the padding */
+    --field-pad-x: var(--space-4); /* phones (≤480px): --space-3 */
+    --field-bg: var(--well);
+    --field-border: var(--line-strong); /* the neutral hairline at rest */
+    --field-border-hover: var(--line-drop);
+    --field-border-active: var(--volt-a40); /* only the active "Your turn" frame */
+    --field-caret: var(--volt);
+
     /* Fixed-size windows for content that fills in (decision 023): they
      * scroll inside instead of pushing the page. */
     --run-log-height: clamp(220px, 42svh, 420px); /* composer runs */
@@ -534,6 +551,7 @@
       --page-gutter: var(--gutter-mobile);
       /* 047: rails sit 12px in from the screen edge; content keeps 20px inside them. */
       --frame-inset: var(--space-3);
+      --field-pad-x: var(--space-3);
       --section-pad-y: var(--space-16);
       --section-pad-x: var(--space-5);
       --section-gap: var(--space-10);

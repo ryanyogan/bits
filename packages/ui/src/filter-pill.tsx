@@ -132,3 +132,25 @@ const cellStyle = css({
   [FOCUS]: { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
   [FORCED_COLORS]: { borderRightColor: 'GrayText' },
 })
+
+/**
+ * A fade at the end of a row of pills that scrolls sideways, so a cut-off
+ * pill reads as "more this way" (decision 051). Put it on the scroller. It
+ * is a scroll-driven animation: the fade shows while there is more to
+ * scroll and lifts at the end; a row that doesn't scroll has no active
+ * timeline and so no fade, and browsers without scroll timelines show none.
+ */
+export const scrollRowFade = css({
+  '@supports (animation-timeline: scroll())': {
+    maskImage: 'linear-gradient(to left, transparent, black var(--space-10))',
+    maskSize: 'calc(100% + var(--space-10)) 100%',
+    maskRepeat: 'no-repeat',
+    maskPosition: '0 0',
+    animation: 'bits-row-fade linear both',
+    animationTimeline: 'scroll(self inline)',
+  },
+  '@keyframes bits-row-fade': {
+    '0%, 92%': { maskPosition: 'calc(-1 * var(--space-10)) 0' },
+    '100%': { maskPosition: '0 0' },
+  },
+})

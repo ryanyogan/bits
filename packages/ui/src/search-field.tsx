@@ -2,7 +2,8 @@ import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
 import { Icon } from './icon.tsx'
-import { hiddenOutline } from './lib/states.ts'
+import { fieldFrameStyle, fieldInputStyle } from './lib/field.ts'
+import { FOCUS_WITHIN, FORCED_COLORS, hiddenOutline } from './lib/states.ts'
 import { SearchShortcut } from './search-shortcut.tsx'
 
 export interface SearchFieldProps {
@@ -19,9 +20,9 @@ export interface SearchFieldProps {
   shortcut?: boolean
   id?: string
   /**
-   * `field` (default): a bordered input. `cell`: borderless, filling a cell
-   * of a ruled toolbar (decision 047); focus fills it a step and draws a
-   * 2px volt underline inside.
+   * `field` (default): the shared field (decision 051). `cell`: borderless,
+   * filling a cell of a ruled toolbar (decision 047); focus fills it a step
+   * and draws the field's 2px focus edge inside the cell.
    */
   variant?: 'field' | 'cell'
   forceFocus?: boolean
@@ -62,7 +63,7 @@ export function SearchField(handle: Handle<SearchFieldProps>) {
         {hidden
           ? Object.entries(hidden).map(([key, val]) => <input key={key} type="hidden" name={key} value={val} />)
           : null}
-        <label data-force={forceFocus ? 'focus' : undefined} mix={[fieldStyle, variant === 'cell' ? cellFieldStyle : undefined]}>
+        <label data-force={forceFocus ? 'focus' : undefined} mix={variant === 'cell' ? cellFieldStyle : [fieldFrameStyle, fieldStyle]}>
           <Icon name="search" />
           <span class="sr-only">{label}</span>
           <input
@@ -73,7 +74,7 @@ export function SearchField(handle: Handle<SearchFieldProps>) {
             placeholder={placeholder}
             enterkeyhint="search"
             autoCapitalize="none"
-            mix={inputStyle}
+            mix={[fieldInputStyle, inputStyle]}
           />
           {shortcut ? <SearchShortcut target={id} /> : null}
         </label>
@@ -84,55 +85,40 @@ export function SearchField(handle: Handle<SearchFieldProps>) {
 
 const formStyle = css({ width: '100%', maxWidth: '440px', minWidth: 0 })
 
+// The shared field (decision 051), sans: a search isn't sent to Claude.
 const fieldStyle = css({
-  display: 'flex',
-  alignItems: 'center',
   gap: 'var(--space-3)',
-  padding: '0 var(--space-3_5) 0 var(--space-4_5)',
-  minHeight: 'var(--control-lg)',
-  borderRadius: 'var(--radius-16)',
-  background: 'var(--surface)',
-  border: 'var(--border-w) solid var(--line-strong)',
-  cursor: 'text',
-  transition: 'border-color var(--duration-focus), box-shadow var(--duration-focus)',
-  '&:focus-within, &[data-force="focus"]': {
-    ...hiddenOutline,
-    borderColor: 'var(--volt-a60)',
-    boxShadow: 'var(--focus-ring-soft)',
-  },
+  paddingRight: 'var(--space-3_5)',
   '@media (max-width: 480px)': { '& kbd': { display: 'none' } },
 })
 
 const inputStyle = css({
-  flex: 1,
-  minWidth: 0,
-  height: 'var(--control-search-input)',
-  padding: 0,
-  background: 'transparent',
-  border: 0,
-  color: 'var(--text)',
   fontFamily: 'var(--font-sans)',
-  fontSize: 'var(--fs-16)',
-  '&::placeholder': { color: 'var(--dim)', opacity: 1 },
-  '&:focus, &:focus-visible': { outline: 'none', boxShadow: 'none' },
   '&::-webkit-search-cancel-button': { filter: 'invert(0.6)' },
 })
 
 const cellFormStyle = css({ maxWidth: 'none', display: 'flex' })
 
+// A cell has no border of its own: the field's focus (a --focus-border edge
+// as thick as border + ring) is drawn inside the cell's hairlines.
 const cellFieldStyle = css({
   flex: 1,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--space-3)',
+  minHeight: 'var(--control-lg)',
   padding: '0 var(--space-4) 0 var(--section-pad-x)',
-  border: 0,
-  background: 'transparent',
+  cursor: 'text',
   transition: 'background-color var(--duration-focus), box-shadow var(--duration-focus)',
   '&:hover': { background: 'var(--fill-hover)' },
-  '&:focus-within, &[data-force="focus"]': {
+  [FOCUS_WITHIN]: {
     ...hiddenOutline,
     background: 'var(--fill-hover)',
-    boxShadow: 'inset 0 calc(-1 * var(--border-w-strong)) 0 var(--volt)',
+    boxShadow: 'inset 0 0 0 var(--border-w-strong) var(--focus-border)',
   },
-  '@media (forced-colors: active)': {
-    '&:focus-within, &[data-force="focus"]': { outline: 'var(--focus-outline-w) solid Highlight', outlineOffset: '-2px' },
+  '@media (max-width: 480px)': { '& kbd': { display: 'none' } },
+  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+  [FORCED_COLORS]: {
+    [FOCUS_WITHIN]: { outline: 'var(--focus-outline-w) solid Highlight', outlineOffset: '-2px' },
   },
 })

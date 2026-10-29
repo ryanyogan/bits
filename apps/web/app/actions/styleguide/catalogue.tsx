@@ -19,7 +19,7 @@ import { CourseCard, WriteCourseCard } from '@bits/ui/course-card'
 import { CourseCover, coverPatterns } from '@bits/ui/course-cover'
 import { EmptyState } from '@bits/ui/empty-state'
 import { Eyebrow, MonoHeading } from '@bits/ui/eyebrow'
-import { FilterPill } from '@bits/ui/filter-pill'
+import { FilterPill, scrollRowFade } from '@bits/ui/filter-pill'
 import { Footer } from '@bits/ui/footer'
 import { BadgeChip, BadgeTile, HexBadge, badgeGridStyle } from '@bits/ui/hex-badge'
 import { Icon, iconNames } from '@bits/ui/icon'
@@ -59,6 +59,7 @@ import { XpPill } from '@bits/ui/xp-pill'
 
 import { APP_NAME } from '../../config.ts'
 import { PathCourseTag, type PathCourse } from '../home/the-path.tsx'
+import { FieldSpecimen } from './field-specimen.tsx'
 import { GridSection } from './grid.tsx'
 import { Section, Specimen, State, column, row, specimenGrid } from './layout.tsx'
 import {
@@ -174,7 +175,7 @@ export function Catalogue(handle: Handle) {
             />
           </div>
         </Specimen>
-        <Specimen caption="App shell (decision 022) — on lesson pages the LessonBar is the AppBar's sub-bar (position shell): one sticky header, same bar as every page. The neurons sit in the sub-bar, never the AppBar (decision 048). Under 760px the sub-bar keeps back + title and LessonModes carries the tabs + progress.">
+        <Specimen caption="App shell (decision 022) — on lesson pages the LessonBar is the AppBar's sub-bar (position shell): one sticky header, same bar as every page. The neurons sit in the sub-bar, never the AppBar (decision 048). Under 760px the sub-bar keeps back + a two-line title with the progress along its bottom edge, and LessonModes is the page's one chrome row: the tabs, with the outline disclosure as its aside (decision 051).">
           <div mix={barFrame}>
             <AppBar
               brand={APP_NAME}
@@ -207,8 +208,6 @@ export function Catalogue(handle: Handle) {
               }
             />
             <LessonModes
-              segments={['done', 'done', 'done', 'done', 'done', 'current', 'upcoming', 'upcoming']}
-              progressLabel="Lesson 6 of 8, 5 complete (modes sample)"
               modes={[
                 { label: 'Read', href: '#sg-nav', current: true },
                 { label: 'Watch', href: '#sg-nav-w' },
@@ -549,6 +548,14 @@ export function Catalogue(handle: Handle) {
               </FilterPill>
             </nav>
             <span mix={note}>selected · rest · hover · focus-visible</span>
+            <nav aria-label="Filter by track (scrolling sample)" mix={[pillScroller, scrollRowFade]}>
+              {['All', 'Foundations', 'Prompting', 'Tools', 'Agents'].map((label, i) => (
+                <FilterPill key={label} href={`#sg-sel-row-${i}`} count={2} dot="var(--track-tools)" variant="cell" selected={i === 0}>
+                  {label}
+                </FilterPill>
+              ))}
+            </nav>
+            <span mix={note}>a row that scrolls sideways: scrollRowFade fades its end until you reach it (decision 051)</span>
           </Specimen>
           <Specimen caption="Tags — meta · meta-ion · format · cover · done · your turn · run hint · free · pro">
             <div mix={row}>
@@ -632,8 +639,14 @@ export function Catalogue(handle: Handle) {
       </Section>
 
       <Section id="sg-inputs" title="Inputs">
+        <Specimen
+          wide
+          caption="Field (decision 051, lib/field.ts) — one spec in every host: --field-* tokens, 16px never less (mono for anything sent to Claude or answered), neutral hairline at rest, focus on the frame (--focus-border + --focus-ring-soft), volt › and an md Keycap in prompt windows, volt border only on the “Your turn” frame"
+        >
+          <FieldSpecimen />
+        </Specimen>
         <div mix={specimenGrid}>
-          <Specimen caption="TextField — rest · focus · error (danger) · hint · disabled · compact">
+          <Specimen caption="TextField — rest · focus · error (danger) · hint · disabled · compact (all 16px)">
             <div mix={column}>
               <TextField name="sg-email" label="Email" type="email" placeholder="you@example.com" mono />
               <TextField name="sg-name" label="Display name" value="Jamie" forceFocus />
@@ -814,7 +827,7 @@ export function Catalogue(handle: Handle) {
             <WriteCourseCard href="#sg-courses" variant="cell" />
           </li>
         </CellGrid>
-        <span mix={note}>CourseCard variant cell in a CellGrid: started (bar) · done (DoneTag) · hover (fill step, sigil scale) with access="pro" (Pro tag; none when owned) · WriteCourseCard. The default card variant keeps its own hairline box.</span>
+        <span mix={note}>CourseCard variant cell in a CellGrid: started (bar) · done (DoneTag) · hover (fill step, sigil scale) with access="pro" (Pro tag; none when owned) · WriteCourseCard. The default card variant keeps its own hairline box. Under 760px a cell is a compact row: a 64px thumbnail cover, two-line description, no track or format tags (decision 051).</span>
         <Specimen caption="CourseCover — the 8 named patterns">
           <ul mix={coverGrid}>
             {coverPatterns.map((pattern, index) => (
@@ -975,7 +988,7 @@ export function Catalogue(handle: Handle) {
           </div>
         </Specimen>
         <div mix={specimenGrid}>
-          <Specimen caption="OddsBars (island) — drag the slider; follows the composer's temperature">
+          <Specimen caption="OddsBars (island) — drag the slider; follows the composer's temperature; both start at 0.7 (DEFAULT_TEMPERATURE)">
             <OddsBars id="sg-odds" context="Moon café tagline:" candidates={oddsCandidates} />
           </Specimen>
           <Specimen caption="RewardToast — lesson · badge (decision 028: the hex replaces the check) · system · RewardRegion (island, listens for bits:reward)">
@@ -1003,7 +1016,7 @@ export function Catalogue(handle: Handle) {
           />
         </Specimen>
         <div mix={specimenGrid}>
-          <Specimen caption="CodeEditor — type mode on (Copy off)">
+          <Specimen caption="CodeEditor — type mode on (Copy off); while typing, the code area draws the focus ring and the caret blinks (B6)">
             <CodeEditor files={[toolsFile]} initialTyped="export async functoin getW" />
           </Specimen>
           <Specimen caption="CodeEditor — copied state (ion keycap)">
@@ -1011,7 +1024,7 @@ export function Catalogue(handle: Handle) {
           </Specimen>
         </div>
         <div mix={specimenGrid}>
-          <Specimen caption="TerminalLog (island) — type “hint” and press Enter">
+          <Specimen caption="TerminalLog (island) — type “hint” and press Enter or Send; the input is the shared field (16px, keyed)">
             <TerminalLog
               path="~/first-agent-loop"
               progress="lesson 4/10 · 18% →"
@@ -1022,7 +1035,7 @@ export function Catalogue(handle: Handle) {
               }}
             />
           </Specimen>
-          <Specimen caption="OutputPanel (island) — Run replays at 120ms/line">
+          <Specimen caption="OutputPanel (island) — Run replays at 120ms/line; the output is a named group, so two panels never clash as landmarks">
             <OutputPanel command='npx tsx agent.ts "Weather in Chicago?"' lines={outputLines} />
           </Specimen>
         </div>
@@ -1152,3 +1165,16 @@ const coverCell = css({ display: 'flex', flexDirection: 'column', gap: 'var(--sp
 const coverRadius = css({ borderRadius: 'var(--radius-lg)', border: '1px solid var(--line)' })
 const nodeGrid = css({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 'var(--space-3)' })
 const chatColumn = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-4_5)', maxWidth: '760px', minWidth: 0 })
+
+// A narrow scrolling pill row for the scrollRowFade sample.
+const pillScroller = css({
+  // Contains the pills' absolutely positioned sr-only text (as the catalog's row does).
+  position: 'relative',
+  display: 'flex',
+  maxWidth: '300px',
+  overflowX: 'auto',
+  scrollbarWidth: 'none',
+  border: 'var(--border-w) solid var(--line-cell)',
+  '& > a': { flex: 'none' },
+})
+
