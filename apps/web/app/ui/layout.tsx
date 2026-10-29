@@ -5,8 +5,6 @@ import { Document, type DocumentImage } from '@bits/ui/document'
 import { AvatarButton } from '@bits/ui/avatar-button'
 import { Keycap } from '@bits/ui/keycap'
 import { PageFrame } from '@bits/ui/page-frame'
-import { StreakPill } from '@bits/ui/streak-pill'
-import { XpPill } from '@bits/ui/xp-pill'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import { platform } from '#platform'
@@ -41,14 +39,12 @@ export interface LayoutProps {
    */
   preloadFonts?: string[]
   /**
-   * The signed-in viewer, or `null` when signed out: XP, streak and avatar
-   * when signed in, "Sign in" + "Start free" otherwise (components §3.1b).
+   * The signed-in viewer, or `null` when signed out: the avatar when signed
+   * in (no XP or streak pill: one uniform header, decision 048), "Sign in" + "Start free" otherwise (components §3.1b).
    * Omitting it renders the signed-out actions, so pass it on every page that
    * knows who is viewing.
    */
   viewer?: Viewer | null
-  /** Replaces the viewer's XpPill in the bar, e.g. the lesson's reward island. */
-  xp?: RemixNode
   /** A second row in the sticky header (`<LessonBar position="shell">`; decision 022). */
   sub?: RemixNode
   /**
@@ -104,7 +100,6 @@ export function Layout(handle: Handle<LayoutProps>) {
       reward,
       preloadFonts = [],
       viewer,
-      xp,
       sub,
       bleed,
       bare,
@@ -144,15 +139,11 @@ export function Layout(handle: Handle<LayoutProps>) {
           sub={sub}
           actions={
             viewer ? (
-              <>
-                {xp ?? <XpPill neurons={viewer.xp} />}
-                <StreakPill days={viewer.streak} />
-                <AvatarButton
-                  initials={viewer.initials}
-                  href={routes.me.index.href()}
-                  current={currentPath === routes.me.index.href()}
-                />
-              </>
+              <AvatarButton
+                initials={viewer.initials}
+                href={routes.me.index.href()}
+                current={currentPath === routes.me.index.href()}
+              />
             ) : (
               <>
                 <a href={routes.login.index.href()} data-rmx-prefetch={prefetchFor(routes.login.index.href())} mix={signInStyle}>

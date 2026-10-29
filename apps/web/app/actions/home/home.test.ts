@@ -112,14 +112,16 @@ describe('landing page', () => {
     assert.doesNotMatch(html, /rel="modulepreload" href="[^"]*three/)
   })
 
-  it('shows Sign in / Start free signed out and the XP pill signed in', async () => {
+  it('shows Sign in / Start free signed out and only the avatar signed in (decision 048)', async () => {
     let anon = await page(routes.home.href())
     assert.match(anon.html, />Sign in<\/a>/)
     assert.match(anon.html, />Start free<\/a>/)
     let { cookie, user } = await signIn('home@example.com')
     await testDb.update(users, user.id, { xp_total: 1240 })
     let signedIn = { html: await (await fetchAs(cookie, routes.home.href())).text() }
-    assert.match(signedIn.html, /1,240<\/span><span class="sr-only"> neurons/)
-    assert.match(signedIn.html, /aria-label="Your profile, [^"]+"/)
+    let header = signedIn.html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? ''
+    assert.match(header, /aria-label="Your profile, [^"]+"/)
+    // One uniform header: no XP or streak pill.
+    assert.doesNotMatch(header, /1,240|neurons|-day streak/)
   })
 })

@@ -12,9 +12,10 @@ export interface LessonXpProps {
 }
 
 /**
- * The neurons pill in the AppBar on lesson pages (decision 022). Server-renders the current total; once the
- * lesson's checks pass it adds the award (1,240 → 1,280) and marks the page
- * as passed. Client entry.
+ * The neurons pill in the LessonBar's `xp` slot on lesson pages (the AppBar
+ * carries no XP pill; decision 048). Server-renders the current total; once
+ * the lesson's checks pass it adds the award (1,240 → 1,280) and marks the
+ * page as passed. Client entry.
  */
 export const LessonXp = clientEntry(import.meta.url, function LessonXp(handle: Handle<LessonXpProps>) {
   let passed = false

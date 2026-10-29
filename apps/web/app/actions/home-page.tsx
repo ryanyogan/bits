@@ -7,7 +7,6 @@ import { Keycap } from '@bits/ui/keycap'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
 import { PageFrame } from '@bits/ui/page-frame'
 import { RuledSection } from '@bits/ui/ruled-section'
-import { XpPill } from '@bits/ui/xp-pill'
 
 import { platform } from '#platform'
 
@@ -93,10 +92,7 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
               menuExtras={viewer ? [] : [{ href: routes.login.index.href(), label: 'Sign in' }]}
               actions={
                 viewer ? (
-                  <>
-                    <XpPill neurons={viewer.xp} />
-                    <AvatarButton initials={viewer.initials} href={routes.me.index.href()} />
-                  </>
+                  <AvatarButton initials={viewer.initials} href={routes.me.index.href()} />
                 ) : (
                   <>
                     <a href={routes.login.index.href()} data-rmx-prefetch={prefetchFor(routes.login.index.href())} mix={[navLinkStyle, signInStyle]}>

@@ -143,8 +143,6 @@ export function Catalogue(handle: Handle) {
               menuId="sg-nav-sheet-app"
               actions={
                 <>
-                  <XpPill neurons={1240} />
-                  <StreakPill days={12} />
                   <AvatarButton initials="JR" href="#sg-nav" />
                 </>
               }
@@ -176,7 +174,7 @@ export function Catalogue(handle: Handle) {
             />
           </div>
         </Specimen>
-        <Specimen caption="App shell (decision 022) — on lesson pages the LessonBar is the AppBar's sub-bar (position shell): one sticky header, same bar as every page. Under 760px the sub-bar keeps back + title and LessonModes carries the tabs + progress.">
+        <Specimen caption="App shell (decision 022) — on lesson pages the LessonBar is the AppBar's sub-bar (position shell): one sticky header, same bar as every page. The neurons sit in the sub-bar, never the AppBar (decision 048). Under 760px the sub-bar keeps back + title and LessonModes carries the tabs + progress.">
           <div mix={barFrame}>
             <AppBar
               brand={APP_NAME}
@@ -188,8 +186,6 @@ export function Catalogue(handle: Handle) {
               menuId="sg-nav-sheet-shell"
               actions={
                 <>
-                  <XpPill neurons={1240} />
-                  <StreakPill days={12} />
                   <AvatarButton initials="JR" href="#sg-nav" />
                 </>
               }
@@ -206,6 +202,7 @@ export function Catalogue(handle: Handle) {
                     { label: 'Watch', href: '#sg-nav-w' },
                     { label: 'Terminal', href: '#sg-nav-t' },
                   ]}
+                  neurons={1240}
                 />
               }
             />

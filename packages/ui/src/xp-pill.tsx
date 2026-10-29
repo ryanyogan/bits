@@ -9,7 +9,7 @@ export interface XpPillProps {
   mix?: MixInput<HTMLElement>
 }
 
-/** Neurons (XP) pill for app bars (components §4.1). Static. */
+/** Neurons (XP) pill for the lesson bar and profile (components §4.1; never the AppBar, decision 048). Static. */
 export function XpPill(handle: Handle<XpPillProps>) {
   return () => {
     let { neurons, mix } = handle.props

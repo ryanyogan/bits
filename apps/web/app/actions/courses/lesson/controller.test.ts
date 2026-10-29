@@ -57,9 +57,11 @@ describe('lesson page and author preview', () => {
 
     let user = await signIn('shell@example.com')
     let signedIn = await page(lessonHref(temperature), user.cookie)
-    // The reward XP island takes the bar's XP slot, keyed per lesson.
-    assert.match(signedIn.html, /<span data-rmx-key="tokens-and-temperature\/temperature"[^>]*>[\s\S]{0,400}neurons/)
+    // The reward XP island sits in the lesson sub-bar's XP slot, keyed per
+    // lesson; the AppBar row above it carries no XP or streak pill (decision 048).
+    assert.match(signedIn.html, /<header data-shell="sub"[\s\S]*<span data-rmx-key="tokens-and-temperature\/temperature"[^>]*>[\s\S]{0,400}neurons/)
     assert.equal(count(signedIn.html, / neurons</), 1)
+    assert.doesNotMatch(signedIn.html, /-day streak/)
   })
 
   it('offers Watch only for lessons with video', async () => {

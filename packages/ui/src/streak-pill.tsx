@@ -9,7 +9,7 @@ export interface StreakPillProps {
   mix?: MixInput<HTMLElement>
 }
 
-/** Streak flame + day count for app bars (components §4.2). Static. */
+/** Streak flame + day count (components §4.2; never the AppBar, decision 048). Static. */
 export function StreakPill(handle: Handle<StreakPillProps>) {
   return () => {
     let { days, mix } = handle.props

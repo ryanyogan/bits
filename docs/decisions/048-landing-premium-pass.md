@@ -90,6 +90,18 @@ Measured after (1440×900 / 360×800): page 4,649 / 7,038px tall (was
 4,825 / 7,532); veil cells 1.02M / 0.35M px², ink cells 1.85M / 1.22M px²
 (was 2.75M / 1.66M all ink); no horizontal overflow; CLS 0.
 
+## Header
+
+The app bar carries no XP or streak pill on any page, signed in or out:
+signed in, its actions are the avatar alone; signed out, Sign in and
+Start free. This amends decision 022, which put the neurons in the AppBar
+(and the lesson's live reward pill in its XP slot). The owner wants one
+uniform header: the same bar, the same action slot and the same height on
+the landing, app pages and lessons, in both states. Neurons live where
+they mean something: the lesson bar (the live `LessonXp` island in
+`LessonBar`'s `xp` slot, still 1,240 → 1,280 when the checks pass,
+hidden at ≤480px) and the profile's stat tiles, with the streak.
+
 ## Spec overrides (Main.md)
 
 The eyebrow badge, the 820px hero cap and 104px top padding, the

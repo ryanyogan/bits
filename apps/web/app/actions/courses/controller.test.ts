@@ -130,6 +130,13 @@ describe('catalog and course pages', () => {
     assert.match(html, /href="\/courses\/tokens-and-temperature\/temperature"/)
   })
 
+  it('keeps the signed-in app bar uniform: the avatar, no XP or streak pill (decision 048)', async () => {
+    let { html } = await page(routes.courses.index.href())
+    let header = html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? ''
+    assert.match(header, /aria-label="Your profile, [^"]+"/)
+    assert.doesNotMatch(header, /neurons|-day streak/)
+  })
+
   it('filters by track with the pill marked current', async () => {
     let { html } = await page(`${routes.courses.index.href()}?track=agents`)
     assert.match(html, /2 courses · all free/)
