@@ -100,7 +100,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
           <RuledSection as="div" pad="none">
           <div mix={panesStyle}>
             <aside mix={asideStyle} aria-labelledby="settings-outline">
-              <MonoHeading id="settings-outline" mix={outlineHeadingStyle}>
+              <MonoHeading id="settings-outline" uppercase={false} mix={[sentenceHeading, outlineHeadingStyle]}>
                 On this page
               </MonoHeading>
               <nav aria-labelledby="settings-outline">
@@ -377,7 +377,7 @@ function Section(handle: Handle<SectionProps>) {
     return (
       <section aria-labelledby={headingId} mix={[sectionStyle, danger ? dangerSectionStyle : undefined]}>
         <div mix={sectionHeadStyle} id={id}>
-          <MonoHeading id={headingId} mix={danger ? dangerHeadingStyle : undefined}>
+          <MonoHeading id={headingId} uppercase={false} mix={[sentenceHeading, danger ? dangerHeadingStyle : undefined]}>
             {title}
           </MonoHeading>
           <p mix={descriptionStyle}>{description}</p>
@@ -495,6 +495,8 @@ const dangerSectionStyle = css({
 
 const sectionHeadStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', alignSelf: 'start' })
 
+// Mono headings in sentence case, like every strip on the grid (decision 047).
+const sentenceHeading = css({ letterSpacing: 'normal' })
 const dangerHeadingStyle = css({ color: 'var(--danger)' })
 
 const descriptionStyle = css({ margin: 0, fontSize: 'var(--fs-14)', lineHeight: 1.55, color: 'var(--muted)' })
