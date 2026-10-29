@@ -528,3 +528,30 @@ Handoff: "The focus ring is a 4 px volt glow." Implement once:
 ```
 
 The artboards only style focus for inputs (`border-color: rgba(198,255,61,.7)` + `0 0 0 4px rgba(198,255,61,.12)`), the search (`.6` + `.1` glow), the hero prompt bar (`.6` + `.12`), the composer (`.75` + `.12`) and the terminal panel (`.55`, no glow). The `.12` glow alone is ~1.3:1 against ink, which fails WCAG 2.2 focus-appearance; the extra 1px `.7` volt ring (6.3:1) is a spec addition — see README.
+
+## 9. Fields (decision 051)
+
+One spec for every box a learner types into, built on the PromptComposer's input cell and the flat focus of decision 047. The mixins live in `packages/ui/src/lib/field.ts` (`fieldFrameStyle`, `fieldKeyedStyle`, `fieldActiveStyle`, `fieldInputStyle`, `fieldMultiStyle`, `fieldGlyphStyle`, `fieldGlyphTopStyle`, `fieldBoxStyle` / `fieldBoxRules`, `fieldFocus`, `fieldSansStyle`); the live specimen is the "Field" card on `/styleguide#sg-inputs`.
+
+| Token | Value | Role |
+|---|---|---|
+| `+` `--field-font` | `var(--font-mono)` | Anything sent to Claude or answered (prompts, terminal, hero, tokenizer, emails, handles). Plain fields (a name, a search) override with `--font-sans`. |
+| `+` `--field-size` | `var(--fs-16)` | Every field's text. **Never below 16px**: iOS Safari zooms the page when a field under 16px takes focus. Also the hidden "Type it" textarea. |
+| `+` `--field-leading` | `1.6` | Multi-line prompts. |
+| `+` `--field-h` | `var(--control-field)` = 50px | One-line field. |
+| `+` `--field-h-keyed` | `var(--control-lg)` = 56px | One-line field with an md Keycap inside (46 + 2 × 4 + hairlines): the terminal input and the hero bar. |
+| `+` `--field-min-h-multi` | `84px` | Multi-line prompt (three lines at 16/1.6, less the padding). |
+| `+` `--field-pad-x` | `var(--space-4)`; `var(--space-3)` ≤480px | Inline padding inside the frame. |
+| `+` `--field-bg` | `var(--well)` | The frame's ground. |
+| `+` `--field-border` | `var(--line-strong)` | Resting hairline: neutral everywhere. |
+| `+` `--field-border-hover` | `var(--line-drop)` | Pointer over a resting frame. |
+| `+` `--field-border-active` | `var(--volt-a40)` | Only the active "Your turn" frame. |
+| `+` `--field-caret` | `var(--volt)` | Caret colour in every field. |
+
+Rules:
+
+- **Focus is on the frame**: `border-color: var(--focus-border)` plus `box-shadow: var(--focus-ring-soft)`, so the hairline reads as 2px; the input inside has `outline: none`. A frame without its own border (a ruled toolbar cell) draws the same 2px edge inset. Forced colours: a transparent outline that forced colours paints `Highlight`.
+- Placeholders are `--dim` at full opacity.
+- Prompt windows (composer, terminal, hero) lead with a volt `›` in the field font; on a multi-line prompt it rides the first line.
+- A prompt window's submit key is the md `Keycap` inside the frame (terminal "Run ↵"/"Send ↵", hero "Ask ↵"); the composer keeps its md Run key in its footer row beside the temperature picker.
+- Errors keep TextField's danger states (`--danger-line`, `--focus-ring-danger`).
