@@ -271,6 +271,13 @@ async function copyPublic() {
       '/assets/*',
       '  Cache-Control: public, max-age=31536000, immutable',
       '  X-Content-Type-Options: nosniff',
+      // Link-preview cards (`pnpm og`): stable names, regenerated rarely.
+      '/og/*',
+      '  Cache-Control: public, max-age=604800',
+      '/favicon.svg',
+      '  Cache-Control: public, max-age=86400',
+      '/favicon.ico',
+      '  Cache-Control: public, max-age=86400',
       '',
     ].join('\n'),
   )

@@ -115,6 +115,8 @@ export function Document(handle: Handle<DocumentProps>) {
             </>
           ) : null}
           <meta name="twitter:card" content={image ? 'summary_large_image' : 'summary'} />
+          {/* The .ico for browsers without SVG favicons (older Safari); sizes="32x32" keeps SVG-capable ones on the SVG. */}
+          <link data-rmx-key="icon-ico" rel="icon" href="/favicon.ico" sizes="32x32" />
           <link data-rmx-key="icon" rel="icon" type="image/svg+xml" href="/favicon.svg" />
           <style>{LAYER_ORDER}</style>
           {fontPreloads.map((href) => (

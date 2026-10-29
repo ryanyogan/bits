@@ -226,6 +226,8 @@ the new page into the old DOM. Write for that:
   Cache-Control default (`private, no-cache`; `no-store` under `/settings`,
   `/me`, `/login`, `/auth` and `/logout`). Set your own Cache-Control on a
   response that needs another policy.
+- Files in `apps/web/public/` never reach the Worker; their Cache-Control
+  comes from the `_headers` that `copyPublic()` in `scripts/build.ts` writes.
 - HTML gets a strict CSP (decision 027): `script-src 'nonce-…'
   'strict-dynamic'`, a fresh nonce per response. `Document` nonces the
   import map and the entry, and everything else must be imported by them
