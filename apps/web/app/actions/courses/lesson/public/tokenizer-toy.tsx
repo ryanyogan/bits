@@ -1,5 +1,6 @@
 import type { Handle } from 'remix/component'
 import { clientEntry, css, on } from 'remix/component'
+import { fieldBoxStyle } from '@bits/ui/lib/field'
 import { TokenizerPanel } from '@bits/ui/token-pill'
 
 export interface TokenizerToyProps {
@@ -40,6 +41,7 @@ export const TokenizerToy = clientEntry(
             spellcheck={false}
             maxLength={200}
             mix={[
+              fieldBoxStyle,
               inputStyle,
               on('input', (event) => {
                 text = event.currentTarget.value
@@ -96,17 +98,7 @@ function fakeId(piece: string): number {
 // tucks its top hairline under the input's bottom one.
 const toyStyle = css({ display: 'flex', flexDirection: 'column' })
 const labelStyle = css({ marginBottom: 'var(--space-2)', fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
-const inputStyle = css({
-  position: 'relative',
-  minHeight: 'var(--control-field)',
-  padding: '0 var(--space-5)',
-  border: 'var(--border-w) solid var(--line-panel)',
-  background: 'var(--well)',
-  color: 'var(--text)',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-16)',
-  transition: 'border-color var(--duration-focus)',
-  '&:focus-visible': { zIndex: 1, borderColor: 'var(--volt-a70)', outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
-  '@media (max-width: 480px)': { paddingInline: 'var(--space-4)' },
-})
+// The shared field as a lone input (decision 051); it lifts over the
+// panel's hairline while focused so the focus edge isn't half covered.
+const inputStyle = css({ position: 'relative', '&:focus': { zIndex: 1 } })
 const panelJoin = css({ marginTop: 'calc(-1 * var(--border-w))' })

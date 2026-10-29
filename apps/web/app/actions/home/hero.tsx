@@ -1,5 +1,7 @@
 import { css, type Handle } from 'remix/component'
 import { SuggestionChip } from '@bits/ui/chip'
+import { Keycap } from '@bits/ui/keycap'
+import { fieldFrameStyle, fieldGlyphStyle, fieldKeyedStyle } from '@bits/ui/lib/field'
 import { RuledSection } from '@bits/ui/ruled-section'
 
 import { agentLessonHref, lessonOneHref } from './links.ts'
@@ -47,20 +49,17 @@ export function Hero(handle: Handle<{ signedIn?: boolean }>) {
         code, and watch the model think.
       </p>
 
-      <form method="get" action={lessonOneHref()} mix={[barStyle, rise[1]]}>
-        <span aria-hidden="true" mix={chevronStyle}>
+      <form method="get" action={lessonOneHref()} mix={[fieldFrameStyle, fieldKeyedStyle, barStyle, rise[1]]}>
+        <span aria-hidden="true" mix={fieldGlyphStyle}>
           ›
         </span>
         <label for="hero-prompt" class="sr-only">
           Ask your first question
         </label>
         <HeroPromptInput id="hero-prompt" name="q" prompts={typewriterPrompts} />
-        <button type="submit" mix={askStyle}>
-          Ask
-          <span aria-hidden="true" mix={enterTile}>
-            ↵
-          </span>
-        </button>
+        <Keycap type="submit" size="md" mix={askStyle}>
+          Ask <span aria-hidden="true">↵</span>
+        </Keycap>
       </form>
 
       {/* On phones the chips are one row that scrolls sideways: focusable, named by its label. */}
@@ -164,93 +163,18 @@ const subStyle = css({
 })
 
 /*
- * The prompt bar (components §7.4; decisions 040 and 047).
+ * The prompt bar (components §7.4; decisions 040, 047 and 051).
  *
- * One row, everything centred on it, squared. The Ask key's underline is
- * drawn inside the key, so its box is what you see and the insets around
- * it are equal: 8px on desktop, 6px on phones. The chevron uses the input's
- * font, size and line box, so its glyph sits on the text's line. The ground
- * is flat ink (`--cell-fill`, no blur) with a hairline that turns volt and
- * doubles on focus.
+ * The shared field with an md key inside (`fieldKeyedStyle`): the volt `›`,
+ * mono 16px, the Ask key, focus on the frame. Only its width and the rise-in
+ * are the hero's own.
  */
 const barStyle = css({
   width: '100%',
   maxWidth: 'var(--read-width)',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 'var(--space-3)',
-  padding: 'var(--space-2) var(--space-2) var(--space-2) var(--space-5)',
-  boxSizing: 'border-box',
-  background: 'var(--cell-fill)',
-  border: 'var(--border-w) solid var(--line-drop)',
-  transition: 'border-color var(--duration-focus), box-shadow var(--duration-focus)',
-  '&:hover': { borderColor: 'var(--line-node-next)' },
-  '&:focus-within': {
-    borderColor: 'var(--focus-border)',
-    boxShadow: 'var(--focus-ring-soft)',
-  },
-  [FORCED]: {
-    background: 'Canvas',
-    borderColor: 'CanvasText',
-    '&:focus-within': { outline: '2px solid Highlight', outlineOffset: '2px' },
-  },
-  [PHONE]: {
-    gap: 'var(--space-2_5)',
-    padding: 'var(--space-1_5) var(--space-1_5) var(--space-1_5) var(--space-4)',
-  },
 })
 
-const chevronStyle = css({
-  flex: 'none',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-17)',
-  fontWeight: 500,
-  lineHeight: 'normal',
-  color: 'var(--volt)',
-  [PHONE]: { fontSize: 'var(--fs-16)' },
-})
-
-const askStyle = css({
-  flex: 'none',
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 'var(--space-2)',
-  minHeight: 'var(--space-12)',
-  padding: '0 var(--space-3) 0 var(--space-4)',
-  boxSizing: 'border-box',
-  border: 0,
-  background: 'var(--volt)',
-  color: 'var(--on-volt)',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-14)',
-  fontWeight: 500,
-  lineHeight: 1,
-  whiteSpace: 'nowrap',
-  cursor: 'pointer',
-  WebkitTapHighlightColor: 'transparent',
-  // The flat key (decision 047): a 2px underline inside the box.
-  boxShadow: 'var(--shadow-keycap-volt)',
-  transition:
-    'background-color var(--duration-press) var(--ease), box-shadow var(--duration-press) var(--ease), transform var(--duration-press) var(--ease)',
-  '&:hover': { background: 'var(--volt-hover)' },
-  '&:active': { transform: 'translateY(var(--keycap-travel))', boxShadow: 'var(--shadow-keycap-volt-pressed)' },
-  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset)' },
-  '&[aria-busy="true"]': { cursor: 'progress' },
-  [REDUCED]: { transition: 'none' },
-  [FORCED]: { border: '1px solid ButtonText' },
-  [PHONE]: { minHeight: 'var(--touch-target)', padding: '0 var(--space-2_5) 0 var(--space-3_5)' },
-})
-
-const enterTile = css({
-  display: 'inline-grid',
-  placeItems: 'center',
-  minWidth: 'var(--space-6)',
-  height: 'var(--space-6)',
-  boxSizing: 'border-box',
-  padding: '0 var(--space-1_5)',
-  background: 'var(--on-volt-a12)',
-  fontSize: 'var(--fs-12)',
-})
+const askStyle = css({ flex: 'none' })
 
 const chipsStyle = css({
   listStyle: 'none',
