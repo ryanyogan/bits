@@ -170,6 +170,27 @@ export const terminalEntries: TerminalEntry[] = [
     ],
     summary: '✓ 2 turns · 1 tool call · 1.8s',
   },
+  {
+    // A quick check (decision 052), answered, so the input stays free for “hint”.
+    kind: 'ask',
+    ask: {
+      id: 'sg-terminal-ask',
+      label: 'What ends the loop?',
+      choices: [
+        { key: 'a', label: 'The model answers with "end_turn"' },
+        { key: 'b', label: 'The tool returns nothing' },
+      ],
+      xp: 10,
+      passed: true,
+    },
+  },
+]
+
+/** Options for the AskPanel specimens. */
+export const sgAskChoices = [
+  { key: 'a', label: '“ the”' },
+  { key: 'b', label: '“Unbelievably”' },
+  { key: 'c', label: '“fetched.”' },
 ]
 
 export const outputLines: TerminalPart[][] = [

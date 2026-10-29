@@ -61,18 +61,39 @@ export function Chip(handle: Handle<ChipProps>) {
 }
 
 export interface SuggestionChipProps {
-  href: string
+  /** A link chip. Without it the chip is a button (an ask's option, which fills the answer field). */
+  href?: string
   /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
   prefetch?: PrefetchProp
+  /** Button chips: `submit` sends `name=value` with its form (the no-JS pick). Default `button`. */
+  type?: 'button' | 'submit'
+  name?: string
+  value?: string
+  /** Button chips: a toggled pick (`aria-pressed`, volt tint). */
+  pressed?: boolean
   forceState?: ForcedState
   mix?: MixInput<HTMLElement>
   children?: RemixNode
 }
 
-/** Link chip over the landing field (components §6.2b, `.chip-link`). Static. */
+/** Link chip over the landing field (components §6.2b, `.chip-link`), or a button chip. Static. */
 export function SuggestionChip(handle: Handle<SuggestionChipProps>) {
   return () => {
-    let { href, prefetch, forceState, mix, children } = handle.props
+    let { href, prefetch, type = 'button', name, value, pressed, forceState, mix, children } = handle.props
+    if (href === undefined) {
+      return (
+        <button
+          type={type}
+          name={name}
+          value={value}
+          aria-pressed={pressed === undefined ? undefined : pressed ? 'true' : 'false'}
+          data-force={forceState}
+          mix={[chipBase, suggestionStyle, buttonChipStyle, mix]}
+        >
+          {children}
+        </button>
+      )
+    }
     return (
       <a href={href} data-rmx-prefetch={prefetchFor(href, prefetch)} data-force={forceState} mix={[chipBase, suggestionStyle, mix]}>
         {children}
@@ -138,4 +159,15 @@ const suggestionStyle = css({
     background: 'var(--volt-a06)',
   },
   [FOCUS]: focusOutline,
+})
+
+// A button chip: the label may be a sentence, so it wraps instead of
+// overflowing a phone; a toggled pick takes the volt tint.
+const buttonChipStyle = css({
+  cursor: 'pointer',
+  whiteSpace: 'normal',
+  textAlign: 'start',
+  paddingBlock: 'var(--space-2)',
+  '&[aria-pressed="true"]': on,
+  [FORCED_COLORS]: { '&[aria-pressed="true"]': forcedSelected },
 })

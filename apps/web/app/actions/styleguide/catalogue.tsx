@@ -39,6 +39,7 @@ import { PromptComposer } from '@bits/ui/prompt-composer'
 import { PendingSubmit } from '@bits/ui/pending-submit'
 import { ProviderButton } from '@bits/ui/provider-button'
 import { QuizChoice } from '@bits/ui/quiz-choice'
+import { AskPanel } from '@bits/ui/ask-panel'
 import { RabbitHole } from '@bits/ui/rabbit-hole'
 import { RewardRegion, RewardToast } from '@bits/ui/reward-toast'
 import { SearchField } from '@bits/ui/search-field'
@@ -73,6 +74,7 @@ import {
   rabbitHoleLinks,
   outputLines,
   readmeFile,
+  sgAskChoices,
   terminalEntries,
   tokens,
   toolsFile,
@@ -635,6 +637,49 @@ export function Catalogue(handle: Handle) {
               explanation="At 0 the favourite wins every time, so the same token comes back."
             />
           </Specimen>
+          <Specimen caption="AskPanel (island, decision 052) — unanswered (preview: no endpoint) · wrong · right">
+            <div mix={column}>
+              <AskPanel
+                id="sg-ask-open"
+                question="Which of these is most likely a single token?"
+                choices={sgAskChoices}
+                xp={10}
+              />
+              <AskPanel
+                id="sg-ask-wrong"
+                question="Why does a model miscount the r’s in “strawberry”?"
+                placeholder="In a sentence"
+                xp={20}
+                initial={{
+                  correct: false,
+                  answer: 'It forgot how to spell it',
+                  feedback: 'It isn’t a memory problem. What does it see instead of letters?',
+                  checks: [
+                    { label: 'Mentions tokens', kind: 'accept', passed: false },
+                    { label: 'Blames memory', kind: 'reject', passed: false },
+                  ],
+                  picks: [],
+                  xp: 0,
+                  saved: true,
+                }}
+              />
+              <AskPanel
+                id="sg-ask-right"
+                question="Which of these is most likely a single token?"
+                choices={sgAskChoices}
+                xp={10}
+                initial={{
+                  correct: true,
+                  answer: 'a',
+                  feedback: 'Very common words, with their leading space, get a token of their own.',
+                  checks: [],
+                  picks: [{ key: 'a', correct: true }],
+                  xp: 10,
+                  saved: false,
+                }}
+              />
+            </div>
+          </Specimen>
         </div>
       </Section>
 
@@ -1031,7 +1076,6 @@ export function Catalogue(handle: Handle) {
               entries={terminalEntries}
               replies={{
                 hint: 'Look at what the API requires after a tool_use block. What’s missing if line 10 is gone?',
-                fallback: 'Good guess. Now delete line 10, hit Run, and read the first line of the error out loud.',
               }}
             />
           </Specimen>

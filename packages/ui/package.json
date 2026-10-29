@@ -7,6 +7,7 @@
     "./assets": "./src/assets.ts",
     "./styles/*.css": "./src/styles/*.css",
     "./fonts/*": "./src/fonts/*",
+    "./lib/ask-client": "./src/lib/ask-client.ts",
     "./lib/drafts": "./src/lib/drafts.ts",
     "./lib/field": "./src/lib/field.ts",
     "./lib/prefetch": "./src/lib/prefetch.ts",

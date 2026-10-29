@@ -79,6 +79,7 @@ function safe(check: { patterns: { source: string; flags?: string }[] }): boolea
 }
 
 const NO_RAN = new Set<number>()
+const VERDICT_LEAD = /^(?:right|correct|yes|exactly|not quite|nope|no)[.!,:]\s*/i
 
 /**
  * Grades `answer`. Right when it names exactly the right choice(s), or when
@@ -100,7 +101,8 @@ export function gradeAsk(block: AskBlock, rawAnswer: string): AskGrade {
   // Choices with no right one are suggestions for a typed answer: the accept lines grade it.
   if (picks && (right.length > 0 || !block.accept.length)) {
     let correct = picks.length === right.length && picks.every((choice) => choice.correct)
-    let explained = picks.map((choice) => choice.explanation).filter(Boolean)
+    // The verdict already says right or wrong: drop a quiz explanation's own "Right." / "Not quite.".
+    let explained = picks.map((choice) => choice.explanation.replace(VERDICT_LEAD, '')).filter(Boolean)
     let feedback = correct
       ? explained.join(' ') || block.explain || 'That’s it.'
       : picks.length && picks.every((choice) => choice.correct)

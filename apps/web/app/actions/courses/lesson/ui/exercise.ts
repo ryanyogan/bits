@@ -2,6 +2,7 @@
 // TerminalLog prompt mode, CodeEditor). Plain data only: these cross into
 // islands.
 import type { CodeFile } from '@bits/ui/code-editor'
+import type { AskEndpoint } from '@bits/ui/lib/ask-client'
 import type { DraftPersist } from '@bits/ui/lib/drafts'
 import type { PromptCheck, RunEndpoint, SubmitFields, TemperatureOption } from '@bits/ui/prompt-composer'
 import type { RewardNext } from '@bits/ui/reward-toast'
@@ -9,7 +10,7 @@ import type { TerminalPart } from '@bits/ui/terminal'
 
 import { draftKey } from '../../../../progress/draft-keys.ts'
 import { routes } from '../../../../routes.ts'
-import type { CodeBlock, PromptBlock } from '../content.ts'
+import type { AskBlock, CodeBlock, PromptBlock } from '../content.ts'
 import type { LessonView } from '../lesson-view.ts'
 
 export function temperatureLabel(t: number): string {
@@ -19,7 +20,8 @@ export function temperatureLabel(t: number): string {
 /** Field names of the lesson's "complete" form (read by app/progress/check.ts). */
 export const fieldNames = {
   prompt: (exerciseId: string) => `prompt.${exerciseId}`,
-  quiz: (quizId: string) => `quiz.${quizId}`,
+  /** An ask's answer, posted to /api/ask (never read by the save: the journal says which were right). */
+  ask: (askId: string) => `answer.${askId}`,
 }
 
 /** Temperatures travel as T × 100 so they compare exactly. */
@@ -90,6 +92,39 @@ export function exerciseProps(view: LessonView, block: PromptBlock): ExercisePro
     run: view.completeForm
       ? { action: routes.api.run.href(), fields: { course: view.course.slug, lesson: view.lesson.slug, exercise: block.id } }
       : undefined,
+  }
+}
+
+/**
+ * What the browser gets of an ask (decision 052): the question, placeholder
+ * and option labels, never its patterns, right answers or explanations.
+ * Graded through /api/ask; absent in the draft preview (nothing to grade
+ * against). `passed` and `initial` come from the session (an earlier right
+ * answer, a verdict flashed back to a native form).
+ */
+export function askProps(view: LessonView, block: AskBlock) {
+  let endpoint: AskEndpoint | undefined = view.completeForm
+    ? {
+        action: routes.api.ask.href(),
+        fields: {
+          course: view.course.slug,
+          lesson: view.lesson.slug,
+          ask: block.id,
+          ...(view.mode === 'read' ? {} : { mode: view.mode }),
+        },
+        answerField: fieldNames.ask(block.id),
+      }
+    : undefined
+  let initial = view.asks.verdict?.ask === block.id ? view.asks.verdict.verdict : undefined
+  return {
+    id: block.id,
+    placeholder: block.placeholder,
+    choices: block.choices.map((choice) => ({ key: choice.key, label: choice.label })),
+    multiple: block.multiple,
+    xp: block.xp,
+    endpoint,
+    passed: view.asks.passed.includes(block.id),
+    initial,
   }
 }
 

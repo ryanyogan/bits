@@ -5,9 +5,10 @@
 import type { Viewer } from '../../../auth/identity.ts'
 import type { Catalog } from '../../../content/catalog.ts'
 import type { SavedDraft } from '@bits/db'
+import type { AskVerdict } from '@bits/ui/lib/ask-client'
 import type { Completed, CourseDetail, LessonSummary } from '../../../content/types.ts'
 import { routes } from '../../../routes.ts'
-import { exercisesOf, hasVideo, type LessonContent } from './content.ts'
+import { exercisesOf, gatingAsksOf, hasVideo, type LessonContent } from './content.ts'
 
 export type LessonMode = 'read' | 'watch' | 'terminal'
 
@@ -31,8 +32,12 @@ export interface LessonView {
   drafts: Record<string, SavedDraft>
   /** Where the browser saves drafts; absent when signed out or in the draft preview. */
   draftSync?: { action: string; fields: Record<string, string> }
-  /** Answers to quizzes submitted with the GET form: quiz id → option keys. */
-  answers: Record<string, string[]>
+  /**
+   * Quick checks (decision 052) this browser has answered right, and the
+   * verdict a native (no-JS) answer was redirected back with. Both come from
+   * the session; the save reads the journal instead.
+   */
+  asks: LessonAsks
   /** The author draft preview. */
   draft?: { version: string; backHref: string }
   /** The "complete lesson" form (absent in the draft preview). */
@@ -49,7 +54,14 @@ export interface LessonView {
   }
 }
 
+export interface LessonAsks {
+  passed: string[]
+  verdict?: { ask: string; verdict: AskVerdict }
+}
+
 export interface LessonViewOptions {
+  /** Asks answered right and a flashed verdict (from the session; none in the draft preview). */
+  asks?: LessonAsks
   /** Render as the author's draft preview. */
   draft?: { version: string }
   /** The signed-in viewer, or null. */
@@ -86,13 +98,6 @@ export async function buildLessonView(
       : routes.courses.lesson.index.href({ course: course.slug, lesson: slug }, { searchParams })
   }
 
-  let answers: Record<string, string[]> = {}
-  for (let block of content.blocks) {
-    if (block.type !== 'quiz') continue
-    let picked = url.searchParams.getAll(`quiz-${block.id}`)
-    if (picked.length) answers[block.id] = picked
-  }
-
   let self = lessonHref(lesson.slug)
   let drafts = (!preview && options.drafts) || {}
   let resumeAt = Number(drafts.video?.value)
@@ -114,7 +119,7 @@ export async function buildLessonView(
       !preview && options.drafts
         ? { action: routes.api.drafts.href(), fields: { course: course.slug, lesson: lesson.slug } }
         : undefined,
-    answers,
+    asks: (!preview && options.asks) || { passed: [] },
     draft: options.draft
       ? { version: options.draft.version, backHref: routes.author.course.index.href({ course: course.slug }) }
       : undefined,
@@ -133,7 +138,14 @@ export async function buildLessonView(
   }
 }
 
-/** Neurons awarded by this lesson's exercises. */
+/** Neurons awarded by this lesson's prompt exercises (an ask reports its own, from the server). */
 export function lessonAward(view: LessonView): number {
   return exercisesOf(view.content).reduce((sum, exercise) => sum + exercise.xp, 0)
+}
+
+/** Gating asks this browser hasn't answered right yet: what "Complete lesson" still waits for. */
+export function openAsks(view: LessonView): string[] {
+  return gatingAsksOf(view.content)
+    .map((ask) => ask.id)
+    .filter((id) => !view.asks.passed.includes(id) && !(view.asks.verdict?.ask === id && view.asks.verdict.verdict.correct))
 }

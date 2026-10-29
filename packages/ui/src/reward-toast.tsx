@@ -114,6 +114,11 @@ export interface RewardEventDetail {
   title?: string
   badge?: RewardBadge
   next?: RewardNext
+  /**
+   * `ask`: a quick check answered right (decision 052). It adds its xp but
+   * doesn't stand for the lesson's prompt checks passing.
+   */
+  source?: 'ask'
 }
 
 export const REWARD_EVENT = 'bits:reward'

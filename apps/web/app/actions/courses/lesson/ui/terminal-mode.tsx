@@ -7,28 +7,31 @@ import { promptText } from '@bits/ui/next-token'
 import { linkMeta } from '@bits/ui/rabbit-hole'
 import { OutputPanel, TerminalLog, type TerminalEntry, type TerminalPart, type TerminalPrompt, type TerminalTone } from '@bits/ui/terminal'
 
-import type {
-  AttentionBlock,
-  Block,
-  CodeBlock,
-  CompareBlock,
-  NextTokenBlock,
-  OddsBlock,
-  Paragraph,
-  PromptBlock,
-  RabbitHoleBlock,
-  TokenizerBlock,
-  TrainingBlock,
+import {
+  quizAsAsk,
+  type AskBlock,
+  type AttentionBlock,
+  type Block,
+  type CodeBlock,
+  type CompareBlock,
+  type NextTokenBlock,
+  type OddsBlock,
+  type Paragraph,
+  type PromptBlock,
+  type RabbitHoleBlock,
+  type TokenizerBlock,
+  type TrainingBlock,
 } from '../content.ts'
 import type { LessonView } from '../lesson-view.ts'
-import { codeEditorProps, exerciseProps, runLines } from './exercise.ts'
-import { inlineNodes } from './inline.tsx'
+import { askProps, codeEditorProps, exerciseProps, runLines } from './exercise.ts'
+import { inlineNodes, inlineText } from './inline.tsx'
 
 /**
  * Terminal mode (CodeLesson artboard): the lesson as a CLI session, with the
  * code editor and its output panel beside it when the lesson has code.
- * Mapping (components §10.15): markdown → `◆ tutor`, `:::quiz` → lettered
- * options, `:::prompt` → the input runs the exercise with `○`/`✓` check
+ * Mapping (components §10.15): markdown → `◆ tutor`, `:::ask` / `:::quiz`
+ * → a quick check with lettered options that the input answers (graded on
+ * the server, decision 052), `:::prompt` → the input runs the exercise with `○`/`✓` check
  * lines, `:::terminal` → `$ cmd` + output, `:::odds`, `:::tokenizer` and
  * the toys (`:::nexttoken`, `:::training`, `:::attention`, `:::compare`) →
  * their CLI equivalents, `:::rabbithole` → a tutor turn with the links, `:::code` → the editor pane (pointed at from the
@@ -46,7 +49,7 @@ export function TerminalMode(handle: Handle<{ view: LessonView }>) {
       <TerminalLog
         path={`~/${view.course.slug}`}
         progress={`lesson ${view.index + 1}/${view.total} · ${pct}% →`}
-        entries={terminalEntries(blocks)}
+        entries={terminalEntries(blocks, view)}
         replies={view.content.replies}
         prompt={prompt ? terminalPrompt(view, prompt) : undefined}
         flush={!!code}
@@ -96,7 +99,19 @@ function tutorBody(paragraphs: Paragraph[]): RemixNode {
   return paragraphs.flatMap((paragraph, i) => (i === 0 ? inlineNodes(paragraph, true) : ['\n\n', ...inlineNodes(paragraph, true)]))
 }
 
-export function terminalEntries(blocks: Block[]): TerminalEntry[] {
+/** An ask's entry without a lesson to grade it in (tests): no endpoint. */
+function askOnly(ask: AskBlock) {
+  return {
+    id: ask.id,
+    placeholder: ask.placeholder,
+    choices: ask.choices.map((choice) => ({ key: choice.key, label: choice.label })),
+    multiple: ask.multiple,
+    xp: ask.xp,
+  }
+}
+
+/** The session's entries; with `view`, quick checks are graded through /api/ask. */
+export function terminalEntries(blocks: Block[], view?: LessonView): TerminalEntry[] {
   let entries: TerminalEntry[] = []
   let code = blocks.find((block): block is CodeBlock => block.type === 'code')
   for (let block of blocks) {
@@ -122,17 +137,17 @@ export function terminalEntries(blocks: Block[]): TerminalEntry[] {
         if (block.ask) entries.push({ kind: 'learner', text: block.ask })
         entries.push({ kind: 'command', command: block.cmd, output: block.lines, summary: block.summary })
         break
+      case 'ask':
       case 'quiz': {
-        let question = inlineNodes(block.question, true)
+        // Quick checks (decision 052): the input answers them, graded on the server.
+        let ask = block.type === 'quiz' ? quizAsAsk(block) : block
+        let question = inlineNodes(ask.question, true)
         let previous = entries[entries.length - 1]
         // A question right after a tutor turn belongs to that turn (as drawn).
         let body: RemixNode =
           previous?.kind === 'tutor' && !previous.pointer ? (entries.pop(), [previous.body, '\n', ...question]) : question
-        entries.push({
-          kind: 'quiz',
-          body,
-          options: block.options.map((option) => ({ key: option.key, label: option.label, reply: option.explanation })),
-        })
+        let props = view ? askProps(view, ask) : { ...askOnly(ask), passed: false }
+        entries.push({ kind: 'ask', body, ask: { ...props, label: inlineText(ask.question) } })
         break
       }
       case 'odds':

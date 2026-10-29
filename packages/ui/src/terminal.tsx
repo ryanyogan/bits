@@ -17,6 +17,7 @@ import {
   type SubmitFields,
   type TemperatureOption,
 } from './prompt-composer.tsx'
+import { announceGate, postAnswer, verdictXpLabel, type AskEndpoint, type AskVerdict } from './lib/ask-client.ts'
 import { announceReward, type RewardNext } from './reward-toast.tsx'
 import { ToolButton } from './tool-button.tsx'
 
@@ -32,22 +33,37 @@ export type TerminalEntry =
   | { kind: 'learner'; text: string }
   | { kind: 'tutor'; body: RemixNode; pointer?: RemixNode }
   | { kind: 'command'; command: string; output: TerminalPart[][]; summary?: string }
-  /** A `:::quiz` in Terminal mode: tutor text plus lettered option buttons (components §6.4). */
-  | { kind: 'quiz'; body?: RemixNode; options: TerminalQuizOption[] }
+  /**
+   * A quick check (`:::ask` or `:::quiz`, decision 052): the tutor's
+   * question with lettered option buttons that fill the input. The input
+   * answers it, and the server grades the answer.
+   */
+  | { kind: 'ask'; body?: RemixNode; ask: TerminalAsk }
 
-export interface TerminalQuizOption {
-  /** Letter shown in brackets, e.g. "a". */
-  key: string
+export interface TerminalAsk {
+  /** The ask's id. */
+  id: string
+  /** Plain text of the question: the input's label while it answers this ask. */
   label: string
-  /** Tutor reply appended when the option is picked. */
-  reply: string
+  placeholder?: string
+  /** Options: `[a] label` buttons that fill the input (a typed letter counts too). */
+  choices: { key: string; label: string }[]
+  /** Several options are right: the buttons toggle letters ("a, c"). */
+  multiple?: boolean
+  xp: number
+  /** Where answers are graded (`/api/ask`); absent in the author preview. */
+  endpoint?: AskEndpoint
+  /** Answered right before (this browser's session). */
+  passed?: boolean
+  /** A verdict the server already gave (a native answer, flashed back). */
+  initial?: AskVerdict
 }
 
 export interface TerminalReplies {
-  /** Reply when the learner's line contains "hint". */
+  /** The authored reply when the learner types "hint" (nothing to answer in the lesson). */
   hint: string
-  /** Any other reply. */
-  fallback: string
+  /** Ignored: a canned reply to a typed answer faked a result (decision 052). */
+  fallback?: string
 }
 
 /**
@@ -81,7 +97,7 @@ export interface TerminalLogProps {
   /** e.g. "lesson 4/10 · 18% →". */
   progress?: string
   entries: TerminalEntry[]
-  /** Canned tutor replies for the free-text input (ignored in prompt mode). */
+  /** The reply to "hint" when there is nothing to answer (no ask pending, no prompt). */
   replies?: TerminalReplies
   /** Turns the input into a prompt exercise. */
   prompt?: TerminalPrompt
@@ -103,15 +119,26 @@ interface ModelEntry {
   note?: string
 }
 
+/** The server's verdict on an answer (or why there isn't one yet). */
+interface VerdictEntry {
+  kind: 'verdict'
+  id: number
+  verdict?: AskVerdict
+  error?: string
+}
+
 type AppendedEntry =
   | (TerminalEntry & { id: number })
   | ModelEntry
+  | VerdictEntry
   | { kind: 'reward'; id: number; xp: number; message: string; next?: RewardNext }
 
-const DEFAULT_REPLIES: TerminalReplies = {
-  hint: 'Re-read the last tutor message: the answer is in there.',
-  fallback: 'Good thinking. Keep going.',
-}
+const DEFAULT_HINT = 'Re-read the last tutor message: the answer is in there.'
+/** The honest reply to free text: there is no tutor model behind this input yet. */
+const NO_TUTOR = 'Nothing to answer here yet: the tutor can’t reply to free questions. Type “hint” for this lesson’s hint.'
+
+/** What the input is answering: an ask, the prompt exercise, or nothing (hint only). */
+type Target = { kind: 'ask'; ask: TerminalAsk } | { kind: 'prompt'; prompt: TerminalPrompt } | { kind: 'free' }
 
 const DEFAULT_TEMPS: TemperatureOption[] = [
   { value: 0, label: '0' },
@@ -121,14 +148,18 @@ const DEFAULT_TEMPS: TemperatureOption[] = [
 
 /**
  * Terminal-mode lesson (components §10.15): a `role="log"` of learner lines,
- * tutor blocks, command output and quizzes, and a prompt input.
- * Server-rendered entries read in order with JS off; as a client entry the
- * input appends the learner's line and a canned tutor reply, quiz options
- * append the pick and its reply, and with `prompt` the input runs the
- * exercise (live checks, example output, reward). The panel is a fixed
- * height (`--terminal-height`) and the log scrolls inside it, like a real
- * terminal: it opens at the top of the lesson, and once the learner acts it
- * follows new lines while they're at the bottom (decision 023). Client entry.
+ * tutor blocks, command output and quick checks, and one input.
+ * Server-rendered entries read in order with JS off. The input answers the
+ * first quick check not yet answered (or the one whose option was tapped):
+ * the server grades it (`/api/ask`, decision 052) and the verdict lands in
+ * the log. With every check answered, it runs the `prompt` exercise (live
+ * checks, server runs, reward); with neither, "hint" shows the lesson's
+ * hint and nothing fakes a reply. Before hydration and without JS the input
+ * is a native form that posts the answer, and the server redirects back
+ * with the verdict. The panel is a fixed height (`--terminal-height`) and
+ * the log scrolls inside it, like a real terminal: it opens at the top of
+ * the lesson, and once the learner acts it follows new lines while they're
+ * at the bottom (decision 023). Client entry.
  */
 export const TerminalLog = clientEntry(
   import.meta.url,
@@ -143,6 +174,31 @@ export const TerminalLog = clientEntry(
     let rewarded = false
     // Opens at the start of the lesson; the learner's first action pins it.
     let follower = createFollower({ startPinned: false })
+    let input: HTMLInputElement | undefined
+
+    // Quick checks: which are answered, the one the learner picked to answer
+    // (else the first open one), and a draft answer per check.
+    let asks = () =>
+      handle.props.entries.flatMap((entry) => (entry.kind === 'ask' ? [entry.ask] : []))
+    let passed = new Set(asks().filter((ask) => ask.passed || ask.initial?.correct).map((ask) => ask.id))
+    let chosen: string | undefined
+    let answers: Record<string, string> = {}
+    let checking = false
+    for (let ask of asks()) {
+      if (!ask.initial) continue
+      appended.push(
+        { kind: 'learner', text: ask.initial.answer, id: ++count },
+        { kind: 'verdict', verdict: ask.initial, id: ++count },
+      )
+    }
+
+    function target(): Target {
+      let all = asks()
+      let ask = all.find((a) => a.id === chosen) ?? all.find((a) => !passed.has(a.id))
+      if (ask) return { kind: 'ask', ask }
+      let prompt = handle.props.prompt
+      return prompt ? { kind: 'prompt', prompt } : { kind: 'free' }
+    }
 
     let persist = (prompt: TerminalPrompt): DraftPersist => prompt.persist ?? { id: prompt.id, key: 'prompt' }
 
@@ -150,12 +206,57 @@ export const TerminalLog = clientEntry(
       let prompt = handle.props.prompt
       if (prompt) value = readDraft(persist(prompt)) ?? prompt.defaultDraft ?? ''
       hydrated = true
+      // A right answer the server flashed back still opens its gate.
+      for (let ask of asks()) if (ask.initial?.correct) announceGate(ask.id)
       handle.update()
     })
 
     function append(...entries: AppendedEntry[]) {
       appended = [...appended, ...entries].slice(-(handle.props.keepAppended ?? 6))
       follower.pin()
+      handle.update()
+    }
+
+    /** An option button: answer that check next, with the option filled in (letters toggle for `multiple`). */
+    function pickOption(ask: TerminalAsk, option?: { key: string; label: string }) {
+      chosen = ask.id
+      if (option) {
+        if (!ask.multiple) {
+          answers[ask.id] = option.label
+        } else {
+          let keys = (answers[ask.id] ?? '')
+            .split(/[,;\s]+/)
+            .map((part) => part.trim().toLowerCase())
+            .filter((part) => /^[a-z]$/.test(part))
+          keys = keys.includes(option.key) ? keys.filter((key) => key !== option.key) : [...keys, option.key].sort()
+          answers[ask.id] = keys.join(', ')
+        }
+      }
+      handle.update()
+      input?.focus()
+    }
+
+    async function answerAsk(ask: TerminalAsk, text: string) {
+      if (!ask.endpoint || checking) return
+      checking = true
+      let entry: VerdictEntry = { kind: 'verdict', id: 0 }
+      entry.id = ++count
+      append({ kind: 'learner', text, id: ++count }, entry)
+      let result = await postAnswer(ask.endpoint, text).catch(() => undefined)
+      checking = false
+      if (!result) return
+      if (!result.ok) {
+        entry.error = result.message
+      } else {
+        entry.verdict = result.verdict
+        if (result.verdict.correct) {
+          passed.add(ask.id)
+          answers[ask.id] = ''
+          if (chosen === ask.id) chosen = undefined
+          announceGate(ask.id)
+          if (result.verdict.xp > 0) announceReward({ xp: result.verdict.xp, message: result.verdict.feedback, source: 'ask' })
+        }
+      }
       handle.update()
     }
 
@@ -210,10 +311,41 @@ export const TerminalLog = clientEntry(
       }
     }
 
+    let free = ''
+
+    function submit() {
+      let goal = target()
+      if (goal.kind === 'ask') {
+        let text = (answers[goal.ask.id] ?? '').trim()
+        if (text) void answerAsk(goal.ask, text)
+        return
+      }
+      if (goal.kind === 'prompt') {
+        let text = value.trim()
+        if (text) void runPrompt(goal.prompt, text)
+        return
+      }
+      let text = free.trim()
+      if (!text) return
+      free = ''
+      // No tutor model answers free text yet: only the authored hint, never a canned verdict.
+      let reply = /hint/i.test(text) ? (handle.props.replies?.hint ?? DEFAULT_HINT) : NO_TUTOR
+      append({ kind: 'learner', text, id: ++count }, { kind: 'tutor', body: reply, id: ++count })
+    }
+
     return () => {
-      let { path, progress, entries, replies = DEFAULT_REPLIES, prompt, keepAppended = 6 } = handle.props
-      let placeholder = handle.props.placeholder ?? prompt?.placeholder ?? 'answer, ask, or type “hint”'
-      let inputId = prompt ? `${prompt.id}-terminal` : 'terminal-input'
+      let { path, progress, entries } = handle.props
+      let goal = target()
+      let ask = goal.kind === 'ask' ? goal.ask : undefined
+      let prompt = goal.kind === 'prompt' ? goal.prompt : undefined
+      let placeholder = ask
+        ? (ask.placeholder ?? (ask.choices.length ? 'type your answer, or pick an option above' : 'type your answer'))
+        : prompt
+          ? (handle.props.placeholder ?? prompt.placeholder ?? 'write your prompt')
+          : 'type “hint” for a hint'
+      let inputId = ask ? `ask-${ask.id}-terminal` : prompt ? `${prompt.id}-terminal` : 'terminal-input'
+      let fieldValue = ask ? (answers[ask.id] ?? '') : prompt ? value : free
+      let native = ask?.endpoint
       return (
         <section aria-label="Lesson" mix={[termStyle, handle.props.flush ? flushStyle : undefined]}>
           <div mix={titleRow}>
@@ -226,11 +358,16 @@ export const TerminalLog = clientEntry(
               <TerminalEntryView
                 key={`s${index}`}
                 entry={entry}
-                onPick={(option) =>
-                  append(
-                    { kind: 'learner', text: `[${option.key}] ${option.label}`, id: ++count },
-                    { kind: 'tutor', body: option.reply, id: ++count },
-                  )
+                ask={
+                  entry.kind === 'ask'
+                    ? {
+                        passed: passed.has(entry.ask.id),
+                        active: ask?.id === entry.ask.id,
+                        answer: answers[entry.ask.id] ?? '',
+                        hydrated,
+                        onPick: (option) => pickOption(entry.ask, option),
+                      }
+                    : undefined
                 }
               />
             ))}
@@ -238,6 +375,15 @@ export const TerminalLog = clientEntry(
               <TerminalEntryView key={`a${entry.id}`} entry={entry} rise />
             ))}
           </div>
+          {ask ? (
+            <div mix={promptTools}>
+              <p id={`${inputId}-ask`} mix={askLine}>
+                <span mix={tones.synapse}>? quick check</span>
+                {ask.xp > 0 ? <span mix={tones.volt}>{` · +${ask.xp} neurons`}</span> : null}
+                {` · ${ask.label}`}
+              </p>
+            </div>
+          ) : null}
           {prompt ? (
             <div mix={promptTools}>
               <ul id={`${inputId}-checks`} aria-label="Checks" mix={checkLines}>
@@ -274,23 +420,24 @@ export const TerminalLog = clientEntry(
               </fieldset>
             </div>
           ) : null}
-          {/* The shared field (decision 051): › prompt, mono 16px, an md key inside the frame. */}
+          {/* The shared field (decision 051): › prompt, mono 16px, an md key inside the frame.
+           * Answering a quick check, the input is also a native form to
+           * /api/ask (works before hydration and without JS; the server
+           * redirects back with the verdict, keeping focus and scroll). */}
           <form
+            id={native ? `ask-${ask!.id}` : undefined}
+            method={native ? 'post' : undefined}
+            action={native?.action}
+            data-rmx-reset-focus={native ? 'manual' : undefined}
+            data-rmx-reset-scroll={native ? 'manual' : undefined}
+            data-rmx-history={native ? 'replace' : undefined}
             mix={[
               fieldFrameStyle,
               fieldKeyedStyle,
               inputRow,
               on('submit', (event) => {
                 event.preventDefault()
-                let text = value.trim()
-                if (!text) return
-                if (prompt) {
-                  void runPrompt(prompt, text)
-                  return
-                }
-                let reply = /hint/i.test(text) ? replies.hint : replies.fallback
-                value = ''
-                append({ kind: 'learner', text, id: ++count }, { kind: 'tutor', body: reply, id: ++count })
+                submit()
               }),
             ]}
           >
@@ -298,43 +445,66 @@ export const TerminalLog = clientEntry(
               ›
             </span>
             <label class="sr-only" for={inputId}>
-              {prompt ? prompt.label : 'Answer or ask the tutor'}
+              {ask ? `Your answer: ${ask.label}` : prompt ? prompt.label : 'Type “hint” for a hint'}
             </label>
             <input
               id={inputId}
+              name={native?.answerField}
               autocomplete="off"
               placeholder={placeholder}
-              value={value}
-              aria-describedby={prompt ? `${inputId}-checks` : undefined}
-              aria-keyshortcuts={prompt ? 'Enter' : undefined}
+              value={fieldValue}
+              aria-describedby={ask ? `${inputId}-ask` : prompt ? `${inputId}-checks` : undefined}
+              aria-keyshortcuts={ask || prompt ? 'Enter' : undefined}
               mix={[
                 fieldInputStyle,
+                ref((node) => (input = node)),
                 on('input', (event) => {
-                  value = event.currentTarget.value
-                  if (!prompt) return
-                  writeDraft(persist(prompt), value)
+                  let next = event.currentTarget.value
+                  let goal = target()
+                  if (goal.kind === 'ask') answers[goal.ask.id] = next
+                  else if (goal.kind === 'free') free = next
+                  else {
+                    value = next
+                    writeDraft(persist(goal.prompt), value)
+                  }
                   handle.update()
                 }),
               ]}
             />
-            <Keycap type="submit" size="md" disabled={!hydrated} mix={sendKeyStyle}>
-              {prompt ? 'Run ↵' : 'Send ↵'}
+            <Keycap type="submit" size="md" disabled={!hydrated && !native} loading={checking} mix={sendKeyStyle}>
+              {prompt ? 'Run ↵' : ask ? 'Check ↵' : 'Send ↵'}
             </Keycap>
+            {native
+              ? Object.entries(native.fields).map(([name, fieldValue]) => <input key={name} type="hidden" name={name} value={fieldValue} />)
+              : null}
             {prompt ? submitFieldInputs(prompt.submit, value) : null}
           </form>
           {/* The note keeps its line once hydrated (as the keyboard hint), so nothing moves. */}
-          {prompt ? <p mix={noJsStyle}>{hydrated ? 'Enter runs your prompt' : 'Turn on JavaScript to run prompts.'}</p> : null}
+          {ask ? (
+            <p mix={noJsStyle}>{ask.endpoint ? 'Enter checks your answer' : 'Answers are checked on the published lesson.'}</p>
+          ) : prompt ? (
+            <p mix={noJsStyle}>{hydrated ? 'Enter runs your prompt' : 'Turn on JavaScript to run prompts.'}</p>
+          ) : null}
         </section>
       )
     }
   },
 )
 
-function TerminalEntryView(
-  handle: Handle<{ entry: AppendedEntry | TerminalEntry; rise?: boolean; onPick?: (option: TerminalQuizOption) => void }>,
-) {
+/** An ask entry's state, from the log. */
+interface AskEntryState {
+  passed: boolean
+  /** The input answers this one now. */
+  active: boolean
+  /** Its draft answer (option letters for a `multiple` ask). */
+  answer: string
+  hydrated: boolean
+  onPick: (option?: { key: string; label: string }) => void
+}
+
+function TerminalEntryView(handle: Handle<{ entry: AppendedEntry | TerminalEntry; rise?: boolean; ask?: AskEntryState }>) {
   return () => {
-    let { entry, rise, onPick } = handle.props
+    let { entry, rise, ask: state } = handle.props
     let riseMix = rise ? riseStyle : undefined
     if (entry.kind === 'learner') {
       return (
@@ -356,18 +526,74 @@ function TerminalEntryView(
         </div>
       )
     }
-    if (entry.kind === 'quiz') {
+    if (entry.kind === 'ask') {
+      let { ask } = entry
+      let keys = ask.multiple ? state?.answer.split(/[,;\s]+/).map((part) => part.toLowerCase()) ?? [] : []
+      return (
+        <div id={`ask-${ask.id}-entry`} mix={[tutorStyle, riseMix]}>
+          <span mix={tones.volt}>
+            ◆ tutor <span mix={tones.synapse}>· quick check</span>
+          </span>
+          {entry.body ? <div mix={tutorBody}>{entry.body}</div> : null}
+          {ask.choices.length ? (
+            <div role="group" aria-label={ask.multiple ? 'Options (pick every one that fits)' : 'Options'} mix={quizRow}>
+              {ask.choices.map((option) => (
+                <ToolButton
+                  key={option.key}
+                  variant="quiz"
+                  disabled={!state?.hydrated}
+                  pressed={ask.multiple ? keys.includes(option.key) : undefined}
+                  mix={[optionWrap, on('click', () => state?.onPick(option))]}
+                >
+                  {`[${option.key}] ${option.label}`}
+                </ToolButton>
+              ))}
+            </div>
+          ) : null}
+          <div mix={pointerStyle}>
+            {state?.passed ? (
+              <span mix={tones.volt}>✓ answered</span>
+            ) : state?.active ? (
+              '↓ answer below'
+            ) : state?.hydrated ? (
+              <ToolButton variant="quiz" mix={on('click', () => state.onPick())}>
+                answer this ↓
+              </ToolButton>
+            ) : (
+              'answer after the checks above'
+            )}
+          </div>
+        </div>
+      )
+    }
+    if (entry.kind === 'verdict') {
+      let { verdict, error } = entry
+      if (!verdict) {
+        return (
+          <p aria-busy={error ? undefined : 'true'} mix={[entryP, riseMix, error ? warnTone : tones.muted]}>
+            {error ?? 'checking…'}
+          </p>
+        )
+      }
+      let xpLabel = verdictXpLabel(verdict)
       return (
         <div mix={[tutorStyle, riseMix]}>
-          <span mix={tones.volt}>◆ tutor</span>
-          {entry.body ? <div mix={tutorBody}>{entry.body}</div> : null}
-          <div role="group" aria-label="Answers" mix={quizRow}>
-            {entry.options.map((option) => (
-              <ToolButton key={option.key} variant="quiz" mix={on('click', () => onPick?.(option))}>
-                {`[${option.key}] ${option.label}`}
-              </ToolButton>
-            ))}
-          </div>
+          <span mix={verdict.correct ? tones.volt : warnTone}>
+            {verdict.correct ? '✓ right' : '✗ not quite'}
+            {xpLabel ? ` · ${xpLabel}` : ''}
+          </span>
+          {verdict.checks.length ? (
+            <ul aria-label="Checks" mix={[checkLines, verdictChecks]}>
+              {verdict.checks.map((check) => (
+                <li key={`${check.kind}-${check.label}`} data-passed={check.passed ? 'true' : 'false'} mix={checkLine}>
+                  <span aria-hidden="true">{check.kind === 'reject' ? '✗ ' : check.passed ? '✓ ' : '○ '}</span>
+                  {check.label}
+                  <span class="sr-only">{check.kind === 'reject' ? ', matched: not this' : check.passed ? ', passed' : ', not yet'}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <div mix={tutorBody}>{verdict.feedback}</div>
         </div>
       )
     }
@@ -640,6 +866,18 @@ const summaryStyle = css({ marginTop: 'var(--space-1_5)', color: 'var(--muted)' 
 const inputRow = css({ margin: 'var(--space-3)' })
 const sendKeyStyle = css({ flex: 'none' })
 const quizRow = css({ paddingLeft: 'var(--space-4_5)', display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' })
+const warnTone = css({ color: 'var(--warn)' })
+const askLine = css({ margin: 0, color: 'var(--text-quiet)', overflowWrap: 'anywhere' })
+// Long options wrap inside the log instead of running past it on a phone.
+const optionWrap = css({
+  maxWidth: '100%',
+  height: 'auto',
+  paddingBlock: 'var(--space-2)',
+  whiteSpace: 'normal',
+  textAlign: 'start',
+  overflowWrap: 'anywhere',
+})
+const verdictChecks = css({ paddingLeft: 'var(--space-4_5)' })
 const nextLink = css({ color: 'var(--volt)' })
 const promptTools = css({
   display: 'flex',

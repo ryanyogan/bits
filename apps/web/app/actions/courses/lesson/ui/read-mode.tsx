@@ -1,22 +1,21 @@
 import type { Handle } from 'remix/component'
-import { attrs, css } from 'remix/component'
+import { css } from 'remix/component'
+import { AskPanel } from '@bits/ui/ask-panel'
 import { AttentionMap } from '@bits/ui/attention-map'
 import { CodeEditor } from '@bits/ui/code-editor'
 import { ComparePanel } from '@bits/ui/compare-panel'
-import { Keycap } from '@bits/ui/keycap'
 import { NextTokenPlayer } from '@bits/ui/next-token'
 import { OddsBars } from '@bits/ui/odds-bars'
 import { PromptComposer } from '@bits/ui/prompt-composer'
-import { QuizChoice, type QuizOption } from '@bits/ui/quiz-choice'
 import { RabbitHole } from '@bits/ui/rabbit-hole'
 import { OutputPanel } from '@bits/ui/terminal'
 import { TrainingScrubber } from '@bits/ui/training-scrubber'
 import { attachedBlock, LearnerBubble, TutorMessage } from '@bits/ui/tutor'
 
-import type { Block, QuizBlock } from '../content.ts'
+import { quizAsAsk, type AskBlock, type Block } from '../content.ts'
 import type { LessonView } from '../lesson-view.ts'
 import { TokenizerToy } from '../public/tokenizer-toy.tsx'
-import { codeEditorProps, exerciseProps, runLines } from './exercise.ts'
+import { askProps, codeEditorProps, exerciseProps, runLines } from './exercise.ts'
 import { inlineNodes } from './inline.tsx'
 
 /**
@@ -94,8 +93,11 @@ function ReadBlock(handle: Handle<{ view: LessonView; block: Block; index: numbe
             </div>
           </>
         )
+      case 'ask':
+        return <Ask view={view} block={block} />
       case 'quiz':
-        return <Quiz view={view} block={block} />
+        // Stored quizzes are upgraded to asks when read (upgradeLessonContent).
+        return <Ask view={view} block={quizAsAsk(block)} />
       case 'tokenizer':
         return (
           <div mix={attachedBlock}>
@@ -137,43 +139,18 @@ function ReadBlock(handle: Handle<{ view: LessonView; block: Block; index: numbe
 }
 
 /**
- * `:::quiz` as the canonical choice card. It submits with GET to this same
- * page (`?quiz-<id>=<key>`), so checking an answer works without JS and the
- * result is a shareable URL.
+ * `:::ask` (and every `:::quiz`, compiled to one) in the prompt window
+ * (decision 052): the learner types the answer or taps an option, and the
+ * server grades it. Works without JS: the panel is a native form to
+ * /api/ask, which redirects back here with the verdict.
  */
-function Quiz(handle: Handle<{ view: LessonView; block: QuizBlock }>) {
+function Ask(handle: Handle<{ view: LessonView; block: AskBlock }>) {
   return () => {
     let { view, block } = handle.props
-    let picked = view.answers[block.id] ?? []
-    let answered = picked.length > 0
-    let options: QuizOption[] = block.options.map((option) => ({
-      value: option.key,
-      label: option.label,
-      checked: picked.includes(option.key),
-      result: picked.includes(option.key) ? (option.correct ? 'correct' : 'incorrect') : undefined,
-    }))
-    let chosen = block.options.filter((option) => picked.includes(option.key))
-    let explanation = answered ? chosen.map((option) => option.explanation).join(' ') : undefined
-    let anchor = `quiz-${block.id}`
     return (
-      <div id={anchor} mix={attachedBlock}>
-        <QuizChoice
-          name={anchor}
-          question={inlineNodes(block.question)}
-          options={options}
-          multiple={block.multiple}
-          explanation={explanation}
-          formAction={`${view.href.self}#${anchor}`}
-          action={
-            <>
-              {view.mode !== 'read' ? <input type="hidden" name="mode" value={view.mode} /> : null}
-              <Keycap type="submit" size="md" mix={attrs({ formMethod: 'get' })}>
-                {answered ? 'Check again' : 'Check'}
-              </Keycap>
-            </>
-          }
-        />
-      </div>
+      <section aria-label="Quick check" mix={exerciseStyle}>
+        <AskPanel {...askProps(view, block)} question={inlineNodes(block.question, true)} />
+      </section>
     )
   }
 }
