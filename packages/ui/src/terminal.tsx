@@ -421,7 +421,8 @@ function TerminalEntryView(
 export function TerminalOutput(handle: Handle<{ lines: TerminalPart[][]; summary?: string }>) {
   return () => (
     // Wide output scrolls sideways, so the box takes focus for keyboard scrolling (decision 031).
-    <div role="region" aria-label="Command output" tabIndex={0} mix={outputBox}>
+    // A group, not a region: a log can hold several, and landmarks must have unique names.
+    <div role="group" aria-label="Command output" tabIndex={0} mix={outputBox}>
       {handle.props.lines.map((line, index) => (
         <div key={index} mix={preLine}>
           {line.map(([tone, text], i) => (
@@ -493,8 +494,10 @@ export const OutputPanel = clientEntry(
             </Keycap>
           </div>
           {/* The full output is a Ghost under the replay, so the panel is its
-           * final size from the start; past --output-panel-height it scrolls. */}
-          <div tabIndex={0} aria-label={`Output of ${command}`} role="region" mix={[panelBody, scrollWindowStyle, ref((node) => (body = node as HTMLElement))]}>
+           * final size from the start; past --output-panel-height it scrolls.
+           * A group, not a region: a lesson can run the same command twice,
+           * and two regions with one name fail axe's landmark-unique. */}
+          <div tabIndex={0} aria-label={`Output of ${command}`} role="group" mix={[panelBody, scrollWindowStyle, ref((node) => (body = node as HTMLElement))]}>
             <div mix={stackStyle}>
               <div aria-live="polite" data-live="">
                 <CommandLine command={command} />
