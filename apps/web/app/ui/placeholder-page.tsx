@@ -1,6 +1,9 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
+import { PageFrame } from '@bits/ui/page-frame'
+import { RuledSection } from '@bits/ui/ruled-section'
+
 import type { Viewer } from '../auth/identity.ts'
 import { Layout } from './layout.tsx'
 
@@ -29,17 +32,17 @@ export function PlaceholderPage(handle: Handle<PlaceholderPageProps>) {
 
     return (
       <Layout title={title} currentPath={currentPath} viewer={viewer}>
-        <section mix={sectionStyle} aria-labelledby="page-title">
-          <p mix={eyebrowStyle}>
-            {pattern}
-            {artboard ? ` · ${artboard}` : null}
-          </p>
-          <h1 id="page-title" mix={titleStyle}>
-            {title}
-          </h1>
-          <p mix={summaryStyle}>{summary}</p>
-          {children}
-        </section>
+        <PageFrame>
+          <RuledSection rule={false} label={artboard ? `${pattern} · ${artboard}` : pattern} aria-labelledby="page-title">
+            <div mix={sectionStyle}>
+              <h1 id="page-title" mix={titleStyle}>
+                {title}
+              </h1>
+              <p mix={summaryStyle}>{summary}</p>
+              {children}
+            </div>
+          </RuledSection>
+        </PageFrame>
       </Layout>
     )
   }
@@ -50,15 +53,6 @@ const sectionStyle = css({
   flexDirection: 'column',
   gap: 'var(--space-5)',
   maxWidth: '760px',
-})
-
-const eyebrowStyle = css({
-  fontFamily: 'var(--font-mono)',
-  fontWeight: 500,
-  fontSize: 'var(--type-eyebrow-size)',
-  letterSpacing: 'var(--type-eyebrow-tracking)',
-  textTransform: 'uppercase',
-  color: 'var(--ion)',
 })
 
 const titleStyle = css({

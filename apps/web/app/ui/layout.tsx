@@ -1,9 +1,10 @@
 import type { Handle, RemixNode } from 'remix/component'
-import { css } from 'remix/component'
+import { css, Fragment } from 'remix/component'
 import { AppBar } from '@bits/ui/app-bar'
 import { Document, type DocumentImage } from '@bits/ui/document'
 import { AvatarButton } from '@bits/ui/avatar-button'
 import { Keycap } from '@bits/ui/keycap'
+import { PageFrame } from '@bits/ui/page-frame'
 import { StreakPill } from '@bits/ui/streak-pill'
 import { XpPill } from '@bits/ui/xp-pill'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
@@ -50,7 +51,11 @@ export interface LayoutProps {
   xp?: RemixNode
   /** A second row in the sticky header (`<LessonBar position="shell">`; decision 022). */
   sub?: RemixNode
-  /** Full-bleed `<main>`: the page owns its own max-width and padding (bands). */
+  /**
+   * Full-bleed `<main>`: the page owns its own max-width and padding. Not
+   * needed for a page that wraps its body in `<PageFrame>`: Layout sees the
+   * frame and steps aside on its own (see `Layout`).
+   */
   bleed?: boolean
   /** No `<main>` wrapper: the page renders its own `<main id="main">` (lesson pages). */
   bare?: boolean
@@ -77,6 +82,14 @@ export function canonicalUrl(path: string): string | undefined {
  * this runtime's assets, the skip link and the sticky AppBar, the same on
  * every app page. Lesson pages add their sub-bar with `sub`. The landing and
  * sign-in pages draw their own frames.
+ *
+ * The squared grid (decision 047): the page brings the frame. Wrap the
+ * page body in `<PageFrame>` (as `<main>`'s top-level child) and lay it out
+ * in `RuledSection`s. Layout notices the frame and gives `<main>` no width
+ * or padding of its own, and stretches the frame to the bottom of the
+ * screen, so its rails run unbroken from the AppBar's (which sit on the
+ * same column) to the foot of the page. `bleed` is then implied. A page
+ * without a frame keeps the old padded `pageShell` column.
  */
 export function Layout(handle: Handle<LayoutProps>) {
   return () => {
@@ -97,6 +110,7 @@ export function Layout(handle: Handle<LayoutProps>) {
       bare,
       children,
     } = handle.props
+    let framed = !bare && hasPageFrame(children)
 
     return (
       <Document
@@ -153,7 +167,7 @@ export function Layout(handle: Handle<LayoutProps>) {
           children
         ) : (
           // tabIndex -1: the skip link moves focus (and a screen reader's cursor) into it (decision 031).
-          <main id="main" tabIndex={-1} mix={[skipTargetStyle, bleed ? undefined : mainStyle]}>
+          <main id="main" tabIndex={-1} mix={[skipTargetStyle, framed ? framedMainStyle : bleed ? undefined : mainStyle]}>
             {children}
           </main>
         )}
@@ -187,5 +201,26 @@ const signInStyle = css({
   '@media (max-width: 420px)': { display: 'none' },
 })
 
+/**
+ * Whether the page's body is (or starts with) a `PageFrame`: a top-level
+ * child, or one inside a top-level fragment. Element types are compared by
+ * identity, so this is a plain server-side check with no markup contract.
+ */
+function hasPageFrame(node: RemixNode): boolean {
+  if (Array.isArray(node)) return node.some(hasPageFrame)
+  if (!node || typeof node !== 'object' || !('type' in node)) return false
+  let element = node as { type: unknown; props?: { children?: RemixNode } }
+  if (element.type === PageFrame) return true
+  return element.type === Fragment ? hasPageFrame(element.props?.children) : false
+}
+
 const skipTargetStyle = css({ '&:focus': { outline: 'none' } })
 const mainStyle = [pageShell, css({ display: 'block' })]
+// The frame grows to fill the screen under the bar, so its rails reach the
+// bottom even on a short page.
+const framedMainStyle = css({
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: 'calc(100dvh - var(--shell-h))',
+  '& > :last-child': { flexGrow: 1 },
+})

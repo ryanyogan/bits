@@ -1,12 +1,12 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
-import { Eyebrow } from '@bits/ui/eyebrow'
 import { Keycap } from '@bits/ui/keycap'
+import { PageFrame } from '@bits/ui/page-frame'
+import { RuledSection } from '@bits/ui/ruled-section'
 
 import type { Viewer } from '../auth/identity.ts'
 import { routes } from '../routes.ts'
 import { Layout } from './layout.tsx'
-import { pageShell } from './page-shell.ts'
 
 export interface NotFoundPageProps {
   path: string
@@ -20,7 +20,8 @@ export function NotFoundPage(handle: Handle<NotFoundPageProps>) {
     return (
       <StatusPage
         title="Page not found"
-        eyebrow="404 · nothing here"
+        code="404"
+        eyebrow="Nothing here"
         heading="That page isn't here."
         viewer={viewer}
         hint={
@@ -44,7 +45,8 @@ export function ForbiddenPage(handle: Handle<ForbiddenPageProps>) {
   return () => (
     <StatusPage
       title="No access"
-      eyebrow="403 · not yours"
+      code="403"
+      eyebrow="Not yours"
       heading="You can't open this one."
       viewer={handle.props.viewer}
       hint={handle.props.hint}
@@ -57,7 +59,8 @@ export function TooManyRequestsPage(handle: Handle<{ viewer: Viewer | null }>) {
   return () => (
     <StatusPage
       title="Slow down"
-      eyebrow="429 · too many requests"
+      code="429"
+      eyebrow="Too many requests"
       heading="That was a lot, very fast."
       viewer={handle.props.viewer}
       hint="Wait a minute, then go back and try again."
@@ -67,6 +70,8 @@ export function TooManyRequestsPage(handle: Handle<{ viewer: Viewer | null }>) {
 
 interface StatusPageProps {
   title: string
+  /** The HTTP status, shown as the band's index. */
+  code: string
   eyebrow: string
   heading: string
   hint: RemixNode
@@ -75,50 +80,49 @@ interface StatusPageProps {
 
 function StatusPage(handle: Handle<StatusPageProps>) {
   return () => {
-    let { title, eyebrow, heading, hint, viewer } = handle.props
+    let { title, code, eyebrow, heading, hint, viewer } = handle.props
     return (
-      <Layout title={title} viewer={viewer} bleed>
-        <div mix={pageStyle}>
-          <div mix={boxStyle}>
-            <Eyebrow tone="ion">{eyebrow}</Eyebrow>
-            <h1 mix={h1Style}>{heading}</h1>
-            <p mix={hintStyle}>{hint}</p>
-            <div mix={actionsStyle}>
-              <Keycap size="lg" href={routes.courses.index.href()}>
-                Browse courses →
-              </Keycap>
-              <Keycap size="lg" variant="ghost" href={routes.home.href()}>
-                Home
-              </Keycap>
+      <Layout title={title} viewer={viewer}>
+        <PageFrame>
+          <RuledSection rule={false} index={code} label={eyebrow} tone="ion" aria-labelledby="status-title">
+            <div mix={boxStyle}>
+              <h1 id="status-title" mix={h1Style}>
+                {heading}
+              </h1>
+              <p mix={hintStyle}>{hint}</p>
+              <div mix={actionsStyle}>
+                <Keycap size="lg" href={routes.courses.index.href()}>
+                  Browse courses →
+                </Keycap>
+                <Keycap size="lg" variant="ghost" href={routes.home.href()}>
+                  Home
+                </Keycap>
+              </div>
             </div>
-          </div>
-        </div>
+          </RuledSection>
+        </PageFrame>
       </Layout>
     )
   }
 }
 
-const pageStyle = pageShell
 const boxStyle = css({
   display: 'flex',
   flexDirection: 'column',
-  alignItems: 'center',
-  gap: 'var(--space-4)',
-  padding: 'var(--space-16) var(--space-12)',
-  borderRadius: 'var(--radius-20)',
-  border: 'var(--border-w) dashed var(--line-dashed)',
-  textAlign: 'center',
-  '@media (max-width: 480px)': { padding: 'var(--space-10) var(--space-5)' },
+  alignItems: 'flex-start',
+  gap: 'var(--space-5)',
+  maxWidth: 'var(--read-width)',
 })
 const h1Style = css({
   margin: 0,
   fontFamily: 'var(--font-display)',
-  fontWeight: 800,
-  fontSize: 'clamp(32px, 4.4vw, 52px)',
-  lineHeight: 1,
-  letterSpacing: 'var(--tracking-tight)',
+  fontWeight: 700,
+  fontSize: 'var(--type-h2-size)',
+  lineHeight: 'var(--type-h2-leading)',
+  letterSpacing: 'var(--type-h2-tracking)',
   textWrap: 'balance',
+  '@media (max-width: 480px)': { fontSize: 'var(--fs-30)' },
 })
-const hintStyle = css({ margin: 0, maxWidth: '52ch', fontSize: 'var(--fs-16)', lineHeight: 1.6, color: 'var(--muted)' })
-const codeStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-14)', color: 'var(--text-quiet)', overflowWrap: 'anywhere' })
-const actionsStyle = css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 'var(--space-3)', paddingTop: 'var(--space-2)' })
+const hintStyle = css({ margin: 0, maxWidth: '52ch', fontSize: 'var(--fs-17)', lineHeight: 1.6, color: 'var(--muted)' })
+const codeStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-15)', color: 'var(--text-quiet)', overflowWrap: 'anywhere' })
+const actionsStyle = css({ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', paddingTop: 'var(--space-3)' })
