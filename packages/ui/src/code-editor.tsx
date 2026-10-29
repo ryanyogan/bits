@@ -36,6 +36,8 @@ export interface CodeEditorProps {
   initialCopied?: boolean
   /** Keep what was typed in type mode (localStorage, plus the server when signed in). */
   persist?: DraftPersist
+  /** No outer border: a ruled parent draws the cell's hairlines (decision 047). */
+  flush?: boolean
 }
 
 function fileText(file: CodeFile): string {
@@ -104,7 +106,7 @@ export const CodeEditor = clientEntry(
       let cursorLine = source.slice(0, typed.length).split('\n').length
 
       return (
-        <div mix={editorStyle}>
+        <div mix={[editorStyle, handle.props.flush ? flushStyle : undefined]}>
           <tabs.Context
             defaultActiveTab={first?.name}
             onActiveTabChange={(name) => {
@@ -282,8 +284,9 @@ const editorStyle = css({
   background: 'var(--well)',
   border: 'var(--border-w) solid var(--line-glass)',
   overflow: 'hidden',
-  boxShadow: 'var(--shadow-editor)',
 })
+/** A cell of a ruled parent: the parent's hairlines are its edges. */
+const flushStyle = css({ border: 0 })
 const rootStyle = css({ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, position: 'relative' })
 const toolbarStyle = css({
   display: 'flex',

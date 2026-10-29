@@ -1,8 +1,7 @@
 import type { Handle, MixInput } from 'remix/component'
 import { css } from 'remix/component'
 
-import { IllustrativeTag } from './toy-panel.tsx'
-import { modelPanelStyle } from './tutor.tsx'
+import { IllustrativeTag, toyBodyStyle, toyHeaderStyle, toyLabelStyle, toyPanelStyle } from './toy-panel.tsx'
 
 export interface TokenPillProps {
   text: string
@@ -69,33 +68,25 @@ export function TokenizerPanel(handle: Handle<TokenizerPanelProps>) {
     let { tokens, illustrative, mix } = handle.props
     let chars = tokens.reduce((sum, [text]) => sum + text.length, 0)
     return (
-      <div mix={[modelPanelStyle, panelStyle, mix]}>
-        <p mix={headerStyle}>
+      <div mix={[toyPanelStyle, mix]}>
+        <p mix={[toyHeaderStyle, headerStyle]}>
           <span mix={tagRow}>
-            tokenizer
+            <span mix={toyLabelStyle}>tokenizer</span>
             {illustrative ? <IllustrativeTag /> : null}
           </span>
           <span>{`${tokens.length} tokens · ${chars} characters`}</span>
         </p>
-        <ol aria-label="Tokens" mix={tokenListStyle}>
-          {tokens.map(([text, id], index) => (
-            <TokenPill key={index} text={text} id={id} index={index} />
-          ))}
-        </ol>
+        <div mix={toyBodyStyle}>
+          <ol aria-label="Tokens" mix={tokenListStyle}>
+            {tokens.map(([text, id], index) => (
+              <TokenPill key={index} text={text} id={id} index={index} />
+            ))}
+          </ol>
+        </div>
       </div>
     )
   }
 }
 
-const tagRow = css({ display: 'inline-flex', alignItems: 'baseline', gap: 'var(--space-2)' })
-const panelStyle = css({ padding: 'var(--space-4)', gap: 'var(--space-3)' })
-const headerStyle = css({
-  margin: 0,
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: 'var(--space-3)',
-  flexWrap: 'wrap',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-12)',
-  color: 'var(--ion)',
-})
+const tagRow = css({ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' })
+const headerStyle = css({ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })

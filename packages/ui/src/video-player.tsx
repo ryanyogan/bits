@@ -236,7 +236,7 @@ export const VideoPlayer = clientEntry(
             {captions && activeCue >= 0 ? <p mix={captionStyle}>{cues[activeCue]!.text}</p> : null}
             {playing ? null : (
               <button type="button" aria-label="Play video" mix={[bigPlay, on('click', () => setPlaying(true))]}>
-                <Icon name="play" />
+                <Icon name="play" color="currentColor" />
               </button>
             )}
             <div mix={controlsStyle}>
@@ -353,10 +353,9 @@ const playerStyle = css({
   flex: '1 1 560px',
   minWidth: 0,
   aspectRatio: '16 / 9',
-  borderRadius: 'var(--radius-20)',
   overflow: 'hidden',
   background: 'var(--well)',
-  border: 'var(--border-w) solid var(--line)',
+  border: 'var(--border-w) solid var(--line-panel)',
   '@media (max-width: 480px)': { aspectRatio: 'auto', minHeight: '320px' },
 })
 const posterStyle = css({
@@ -407,23 +406,28 @@ const captionStyle = css({
   fontSize: 'var(--fs-16)',
   textAlign: 'center',
 })
+// Flat (decision 047): a square key over the picture, an ink face with a
+// hairline and a volt glyph; hover steps the face and lights the border.
 const bigPlay = css({
   position: 'absolute',
   left: '50%',
   top: '42%',
   transform: 'translate(-50%, -50%)',
-  width: '84px',
-  height: '84px',
-  borderRadius: 'var(--radius-pill)',
-  border: 0,
-  background: 'var(--text)',
+  width: '76px',
+  height: '76px',
+  boxSizing: 'border-box',
+  border: 'var(--border-w) solid var(--line-drop)',
+  background: 'var(--ink-a86)',
+  color: 'var(--volt)',
   display: 'grid',
   placeItems: 'center',
-  boxShadow: 'var(--shadow-play)',
+  boxShadow: 'inset 0 calc(-1 * var(--keycap-edge)) 0 var(--volt-edge)',
   cursor: 'pointer',
-  transition: 'transform var(--duration-fast) var(--ease)',
-  '&:hover': { transform: 'translate(-50%, -50%) scale(1.04)' },
+  transition: 'background-color var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease)',
+  '&:hover': { background: 'var(--selected)', borderColor: 'var(--volt-a60)' },
+  '&:active': { boxShadow: 'inset 0 calc(-1 * var(--border-w)) 0 var(--volt-edge)' },
   '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-wide)' },
+  '@media (forced-colors: active)': { borderColor: 'ButtonText', color: 'ButtonText' },
   // Over the middle of the picture, which sits at the top on narrow screens.
   '@media (max-width: 480px)': { top: '28%' },
 })
@@ -476,9 +480,8 @@ const transcriptStyle = css({
   flexDirection: 'column',
   gap: 'var(--space-2_5)',
   padding: 'var(--space-5_5)',
-  borderRadius: 'var(--radius-xl)',
   background: 'var(--surface)',
-  border: 'var(--border-w) solid var(--line)',
+  border: 'var(--border-w) solid var(--line-panel)',
 })
 const cueList = css({
   listStyle: 'none',
@@ -505,7 +508,8 @@ const cueStyle = css({
   textAlign: 'left',
   cursor: 'pointer',
   '&[data-past]': { color: 'var(--dim)' },
-  '&[aria-current="true"]': { background: 'var(--ion-a08)', color: 'var(--text)' },
+  // The line being spoken: an ion step and a 2px ion bar on its leading edge.
+  '&[aria-current="true"]': { background: 'var(--ion-a08)', color: 'var(--text)', boxShadow: 'inset 2px 0 0 var(--ion)' },
   '&:hover': { color: 'var(--text)' },
   '&:focus-visible': focusOutline,
 })

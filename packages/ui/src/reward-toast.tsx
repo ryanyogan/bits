@@ -33,7 +33,12 @@ export interface RewardToastProps {
   mix?: MixInput<HTMLElement>
 }
 
-/** The volt "+40 neurons" reward (components §10.13). Static markup; islands insert it. */
+/**
+ * The "+40 neurons" reward (components §10.13). Flat (decision 047): an ink
+ * panel with a volt hairline and a 3px volt bar on its leading edge, the
+ * title in volt. The pop-in is the fun, not a neon fill. Static markup;
+ * islands insert it.
+ */
 export function RewardToast(handle: Handle<RewardToastProps>) {
   return () => {
     let { xp, message, title, badge, next, variant = 'lesson', animate, mix } = handle.props
@@ -45,14 +50,14 @@ export function RewardToast(handle: Handle<RewardToastProps>) {
             <HexBadge name={badge.name} glyph={badge.glyph} color={badge.color} />
           </span>
         ) : (
-          <Icon name="hex-check" size={system ? 36 : 40} />
+          <Icon name="hex-check" size={system ? 36 : 40} color="var(--volt-a14)" />
         )}
         <div mix={textStyle}>
           <span mix={[titleStyle, system ? systemTitle : lessonTitle]}>{title ?? `+${xp} neurons`}</span>
           <span mix={system ? systemBody : lessonBody}>{message}</span>
         </div>
         {next ? (
-          <Keycap variant="inverse" size="md" href={next.href} mix={nextStyle}>
+          <Keycap variant="primary" size="md" href={next.href} mix={nextStyle}>
             {next.label}
           </Keycap>
         ) : null}
@@ -65,21 +70,14 @@ const toastStyle = css({
   display: 'flex',
   alignItems: 'center',
   flexWrap: 'wrap',
-  background: 'var(--volt)',
-  color: 'var(--on-volt)',
+  background: 'var(--surface)',
+  color: 'var(--text-body)',
+  border: 'var(--border-w) solid var(--volt-a45)',
+  boxShadow: 'inset 3px 0 0 var(--volt)',
+  '@media (forced-colors: active)': { borderColor: 'CanvasText', borderLeftWidth: '3px' },
 })
-const lessonStyle = css({
-  gap: 'var(--space-4)',
-  padding: 'var(--space-4) var(--space-5)',
-  borderRadius: 'var(--radius-xl)',
-  boxShadow: 'var(--glow-toast)',
-})
-const systemStyle = css({
-  gap: 'var(--space-3_5)',
-  padding: 'var(--space-3_5) var(--space-4_5)',
-  borderRadius: 'var(--radius-16)',
-  boxShadow: 'var(--glow-toast-s)',
-})
+const lessonStyle = css({ gap: 'var(--space-4)', padding: 'var(--space-4) var(--space-5)' })
+const systemStyle = css({ gap: 'var(--space-3_5)', padding: 'var(--space-3_5) var(--space-4_5)' })
 const popStyle = css({
   animation: 'bits-pop var(--duration-pop) var(--ease-spring) both',
   '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
@@ -90,8 +88,8 @@ const badgeStyle = css({
   display: 'grid',
   placeItems: 'center',
   padding: 'var(--space-1)',
-  borderRadius: 'var(--radius-lg)',
   background: 'var(--ink)',
+  border: 'var(--border-w) solid var(--line-panel)',
 })
 const textStyle = css({ flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', gap: 'var(--space-0_5)' })
 // "Next: <long lesson title> →" wraps instead of widening the toast past a
@@ -103,7 +101,7 @@ const nextStyle = css({
   lineHeight: 'var(--type-heading-leading)',
   paddingBlock: 'var(--space-2)',
 })
-const titleStyle = css({ fontFamily: 'var(--font-display)', fontWeight: 700, lineHeight: 1.2 })
+const titleStyle = css({ fontFamily: 'var(--font-display)', fontWeight: 700, lineHeight: 1.2, color: 'var(--volt)' })
 const lessonTitle = css({ fontSize: 'var(--fs-20)' })
 const systemTitle = css({ fontSize: 'var(--fs-18)' })
 const lessonBody = css({ fontSize: 'var(--fs-15)' })

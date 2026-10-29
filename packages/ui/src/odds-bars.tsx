@@ -4,6 +4,7 @@ import { clientEntry, css, on } from 'remix/component'
 import { focusOutline } from './lib/states.ts'
 import { Ghost, stackStyle } from './lib/stable.tsx'
 import { OddsList } from './odds-list.tsx'
+import { toyBodyStyle, toyContextStyle, toyHeaderStyle, toyLabelStyle, toyPanelStyle } from './toy-panel.tsx'
 
 export const TEMPERATURE_EVENT = 'bits:temperature'
 
@@ -61,48 +62,50 @@ export const OddsBars = clientEntry(
       let t = value / 100
       let probs = oddsAt(candidates, t)
       return (
-        <div mix={panelStyle}>
-          <div mix={headerStyle}>
-            <span mix={contextStyle}>
+        <div mix={toyPanelStyle}>
+          <div mix={toyHeaderStyle}>
+            <span mix={toyContextStyle}>
               {context} <span mix={blankStyle}>{blank}</span>
             </span>
-            <span mix={labelStyle}>next-token odds</span>
+            <span mix={toyLabelStyle}>next-token odds</span>
           </div>
-          <OddsList rows={candidates.map(([token], index) => ({ token, p: probs[index] ?? 0 }))} />
-          <div mix={sliderRow}>
-            <label for={id} mix={sliderLabel}>
-              temperature
-            </label>
-            <input
-              id={id}
-              type="range"
-              min="0"
-              max="150"
-              step="5"
-              value={String(value)}
-              aria-valuetext={t.toFixed(2)}
-              mix={[
-                sliderStyle,
-                on('input', (event) => {
-                  value = Number(event.currentTarget.value)
-                  handle.update()
-                }),
-              ]}
-            />
-            <output for={id} mix={badgeStyle}>
-              {t.toFixed(2)}
-            </output>
-          </div>
-          {/* All four notes reserve the slot, so dragging never moves the page. */}
-          <div mix={stackStyle}>
-            <p aria-live="polite" mix={noteStyle}>
-              {temperatureNote(t)}
-            </p>
-            {NOTE_TEMPS.map((at) => (
-              <Ghost key={at}>
-                <p mix={noteStyle}>{temperatureNote(at)}</p>
-              </Ghost>
-            ))}
+          <div mix={toyBodyStyle}>
+            <OddsList rows={candidates.map(([token], index) => ({ token, p: probs[index] ?? 0 }))} />
+            <div mix={sliderRow}>
+              <label for={id} mix={sliderLabel}>
+                temperature
+              </label>
+              <input
+                id={id}
+                type="range"
+                min="0"
+                max="150"
+                step="5"
+                value={String(value)}
+                aria-valuetext={t.toFixed(2)}
+                mix={[
+                  sliderStyle,
+                  on('input', (event) => {
+                    value = Number(event.currentTarget.value)
+                    handle.update()
+                  }),
+                ]}
+              />
+              <output for={id} mix={badgeStyle}>
+                {t.toFixed(2)}
+              </output>
+            </div>
+            {/* All four notes reserve the slot, so dragging never moves the page. */}
+            <div mix={stackStyle}>
+              <p aria-live="polite" mix={noteStyle}>
+                {temperatureNote(t)}
+              </p>
+              {NOTE_TEMPS.map((at) => (
+                <Ghost key={at}>
+                  <p mix={noteStyle}>{temperatureNote(at)}</p>
+                </Ghost>
+              ))}
+            </div>
           </div>
         </div>
       )
@@ -115,24 +118,6 @@ const NOTE_TEMPS = [0, 0.3, 0.8, 1.2]
 
 const NARROW = '@media (max-width: 480px)'
 
-const panelStyle = css({
-  padding: 'var(--space-5_5)',
-  borderRadius: 'var(--radius-xl)',
-  background: 'var(--surface)',
-  border: 'var(--border-w) solid var(--ion-a28)',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--space-4_5)',
-  [NARROW]: { padding: 'var(--space-4)' },
-})
-const headerStyle = css({
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'baseline',
-  gap: 'var(--space-3)',
-  flexWrap: 'wrap',
-})
-const contextStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--muted)' })
 const blankStyle = css({ color: 'var(--text)' })
 const labelStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--ion)' })
 const sliderRow = css({
