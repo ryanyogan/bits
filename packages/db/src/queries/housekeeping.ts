@@ -13,6 +13,8 @@ export const retention = {
   emailTokensMs: HOUR,
   /** Signed-out prompt runs: only the hourly limits and the run checks need them (decision 019). */
   anonymousRunsMs: 7 * DAY,
+  /** Signed-out answers to quick checks: only the hourly limit and the lesson save need them (decision 052). */
+  anonymousAsksMs: 7 * DAY,
   /** Daily mail counters (decision 039). */
   mailQuotaDays: 30,
   /** Author invites stay 30 days past expiry, accepted or not, for the admin page (decision 037). */
@@ -49,6 +51,7 @@ export interface HousekeepingCounts {
   mailQuota: number
   authorInvites: number
   staleUploads: number
+  anonymousAsks: number
 }
 
 /**
@@ -60,8 +63,9 @@ export interface HousekeepingCounts {
  * - signed-out prompt runs older than 7 days;
  * - mail counters older than 30 days;
  * - author invites 30 days after they expired, accepted or not;
- * - and marks `uploading` videos older than R2's 7-day abort window
- *   `failed` (the row stays: its r2_key is never reused).
+ * - marks `uploading` videos older than R2's 7-day abort window `failed`
+ *   (the row stays: its r2_key is never reused);
+ * - and deletes signed-out answers to quick checks older than 7 days.
  */
 export async function deleteExpiredRows(db: D1DataTableDatabase, now: number): Promise<HousekeepingCounts> {
   let d1 = db.d1
@@ -82,6 +86,7 @@ export async function deleteExpiredRows(db: D1DataTableDatabase, now: number): P
          where status = 'uploading' and created_at < ?2`,
       )
       .bind(now, now - retention.staleUploadMs),
+    d1.prepare('delete from ask_attempts where user_id is null and created_at < ?').bind(now - retention.anonymousAsksMs),
   ])
   let changes = results.map((result) => result.meta.changes)
   return {
@@ -92,5 +97,6 @@ export async function deleteExpiredRows(db: D1DataTableDatabase, now: number): P
     mailQuota: changes[4] ?? 0,
     authorInvites: changes[5] ?? 0,
     staleUploads: changes[6] ?? 0,
+    anonymousAsks: changes[7] ?? 0,
   }
 }

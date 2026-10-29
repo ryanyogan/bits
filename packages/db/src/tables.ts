@@ -226,6 +226,31 @@ export const exerciseAttempts = table({
 
 export type ExerciseAttempt = TableRow<typeof exerciseAttempts>
 
+/** The ask journal: every answer to a quick check, graded on the server (migration 0011, decision 052). */
+export const askAttempts = table({
+  name: 'ask_attempts',
+  columns: {
+    id: c.text(),
+    user_id: c.text().nullable(),
+    /** Session-held id of a signed-out visitor. */
+    visitor: c.text().nullable(),
+    ip_hash: c.text().nullable(),
+    course_id: c.text(),
+    lesson_slug: c.text(),
+    ask_id: c.text(),
+    answer: c.text(),
+    correct: c.boolean(),
+    created_at: c.integer(),
+  },
+  afterRead({ value }) {
+    let next = { ...value }
+    if ('correct' in next && next.correct != null) next.correct = decodeBoolean(next.correct) as boolean
+    return { value: next }
+  },
+})
+
+export type AskAttempt = TableRow<typeof askAttempts>
+
 export const xpKinds = ['exercise', 'quiz', 'lesson'] as const
 export type XpKind = (typeof xpKinds)[number]
 

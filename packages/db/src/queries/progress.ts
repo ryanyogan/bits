@@ -39,8 +39,13 @@ export interface LessonCompletionInput {
  * Records a completed lesson: progress row, journal attempts, once-only XP
  * awards, the day's activity, the recomputed xp_total and the streak.
  */
-export async function recordLessonCompletion(db: D1DataTableDatabase, input: LessonCompletionInput): Promise<void> {
-  await db.batch(lessonCompletionStatements(db, input))
+export async function recordLessonCompletion(db: D1DataTableDatabase, input: LessonCompletionInput): Promise<{ newXp: number }> {
+  let results = await db.batch(lessonCompletionStatements(db, input))
+  // The award inserts follow the progress row and the attempts; an award
+  // already in the ledger (a replay, an ask answered earlier) changes nothing.
+  let first = 1 + input.attempts.length
+  let newXp = input.awards.reduce((sum, award, i) => sum + (results[first + i]?.meta.changes === 1 ? award.xp : 0), 0)
+  return { newXp }
 }
 
 /**
