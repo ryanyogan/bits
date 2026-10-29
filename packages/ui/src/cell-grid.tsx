@@ -39,7 +39,7 @@ export interface CellGridProps {
  * cell. Each cell draws its top border and, unless it ends a row, its
  * right one, so no line is ever drawn twice (translucent lines would
  * double). Responsive with no JS: `cols` from 1024px, `colsMid` from 760px,
- * one column on phones.
+ * `colsPhone` (default 1) below that.
  *
  * A whole-cell link: give the `<a>` `cellLinkStyle`. Static.
  */

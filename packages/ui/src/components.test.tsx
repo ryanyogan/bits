@@ -6,7 +6,11 @@ import { describe, it } from 'remix/test'
 import { AttentionMap } from './attention-map.tsx'
 import { CheckChip } from './check-chip.tsx'
 import { ComparePanel } from './compare-panel.tsx'
+import { CellGrid } from './cell-grid.tsx'
 import { CourseCard } from './course-card.tsx'
+import { Crosshair } from './crosshair.tsx'
+import { PageFrame } from './page-frame.tsx'
+import { RuledSection } from './ruled-section.tsx'
 import { coverPatterns, CourseCover } from './course-cover.tsx'
 import { Document } from './document.tsx'
 import { FilterPill } from './filter-pill.tsx'
@@ -407,6 +411,9 @@ describe('lesson toys (server render = the interactive first state, plus <noscri
 // Decision 023: what fills in has a reserved size, so nothing below it moves.
 describe('layout stability', () => {
   const outsideNoscript = (html: string) => html.replace(/<noscript>.*?<\/noscript>/gs, '')
+  /** The markup alone, without the <head> of styles renderToString prepends. */
+  const markup = async (node: Parameters<typeof renderToString>[0]) =>
+    (await renderToString(node)).replace(/^<head>.*?<\/head>/s, '')
 
   it('PromptComposer renders its fixed runs window and the hint line before any run', async () => {
     let html = await renderToString(<PromptComposer id="p" task="Say hi" checks={[{ label: 'Says hi', patterns: [{ source: 'hi' }] }]} />)
@@ -447,8 +454,53 @@ describe('layout stability', () => {
     assert.match(outsideNoscript(html), /aria-hidden="true"[^>]*>(?:<[^>]+>)*Once<\/span>upon a time there lived/)
   })
 
+  it('PageFrame renders a div by default and a focusable main on request', async () => {
+    let html = await markup(<PageFrame>body</PageFrame>)
+    assert.match(html, /^<div[^>]*>body<\/div>$/)
+    let main = await markup(
+      <PageFrame as="main" id="main">
+        body
+      </PageFrame>,
+    )
+    assert.match(main, /<main id="main" tabindex="-1"/)
+  })
+
+  it('RuledSection labels itself, marks the rails and shows the index strip (decision 047)', async () => {
+    let html = await markup(
+      <RuledSection id="how" aria-labelledby="how-title" index="02" label="How it works" aside="3 lessons">
+        <h2 id="how-title">Hi</h2>
+      </RuledSection>,
+    )
+    assert.match(html, /^<section id="how" aria-labelledby="how-title"/)
+    assert.equal(html.match(/<span aria-hidden="true"[^>]*><\/span>/g)?.length, 2, 'two crosshairs')
+    assert.match(html, /<span[^>]*>02<\/span><span aria-hidden="true"[^>]*> \/ <\/span>How it works/)
+    assert.match(html, /3 lessons/)
+    let bare = await markup(
+      <RuledSection as="div" rule={false}>
+        x
+      </RuledSection>,
+    )
+    assert.doesNotMatch(bare, /aria-hidden/, 'no marks without a rule')
+    assert.doesNotMatch(bare, /<p/, 'no header strip without index, label or aside')
+  })
+
+  it('CellGrid renders the requested list element with its label', async () => {
+    let html = await markup(
+      <CellGrid as="ul" cols={4} aria-label="Tracks">
+        <li>a</li>
+        <li>b</li>
+      </CellGrid>,
+    )
+    assert.match(html, /^<ul aria-label="Tracks"[^>]*><li>a<\/li><li>b<\/li><\/ul>$/)
+    assert.match(await markup(<CellGrid>x</CellGrid>), /^<div/)
+  })
+
+  it('Crosshair is decorative', async () => {
+    assert.match(await markup(<Crosshair placement="top-end" />), /^<span aria-hidden="true"/)
+  })
+
   it('OutputPanel is a scrolling region with the full output on the server', async () => {
-    let html = await renderToString(<OutputPanel command="node run.js" lines={[[['text', 'one']], [['muted', 'two']]]} />)
+    let html = await markup(<OutputPanel command="node run.js" lines={[[['text', 'one']], [['muted', 'two']]]} />)
     assert.match(html, /role="region"[^>]*aria-label="Output of node run\.js"|aria-label="Output of node run\.js"[^>]*role="region"/)
     assert.match(html, /one.*two/s)
     assert.doesNotMatch(html, /<div aria-hidden="true"/, 'no Ghost until a replay starts')
