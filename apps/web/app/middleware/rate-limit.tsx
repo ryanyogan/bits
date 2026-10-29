@@ -25,6 +25,8 @@ export type RateLimitTier =
   | 'RL_DRAFTS'
   /** Video upload parts (/api/author/videos/:id/parts/:n): 120 a minute (decision 029). */
   | 'RL_UPLOADS'
+  /** Answers to quick checks (/api/ask): 30 a minute (decision 052). */
+  | 'RL_ASKS'
 
 /**
  * Keyed by the signed-in user, else by the client IP. The binding is

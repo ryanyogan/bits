@@ -1,15 +1,18 @@
 import * as s from 'remix/data-schema'
+import { redirect } from 'remix/response/redirect'
 import { createController } from 'remix/router'
 
 import { currentUser, recentlyAuthenticated } from '../../auth/identity.ts'
 import { registrationOptions, relyingParty, signInOptions } from '../../auth/passkeys.ts'
 import { rateLimit } from '../../middleware/rate-limit.tsx'
+import { answerAsk, flashVerdict } from '../../progress/answers.ts'
 import { routes } from '../../routes.ts'
+import { fieldNames } from '../courses/lesson/ui/exercise.ts'
 import { jsonError, startRun } from '../../runs/run.ts'
 import { completeVideoUpload, startVideoUpload, uploadVideoPart } from '../../video/upload.ts'
 import { authorUpload } from './author-upload.ts'
 import { saveDraftsAction } from './drafts.ts'
-import { runForm } from './schema.ts'
+import { askForm, runForm } from './schema.ts'
 
 function noStoreJson(body: unknown) {
   return Response.json(body, { headers: { 'Cache-Control': 'no-store' } })
@@ -31,6 +34,30 @@ export default createController(routes.api, {
           return jsonError('invalid', 422, { issues: parsed.issues.map((issue) => issue.message) })
         }
         return startRun(context, parsed.value)
+      },
+    },
+    // An answer to a quick check (decision 052): graded and journalled on
+    // the server. The islands ask for JSON; a native form (no JS yet) gets
+    // a 303 back to the lesson, which shows the flashed verdict.
+    ask: {
+      middleware: [rateLimit('RL_ASKS', () => jsonError('rate_limited', 429, { retryAfter: 60 }))],
+      async handler(context) {
+        let parsed = s.parseSafe(askForm, context.formData)
+        if (!parsed.success) {
+          return jsonError('invalid', 422, { issues: parsed.issues.map((issue) => issue.message) })
+        }
+        let { course, lesson, ask, mode } = parsed.value
+        let raw = context.formData.get(fieldNames.ask(ask))
+        let answer = typeof raw === 'string' ? raw.trim() : ''
+        let wantsJson = (context.headers.get('Accept') ?? '').includes('application/json')
+        let back = () =>
+          redirect(`${routes.courses.lesson.index.href({ course, lesson }, { searchParams: mode === 'read' ? {} : { mode } })}#ask-${ask}`, 303)
+        if (!answer) return wantsJson ? jsonError('empty', 422) : back()
+        let result = await answerAsk(context, { course, lesson, ask, answer })
+        if (wantsJson) return result.ok ? noStoreJson(result.verdict) : jsonError(result.error, result.status)
+        if (!result.ok) return back()
+        flashVerdict(context, { course, lesson, ask, verdict: result.verdict })
+        return back()
       },
     },
     // WebAuthn options (decision 030). The browser's answer comes back as a

@@ -4,10 +4,11 @@ import { createController } from 'remix/router'
 import { currentUser, getViewer } from '../../../auth/identity.ts'
 import { getCatalog } from '../../../content/request.ts'
 import { rateLimit } from '../../../middleware/rate-limit.tsx'
+import { passedAsks, takeVerdict } from '../../../progress/answers.ts'
 import { readSubmission } from '../../../progress/check.ts'
 import { loadDrafts } from '../../../progress/drafts.ts'
 import { completeLesson, loadCompleted } from '../../../progress/progress.ts'
-import { flashReward, rewardNotice, takeReward } from '../../../progress/reward.ts'
+import { flashReward, rewardNotice, savedNotice, takeReward } from '../../../progress/reward.ts'
 import { routes } from '../../../routes.ts'
 import { LessonPage } from './lesson-page.tsx'
 import { buildLessonView } from './lesson-view.ts'
@@ -23,7 +24,9 @@ export default createController(routes.courses.lesson, {
         loadDrafts(context, course, lesson),
       ])
       let viewer = getViewer(context)
-      let view = await buildLessonView(catalog, course, lesson, context.url, { viewer, completed, drafts })
+      // Quick checks answered right, and a verdict flashed back to a native answer (decision 052).
+      let asks = { passed: passedAsks(context, course, lesson), verdict: takeVerdict(context, course, lesson) }
+      let view = await buildLessonView(catalog, course, lesson, context.url, { viewer, completed, drafts, asks })
       if (!view) {
         return context.render(
           <LessonNotFoundPage course={context.params.course} currentPath={context.url.pathname} viewer={viewer} />,
@@ -48,34 +51,46 @@ export default createController(routes.courses.lesson, {
         if (!result) return new Response('Lesson not found', { status: 404 })
 
         let mode = context.formData.get('mode')
-        let searchParams: Record<string, string | string[]> = typeof mode === 'string' && mode !== 'read' ? { mode } : {}
+        let searchParams: Record<string, string> = typeof mode === 'string' && mode !== 'read' ? { mode } : {}
 
         if (!result.ok) {
-          // Same page again, with the learner's quiz answers and what failed.
-          for (let [quiz, keys] of Object.entries(submission.quizzes)) searchParams[`quiz-${quiz}`] = keys
+          // Same page again, with what failed.
           let url = new URL(routes.courses.lesson.index.href({ course, lesson }, { searchParams }), context.url)
+          let [completed, drafts] = await Promise.all([loadCompleted(context), loadDrafts(context, course, lesson)])
           let view = (await buildLessonView(catalog, course, lesson, url, {
             viewer: getViewer(context),
-            completed: await loadCompleted(context),
-            drafts: await loadDrafts(context, course, lesson),
+            completed,
+            drafts,
+            asks: { passed: passedAsks(context, course, lesson) },
           }))!
-          let issues = result.checked.exercises
-            .filter((exercise) => !exercise.passed)
-            .map((exercise) => `Not saved: “${exercise.failed.join('”, “')}” didn’t pass for “${exercise.task}”.`)
+          let issues = [
+            ...result.checked.exercises
+              .filter((exercise) => !exercise.passed)
+              .map((exercise) => `Not saved: “${exercise.failed.join('”, “')}” didn’t pass for “${exercise.task}”.`),
+            ...(result.checked.unanswered.length
+              ? [
+                  result.checked.unanswered.length === 1
+                    ? 'Not saved: answer the quick check first.'
+                    : `Not saved: answer the ${result.checked.unanswered.length} quick checks first.`,
+                ]
+              : []),
+          ]
           return context.render(<LessonPage view={view} issues={issues} />, { status: 422 })
         }
 
-        // New badges show as a toast on the page we land on (decision 028).
-        let user = currentUser(context)
-        if (user) flashReward(context, rewardNotice(result.badges, user.handle))
-
         let next = found.next
-        return redirect(
-          next
-            ? routes.courses.lesson.index.href({ course, lesson: next.slug }, { searchParams })
-            : routes.courses.course.index.href({ course }),
-          303,
+        let target = next
+          ? routes.courses.lesson.index.href({ course, lesson: next.slug }, { searchParams })
+          : routes.courses.course.index.href({ course })
+        // The page we land on shows what the save earned: new badges
+        // (decision 028), else the neurons it added (decision 052).
+        let user = currentUser(context)
+        let loginHref = routes.login.index.href(undefined, { searchParams: { next: target } })
+        flashReward(
+          context,
+          (user && rewardNotice(result.badges, user.handle)) || savedNotice(result.newXp, Boolean(user), loginHref),
         )
+        return redirect(target, 303)
       },
     },
   },

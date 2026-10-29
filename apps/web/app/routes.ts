@@ -106,6 +106,9 @@ export const routes = route({
   // JSON endpoints: actions/api/controller.tsx
   api: route('/api', {
     run: post('/run'),
+    // An answer to a quick check (`:::ask`, decision 052): JSON for the
+    // islands, a 303 back to the lesson for a native form.
+    ask: post('/ask'),
     drafts: post('/drafts'), // a signed-in learner's lesson drafts and watch position (decision 029)
     passkey: post('/passkey/:step'),
     authorUpload: post('/author/upload'),

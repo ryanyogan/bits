@@ -138,3 +138,50 @@ export async function completeLesson(
 ): Promise<Response> {
   return fetchAs(cookie, routes.courses.lesson.complete.href({ course, lesson }), { method: 'POST', body: form(fields) })
 }
+
+export interface AskInput {
+  course: string
+  lesson: string
+  ask: string
+  answer: string
+  /** CF-Connecting-IP; defaults to a fresh test IP. */
+  ip?: string
+  /** Ask for JSON as the island does (default), or post as the native form. */
+  json?: boolean
+}
+
+/** POST /api/ask (decision 052). Returns the response. */
+export function postAnswer(cookie: string | null, input: AskInput): Promise<Response> {
+  let { ip = testIp(), json = true, answer, ...fields } = input
+  let headers: Record<string, string> = { 'CF-Connecting-IP': ip }
+  if (json) headers.Accept = 'application/json'
+  return fetchAs(cookie, routes.api.ask.href(), {
+    method: 'POST',
+    headers,
+    body: form({ ...fields, [`answer.${fields.ask}`]: answer }),
+  })
+}
+
+export interface TestVerdict {
+  correct: boolean
+  xp: number
+  saved: boolean
+  feedback?: string
+}
+
+/**
+ * Answers a quick check as the island does and returns the verdict, plus
+ * the session cookie to keep using (a signed-out visitor gets one).
+ */
+export async function answerAsk(
+  cookie: string | null,
+  course: string,
+  lesson: string,
+  ask: string,
+  answer: string,
+): Promise<{ cookie: string | null; verdict: TestVerdict }> {
+  let response = await postAnswer(cookie, { course, lesson, ask, answer })
+  if (response.status !== 200) throw new Error(`POST /api/ask answered ${response.status}: ${await response.text()}`)
+  let verdict = (await response.json()) as TestVerdict
+  return { cookie: sessionCookieFrom(response) ?? cookie, verdict }
+}

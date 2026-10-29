@@ -6,7 +6,7 @@ import { disposePlatform, platform } from '#platform'
 import { routes } from '../../routes.ts'
 import { loadCatalog } from '../../content/store.ts'
 import { badgeDefinitions } from '../../progress/badges.ts'
-import { completeLesson, fetchAs, runAt, signIn, testDb } from '../../test/auth.ts'
+import { answerAsk, completeLesson, fetchAs, runAt, signIn, testDb } from '../../test/auth.ts'
 
 function get(path: string) {
   return fetchAs(null, path)
@@ -24,7 +24,8 @@ async function getSignedIn(path: string) {
     for (let n = 5; n <= 8; n++) {
       await completeLesson(cookie, 'tokens-and-temperature', 'temperature', { 'prompt.moon-tagline': prompt(n) })
     }
-    await completeLesson(cookie, 'tokens-and-temperature', 'what-is-a-token', { 'quiz.common-words': 'a' })
+    await answerAsk(cookie, 'tokens-and-temperature', 'what-is-a-token', 'common-words', 'a')
+    await completeLesson(cookie, 'tokens-and-temperature', 'what-is-a-token')
     return cookie
   })()
   return fetchAs(await jamie, path)

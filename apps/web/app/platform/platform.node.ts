@@ -85,7 +85,7 @@ export const platform: Platform = {
     // installs its own). Nor do they render the Web Analytics beacon unless a
     // test sets the token (app/middleware/web-analytics.test.ts).
     isTest
-      ? { ANTHROPIC_API_KEY: undefined, CF_AIG_TOKEN: undefined, RL_WRITES: undefined, RL_SIGNIN: undefined, RL_RUNS: undefined, RL_REPORTS: undefined, RL_DRAFTS: undefined, RL_UPLOADS: undefined, WEB_ANALYTICS_TOKEN: undefined }
+      ? { ANTHROPIC_API_KEY: undefined, CF_AIG_TOKEN: undefined, RL_WRITES: undefined, RL_SIGNIN: undefined, RL_RUNS: undefined, RL_REPORTS: undefined, RL_DRAFTS: undefined, RL_UPLOADS: undefined, RL_ASKS: undefined, WEB_ANALYTICS_TOKEN: undefined }
       : {},
   ),
   assets,

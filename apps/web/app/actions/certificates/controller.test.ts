@@ -111,10 +111,13 @@ describe('certificates and the badge toast', () => {
     let again = await page(cookie, next)
     assert.doesNotMatch(again.html, /data-badge-notice/)
 
-    // Completing a lesson that earns nothing new shows nothing.
+    // Completing a lesson that earns no badge shows no badge toast.
     await completeLesson(cookie, COURSE, LESSONS[1]!)
     let quiet = await page(cookie, routes.courses.lesson.index.href({ course: COURSE, lesson: LESSONS[2]! }))
     assert.doesNotMatch(quiet.html, /data-badge-notice/)
+    // It shows what the save added instead (decision 052).
+    assert.match(quiet.html, /data-saved-notice/)
+    assert.match(quiet.html, /\+[0-9]+ neurons · saved/)
 
     // The last lesson finishes the course: the toast lands on the course page
     // and links to the certificate.
@@ -136,5 +139,6 @@ describe('certificates and the badge toast', () => {
     let cookie = response.headers.getSetCookie().find((c) => c.startsWith('__Host-session='))?.split(';')[0] ?? null
     let landed = await page(cookie, response.headers.get('Location')!)
     assert.doesNotMatch(landed.html, /data-badge-notice/)
+    assert.match(landed.html, /neurons · sign in to keep them/)
   })
 })
