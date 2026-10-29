@@ -30,9 +30,10 @@ export interface LessonBarProps {
    * `shell`: the lesson sub-bar inside the AppBar's sticky header (pass it as
    * `AppBar`'s `sub`; decision 022). One row, `--lessonbar-h` tall, aligned
    * to the AppBar's column, no glass of its own. Under 760px it keeps back +
-   * title only; render `LessonModes` at the top of the page for the tabs and
-   * progress. `sticky`: a standalone glass bar pinned at the top (no
-   * AppBar). `static`: in-page demos.
+   * the title (two lines, never cut mid-word) and draws the segmented
+   * progress as a strip along its bottom edge; render `LessonModes` at the
+   * top of the page for the tabs (decision 051). `sticky`: a standalone glass
+   * bar pinned at the top (no AppBar). `static`: in-page demos.
    */
   position?: 'shell' | 'sticky' | 'static'
   mix?: MixInput<HTMLElement>
@@ -102,6 +103,10 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
             <div data-lesson-progress mix={[progressStyle, wideOnly]}>
               <SegmentedProgress segments={segments} label={progressLabel} />
             </div>
+            {/* Phones: the progress rides the bar's bottom edge, so it stays in view and takes no row. */}
+            <div data-lesson-progress mix={phoneProgress}>
+              <SegmentedProgress segments={segments} label={progressLabel} />
+            </div>
             <div mix={[tabsCell, wideOnly]}>
               <SegmentedTabs label="Lesson format" items={modes} />
             </div>
@@ -118,27 +123,30 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
 }
 
 export interface LessonModesProps {
-  segments: SegmentState[]
-  progressLabel: string
   modes: SegmentedTabItem[]
+  /**
+   * The row's end, e.g. the lesson outline disclosure ("Lesson 3 of 8 ▾").
+   * The row is `position: relative`, so an open disclosure can hang its
+   * list under the whole row.
+   */
+  aside?: RemixNode
   mix?: MixInput<HTMLElement>
 }
 
 /**
- * The shell sub-bar's mode tabs + segmented progress, for screens under
- * 760px, where the sticky header keeps only back + title (decision 022).
- * Put it at the top of the lesson; it scrolls with the page and hides at
- * 760px and up. Static.
+ * The shell sub-bar's mode tabs for screens under 760px, where the sticky
+ * header keeps back + title and draws the progress along its edge (decisions
+ * 022 and 051). Put it at the top of the lesson: the page's one row of
+ * chrome under the header, with the outline as its `aside`. It scrolls with
+ * the page and hides at 760px and up. Static.
  */
 export function LessonModes(handle: Handle<LessonModesProps>) {
   return () => {
-    let { segments, progressLabel, modes, mix } = handle.props
+    let { modes, aside, mix } = handle.props
     return (
       <div mix={[modesRow, mix]}>
         <SegmentedTabs label="Lesson format" items={modes} />
-        <div data-lesson-progress mix={modesProgress}>
-          <SegmentedProgress segments={segments} label={progressLabel} />
-        </div>
+        {aside !== undefined ? <div mix={modesAside}>{aside}</div> : null}
       </div>
     )
   }
@@ -242,6 +250,10 @@ const contextStyle = css({
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
+  [SHELL_NARROW]: { fontSize: 'var(--fs-11)', lineHeight: 1.3 },
+  // ≤480px the title takes the whole bar; the course is one tap back and
+  // the page's chrome row says "Lesson n of N" (decision 051).
+  [NARROW]: { display: 'none' },
 })
 const titleStyle = css({
   margin: 0,
@@ -249,10 +261,17 @@ const titleStyle = css({
   fontWeight: 500,
   fontSize: 'var(--fs-17)',
   letterSpacing: 'var(--tracking-title)',
-  lineHeight: 'var(--type-heading-leading)',
-  whiteSpace: 'nowrap',
+  // Two lines before it truncates, never "Attention: how it keeps tr…"
+  // (decision 051): context + two lines at 17/1.15 fit the 64px bar.
+  lineHeight: 1.15,
   overflow: 'hidden',
-  textOverflow: 'ellipsis',
+  textWrap: 'balance',
+  display: '-webkit-box',
+  WebkitBoxOrient: 'vertical',
+  WebkitLineClamp: 2,
+  // Phones: context (11/1.3) + two lines at 15/1.15 fit the 56px bar; ≤480px
+  // the context hides and the two lines sit alone.
+  [SHELL_NARROW]: { fontSize: 'var(--fs-15)' },
 })
 const progressStyle = css({
   flex: '1 1 160px',
@@ -263,8 +282,27 @@ const progressStyle = css({
 })
 const modesRow = css({
   display: 'none',
-  [SHELL_NARROW]: { display: 'flex', alignItems: 'center', gap: 'var(--space-3)' },
+  [SHELL_NARROW]: {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-3)',
+    // The tabs' own track aligns to the start of a column; here it centres in the row.
+    '& > nav': { alignSelf: 'center' },
+  },
 })
-const modesProgress = css({ flex: '1 1 72px', minWidth: 0 })
+const modesAside = css({ marginLeft: 'auto', minWidth: 0, alignSelf: 'stretch', display: 'flex', alignItems: 'stretch' })
+// The phone progress strip: segments 3px tall on the bar's bottom hairline,
+// inside the rails. Hidden from 760px, where the row has its own progress cell.
+const phoneProgress = css({
+  display: 'none',
+  [SHELL_NARROW]: {
+    display: 'block',
+    position: 'absolute',
+    insetInline: 0,
+    bottom: 0,
+    '& > [role="img"] > span': { height: 'var(--space-0_75)', borderRadius: 0 },
+  },
+})
 /** The bar hides the pill at ≤480px; reuse on a custom `xp` slot. */
 export const lessonBarXpStyle = css({ [NARROW]: { display: 'none' } })

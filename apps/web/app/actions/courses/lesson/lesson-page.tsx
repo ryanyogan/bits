@@ -94,7 +94,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
         {mode === 'terminal' ? (
           <PageFrame rails>
             <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, workspaceMain]}>
-              <LessonModes segments={segments} progressLabel={progressLabel} modes={modeItems} mix={modesStrip} />
+              <LessonModes modes={modeItems} mix={modesStrip} />
               <TerminalMode view={view} />
               <LessonFooter view={view} gated={gated} issues={issues} width={hasCode(content) ? 'full' : 'solo'} />
             </main>
@@ -104,8 +104,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
             <div mix={bodyStyle}>
               <OutlineNav view={view} />
               <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, mainStyle]}>
-                <LessonModes segments={segments} progressLabel={progressLabel} modes={modeItems} mix={modesStrip} />
-                <OutlineDisclosure view={view} />
+                <LessonModes modes={modeItems} aside={<OutlineDisclosure view={view} />} mix={modesStrip} />
                 <div mix={mode === 'watch' ? watchBody : readBody}>
                   {mode === 'watch' ? <WatchMode view={view} /> : <ReadMode view={view} />}
                 </div>
@@ -229,13 +228,16 @@ const bodyStyle = css({
 // The skip link's target takes focus (tabIndex -1) without drawing a ring round the page (decision 031).
 const skipTargetStyle = css({ '&:focus': { outline: 'none' } })
 const mainStyle = css({ minWidth: 0, display: 'flex', flexDirection: 'column' })
-// Phones: the mode tabs and progress are the column's first strip.
+// Phones: the page's one row of chrome under the header (decision 051): the
+// mode tabs, then the outline disclosure as the row's end cell. The progress
+// rides the sticky bar's bottom edge.
 const modesStrip = css({
   [MOBILE]: {
-    padding: 'var(--space-2) var(--section-pad-x)',
+    minHeight: 'var(--control-lg)',
+    paddingLeft: 'var(--section-pad-x)',
     borderBottom: 'var(--border-w) solid var(--line-cell)',
   },
-  '@media (max-width: 480px)': { paddingInline: 'var(--space-4)' },
+  '@media (max-width: 480px)': { paddingLeft: 'var(--space-4)' },
 })
 // Prose gets air: a calm column, padded like a section body.
 const readBody = css({

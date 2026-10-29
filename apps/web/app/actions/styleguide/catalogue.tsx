@@ -174,7 +174,7 @@ export function Catalogue(handle: Handle) {
             />
           </div>
         </Specimen>
-        <Specimen caption="App shell (decision 022) — on lesson pages the LessonBar is the AppBar's sub-bar (position shell): one sticky header, same bar as every page. The neurons sit in the sub-bar, never the AppBar (decision 048). Under 760px the sub-bar keeps back + title and LessonModes carries the tabs + progress.">
+        <Specimen caption="App shell (decision 022) — on lesson pages the LessonBar is the AppBar's sub-bar (position shell): one sticky header, same bar as every page. The neurons sit in the sub-bar, never the AppBar (decision 048). Under 760px the sub-bar keeps back + a two-line title with the progress along its bottom edge, and LessonModes is the page's one chrome row: the tabs, with the outline disclosure as its aside (decision 051).">
           <div mix={barFrame}>
             <AppBar
               brand={APP_NAME}
@@ -207,8 +207,6 @@ export function Catalogue(handle: Handle) {
               }
             />
             <LessonModes
-              segments={['done', 'done', 'done', 'done', 'done', 'current', 'upcoming', 'upcoming']}
-              progressLabel="Lesson 6 of 8, 5 complete (modes sample)"
               modes={[
                 { label: 'Read', href: '#sg-nav', current: true },
                 { label: 'Watch', href: '#sg-nav-w' },
