@@ -33,7 +33,7 @@ export function LegalPage(handle: Handle<LegalPageProps>) {
     return (
       <Layout title={title} description={description} viewer={viewer} currentPath={path} canonicalPath={path}>
         <PageFrame>
-          <PageHead label="Policies" aside={`Updated ${updated}`} title={title} titleId="legal-title" lead={description} />
+          <PageHead label="Policies" aside={`Last updated ${updated}`} title={title} titleId="legal-title" lead={description} />
           <RuledSection pad="none" aria-label={`${title} in full`}>
             <div mix={bodyStyle}>
               <nav aria-label="Policies" mix={sideStyle}>
