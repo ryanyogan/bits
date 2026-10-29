@@ -1,5 +1,4 @@
 import { cop } from 'remix/middleware/cop'
-import { formData } from 'remix/middleware/form-data'
 import { render } from 'remix/middleware/render'
 import { createRouter, type RouterContext } from 'remix/router'
 
@@ -38,6 +37,7 @@ import { profileReadOptions } from './actions/profile/data.ts'
 import { errorFields, log } from './log.ts'
 import { contentTiming } from './middleware/content-timing.ts'
 import { loadDatabase } from './middleware/database.ts'
+import { scopedFormData } from './middleware/form-data.ts'
 import { cspNonce } from './middleware/csp-nonce.tsx'
 import { responseHeaders } from './middleware/headers.ts'
 import { serveMedia } from './middleware/media.ts'
@@ -84,9 +84,9 @@ export const router = createRouter({
       withProfile: (context) =>
         context.method === 'GET' && /^\/me\/?$/.test(context.url.pathname) ? profileReadOptions() : undefined,
     }),
-    // A course folder upload is many small text files (POST /api/author/upload;
-    // the DropZone sends media as names only, so videos never come through here).
-    formData({ maxFiles: 300, maxFileSize: 1024 * 1024, maxTotalSize: 8 * 1024 * 1024 }),
+    // Form bodies, with limits per endpoint (middleware/form-data.ts): only the
+    // course-folder upload takes files; over a limit is a 413.
+    scopedFormData(),
     loadAuth(),
     // Streaming render failures happen after the first byte, past worker.ts's
     // catch, so they are reported here (guide 12).

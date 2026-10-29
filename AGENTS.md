@@ -238,6 +238,9 @@ the new page into the old DOM. Write for that:
   `style=` are allowed. New image, font or connect origins go in
   `contentSecurityPolicy()`. Violations are logged as `CSP violation`
   (`POST /csp-report`). `pnpm dev` (HMR) only reports.
+- Form bodies are parsed with per-endpoint limits (`formLimits` in
+  `app/middleware/form-data.ts`, 64 KiB and no files by default; over is a 413).
+  An endpoint that needs more, or files, gets its own scope there.
 - Write endpoints get a burst limit: add
   `middleware: [rateLimit('RL_<tier>')]` to the action
   (`app/middleware/rate-limit.tsx`). Tiers are bindings in
