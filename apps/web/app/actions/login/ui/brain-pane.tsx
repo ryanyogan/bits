@@ -8,6 +8,11 @@ import { BrainCanvas } from '../public/brain-canvas.tsx'
  * dot grid, "Your neurons, saved." and the decorative SessionPanel. The
  * logo is AuthShell's, laid over this pane's top row (decision 044).
  *
+ * A cell of the auth band (decision 047): the canvas stays inside it, over
+ * faint graph paper, and the session panel is a flat ink cell with a
+ * hairline (no glass, no blur), nearly opaque so its text reads over the
+ * points.
+ *
  * Responsive (resolutions §8): stacked above the form below 1040px; below
  * 760px it moves under the form as a 200px band with no canvas and no
  * session panel; at 520px and narrower it is hidden.
@@ -17,7 +22,7 @@ export function BrainPane(_handle: Handle) {
     return (
       <aside aria-label="About accounts" mix={paneStyle}>
         <BrainCanvas />
-        <div aria-hidden="true" mix={dotGridStyle} />
+        <div aria-hidden="true" mix={gridPaperStyle} />
         <div mix={bottomStyle}>
           {/* Not a heading: the form's <h1> must come first (Auth spec, accessibility). */}
           <p mix={displayStyle}>
@@ -45,32 +50,33 @@ export function BrainPane(_handle: Handle) {
 
 const paneStyle = css({
   position: 'relative',
-  flex: '1 1 560px',
   minWidth: 0,
   minHeight: '560px',
   overflow: 'hidden',
-  borderRight: 'var(--border-w) solid var(--line-hair)',
+  borderRight: 'var(--border-w) solid var(--line-cell)',
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'flex-end',
-  // The top row is AuthShell's logo (an --appbar-h row at the page gutter).
-  padding: 'var(--appbar-h) var(--page-gutter) var(--space-8)',
-  '@media (max-width: 1039px)': { borderRight: 0, borderBottom: 'var(--border-w) solid var(--line-hair)' },
+  padding: 'var(--space-10) var(--section-pad-x)',
+  '@media (max-width: 1039px)': { minHeight: '480px', borderRight: 0, borderBottom: 'var(--border-w) solid var(--line-cell)' },
   '@media (max-width: 759px)': {
-    flexBasis: '100%',
     minHeight: '200px',
-    padding: 'var(--space-6) var(--page-gutter)',
+    padding: 'var(--space-6) var(--section-pad-x)',
     borderBottom: 0,
-    borderTop: 'var(--border-w) solid var(--line-hair)',
+    borderTop: 'var(--border-w) solid var(--line-cell)',
   },
   '@media (max-width: 520px)': { display: 'none' },
+  '@media (forced-colors: active)': { borderColor: 'GrayText' },
 })
 
-const dotGridStyle = css({
+// Graph paper, as under the landing field (047), from the cell's top-left.
+const gridPaperStyle = css({
   position: 'absolute',
   inset: 0,
-  backgroundImage: 'radial-gradient(var(--dot-grid) 1px, transparent 1px)',
-  backgroundSize: '26px 26px',
+  backgroundImage:
+    'linear-gradient(var(--field-grid) var(--border-w), transparent var(--border-w)), linear-gradient(90deg, var(--field-grid) var(--border-w), transparent var(--border-w))',
+  backgroundSize: 'var(--field-grid-step) var(--field-grid-step)',
+  backgroundPosition: '-1px -1px',
   pointerEvents: 'none',
 })
 
@@ -78,7 +84,7 @@ const bottomStyle = css({
   position: 'relative',
   display: 'flex',
   flexDirection: 'column',
-  gap: 'var(--space-5_5)',
+  gap: 'var(--space-6)',
   maxWidth: '520px',
 })
 
@@ -92,13 +98,12 @@ const displayStyle = css({
   '@media (max-width: 759px)': { fontSize: '36px' },
 })
 
+// Flat ink over the canvas (047): no glass, no blur, square.
 const sessionStyle = css({
-  padding: 'var(--space-4) var(--space-4_5)',
-  borderRadius: 'var(--radius-lg)',
-  background: 'var(--glass-well)',
-  WebkitBackdropFilter: 'blur(12px)',
-  backdropFilter: 'blur(12px)',
-  border: 'var(--border-w) solid var(--line)',
+  padding: 'var(--space-4) var(--space-5)',
+  background: 'var(--cell-fill)',
+  border: 'var(--border-w) solid var(--line-cell)',
+  boxShadow: 'inset var(--border-w-strong) 0 0 var(--volt-edge)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-13)',
   lineHeight: 1.9,

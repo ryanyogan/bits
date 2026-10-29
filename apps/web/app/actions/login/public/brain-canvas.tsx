@@ -115,19 +115,20 @@ async function start(canvas: HTMLCanvasElement, signal: AbortSignal) {
         gl_PointSize = uPx * (1.0 + max(w, 0.0) * 3.0) * (26.0 / -mv.z);
         vH = w; vR = abs(aR);
       }`,
-    // Ion → volt by wave height (the brand accents #3DE3FF / #C6FF3D).
+    // Ion → volt by wave height: the toned accents of decision 047 (#5EC8DC /
+    // #B8E05A), a little dimmer at rest so the cloud stays a backdrop.
     fragmentShader: `
       varying float vH; varying float vR;
       void main() {
         float d = length(gl_PointCoord - 0.5); if (d > 0.5) discard;
         float a = smoothstep(0.5, 0.0, d); a *= a;
-        vec3 c = mix(vec3(0.24, 0.89, 1.0), vec3(0.78, 1.0, 0.24), smoothstep(-0.2, 0.6, vH));
-        gl_FragColor = vec4(c, a * (0.35 + max(vH, 0.0) * 0.9 + vR * 0.2));
+        vec3 c = mix(vec3(0.369, 0.784, 0.863), vec3(0.722, 0.878, 0.353), smoothstep(-0.2, 0.6, vH));
+        gl_FragColor = vec4(c, a * 0.85 * (0.3 + max(vH, 0.0) * 0.8 + vR * 0.18));
       }`,
   })
   group.add(new T.Points(geo, mat))
 
-  // Orbit ring in synapse (#9D85FF).
+  // Orbit ring in synapse (#9B8CE6, decision 047).
   let M = 900
   let rp = new Float32Array(M * 3)
   for (let i = 0; i < M; i++) {
@@ -140,10 +141,10 @@ async function start(canvas: HTMLCanvasElement, signal: AbortSignal) {
   let rgeo = new T.BufferGeometry()
   rgeo.setAttribute('position', new T.BufferAttribute(rp, 3))
   let rmat = new T.PointsMaterial({
-    color: 0x9d85ff,
+    color: 0x9b8ce6,
     size: 0.045,
     transparent: true,
-    opacity: 0.7,
+    opacity: 0.55,
     blending: T.AdditiveBlending,
     depthWrite: false,
   })
@@ -185,6 +186,9 @@ async function start(canvas: HTMLCanvasElement, signal: AbortSignal) {
       height = h
       renderer.setSize(w, h, false)
       camera.aspect = w / h
+      // Keep the ring (radius 4.4) inside a tall, narrow cell: back the
+      // camera off until the cloud fits the width (tan 22.5° ≈ 0.414).
+      camera.position.z = Math.max(12, 5 / camera.aspect / 0.414)
       camera.updateProjectionMatrix()
     }
     mat.uniforms.uTime!.value = t

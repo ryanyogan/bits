@@ -108,11 +108,11 @@ export function CheckEmailPage(handle: Handle<CheckEmailPageProps>) {
 const blockStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-5_5)' })
 
 const tileStyle = css({
-  width: '64px',
-  height: '64px',
-  borderRadius: 'var(--radius-xl)',
+  width: '56px',
+  height: '56px',
+  color: 'var(--volt)',
   background: 'var(--volt-tint)',
-  border: 'var(--border-w) solid var(--volt-a40)',
+  border: 'var(--border-w) solid var(--volt-edge)',
   display: 'grid',
   placeItems: 'center',
 })

@@ -199,7 +199,13 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
 
 const blockStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-5_5)' })
 
-const providersStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-2_5)' })
+// One stack of keys that share their hairlines (decision 047): no gaps.
+const providersStyle = css({
+  display: 'flex',
+  flexDirection: 'column',
+  '& > * + *': { marginTop: 'calc(-1 * var(--border-w))' },
+  '& > *:hover, & > *:focus-visible': { position: 'relative', zIndex: 1 },
+})
 
 const dividerStyle = css({
   display: 'flex',
@@ -210,7 +216,7 @@ const dividerStyle = css({
   color: 'var(--dim)',
 })
 
-const ruleStyle = css({ flex: 1, height: '1px', background: 'var(--line)' })
+const ruleStyle = css({ flex: 1, height: 'var(--border-w)', background: 'var(--line-cell)' })
 
 const formStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' })
 

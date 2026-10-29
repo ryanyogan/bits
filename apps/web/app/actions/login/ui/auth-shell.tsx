@@ -3,6 +3,8 @@ import { css } from 'remix/component'
 import { Document } from '@bits/ui/document'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
 import { Logo } from '@bits/ui/logo'
+import { PageFrame } from '@bits/ui/page-frame'
+import { RuledSection } from '@bits/ui/ruled-section'
 import { SegmentedTabs } from '@bits/ui/segmented-tabs'
 
 import { platform } from '#platform'
@@ -37,49 +39,58 @@ export function AuthShell(handle: Handle<AuthShellProps>) {
         <a href="#main" mix={skipLinkStyle}>
           Skip to content
         </a>
-        <div mix={rootStyle}>
+        {/*
+          The squared grid (decision 047): one PageFrame, a header band with
+          the logo, then one ruled band of two cells sharing a hairline: the
+          brain and the form. Stacked under 1040px (brain first), and under
+          760px the form comes first (resolutions §8).
+        */}
+        <PageFrame mix={rootStyle}>
           {/*
             One logo for every breakpoint and every auth state, in the same
-            spot the app bar puts it (decision 044): an --appbar-h row at the
-            page gutter, top-left. It overlays the brain pane when that pane
-            is beside or above the form, and sits above the tabs on phones.
+            spot the app bar puts it (decision 044): an --appbar-h row,
+            top-left, at the section inset. It is the only href="/" here.
           */}
           <header mix={brandRowStyle}>
             <Logo brand={APP_NAME} href={routes.home.href()} variant="app" />
           </header>
-          <BrainPane />
-          <main id="main" tabIndex={-1} mix={[skipTargetStyle, formPaneStyle]}>
-            <div mix={columnStyle}>
-              <SegmentedTabs
-                label="Account"
-                flavour="account"
-                keepPlace
-                items={[
-                  {
-                    label: 'Sign in',
-                    href: routes.login.index.href(undefined, { searchParams: nextParam }),
-                    current: mode === 'signin',
-                  },
-                  {
-                    label: 'Create account',
-                    href: routes.login.index.href(undefined, { searchParams: { mode: 'signup', ...nextParam } }),
-                    current: mode === 'signup',
-                  },
-                ]}
-              />
-              {children}
-              <footer mix={footerStyle}>
-                <a href={lessonOneHref()} data-rmx-prefetch={prefetchFor(lessonOneHref())} mix={exploreLinkStyle}>
-                  Just exploring? Start lesson 1 without an account →
-                </a>
-                <p mix={legalStyle}>
-                  By continuing you agree to the <a href={routes.legal.terms.href()}>Terms</a> and{' '}
-                  <a href={routes.legal.privacy.href()}>Privacy Policy</a>.
-                </p>
-              </footer>
+          <RuledSection as="div" pad="none" mix={bodyStyle}>
+            <div mix={cellsStyle}>
+              <BrainPane />
+              <main id="main" tabIndex={-1} mix={[skipTargetStyle, formPaneStyle]}>
+                <div mix={columnStyle}>
+                  <SegmentedTabs
+                    label="Account"
+                    flavour="account"
+                    keepPlace
+                    items={[
+                      {
+                        label: 'Sign in',
+                        href: routes.login.index.href(undefined, { searchParams: nextParam }),
+                        current: mode === 'signin',
+                      },
+                      {
+                        label: 'Create account',
+                        href: routes.login.index.href(undefined, { searchParams: { mode: 'signup', ...nextParam } }),
+                        current: mode === 'signup',
+                      },
+                    ]}
+                  />
+                  {children}
+                  <footer mix={footerStyle}>
+                    <a href={lessonOneHref()} data-rmx-prefetch={prefetchFor(lessonOneHref())} mix={exploreLinkStyle}>
+                      Just exploring? Start lesson 1 without an account →
+                    </a>
+                    <p mix={legalStyle}>
+                      By continuing you agree to the <a href={routes.legal.terms.href()}>Terms</a> and{' '}
+                      <a href={routes.legal.privacy.href()}>Privacy Policy</a>.
+                    </p>
+                  </footer>
+                </div>
+              </main>
             </div>
-          </main>
-        </div>
+          </RuledSection>
+        </PageFrame>
       </Document>
     )
   }
@@ -117,20 +128,34 @@ const skipLinkStyle = css({
   top: '-100px',
   zIndex: 10,
   padding: 'var(--space-3) var(--space-4)',
-  borderRadius: 'var(--radius-sm)',
   background: 'var(--volt)',
   color: 'var(--on-volt)',
   '&:focus': { top: 'var(--space-4)' },
 })
 
 const rootStyle = css({
-  position: 'relative',
   minHeight: '100vh',
   display: 'flex',
-  flexWrap: 'wrap',
-  background: 'var(--ink)',
+  flexDirection: 'column',
   color: 'var(--text)',
   fontFamily: 'var(--font-sans)',
+})
+
+// The band (and its body box) grows to the foot of the screen, so the two
+// cells and the rails end together.
+const bodyStyle = css({
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  '& > div:last-child': { flex: 1, display: 'flex', flexDirection: 'column' },
+})
+
+// Two cells sharing one hairline: side by side from 1040px, stacked below.
+const cellsStyle = css({
+  flex: 1,
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1.25fr) minmax(0, 1fr)',
+  '@media (max-width: 1039px)': { gridTemplateColumns: 'minmax(0, 1fr)' },
 })
 
 // The skip link's target takes focus (tabIndex -1) without drawing a ring round the pane (decision 031).
@@ -139,21 +164,16 @@ const skipTargetStyle = css({ '&:focus': { outline: 'none' } })
 // ~240px taller than sign-in, so a centred column moved the tabs (and
 // everything under them) by half that on every switch (decision 044).
 const formPaneStyle = css({
-  flex: '1 1 480px',
   minWidth: 0,
   display: 'flex',
   alignItems: 'flex-start',
   justifyContent: 'center',
-  padding: 'clamp(var(--space-12), 12vh, var(--space-30)) var(--space-6) var(--space-12)',
+  padding: 'clamp(var(--space-12), 10vh, var(--space-24)) var(--section-pad-x) var(--space-12)',
   // Stacked under the brain pane (760–1039px): a fixed gap below it.
   '@media (max-width: 1039px)': { paddingTop: 'var(--space-12)' },
   // resolutions §8: below 760px the form comes first, under the logo row,
   // and the brain pane follows it.
-  '@media (max-width: 759px)': {
-    order: -1,
-    flexBasis: '100%',
-    padding: 'var(--appbar-h) var(--page-gutter) var(--space-8)',
-  },
+  '@media (max-width: 759px)': { order: -1, padding: 'var(--space-8) var(--section-pad-x)' },
 })
 
 const columnStyle = css({
@@ -166,12 +186,9 @@ const columnStyle = css({
 })
 
 const brandRowStyle = css({
-  position: 'absolute',
-  zIndex: 1,
-  top: 0,
-  left: 0,
-  height: 'calc(var(--appbar-h) - 1px)',
-  padding: '0 var(--page-gutter)',
+  boxSizing: 'border-box',
+  height: 'var(--appbar-h)',
+  padding: '0 var(--section-pad-x)',
   display: 'flex',
   alignItems: 'center',
 })
@@ -181,7 +198,7 @@ const footerStyle = css({
   flexDirection: 'column',
   gap: 'var(--space-3)',
   paddingTop: 'var(--space-5)',
-  borderTop: 'var(--border-w) solid var(--line)',
+  borderTop: 'var(--border-w) solid var(--line-cell)',
 })
 
 const exploreLinkStyle = css({
