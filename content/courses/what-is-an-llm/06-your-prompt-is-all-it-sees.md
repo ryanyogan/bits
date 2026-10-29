@@ -1,14 +1,20 @@
 ---
 # sources (checked 2026-10-29):
-# - Anthropic, Context windows ("working memory"; everything in the request counts: system
-#   prompt, every message so far, documents, then the reply; 1M tokens for Claude Haiku 5.5)
+# - Anthropic, Context windows ("working memory"; everything in the request counts: the system
+#   prompt, every message, tool results, documents, tool definitions, then the output and its
+#   thinking; 1M tokens for Claude Haiku 5.5, with prompts over 100k tokens priced higher;
+#   usage reported on every response)
 #   https://platform.claude.com/docs/en/build-with-claude/context-windows
 # - Anthropic, System prompts (instructions set before the conversation: role, rules, format)
 #   https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/system-prompts
 # - Anthropic, Glossary ("Context window": the model's working memory, separate from training)
 #   https://platform.claude.com/docs/en/about-claude/glossary
-# - Anthropic, Messages API (stateless: the whole conversation is sent on every request)
+# - Anthropic, Messages API (stateless: `system` plus the alternating `user`/`assistant`
+#   `messages` are sent on every request; the model writes the next assistant turn)
 #   https://platform.claude.com/docs/en/api/messages
+# - Anthropic, Models overview (1M tokens is roughly 555k words; prompt cache reads cost
+#   10% of the base input price on Claude Haiku 5.5)
+#   https://platform.claude.com/docs/en/models/overview
 # - Matt Pocock (AI Hero), Messages, System Prompts and Reasoning Tokens (the chat protocol:
 #   user and assistant turns, a hidden system prompt the model gives priority to)
 #   https://www.aihero.dev/messages-system-prompts-and-reasoning-tokens
@@ -25,6 +31,7 @@ Lesson 1 said each run sends only what's in the box. Here's the bigger idea
 behind that, and it's the one that explains most of what apps like claude.ai
 do.
 
+:::new
 A model has no eyes on your screen and no memory of yesterday. Each time it
 writes, it gets **one piece of text** and continues it. That's the whole
 interface. Everything the model “knows about you” has to be inside that
@@ -40,6 +47,26 @@ with more on the end.
 
 Here's the second turn of a short chat, as you see it and as Claude sees it.
 The hidden note at the top is illustrative; real ones are longer.
+:::
+
+:::engineer
+The model is a pure function of its input. It has no state between calls, no
+access to your screen, your files or your last request. Each call delivers
+one token sequence; the model continues it. Everything it “knows” about the
+situation is in that sequence or in the weights, and the weights stopped
+changing at the training cutoff.
+
+---
+
+The Messages API is stateless by design. A chat app keeps the transcript and,
+on every send, posts the whole thing: an optional `system` string, then the
+`messages` array of alternating `user` and `assistant` turns. The model
+returns the next `assistant` turn. Turn two is turn one re-sent with two more
+messages on the end; the model reads it as one document.
+
+Below is the second turn of a chat as the user sees it and as the request
+body reads. The system prompt is illustrative; real ones run to pages.
+:::
 
 :::compare{left="What you typed" right="What Claude gets" illustrative}
 - prompt "Turn 2 of a chat"
@@ -49,6 +76,7 @@ The hidden note at the top is illustrative; real ones are longer.
 
 Three things to notice in the right column.
 
+:::new
 **There's a note up top you never wrote.** That's the **system prompt**:
 instructions the app puts first, saying who the model should be and how to
 answer. You've been living inside one on every chat app you've used. Lesson
@@ -71,6 +99,36 @@ start? Because the app stopped sending it. How does an app “remember” you
 across days? It saved notes and pastes them into the text. How does Claude
 “read” a PDF or a web page? The app turns it into text and puts it in the
 window. Tools, search, documents, memory: text in the window, every time.
+:::
+
+:::engineer
+**The system prompt.** The `system` field is where you set role, rules and
+output format. Post-training (lesson 5) saw that slot filled in its
+examples, so the model weights it above a user turn, which is the whole
+reason to use it rather than pasting instructions into `messages`.
+
+**The history is literal.** The only reason the model can answer “Sam” is
+that turn 1 is in the array. Drop it and the model cannot know; nothing is
+cached on the model's side.
+
+**The budget is the context window.** For Claude Haiku 5.5 it is 1M tokens
+(about 555k words), and everything in the request counts: `system`, every
+message, tool results, documents, tool definitions, plus the output and any
+thinking. Every response reports `usage`. Two cost notes: on Haiku 5.5,
+prompts over 100k tokens are priced higher, and prompt cache reads cost 10%
+of the input price, so a long stable prefix (system prompt, documents) should
+be cached rather than re-paid.
+
+---
+
+Everything a product calls memory, tools, search or “reading a file” is one
+mechanism: code outside the model puts text into the window before the call.
+Long chats “forget” because the app truncated or summarised the transcript.
+Cross-session memory is saved notes re-inserted into `system` or the first
+turn. A PDF is extracted text, or an image block, in a message. Once you see
+that, context engineering is the whole job: decide what goes in the window,
+in what order, at what cost.
+:::
 
 The flip side is the most useful habit in this course. If Claude needs a
 fact, **put it in the prompt**. Try it: tell Claude something it can't know,

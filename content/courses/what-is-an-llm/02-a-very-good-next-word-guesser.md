@@ -1,14 +1,18 @@
 ---
 # sources (checked 2026-10-29):
-# - Anthropic, Glossary ("Pretraining": autoregressive models predict the next word; "Temperature")
+# - Anthropic, Glossary ("Pretraining": autoregressive models predict the next word; "Temperature";
+#   non-determinism even at temperature 0)
 #   https://platform.claude.com/docs/en/about-claude/glossary
+# - Anthropic, Messages API (current models expose no sampling parameters; the request is the
+#   turns so far, the response is the next turn; max_tokens)
+#   https://platform.claude.com/docs/en/api/messages
 # - Anthropic, Tracing the thoughts of a large language model (Claude plans rhymes ahead
 #   even though it writes one token at a time), 2025-03-27
 #   https://www.anthropic.com/research/tracing-thoughts-language-model
 # - 3Blue1Brown, Transformers (Deep Learning Chapter 5): one score per vocabulary entry,
 #   softmax turns the scores into a distribution, sample one, append, repeat
 #   https://www.youtube.com/watch?v=wjZofJX0v4M
-# - bits decision 019 (Claude samples at temperature 1.0)
+# - bits decision 019 and app/runs/model.ts (the sandbox runs live only at T=1.0)
 title: "A very good next-word guesser"
 order: 2
 minutes: 6
@@ -19,6 +23,7 @@ module: Meet the model
 Here's the whole trick, in one sentence. A language model looks at the text so
 far and guesses **what comes next**.
 
+:::new
 Not the whole answer at once. One small piece, called a **token** (often a
 word, sometimes part of one). Then it adds that piece to the text and guesses
 again. And again. Until it guesses that it's done.
@@ -33,6 +38,20 @@ running until the model draws the token that means “I'm done”.
 
 Step through a reply below and watch the odds at each draw. The numbers are
 illustrative, but the shape is real.
+:::
+
+:::engineer
+The unit is a **token**, not a word (lesson 3). One forward pass takes the
+token sequence so far and returns one score (a logit) per entry in the
+vocabulary, on the order of a hundred thousand of them. Softmax turns the
+scores into a distribution. One token is sampled, appended, and the pass
+runs again. That is **autoregressive decoding**, and it ends when the model
+emits an end-of-turn token or hits `max_tokens`.
+
+So a reply is never computed as a whole. It is a sequence of draws, each one
+conditioned on everything before it, your prompt included. Step through one
+below; the probabilities are illustrative, the shape is real.
+:::
 
 :::nexttoken{prompt="Finish the sentence: The best thing about rainy days is" illustrative}
 " the" 0.41 | " curling":0.22 " staying":0.14
@@ -45,6 +64,7 @@ illustrative, but the shape is real.
 "." 0.91 | "!":0.05 " while":0.02
 :::
 
+:::new
 Notice that some steps are nearly certain (“of” after “sound”) and some are
 close calls (“roof” or “window”). The model doesn't always take the top
 pick. Claude **samples** from the odds, so a 38% option wins roughly 4 times in
@@ -60,6 +80,28 @@ It doesn't only think one word ahead either. Anthropic looked inside Claude
 while it wrote a rhyming couplet and found it had picked the rhyme **before**
 starting the line, then wrote towards it. It writes one token at a time, but
 it can plan further ahead.
+:::
+
+:::engineer
+Some steps are near-deterministic (“of” after “sound”), some are close
+(“roof” 0.52 against “window” 0.38). Claude **samples** rather than taking
+the argmax, so the 0.38 branch wins about 4 runs in 10 and the same prompt
+gives different replies. Two practical consequences. The current Messages
+API exposes no sampling parameters, so you can't turn this off; design for
+variance instead (lesson 8 has the habits). And Anthropic notes that even a
+fixed setting is not fully deterministic across calls, so never build on
+byte-identical output.
+
+---
+
+“Just autocomplete” undersells the objective. Minimising next-token error
+over every kind of text forces the model to encode grammar, facts, register
+and argument structure, because each of those lowers the error. And the
+one-token-at-a-time output does not mean one-token-at-a-time planning:
+Anthropic's interpretability work found Claude choosing a rhyme word before
+writing the line that leads to it. The decoding is sequential; the
+computation behind each step is not that naive.
+:::
 
 Your turn. Ask Claude to finish a sentence with **just one word**, then run it
 a few times. Does the word change?

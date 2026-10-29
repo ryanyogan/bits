@@ -1,7 +1,8 @@
 ---
 # sources (checked 2026-10-29):
 # - Anthropic, Glossary ("Pretraining": base models aren't good at following instructions;
-#   "Fine-tuning"; "RLHF": people rank two or more texts, RL favours the higher-ranked)
+#   "Fine-tuning": Claude is not a bare language model; "RLHF": people rank two or more
+#   texts, RL favours the higher-ranked)
 #   https://platform.claude.com/docs/en/about-claude/glossary
 # - Anthropic, Constitutional AI: Harmlessness from AI Feedback (self-critique and revision,
 #   then RL from AI feedback against written principles)
@@ -11,12 +12,15 @@
 # - Anthropic, Transparency Hub, Claude Haiku 5.5 ("substantial post-training" towards the
 #   values in Claude's constitution)
 #   https://www.anthropic.com/transparency
-# - Anthropic, Extended thinking (current Claude models can write out their reasoning before
-#   the reply; it's generated the same way as the reply)
-#   https://platform.claude.com/docs/en/build-with-claude/extended-thinking
+# - Anthropic, Steering thinking (thinking is adaptive: the model decides per request whether
+#   to think and how much; effort levels; thinking tokens count toward max_tokens)
+#   https://platform.claude.com/docs/en/build-with-claude/thinking-steering-and-cost
+# - Anthropic, Messages API (thinking: {type: "adaptive"}; the legacy manual budget_tokens)
+#   https://platform.claude.com/docs/en/api/messages
 # - Andrej Karpathy, Deep Dive into LLMs like ChatGPT, "pretraining to post-training" (59:23)
 #   https://www.youtube.com/watch?v=7xTGNNLPyMI
-# Toy: both outputs are illustrative; no base model runs in bits.
+# Toy: both outputs are illustrative; no base model runs in bits. The sandbox runs with
+# thinking off (app/runs/model.ts).
 title: "From autocomplete to assistant"
 order: 5
 minutes: 6
@@ -28,10 +32,21 @@ Here's the one idea in this lesson. Pretraining is where the model gets what
 it **knows**. Post-training is where it learns how to **behave**. Everything
 below is those two sentences, slowed down.
 
+---
+
+:::new
 A base model continues documents. That's all pretraining taught it. So if you
 type a question, it asks itself: what kind of page starts like this, and what
 comes next on that page? Often the answer is “more questions”. Here's the
 same prompt sent to a base model and to an assistant.
+:::
+
+:::engineer
+A base model is a document continuer. Given a question with no framing, the
+highest-likelihood continuation is often more of the page it looks like it
+came from: a forum thread, a quiz sheet, a list of FAQs. Same prompt, base
+model against assistant:
+:::
 
 :::compare{left="Base model" right="Assistant" illustrative}
 - prompt "How do I boil an egg?"
@@ -42,7 +57,7 @@ same prompt sent to a base model and to an assistant.
 Both are good next-token guesses. Only one is useful to you. Turning the left
 into the right is called **post-training**.
 
----
+:::new
 
 First, the model is shown a large set of example conversations: a person
 asks, a helpful assistant answers. It's the same next-token exercise as
@@ -69,6 +84,39 @@ Underneath all of this, it's still predicting the next token. It's just
 predicting what a helpful assistant would say. Which is why most of what
 Claude knows comes from pretraining, and most of how it acts comes from
 post-training.
+:::
+
+:::engineer
+
+Stage one is **supervised fine-tuning** on conversations: the same
+next-token objective, but the corpus is now dialogues in a fixed format
+(a system note, `user` turns, `assistant` turns), so the model learns to
+continue the transcript as the assistant. The chat format you'll send next
+lesson is that training format, which is why the roles carry weight.
+
+Stage two is **preference optimisation**. The model samples several
+responses per prompt; a reward signal ranks them; reinforcement learning
+shifts the policy towards what ranks well. The glossary's RLHF is the human
+version: people rank two or more candidates. Anthropic's Constitutional AI
+adds self-critique and revision against written principles and then RL from
+AI feedback, so most of the ranking is done by a model judging against the
+constitution. The Transparency Hub describes Claude Haiku 5.5 as having had
+substantial post-training toward those values. Post-training uses far less
+text than pretraining; it steers behaviour more than it adds knowledge.
+
+---
+
+Current Claude models also do **adaptive thinking**: per request, the model
+decides whether to reason before answering and how much, with an `effort`
+level you can set. The reasoning is ordinary sampled tokens, counted against
+`max_tokens` and billed as output. The sandbox here runs with thinking off
+and low effort, which is fine for one-line answers and wrong for anything
+multistep.
+
+The invariant: it is still next-token prediction, now over the distribution
+of what a helpful, honest assistant would say. Knowledge mostly comes from
+pretraining; behaviour mostly comes from post-training.
+:::
 
 :::quiz{id="knows-vs-behaves" xp=20}
 Claude knows the capital of Mongolia. It also answers your question instead of listing more questions. Where did each of those come from?

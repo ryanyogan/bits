@@ -1,9 +1,13 @@
 ---
 # sources (checked 2026-10-29):
-# - Anthropic, Prompting best practices ("Be clear and direct" and the new-colleague test,
-#   "Add context to improve performance", "Use examples effectively")
+# - Anthropic, Prompting best practices ("Be clear and direct" and the new-employee framing
+#   with the colleague test, "Add context to improve performance", "Use examples effectively"
+#   with 3–5 examples in <example> tags, "Structure prompts with XML tags", "Give Claude a
+#   role" in the system prompt, "Long context prompting": long documents at the top and the
+#   query at the end)
 #   https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
-# - Anthropic, Reduce hallucinations ("Allow Claude to say I don't know")
+# - Anthropic, Reduce hallucinations ("Allow Claude to say I don't know", quotes first,
+#   citations, best-of-N)
 #   https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations
 # - Anthropic, Prompt engineering overview
 #   https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview
@@ -20,9 +24,20 @@ You know what's on the other end now: a next-token guesser, trained on a
 mountain of text, shaped into an assistant, and blind to anything you don't
 tell it. That last part is the key to prompting.
 
+---
+
+:::new
 Claude only has your words to go on. So a good prompt is mostly **the context
 you'd give a smart new colleague** on their first day. Here's one request,
 sent bare and then with that context added.
+:::
+
+:::engineer
+Everything from lessons 6 to 8 reduces to one rule: the model's output is a
+function of the window, so prompt quality is context quality. Anthropic's
+framing is a brilliant new employee with none of your norms. Here is one
+request bare, then with the context that employee would need.
+:::
 
 :::compare{left="Bare request" right="With who, why and length" illustrative}
 - prompt "Write a welcome message for my running club."
@@ -34,7 +49,7 @@ The right column came from adding one line: it's for **nervous beginners**,
 keep it **friendly** and **under 40 words**, and mention the Saturday slow
 group. Same model. Very different answer.
 
----
+:::new
 
 Six habits that do most of the work:
 
@@ -55,8 +70,39 @@ pick good ones.
 
 **Let it say “I don't know”, or ask you questions.** Then read the answer,
 tweak the prompt and run it again. Prompting is a loop, not a spell.
+:::
 
----
+:::engineer
+
+The habits, with the mechanism behind each:
+
+**Supply the facts.** Names, dates, documents, decisions already made: if
+it's not in the window it doesn't exist (lesson 6). Anything recent or
+private must be pasted or retrieved (lesson 8).
+
+**Be clear and direct.** Anthropic's test: hand the prompt to a colleague with
+minimal context; if they'd be confused, so will the model. Ambiguity is
+resolved by sampling, not by asking, unless you say otherwise.
+
+**Give the why.** Motivation and audience let the model make the judgement
+calls you would. “For nervous beginners” did more above than any adjective.
+
+**Constrain the shape.** Length, format, number of options. Unconstrained
+output follows the corpus's defaults, which are long and generic.
+
+**Use examples when style matters.** Three to five, wrapped in `<example>`
+tags so they can't be mistaken for instructions. The model matches them
+closely, so the examples are the spec.
+
+**Structure and placement.** In code, wrap instructions, context and inputs
+in XML tags; put the role in the `system` field; and with long documents
+(20k tokens and up), put the documents at the top and the question at the
+end, which Anthropic measured at up to 30% better on multidocument tasks.
+
+**Leave room for “I don't know” or a question.** It's the cheapest
+hallucination guard there is. Then iterate: read, adjust, rerun. A prompt is
+an artefact you version, not an incantation.
+:::
 
 Checkpoint time. Write a prompt for something you actually need: an email, a
 plan, an explanation. Hit all four checks, then run it.
