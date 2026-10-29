@@ -222,7 +222,7 @@ const frameStyle = css({ '@media (max-width: 480px)': { width: '100%', borderInl
 // Outline | lesson, sharing the outline's hairline (decision 022).
 const bodyStyle = css({
   display: 'grid',
-  gridTemplateColumns: 'minmax(240px, 288px) minmax(0, 1fr)',
+  gridTemplateColumns: 'clamp(220px, 24%, 288px) minmax(0, 1fr)',
   alignItems: 'start',
   [MOBILE]: { display: 'block' },
 })
