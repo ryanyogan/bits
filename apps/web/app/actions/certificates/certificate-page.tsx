@@ -227,7 +227,7 @@ const titleStyle = css({
   margin: 0,
   fontFamily: 'var(--font-display)',
   fontWeight: 800,
-  fontSize: 'var(--type-display-cta-size)',
+  fontSize: 'var(--type-display-cert-size)',
   lineHeight: 'var(--type-display-cta-leading)',
   letterSpacing: 'var(--tracking-display)',
   overflowWrap: 'anywhere',

@@ -243,11 +243,16 @@
     --type-display-xl-leading: 0.94;
     --type-display-xl-tracking: var(--tracking-display);
     --type-display-xl-measure: 1100px; /* Main hero h1 max-width */
-    /* display-cta: Main's closing CTA h2 (tokens.md "Type"). */
-    --type-display-cta-size: clamp(42px, 7vw, 104px);
+    /* display-cta: Main's closing CTA h2 (tokens.md "Type"); 80px max so it
+       sets in two lines under the hero's h1 (decision 048). */
+    --type-display-cta-size: clamp(38px, 5.6vw, 80px);
     --type-display-cta-leading: 0.96;
     --type-display-cta-measure: 1000px;
+    /* The certificate's course title kept the old CTA size (decision 048). */
+    --type-display-cert-size: clamp(42px, 7vw, 104px);
     --type-h2-size: clamp(36px, 4.6vw, 64px);
+    /* The landing's h2 in a half-width cell; --type-h2-size stays for PageHead (decision 048). */
+    --type-h2-landing-size: clamp(var(--fs-30), 3.9vw, var(--fs-56));
     --type-h2-leading: 1.02;
     --type-h2-tracking: var(--tracking-h2);
     --type-h3-size: var(--fs-22);
@@ -350,6 +355,14 @@
     --cell-pad: var(--section-pad-x); /* CellGrid cells: the same inset, so every left edge lines up */
     --cell-fill: rgb(7 8 13 / 0.9); /* a cell over the landing field: ink, nearly opaque, no blur */
     --cell-fill-hover: rgb(20 23 33 / 0.9); /* a linked cell on hover */
+    /* Decision 048: a copy cell over the field (headline + lead) takes the
+       veil, so the field reads through; an "object" cell (preview card, mode
+       art, tracks, showcase) keeps --cell-fill. Same hue as --ink, so text
+       contrast on the ground is unchanged. No blur (047). */
+    --cell-fill-veil: rgb(7 8 13 / 0.55);
+    --cell-pad-lg: var(--space-16); /* a cell holding display type; --section-pad-x under 1024px */
+    --track-cell-min: 300px; /* landing path: a track cell's height from 760px */
+    --mode-art-h: 200px; /* landing modes: the art well (phones 120) */
     --control-xs: 34px; /* "Type it" tool toggle (44px hit area via ::before) */
     --control-sm: 36px; /* sm keycap (44px hit area via ::before) */
     --control-tab: 38px; /* mode tab item, Read / Watch / Terminal (44px hit area via ::before) */
@@ -519,6 +532,14 @@
       --frame-inset: var(--space-3);
       --section-pad-y: var(--space-16);
       --section-pad-x: var(--space-5);
+      --mode-art-h: var(--space-30);
+    }
+  }
+
+  /* <1024px: a display-type cell keeps the ordinary inset (decision 048). */
+  @media (max-width: 1023.98px) {
+    :root {
+      --cell-pad-lg: var(--section-pad-x);
     }
   }
 
