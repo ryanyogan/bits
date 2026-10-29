@@ -13,8 +13,7 @@
  * - A navigation progress bar. A thin bar along the top edge for any
  *   navigation that takes longer than a moment; fast ones show nothing.
  *
- * Forms the browser submits itself (`data-rmx-document`, including the
- * entry's resubmit-after-error fallback) are left alone.
+ * Forms the browser submits itself (`data-rmx-document`) are left alone.
  */
 
 const PENDING = 'data-pending'

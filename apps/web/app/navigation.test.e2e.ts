@@ -145,6 +145,38 @@ describe('client navigation', () => {
     assert.equal(outbox.filter((m) => m.to === email).length, 1)
   })
 
+  it('sends a POST that fails with a 500 once, and shows the failure in place', async (t) => {
+    // Counted on the server: the sign-in action throws, so the router
+    // answers its plain-text 500 (logServerErrors).
+    let posts = 0
+    let page = await t.serve(
+      await createTestServer(async (request) => {
+        if (request.method === 'POST' && new URL(request.url).pathname === routes.login.action.href()) {
+          posts++
+          return new Response('Internal Server Error', {
+            status: 500,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+          })
+        }
+        return router.fetch(request)
+      }),
+    )
+    await page.goto(routes.login.index.href())
+    await page.evaluate(() => ((window as { navMarker?: number }).navMarker = 1))
+    await page.getByLabel('Email').fill(`e2e-500-${Date.now()}@example.com`)
+    await page.locator('form[method="post"] button[type="submit"]').click()
+    await page.getByRole('heading', { level: 1, name: 'That didn’t go through.' }).waitFor()
+    await page.getByText('The server answered 500: Internal Server Error').waitFor()
+    // Give a resubmit (or a document reload) time to happen before counting.
+    await page.waitForTimeout(500)
+    assert.equal(posts, 1, 'the form was submitted once')
+    assert.equal(await page.evaluate(() => (window as { navMarker?: number }).navMarker), 1, 'no document load')
+    // Still on the client router: the back link is a normal navigation.
+    await page.getByRole('link', { name: 'Back to the page' }).click()
+    await page.getByLabel('Email').waitFor()
+    assert.equal(posts, 1)
+  })
+
   it('marks the submitter busy and shows the progress bar during a slow navigation', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.goto(routes.login.index.href())

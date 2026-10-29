@@ -195,7 +195,8 @@ the new page into the old DOM. Write for that:
   navigation's focus reset lands there). Forms that re-render in place
   (search, quiz) set `data-rmx-reset-focus="manual"`.
 - Re-render failures as 4xx pages, not 5xx: the runtime treats a 5xx as a
-  failed navigation. `entry.ts` then falls back to a document load.
+  failed navigation. `entry.ts` then falls back to a document load for a
+  link; a POST's 5xx is rendered in place, never re-submitted.
 - Cover the enhanced path with an e2e test (`app/*.test.e2e.ts`, Playwright
   via `remix test`).
 
