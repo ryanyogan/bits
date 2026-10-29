@@ -11,7 +11,14 @@ import {
   type AskEndpoint,
   type AskVerdict,
 } from './lib/ask-client.ts'
-import { FOCUS_WITHIN, FORCED_COLORS } from './lib/states.ts'
+import {
+  fieldFrameStyle,
+  fieldGlyphStyle,
+  fieldGlyphTopStyle,
+  fieldInputStyle,
+  fieldKeyedStyle,
+} from './lib/field.ts'
+import { FORCED_COLORS } from './lib/states.ts'
 import { announceReward } from './reward-toast.tsx'
 import { toyHeaderStyle, toyLabelStyle, toyPanelStyle } from './toy-panel.tsx'
 import { LearnerBubble, TutorMessage } from './tutor.tsx'
@@ -231,8 +238,9 @@ export const AskPanel = clientEntry(
                 ))}
               </div>
             ) : null}
-            <div mix={fieldRow}>
-              <span aria-hidden="true" mix={promptGlyph}>
+            {/* The shared field (decision 051): › answer, mono 16px, the Check key inside the frame. */}
+            <div mix={[fieldFrameStyle, fieldKeyedStyle, answerFrameStyle]}>
+              <span aria-hidden="true" mix={[fieldGlyphStyle, fieldGlyphTopStyle, answerGlyphStyle]}>
                 ›
               </span>
               <textarea
@@ -246,7 +254,8 @@ export const AskPanel = clientEntry(
                 aria-labelledby={questionId}
                 aria-keyshortcuts="Enter"
                 mix={[
-                  fieldStyle,
+                  fieldInputStyle,
+                  answerInputStyle,
                   ref((node) => (field = node)),
                   on('input', (event) => {
                     value = event.currentTarget.value
@@ -399,42 +408,26 @@ const composerStyle = css({
   flexDirection: 'column',
   gap: 'var(--space-3)',
   padding: 'var(--space-4)',
-  transition: 'box-shadow var(--duration-focus)',
-  // Flat focus, as the composer: a 2px ring drawn inside the field's cell.
-  [FOCUS_WITHIN]: { boxShadow: 'inset 0 0 0 var(--focus-outline-w) var(--focus-ring-color)' },
   '@media (max-width: 480px)': { padding: 'var(--space-3_5) var(--space-3)' },
 })
 const chipsStyle = css({ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' })
 const keyStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
-const fieldRow = css({ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2_5)', flexWrap: 'wrap' })
-const promptGlyph = css({
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-16)',
-  lineHeight: 1.6,
-  paddingTop: 'var(--space-2_5)',
-  color: 'var(--volt)',
-})
-// Single line that grows with the answer: mono 16px, as the composer's field.
-const fieldStyle = css({
-  flex: '1 1 12rem',
-  minWidth: 0,
-  minHeight: 'var(--control-field)',
-  boxSizing: 'border-box',
-  padding: 'var(--space-2_5) 0',
+const hintStyle = css({ margin: 0, fontSize: 'var(--fs-13)', color: 'var(--muted)' })
+// The field's own look is the shared spec (decision 051); these only let the
+// one-line answer grow: the key stays at the bottom, the › on the first line.
+const answerFrameStyle = css({ alignItems: 'flex-end' })
+const answerGlyphStyle = css({ paddingTop: 'var(--space-2_5)' })
+const answerInputStyle = css({
+  alignSelf: 'stretch',
+  height: 'auto',
+  minHeight: 'calc(var(--field-h-keyed) - 2 * var(--space-1) - 2 * var(--border-w))',
+  paddingBlock: 'var(--space-2_5)',
+  lineHeight: 'var(--field-leading)',
   resize: 'none',
   overflow: 'hidden',
-  background: 'transparent',
-  border: 0,
-  color: 'var(--text)',
-  caretColor: 'var(--volt)',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-16)',
-  lineHeight: 1.6,
-  outline: 'none',
-  // The cell shows focus (focus-within); no ring on the field itself.
-  '&:focus-visible': { outline: 'none', boxShadow: 'none' },
-  '&::placeholder': { color: 'var(--dim)' },
   '&:disabled': { cursor: 'not-allowed' },
+  // A narrow field (a phone, with the key inside) cuts the placeholder short
+  // instead of wrapping it onto a second, clipped line.
+  '&::placeholder': { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
 })
-const checkKeyStyle = css({ minWidth: '8em', '@media (max-width: 360px)': { width: '100%' } })
-const hintStyle = css({ margin: 0, fontSize: 'var(--fs-13)', color: 'var(--muted)' })
+const checkKeyStyle = css({ flex: 'none' })
