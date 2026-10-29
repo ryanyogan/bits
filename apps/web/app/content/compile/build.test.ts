@@ -198,6 +198,20 @@ describe('content build', () => {
     assert.deepEqual(exercise?.examples, [{ temperature: 0, text: 'Line one.\nLine "two".' }])
   })
 
+  it('reads a course’s access: free by default, pro when it says so, nothing else (decision 048)', () => {
+    let one = { '01-one.md': lesson('Hi') }
+    assert.equal(build(one).manifest?.access, 'free')
+    let sources = (frontmatter: string) =>
+      Object.entries({ 'course.md': course.replace('level: beginner', `level: beginner\n${frontmatter}`), ...one }).map(
+        ([p, text]) => ({ path: p, text, size: text.length }),
+      )
+    assert.equal(buildCourse(sources('access: pro'), { folder: 'test' }).manifest?.access, 'pro')
+    assert.equal(buildCourse(sources('access: free'), { folder: 'test' }).manifest?.access, 'free')
+    let paid = buildCourse(sources('access: paid'), { folder: 'test' })
+    assert.equal(paid.manifest, undefined)
+    assert.match(errors(paid).join('\n'), /^course\.md:5 → access: /)
+  })
+
   it('reports problems with file and line', () => {
     let result = build({
       '01-one.md': lesson(':::prompt{id="p"}\nDo it.\n- check "bad" /(a+)+/\n:::\n\n# Heading\n\n<b>hi</b>'),

@@ -39,7 +39,7 @@ describe('landing page', () => {
     ]) {
       assert.ok(html.includes(heading), heading)
     }
-    assert.match(html, /Read it\. Watch it\. <span[^>]*>Run it\.<\/span>/)
+    assert.ok(html.includes('Read\u00a0it. Watch\u00a0it. Run\u00a0it.'), 'modes heading')
     assert.match(html, /© 2026 Bits/)
     assert.doesNotMatch(html, /latent/i)
   })
@@ -66,6 +66,19 @@ describe('landing page', () => {
     assert.ok(html.includes(`href="${escape(agent)}"`))
     let lesson = await page(lessonOneHref('hello'))
     assert.equal(lesson.status, 200)
+  })
+
+  it('tags every path course free, claims "free to start" and never a price (decision 048)', async () => {
+    let { html } = await page(routes.home.href())
+    assert.equal(count(html, />Free<\/span>/), 8)
+    assert.doesNotMatch(html, />Pro<\/span>/)
+    assert.doesNotMatch(html, /\$\d/)
+    assert.doesNotMatch(html, /every course is free|Free forever|no trial, no catch/)
+    assert.equal(count(html, /Free to start/), 2)
+    // The hero badge is gone: the h1 is the first thing in the hero.
+    assert.doesNotMatch(html, /from zero to your first agent/)
+    // The phone chip row scrolls sideways, so it is focusable and named.
+    assert.match(html, /<ul aria-label="Try asking" tabindex="0"/i)
   })
 
   it('links each track to the filtered catalog', async () => {
@@ -99,14 +112,16 @@ describe('landing page', () => {
     assert.doesNotMatch(html, /rel="modulepreload" href="[^"]*three/)
   })
 
-  it('shows Sign in / Start free signed out and the XP pill signed in', async () => {
+  it('shows Sign in / Start free signed out and only the avatar signed in (decision 048)', async () => {
     let anon = await page(routes.home.href())
     assert.match(anon.html, />Sign in<\/a>/)
     assert.match(anon.html, />Start free<\/a>/)
     let { cookie, user } = await signIn('home@example.com')
     await testDb.update(users, user.id, { xp_total: 1240 })
     let signedIn = { html: await (await fetchAs(cookie, routes.home.href())).text() }
-    assert.match(signedIn.html, /1,240<\/span><span class="sr-only"> neurons/)
-    assert.match(signedIn.html, /aria-label="Your profile, [^"]+"/)
+    let header = signedIn.html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? ''
+    assert.match(header, /aria-label="Your profile, [^"]+"/)
+    // One uniform header: no XP or streak pill.
+    assert.doesNotMatch(header, /1,240|neurons|-day streak/)
   })
 })

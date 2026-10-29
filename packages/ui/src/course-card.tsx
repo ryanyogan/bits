@@ -24,6 +24,13 @@ export interface CourseCardProps {
   tone: Tone
   pattern: CoverPattern
   formats: CourseFormat[]
+  /**
+   * `free` (default) or `pro` (decision 048). A pro course shows a `Pro` tag
+   * unless `owned`; free cards are not tagged (free is the catalog's default).
+   */
+  access?: 'free' | 'pro'
+  /** The signed-in viewer has this pro course: no tag, the card is just theirs. */
+  owned?: boolean
   /** 0 = not started (no bar), 100 = done (DoneTag). */
   pct?: number
   /** Heading level of the title inside the card. */
@@ -47,7 +54,7 @@ export interface CourseCardProps {
  */
 export function CourseCard(handle: Handle<CourseCardProps>) {
   return () => {
-    let { href, title, desc, track, level, lessons, mins, sigil, tone, pattern, formats, pct = 0, headingLevel = 3, variant = 'card', prefetch, forceState, mix } =
+    let { href, title, desc, track, level, lessons, mins, sigil, tone, pattern, formats, access = 'free', owned = false, pct = 0, headingLevel = 3, variant = 'card', prefetch, forceState, mix } =
       handle.props
     let cell = variant === 'cell'
     let done = pct >= 100
@@ -74,6 +81,11 @@ export function CourseCard(handle: Handle<CourseCardProps>) {
             <span>{`${lessons} lessons`}</span>
             <span aria-hidden="true">·</span>
             <span>{`${mins} min`}</span>
+            {access === 'pro' && !owned ? (
+              <Tag variant="pro" mix={proTagPos}>
+                Pro
+              </Tag>
+            ) : null}
           </p>
           <div mix={formatsStyle}>
             {formats.map((format) => (
@@ -177,6 +189,7 @@ const metaStyle = css({
   fontSize: 'var(--fs-12)',
   color: 'var(--muted)',
 })
+const proTagPos = css({ marginLeft: 'auto' })
 const formatsStyle = css({ display: 'flex', gap: 'var(--space-1_5)', flexWrap: 'wrap' })
 const progressRow = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-2_5)' })
 const pctStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--tone)' })

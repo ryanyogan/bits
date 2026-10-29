@@ -71,7 +71,7 @@ void main(){
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
   float tw = 0.7 + 0.3 * sin(uTime * 2.2 + aR * 60.0);
-  gl_PointSize = aS * tw * uPx * (36.0 / -mv.z);
+  gl_PointSize = aS * tw * uPx * (42.0 / -mv.z);
   vR = aR;
 }`
 
@@ -322,8 +322,8 @@ export function createField(T: Three, options: FieldOptions): Field {
       uPx: { value: px },
       uC1: { value: new T.Color(PALETTE[0][0]) },
       uC2: { value: new T.Color(PALETTE[0][1]) },
-      // A little under full strength: the field is a ground, not a light show (047).
-      uAlpha: { value: 0.85 },
+      // Full strength: copy cells sit on a veil now, so the field can be seen (048).
+      uAlpha: { value: 1.0 },
     },
     vertexShader: pointsVertex,
     fragmentShader: pointsFragment,
@@ -337,7 +337,7 @@ export function createField(T: Three, options: FieldOptions): Field {
   let lineMat = new T.LineBasicMaterial({
     color: 0xb8e05a,
     transparent: true,
-    opacity: 0.14,
+    opacity: 0.2,
     blending: T.AdditiveBlending,
     depthWrite: false,
   })
@@ -416,7 +416,7 @@ export function createField(T: Three, options: FieldOptions): Field {
 
     // Edges and signals fade out during the first morph.
     let netAlpha = 1 - Math.min(1, morph * 1.6)
-    lineMat.opacity = 0.12 * netAlpha
+    lineMat.opacity = 0.18 * netAlpha
     signalMat.uniforms.uAlpha!.value = netAlpha
     lines.visible = netAlpha > 0.01
     signals.visible = netAlpha > 0.01

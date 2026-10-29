@@ -1,5 +1,5 @@
 import { css, type Handle } from 'remix/component'
-import { CellGrid } from '@bits/ui/cell-grid'
+import { CellGrid, cellInkStyle, cellVeilStyle } from '@bits/ui/cell-grid'
 import { BadgeChip } from '@bits/ui/hex-badge'
 import { Keycap } from '@bits/ui/keycap'
 import { ProgressRing } from '@bits/ui/progress-ring'
@@ -18,28 +18,32 @@ const badges = [
   { name: 'Tool wielder', color: 'var(--code-gutter-faint)' },
 ]
 
-/** "04 / You" (Main.md §6): the copy and a ProgressShowcase (components §12.5) in two cells. */
+/**
+ * "Progress" (Main.md §6): the copy and a ProgressShowcase (components §12.5)
+ * in two cells. The copy sits on the veil, over the field's galaxy; the
+ * showcase keeps the ink slab (decision 048).
+ */
 export function Progress(_handle: Handle) {
   return () => (
-    <RuledSection aria-labelledby="you-title" index="04" label="You" pad="none">
-      <CellGrid cols={2} fill="ink" pad={false} top={false}>
-        <div mix={copyCell}>
+    <RuledSection aria-labelledby="you-title" label="Progress" pad="none">
+      <CellGrid cols={2} pad={false} top={false}>
+        <div mix={[cellVeilStyle, copyCell]}>
           <div mix={introStyle}>
             <h2 id="you-title" mix={h2Style}>
               Progress you can feel.
             </h2>
             <p mix={leadStyle}>
               Sign in once and every prompt you write, every lesson you finish and every badge you
-              earn follows you to any device. Free — no card, no trial, no catch.
+              earn follows you to any device. No card to start.
             </p>
           </div>
           <div>
             <Keycap variant="dark" href={profileHref()} mix={profileKey}>
-              See your profile →
+              See your profile
             </Keycap>
           </div>
         </div>
-        <div mix={showcase}>
+        <div mix={[cellInkStyle, showcase]}>
           <div mix={ringRow}>
             <ProgressRing
               pct={62}
@@ -78,7 +82,7 @@ const copyCell = css({
   flexDirection: 'column',
   justifyContent: 'center',
   gap: 'var(--space-8)',
-  padding: 'var(--section-pad-y) var(--section-pad-x)',
+  padding: 'var(--section-pad-y) var(--cell-pad-lg)',
   [PHONE]: { padding: 'var(--space-12) var(--section-pad-x)' },
 })
 const showcase = css({
@@ -86,7 +90,7 @@ const showcase = css({
   flexDirection: 'column',
   justifyContent: 'center',
   gap: 'var(--space-6)',
-  padding: 'var(--section-pad-x)',
+  padding: 'var(--cell-pad-lg)',
 })
 const ringRow = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-6)', flexWrap: 'wrap' })
 const ringStyle = css({ [PHONE]: { width: '112px', height: '112px' } })

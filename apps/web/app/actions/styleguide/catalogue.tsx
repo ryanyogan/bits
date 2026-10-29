@@ -58,6 +58,7 @@ import { VideoPlayer } from '@bits/ui/video-player'
 import { XpPill } from '@bits/ui/xp-pill'
 
 import { APP_NAME } from '../../config.ts'
+import { PathCourseTag, type PathCourse } from '../home/the-path.tsx'
 import { GridSection } from './grid.tsx'
 import { Section, Specimen, State, column, row, specimenGrid } from './layout.tsx'
 import {
@@ -142,8 +143,6 @@ export function Catalogue(handle: Handle) {
               menuId="sg-nav-sheet-app"
               actions={
                 <>
-                  <XpPill neurons={1240} />
-                  <StreakPill days={12} />
                   <AvatarButton initials="JR" href="#sg-nav" />
                 </>
               }
@@ -175,7 +174,7 @@ export function Catalogue(handle: Handle) {
             />
           </div>
         </Specimen>
-        <Specimen caption="App shell (decision 022) — on lesson pages the LessonBar is the AppBar's sub-bar (position shell): one sticky header, same bar as every page. Under 760px the sub-bar keeps back + title and LessonModes carries the tabs + progress.">
+        <Specimen caption="App shell (decision 022) — on lesson pages the LessonBar is the AppBar's sub-bar (position shell): one sticky header, same bar as every page. The neurons sit in the sub-bar, never the AppBar (decision 048). Under 760px the sub-bar keeps back + title and LessonModes carries the tabs + progress.">
           <div mix={barFrame}>
             <AppBar
               brand={APP_NAME}
@@ -187,8 +186,6 @@ export function Catalogue(handle: Handle) {
               menuId="sg-nav-sheet-shell"
               actions={
                 <>
-                  <XpPill neurons={1240} />
-                  <StreakPill days={12} />
                   <AvatarButton initials="JR" href="#sg-nav" />
                 </>
               }
@@ -205,6 +202,7 @@ export function Catalogue(handle: Handle) {
                     { label: 'Watch', href: '#sg-nav-w' },
                     { label: 'Terminal', href: '#sg-nav-t' },
                   ]}
+                  neurons={1240}
                 />
               }
             />
@@ -552,7 +550,7 @@ export function Catalogue(handle: Handle) {
             </nav>
             <span mix={note}>selected · rest · hover · focus-visible</span>
           </Specimen>
-          <Specimen caption="Tags — meta · meta-ion · format · cover · done · your turn · run hint">
+          <Specimen caption="Tags — meta · meta-ion · format · cover · done · your turn · run hint · free · pro">
             <div mix={row}>
               <Tag variant="meta">8 lessons</Tag>
               <Tag variant="meta-ion">text + video</Tag>
@@ -566,7 +564,26 @@ export function Catalogue(handle: Handle) {
               <Tag variant="your-turn">Your turn</Tag>
               <Tag variant="your-turn-sm">Your turn · +40</Tag>
               <Tag variant="run-hint">Run ↵</Tag>
+              <Tag variant="free">Free</Tag>
+              <Tag variant="pro">Pro</Tag>
             </div>
+          </Specimen>
+          <Specimen caption="Landing path rows (decision 048) — free · pro · pro, owned (no tag). Every course is free today.">
+            <ul mix={pathRows}>
+              {(
+                [
+                  { title: 'What is an LLM, really?', access: 'free' },
+                  { title: 'Give your model tools', access: 'pro' },
+                  { title: 'Your first agent loop', access: 'pro', owned: true },
+                ] as PathCourse[]
+              ).map((course) => (
+                <li key={course.title} mix={pathRow}>
+                  <span aria-hidden="true" mix={pathDot} />
+                  <span mix={pathTitle}>{course.title}</span>
+                  <PathCourseTag course={course} />
+                </li>
+              ))}
+            </ul>
           </Specimen>
           <Specimen caption="Switch (Settings) · QuizChoice (progressive form)">
             <Switch
@@ -788,6 +805,7 @@ export function Catalogue(handle: Handle) {
               tone="synapse"
               pattern="rings"
               formats={['text', 'code']}
+              access="pro"
               forceState="hover"
               variant="cell"
             />
@@ -796,7 +814,7 @@ export function Catalogue(handle: Handle) {
             <WriteCourseCard href="#sg-courses" variant="cell" />
           </li>
         </CellGrid>
-        <span mix={note}>CourseCard variant cell in a CellGrid: started (bar) · done (DoneTag) · hover (fill step, sigil scale) · WriteCourseCard. The default card variant keeps its own hairline box.</span>
+        <span mix={note}>CourseCard variant cell in a CellGrid: started (bar) · done (DoneTag) · hover (fill step, sigil scale) with access="pro" (Pro tag; none when owned) · WriteCourseCard. The default card variant keeps its own hairline box.</span>
         <Specimen caption="CourseCover — the 8 named patterns">
           <ul mix={coverGrid}>
             {coverPatterns.map((pattern, index) => (
@@ -1114,6 +1132,11 @@ const matrixRow = css({ display: 'flex', gap: 'var(--space-4)', alignItems: 'fle
 const matrixLabel = css({ width: '96px', paddingTop: 'var(--space-5)', fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
 const inverseRow = css({ padding: 'var(--space-3)', borderRadius: 'var(--radius-16)', background: 'var(--volt)', '& span': { color: 'var(--on-volt)' } })
 const onVolt = css({ color: 'var(--on-volt)' })
+// The landing path's course rows (the-path.tsx), on a cell's width.
+const pathRows = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-1_5)', maxWidth: '280px' })
+const pathRow = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--fs-14)', color: 'var(--text-body)' })
+const pathDot = css({ flex: 'none', width: '5px', height: '5px', background: 'var(--volt)' })
+const pathTitle = css({ flex: 1, minWidth: 0 })
 const coverTagBg = css({ display: 'inline-flex', padding: 'var(--space-1_5)', borderRadius: 'var(--radius-sm)', background: 'var(--well)', '& > span': { position: 'static' } })
 const glassBg = css({ padding: 'var(--space-4)', borderRadius: 'var(--radius-20)', background: 'radial-gradient(var(--syn-a40) 1px, transparent 1px) 0 0 / 14px 14px, var(--ink)' })
 const statRow = css({ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 'var(--space-3)' })

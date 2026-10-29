@@ -34,23 +34,16 @@ const suggestions = [
 export function Hero(handle: Handle<{ signedIn?: boolean }>) {
   return () => (
     <section aria-labelledby="hero-title" mix={heroStyle}>
-      <p mix={[badgeStyle, rise[0]]}>
-        <span aria-hidden="true" mix={pulseDot} />
-        <span>
-          Free courses<span mix={dotBreak}> · </span>from zero to your first agent
-        </span>
-      </p>
       <h1 id="hero-title" mix={h1Style}>
         Learn AI by <span mix={voltText}>typing</span> to it.
         <span aria-hidden="true" mix={caretStyle} />
       </h1>
-      <p mix={[subStyle, rise[1]]}>
-        Free, hands-on courses that take you from “what's a token?” to shipping your first agent.
-        Every lesson is a conversation — you write the prompts, run the code, and watch the model
-        think.
+      <p mix={[subStyle, rise[0]]}>
+        Hands-on courses from “what's a token?” to your first agent. You write the prompts, run the
+        code, and watch the model think.
       </p>
 
-      <form method="get" action={lessonOneHref()} mix={[barStyle, rise[2]]}>
+      <form method="get" action={lessonOneHref()} mix={[barStyle, rise[1]]}>
         <span aria-hidden="true" mix={chevronStyle}>
           ›
         </span>
@@ -66,7 +59,8 @@ export function Hero(handle: Handle<{ signedIn?: boolean }>) {
         </button>
       </form>
 
-      <ul aria-label="Try asking" mix={[chipsStyle, rise[3]]}>
+      {/* On phones the chips are one row that scrolls sideways: focusable, named by its label. */}
+      <ul aria-label="Try asking" tabIndex={0} mix={[chipsStyle, rise[2]]}>
         {suggestions.map((s) => (
           <li key={s.label}>
             <SuggestionChip href={s.href} mix={chipStyle}>
@@ -76,20 +70,21 @@ export function Hero(handle: Handle<{ signedIn?: boolean }>) {
         ))}
       </ul>
 
-      <p mix={[monoNote, noteStyle, rise[4]]}>
+      <p mix={[monoNote, noteStyle, rise[3]]}>
         {/* The signed-in line fits one phone line, so it stays plain text. */}
         {handle.props.signedIn ? (
           'Signed in · your progress saves as you go'
         ) : (
           <>
-            No account needed to start<span mix={dotBreak}> · </span>sign in to save progress
+            Free to start<span mix={dotBreak}> · </span>no account needed
+            <span mix={dotBreak}> · </span>sign in to save progress
           </>
         )}
       </p>
 
-      <div mix={[cueStyle, rise[5]]}>
+      <div mix={[cueStyle, rise[4]]}>
         <div aria-hidden="true" mix={cueTextStyle}>
-          Scroll — the network rewires itself
+          Scroll · the network rewires itself
           <span mix={cueLine} />
         </div>
         {/* Pauses the field's own motion (WCAG 2.2.2, decision 034). */}
@@ -104,7 +99,7 @@ export function Hero(handle: Handle<{ signedIn?: boolean }>) {
  * the last. Opacity and transform only, so nothing shifts layout; reduced
  * motion shows everything at once.
  */
-const rise = [0, 1, 2, 3, 4, 5].map((i) =>
+const rise = [0, 1, 2, 3, 4].map((i) =>
   css({
     animation: `bits-rise var(--duration-pop) var(--ease-out) ${i * 70}ms both`,
     [REDUCED]: { animation: 'none' },
@@ -112,59 +107,22 @@ const rise = [0, 1, 2, 3, 4, 5].map((i) =>
 )
 
 const heroStyle = css({
-  // Spec: 104px top, 820px tall. The height is capped by the viewport so
-  // the scroll cue and pause control stay above the fold on a laptop.
-  padding: 'var(--space-24) var(--section-pad-x) var(--space-12)',
-  minHeight: 'min(var(--hero-min-height), calc(100svh - var(--appbar-h)))',
+  // One full fold (decision 048): the scroll cue and pause control sit on
+  // its bottom edge (they take `margin-top: auto`); at 1440×900 the content
+  // just fits (64 top, 32 bottom). Phones size to content.
+  padding: 'var(--space-16) var(--section-pad-x) var(--space-8)',
+  minHeight: 'calc(100svh - var(--appbar-h))',
   boxSizing: 'border-box',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   textAlign: 'center',
-  gap: 'var(--space-7)',
+  gap: 'var(--space-8)',
   [PHONE]: {
-    padding: 'var(--space-12) var(--section-pad-x) var(--space-10)',
+    padding: 'var(--space-10) var(--section-pad-x) var(--space-8)',
     minHeight: 'auto',
     gap: 'var(--space-6)',
   },
-})
-
-// A square tag with a hairline on flat ink (decision 047).
-const badgeStyle = css({
-  margin: 0,
-  maxWidth: '100%',
-  boxSizing: 'border-box',
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 'var(--space-2_5)',
-  padding: 'var(--space-2) var(--space-3_5)',
-  border: 'var(--border-w) solid var(--volt-a28)',
-  background: 'var(--cell-fill)',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-12)',
-  color: 'var(--volt)',
-  textAlign: 'left',
-  textWrap: 'balance',
-  // Phones break the line at its " · " (dotBreak) instead of mid-phrase.
-  [PHONE]: {
-    gap: 'var(--space-2)',
-    padding: 'var(--space-1_5) var(--space-2_5)',
-    fontSize: 'var(--fs-11)',
-    letterSpacing: 'var(--tracking-title)',
-  },
-})
-
-// A live dot: round, because round means "on" (decision 047).
-const pulseDot = css({
-  flex: 'none',
-  display: 'block',
-  width: 'var(--space-1_5)',
-  height: 'var(--space-1_5)',
-  borderRadius: 'var(--radius-round)',
-  background: 'var(--volt)',
-  animation: 'bits-pulse-volt var(--duration-pulse) ease-in-out infinite',
-  [REDUCED]: { animation: 'none' },
-  [FORCED]: { forcedColorAdjust: 'none', background: 'CanvasText' },
 })
 
 const h1Style = css({
@@ -192,7 +150,7 @@ const caretStyle = css({
 
 const subStyle = css({
   margin: 0,
-  maxWidth: '640px',
+  maxWidth: 'var(--read-width)',
   fontSize: 'var(--fs-19)',
   lineHeight: 1.55,
   color: 'var(--text-lead)',
@@ -298,6 +256,20 @@ const chipsStyle = css({
   flexWrap: 'wrap',
   justifyContent: 'center',
   maxWidth: 'var(--read-width)',
+  // Phones: one row that scrolls sideways and bleeds to the rails (decision 048).
+  [PHONE]: {
+    flexWrap: 'nowrap',
+    overflowX: 'auto',
+    justifyContent: 'flex-start',
+    width: 'calc(100% + 2 * var(--section-pad-x))',
+    maxWidth: 'none',
+    boxSizing: 'border-box',
+    marginInline: 'calc(-1 * var(--section-pad-x))',
+    paddingInline: 'var(--section-pad-x)',
+    scrollbarWidth: 'none',
+    '& > li': { flex: 'none' },
+    '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
+  },
 })
 
 // Chips sit on the field too: give them the flat ink ground so they read.
@@ -310,11 +282,11 @@ const noteStyle = css({ marginTop: 'var(--space-1_5)' })
 
 const cueStyle = css({
   marginTop: 'auto',
-  paddingTop: 'var(--space-14)',
+  paddingTop: 'var(--space-6)',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
-  gap: 'var(--space-5)',
+  gap: 'var(--space-4)',
   [PHONE]: { paddingTop: 'var(--space-6)', gap: 'var(--space-4)' },
 })
 
@@ -325,16 +297,13 @@ const cueTextStyle = css({
   gap: 'var(--space-3)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-11)',
-  letterSpacing: 'var(--tracking-cue)',
-  textTransform: 'uppercase',
   color: 'var(--dim)',
-  [PHONE]: { letterSpacing: 'var(--tracking-eyebrow-s)' },
 })
 
 const cueLine = css({
   display: 'block',
   width: 'var(--border-w)',
-  height: 'var(--space-12)',
+  height: 'var(--space-10)',
   background: 'var(--volt)',
   animation: 'bits-cue 2.4s ease-in-out infinite',
   [REDUCED]: { animation: 'none' },

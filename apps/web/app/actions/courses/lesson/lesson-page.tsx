@@ -59,13 +59,6 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
         head={<style innerHTML={unsafeHTML(pageStyles)} />}
         viewer={viewer}
         reward={reward}
-        xp={
-          viewer ? (
-            <span data-rmx-key={view.key} mix={contentsStyle}>
-              <LessonXp neurons={viewer.xp} award={award} />
-            </span>
-          ) : undefined
-        }
         sub={
           <LessonBar
             position="shell"
@@ -77,6 +70,13 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
             segments={segments}
             progressLabel={progressLabel}
             modes={modeItems}
+            xp={
+              viewer ? (
+                <span data-rmx-key={view.key} mix={contentsStyle}>
+                  <LessonXp neurons={viewer.xp} award={award} />
+                </span>
+              ) : undefined
+            }
           />
         }
         bare

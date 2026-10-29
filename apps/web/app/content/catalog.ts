@@ -31,6 +31,8 @@ export class Catalog {
   #load: LessonLoader
 
   constructor(courses: readonly CourseManifest[], load: LessonLoader) {
+    // Manifests built before decision 048 have no `access`: they are free.
+    courses = courses.map((course) => (course.access ? course : { ...course, access: 'free' }))
     this.courses = courses
     this.#bySlug = new Map(courses.map((course) => [course.slug, course]))
     this.#load = load

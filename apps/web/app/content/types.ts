@@ -16,6 +16,13 @@ export type Track = (typeof tracks)[number]
 export const levels = ['Beginner', 'Intermediate', 'Advanced'] as const
 export type Level = (typeof levels)[number]
 
+/**
+ * Who can take a course (decision 048). Every course is `free` today; `pro`
+ * is the data shape for paid courses, shown as a tag and never gated yet.
+ */
+export const courseAccess = ['free', 'pro'] as const
+export type CourseAccess = (typeof courseAccess)[number]
+
 export const lessonKinds = ['chat', 'type', 'video', 'code', 'project'] as const
 export type LessonKind = (typeof lessonKinds)[number]
 
@@ -32,6 +39,12 @@ export interface CourseInfo {
   tone: Tone
   pattern: CoverPattern
   formats: CourseFormat[]
+  /**
+   * `free` unless the frontmatter says `access: pro` (decision 048). The
+   * build and the catalog always set it; absent (an author-page card) means
+   * free.
+   */
+  access?: CourseAccess
 }
 
 /** A course with the viewer's progress, 0–100. */

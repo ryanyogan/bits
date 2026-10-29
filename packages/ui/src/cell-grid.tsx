@@ -5,7 +5,7 @@ import { FOCUS, FORCED_COLORS, HOVER } from './lib/states.ts'
 
 export type CellGridCols = 1 | 2 | 3 | 4
 export type CellGridEdge = 'flush' | 'boxed'
-export type CellGridFill = 'none' | 'ink'
+export type CellGridFill = 'none' | 'ink' | 'veil'
 
 export interface CellGridProps {
   /** Columns from 1024px up. */
@@ -21,7 +21,12 @@ export interface CellGridProps {
    * edges, for a grid that sits inside padding.
    */
   edge?: CellGridEdge
-  /** `ink` gives every cell the nearly opaque `--cell-fill` (over the landing's field). */
+  /**
+   * `ink` gives every cell the nearly opaque `--cell-fill` (over the landing's
+   * field); `veil` the lighter `--cell-fill-veil`, for copy the field should
+   * read through (decision 048). A grid that mixes both leaves this `none`
+   * and gives each cell `cellInkStyle` or `cellVeilStyle`.
+   */
   fill?: CellGridFill
   /**
    * Draw the first row's top hairline (default). Off for a grid right under
@@ -58,7 +63,7 @@ export function CellGrid(handle: Handle<CellGridProps>) {
       layoutFor(cols, mid as CellGridCols, colsPhone),
       top ? undefined : openFor(cols, mid as CellGridCols, colsPhone),
       edge === 'boxed' ? boxedStyle : undefined,
-      fill === 'ink' ? inkStyle : undefined,
+      fill === 'ink' ? inkStyle : fill === 'veil' ? veilStyle : undefined,
       pad ? padStyle : undefined,
       mix,
     ]
@@ -130,6 +135,11 @@ const boxedStyle = css({
 })
 
 const inkStyle = css({ '& > *': { background: 'var(--cell-fill)' } })
+const veilStyle = css({ '& > *': { background: 'var(--cell-fill-veil)' } })
+
+/** One cell's own fill, for a grid that mixes copy and objects (decision 048). */
+export const cellInkStyle = css({ background: 'var(--cell-fill)' })
+export const cellVeilStyle = css({ background: 'var(--cell-fill-veil)' })
 
 const padStyle = css({ '& > *': { padding: 'var(--cell-pad)' } })
 

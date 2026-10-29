@@ -36,6 +36,8 @@ export const CourseFrontmatter = object(
     track: enum_(['foundations', 'prompting', 'tools', 'agents']),
     level: enum_(['beginner', 'intermediate', 'advanced']),
     summary: text(),
+    /** `free` (default) or `pro` (decision 048: a tag only, nothing is gated). */
+    access: optional(enum_(['free', 'pro'])),
     /** Catalog position, low first. */
     order: optional(number().pipe(min(0))),
     outcomes: array(text()).refine((list) => list.length > 0, 'Expected at least one outcome'),

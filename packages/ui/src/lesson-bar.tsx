@@ -17,8 +17,12 @@ export interface LessonBarProps {
   segments: SegmentState[]
   progressLabel: string
   modes: SegmentedTabItem[]
+  /** The viewer's neurons, shown as an XpPill at the row's end (hidden at ≤480px). */
   neurons?: number
-  /** Replaces the XpPill slot, e.g. an island that re-renders the pill after a reward. */
+  /**
+   * Replaces the XpPill slot, e.g. an island that re-renders the pill after a
+   * reward. The bar wraps it in its slot, which hides at ≤480px.
+   */
   xp?: RemixNode
   /** Render the lesson title as the page's `<h1>` (lesson pages) instead of a span. */
   titleAs?: 'span' | 'h1'
@@ -38,7 +42,8 @@ export interface LessonBarProps {
  * The compact lesson header (components §3.1c; canonical for Read, Watch and
  * Terminal modes): back, course context + lesson title, segmented progress,
  * mode tabs (links) and neurons. Static. On lesson pages it is the AppBar's
- * sub-bar (`position="shell"`), and the AppBar carries the neurons.
+ * sub-bar (`position="shell"`) and the only place the header shows neurons:
+ * the AppBar carries no XP or streak pill (decision 048).
  */
 export function LessonBar(handle: Handle<LessonBarProps>) {
   return () => {
@@ -75,7 +80,7 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
         ) : (
           <SegmentedTabs label="Lesson format" items={modes} />
         )}
-        {xp !== undefined ? xp : neurons !== undefined ? <XpPill neurons={neurons} mix={lessonBarXpStyle} /> : null}
+        {xp !== undefined ? <div mix={[xpSlot, lessonBarXpStyle]}>{xp}</div> : neurons !== undefined ? <XpPill neurons={neurons} mix={lessonBarXpStyle} /> : null}
       </>
     )
     if (shell) {
@@ -100,7 +105,10 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
             <div mix={[tabsCell, wideOnly]}>
               <SegmentedTabs label="Lesson format" items={modes} />
             </div>
-            {xp !== undefined ? xp : neurons !== undefined ? <XpPill neurons={neurons} mix={lessonBarXpStyle} /> : null}
+            {xp !== undefined || neurons !== undefined ? (
+              // The pill closes the row as its own cell, after the tabs.
+              <div mix={[xpCell, lessonBarXpStyle]}>{xp !== undefined ? xp : <XpPill neurons={neurons ?? 0} />}</div>
+            ) : null}
           </div>
         </div>
       )
@@ -206,6 +214,16 @@ const tabsCell = css({
   // Repeated from wideOnly: this mixin is declared later, so its layer wins.
   [SHELL_NARROW]: { display: 'none' },
 })
+// The neurons cell: last in the row, pushed to the end when the tabs hide (<760px).
+const xpCell = css({
+  alignSelf: 'stretch',
+  display: 'flex',
+  alignItems: 'center',
+  paddingInline: 'var(--space-3)',
+  [SHELL_NARROW]: { marginLeft: 'auto' },
+  borderLeft: 'var(--border-w) solid var(--line-cell)',
+})
+const xpSlot = css({ display: 'flex', alignItems: 'center' })
 const wideOnly = css({ [SHELL_NARROW]: { display: 'none' } })
 // ≤480px (Lesson spec, 360px): row 1 back + title (truncated), row 2 mode tabs + progress.
 const titleBlock = css({

@@ -2,38 +2,45 @@ import { css, type Handle, type RemixNode } from 'remix/component'
 import { CellGrid } from '@bits/ui/cell-grid'
 import { RuledSection } from '@bits/ui/ruled-section'
 
-import { cardDesc, cardTitle, cellLabel, h2Style, PHONE, voltText } from './styles.ts'
+import { cardDesc, cardTitle, cellLabel, h2Style, introStyle, leadStyle, PHONE } from './styles.ts'
 
-/** "Read it. Watch it. Run it." (Main.md §5): three ModeCards as cells (components §12.3). */
+/**
+ * "Modes" (Main.md §5): the same stacked intro as the other bands, then three
+ * ModeCards as cells (components §12.3). The art wells are objects, so the
+ * cards keep the ink slab (decision 048).
+ */
 export function Modes(_handle: Handle) {
   return () => (
-    <RuledSection aria-labelledby="modes-title" pad="none">
-      <div mix={headerRow}>
-        <h2 id="modes-title" mix={[h2Style, titleStyle]}>
-          Read it. Watch it. <span mix={voltText}>Run it.</span>
-        </h2>
-        <p mix={introStyle}>
-          Every lesson works as text. Some come with a video. The coding ones hand you a real
-          editor.
-        </p>
+    <RuledSection aria-labelledby="modes-title" label="Modes" pad="none">
+      <div mix={introCell}>
+        <div mix={introStyle}>
+          <h2 id="modes-title" mix={h2Style}>
+            {/* No-break spaces keep each "… it." whole when the line wraps. */}
+            Read{'\u00a0'}it. Watch{'\u00a0'}it. Run{'\u00a0'}it.
+          </h2>
+          <p mix={leadStyle}>
+            Every lesson works as text. Some come with a video. The coding ones hand you a real
+            editor.
+          </p>
+        </div>
       </div>
       <CellGrid as="ul" cols={3} fill="ink">
         <ModeCard
-          eyebrow="TEXT · ALWAYS"
+          eyebrow="Text · always"
           color="var(--volt)"
           title="Chat or terminal"
           desc="Read the lesson as a conversation with a tutor, or flip to terminal mode for a CLI feel. Either way, you type to move forward."
           art={<ReadArt />}
         />
         <ModeCard
-          eyebrow="VIDEO · OPTIONAL"
+          eyebrow="Video · optional"
           color="var(--ion)"
           title="Watch when it helps"
           desc="Chaptered videos with a synced transcript. Jump back to text any time — your place is kept in both."
           art={<WatchArt />}
         />
         <ModeCard
-          eyebrow="CODE · WHEN IT MATTERS"
+          eyebrow="Code · when it matters"
           color="var(--volt)"
           title="A real editor"
           desc="Syntax-highlighted, one-click copy, and a “type it yourself” mode for the moments muscle memory matters."
@@ -122,22 +129,7 @@ function RunArt(_handle: Handle) {
   )
 }
 
-const headerRow = css({
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-end',
-  gap: 'var(--space-8)',
-  flexWrap: 'wrap',
-  padding: 'var(--section-pad-y) var(--section-pad-x) calc(var(--section-pad-y) / 2)',
-})
-const titleStyle = css({ maxWidth: '720px', textWrap: 'wrap' })
-const introStyle = css({
-  margin: 0,
-  maxWidth: '380px',
-  fontSize: 'var(--fs-17)',
-  lineHeight: 1.6,
-  color: 'var(--text-lead)',
-})
+const introCell = css({ padding: 'var(--section-pad-y) var(--cell-pad-lg) calc(var(--section-pad-y) / 2)' })
 const cardStyle = css({
   display: 'flex',
   flexDirection: 'column',
@@ -146,7 +138,7 @@ const cardStyle = css({
 })
 const wellStyle = css({
   position: 'relative',
-  height: '200px',
+  height: 'var(--mode-art-h)',
   background: 'var(--well)',
   border: 'var(--border-w) solid var(--line-hair)',
   overflow: 'hidden',
