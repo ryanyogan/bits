@@ -1,5 +1,5 @@
 ---
-# sources (checked 2026-10-26):
+# sources (checked 2026-10-29):
 # - Anthropic, Glossary ("Pretraining": trained on a large unlabeled corpus to predict the
 #   next word; pretrained models aren't good at following instructions on their own)
 #   https://platform.claude.com/docs/en/about-claude/glossary
@@ -62,7 +62,7 @@ models, cleaned and de-duplicated first.
 Here's a useful way to think about the result. The text is far bigger than the
 model, so it can't keep a copy of it all. It mostly keeps **patterns**, a bit like a
 lossy zip file of everything it read. The gist survives. Rare details get
-fuzzy. Hold on to that, because it explains a lot in lesson 7.
+fuzzy. Hold on to that, because it explains a lot in lesson 8.
 
 :::quiz{id="what-pretraining-practises" xp=20}
 During pretraining, what is the model practising, over and over?

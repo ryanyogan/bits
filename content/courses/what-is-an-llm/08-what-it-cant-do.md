@@ -1,5 +1,5 @@
 ---
-# sources (checked 2026-10-26):
+# sources (checked 2026-10-29):
 # - Anthropic, Models overview (Claude Haiku 5.5 reliable knowledge cutoff: Jun 2026)
 #   https://platform.claude.com/docs/en/models/overview
 # - Anthropic, Tracing the thoughts of a large language model, 2025-03-27 ("Hallucinations":
@@ -9,29 +9,23 @@
 # - Anthropic, Reduce hallucinations (allow "I don't know", ground in quotes, verify,
 #   best-of-N comparison)
 #   https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations
-# - Anthropic, Glossary ("Context window" as working memory, separate from training data)
-#   https://platform.claude.com/docs/en/about-claude/glossary
 # - bits app/runs/model.ts (the sandbox sends one user message, no tools, no history)
 # Toy: odds are illustrative; "The Glass Orchard" is a made-up book.
 title: "What it can't do"
-order: 7
-minutes: 7
+order: 8
+minutes: 6
 xp: 50
 module: Using it well
 ---
 
-Now that you know how it works, its weak spots make sense. Here are the four
-that catch people out.
+Now that you know how it works, its weak spots make sense. Here are the three
+that catch people out. (Forgetting isn't on the list. You saw in lesson 6
+that it's the interface, not a flaw.)
 
 **It has a cutoff.** It learned from text up to a date. For Claude Haiku 5.5,
 Anthropic gives a reliable knowledge cutoff of June 2026 (checked October
 2026). Anything newer, it doesn't know unless you paste it in or a tool looks
 it up. This sandbox has no tools.
-
-**It doesn't remember you.** Chatting doesn't change its parameters. In each
-conversation it sees only what's in its context window. Apps that “remember”
-save notes and quietly add them to your next prompt. Here, every run starts
-blank.
 
 ---
 
@@ -64,7 +58,8 @@ it.
 it learned from text, not with a calculator. The same study caught it adding
 two numbers by working out a rough total and the exact last digit in parallel,
 then combining them. Ask how it did the sum, though, and it describes carrying
-the 1, the method from school.
+the 1, the method from school. The fix is to hand it a calculator: a tool it
+can call, which is what the **Give your model tools** course is about.
 
 So check what matters. Ask it to say when it's unsure. Paste in the source
 and ask it to quote from it. Check names, numbers, quotes and links yourself.
