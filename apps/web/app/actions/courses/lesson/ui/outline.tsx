@@ -73,7 +73,10 @@ export function OutlineNav(handle: Handle<{ view: LessonView }>) {
     let { view } = handle.props
     return (
       <nav aria-label="Lessons" mix={navStyle}>
-        <h2 mix={headingStyle}>In this course</h2>
+        <h2 mix={headingStyle}>
+          <span>In this course</span>
+          <span aria-hidden="true" mix={countStyle}>{`${String(view.index + 1).padStart(2, '0')} / ${String(view.total).padStart(2, '0')}`}</span>
+        </h2>
         <OutlineList view={view} />
         <span data-rmx-key={view.key} hidden>
           <OutlineScroll />
@@ -105,9 +108,8 @@ export function OutlineDisclosure(handle: Handle<{ view: LessonView }>) {
 
 const MOBILE = '@media (max-width: 759px)'
 
+// The column's first cell: its hairline is the outline's right edge.
 const navStyle = css({
-  flex: '1 1 260px',
-  maxWidth: '320px',
   position: 'sticky',
   top: 'var(--shell-h)',
   height: 'calc(100dvh - var(--shell-h))',
@@ -115,40 +117,59 @@ const navStyle = css({
   overscrollBehavior: 'contain',
   scrollbarWidth: 'thin',
   // Keyboard focus moving through a long outline stays clear of its edges.
-  scrollPaddingBlock: 'var(--space-4)',
-  padding: 'var(--space-7) var(--space-4)',
+  scrollPaddingBlock: 'var(--space-12)',
   display: 'flex',
   flexDirection: 'column',
-  gap: 'var(--space-1)',
-  borderRight: 'var(--border-w) solid var(--line-hair)',
+  borderRight: 'var(--border-w) solid var(--line-cell)',
   [MOBILE]: { display: 'none' },
 })
+// A header strip like a RuledSection's: mono label … position.
 const headingStyle = css({
+  position: 'sticky',
+  top: 0,
+  zIndex: 1,
   margin: 0,
-  padding: '0 var(--space-3) var(--space-2_5)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 'var(--space-3)',
+  minHeight: 'var(--touch-target)',
+  boxSizing: 'border-box',
+  padding: 'var(--space-2) var(--space-5)',
+  background: 'var(--ink)',
+  borderBottom: 'var(--border-w) solid var(--line-cell)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',
   fontWeight: 400,
-  lineHeight: 'normal',
-  letterSpacing: 'var(--tracking-eyebrow-s)',
-  textTransform: 'uppercase',
-  color: 'var(--dim)',
+  lineHeight: 1.4,
+  color: 'var(--muted)',
 })
-const listStyle = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' })
+const countStyle = css({ color: 'var(--dim)', fontVariantNumeric: 'tabular-nums' })
+// One row per lesson, hairlines between them: the outline is a ruled list.
+const listStyle = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column' })
 const itemStyle = css({
+  position: 'relative',
   display: 'flex',
   alignItems: 'center',
   gap: 'var(--space-3)',
-  minHeight: 'var(--touch-target)',
-  padding: 'var(--space-1_5) var(--space-3)',
-  borderRadius: 'var(--radius-10)',
+  minHeight: 'var(--control-lg)',
+  boxSizing: 'border-box',
+  padding: 'var(--space-2) var(--space-5)',
+  borderBottom: 'var(--border-w) solid var(--line-cell)',
   textDecoration: 'none',
   fontSize: 'var(--fs-14)',
+  lineHeight: 1.35,
   color: 'var(--text-quiet)',
   transition: 'background-color var(--duration-fast)',
   '&[data-state="done"]': { color: 'var(--muted)' },
   '&:hover': { background: 'var(--fill-hover)', color: 'var(--text)' },
-  '&[aria-current="page"], &[aria-current="page"]:hover': { background: 'var(--ion-a08)', color: 'var(--text)' },
+  '&:focus-visible': { outlineOffset: 'var(--focus-offset-inset)' },
+  // The open lesson: a quiet ion step and a 2px ion bar on the leading edge.
+  '&[aria-current="page"], &[aria-current="page"]:hover': {
+    background: 'var(--ion-a08)',
+    color: 'var(--text)',
+    boxShadow: 'inset 2px 0 0 var(--ion)',
+  },
   // Forced colours drop the tint, so the lesson you're on needs a frame (decision 025).
   '@media (forced-colors: active)': { '&[aria-current="page"]': { outline: 'var(--focus-outline-w) solid Highlight', outlineOffset: '-2px' } },
 })
@@ -157,12 +178,12 @@ const pendingOnly = css({ display: 'contents', [PASSED]: { display: 'none' } })
 const passedOnly = css({ display: 'none', [PASSED]: { display: 'contents' } })
 
 const disclosureNav = css({ display: 'none', [MOBILE]: { display: 'block' } })
+// Phones: a strip of the column, closed by default; open, the rows hang under it.
 const detailsStyle = css({
-  borderRadius: 'var(--radius-md)',
-  background: 'var(--surface)',
-  border: 'var(--border-w) solid var(--line)',
-  '&[open]': { paddingBottom: 'var(--space-2)' },
+  borderBottom: 'var(--border-w) solid var(--line-cell)',
+  '&[open] > summary': { borderBottom: 'var(--border-w) solid var(--line-cell)' },
   '&[open] > summary > span:last-child': { transform: 'rotate(180deg)' },
+  '& li:last-child > a': { borderBottom: 0 },
 })
 const summaryStyle = css({
   display: 'flex',
@@ -170,13 +191,15 @@ const summaryStyle = css({
   justifyContent: 'space-between',
   gap: 'var(--space-3)',
   minHeight: 'var(--touch-target)',
-  padding: '0 var(--space-4)',
+  padding: '0 var(--section-pad-x)',
   fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-13)',
+  fontSize: 'var(--fs-12)',
   color: 'var(--muted)',
   cursor: 'pointer',
   listStyle: 'none',
   '&::-webkit-details-marker': { display: 'none' },
-  '&:hover': { color: 'var(--text)' },
+  '&:hover': { color: 'var(--text)', background: 'var(--fill-hover)' },
+  '&:focus-visible': { outlineOffset: 'var(--focus-offset-inset)' },
+  '@media (max-width: 480px)': { paddingInline: 'var(--space-4)' },
 })
 const chevronStyle = css({ transition: 'transform var(--duration-fast)' })

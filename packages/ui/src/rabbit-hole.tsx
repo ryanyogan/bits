@@ -3,6 +3,7 @@ import { css } from 'remix/component'
 
 import { MonoHeading } from './eyebrow.tsx'
 import { Icon } from './icon.tsx'
+import { toyHeaderStyle, toyPanelStyle } from './toy-panel.tsx'
 
 export interface RabbitHoleLink {
   kind: 'video' | 'read'
@@ -41,14 +42,17 @@ export function RabbitHole(handle: Handle<RabbitHoleProps>) {
   return () => {
     let { links, id = 'rabbit-hole', mix } = handle.props
     return (
-      <section aria-labelledby={id} mix={[sectionStyle, mix]}>
-        <MonoHeading level={2} id={id}>
-          Down the rabbit hole
-        </MonoHeading>
+      <section aria-labelledby={id} mix={[toyPanelStyle, mix]}>
+        <div mix={toyHeaderStyle}>
+          <MonoHeading level={2} id={id}>
+            Down the rabbit hole
+          </MonoHeading>
+          <span aria-hidden="true" mix={countStyle}>{`${links.length} ${links.length === 1 ? 'link' : 'links'} ↗`}</span>
+        </div>
         <ul mix={listStyle}>
           {links.map((link) => (
             <li key={link.url} mix={itemStyle}>
-              <a href={link.url} target="_blank" rel="noopener noreferrer" data-rmx-document="" mix={cardStyle}>
+              <a href={link.url} target="_blank" rel="noopener noreferrer" data-rmx-document="" data-kind={link.kind} mix={cardStyle}>
                 <span aria-hidden="true" data-kind={link.kind} mix={kindStyle}>
                   <Icon name={link.kind === 'video' ? 'play-inline' : 'book'} color="currentColor" />
                 </span>
@@ -71,16 +75,20 @@ export function RabbitHole(handle: Handle<RabbitHoleProps>) {
   }
 }
 
-const sectionStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-3_5)', minWidth: 0 })
+const countStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--dim)' })
+// Cells sharing 1px hairlines (decision 047): the gaps show the list's
+// line-coloured ground. Flex, not grid, so a short last row still fills.
 const listStyle = css({
   listStyle: 'none',
   margin: 0,
   padding: 0,
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))',
-  gap: 'var(--space-3)',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 'var(--border-w)',
+  background: 'var(--line-cell)',
+  '@media (forced-colors: active)': { background: 'CanvasText' },
 })
-const itemStyle = css({ display: 'flex', minWidth: 0 })
+const itemStyle = css({ flex: '1 1 220px', display: 'flex', minWidth: 0, background: 'var(--surface)' })
 const cardStyle = css({
   flex: 1,
   minWidth: 0,
@@ -88,15 +96,16 @@ const cardStyle = css({
   display: 'flex',
   alignItems: 'flex-start',
   gap: 'var(--space-3)',
-  padding: 'var(--space-4)',
-  borderRadius: 'var(--radius-lg)',
-  background: 'var(--surface)',
-  border: 'var(--border-w) solid var(--line)',
+  padding: 'var(--space-4) var(--space-5)',
   color: 'var(--text)',
   textDecoration: 'none',
-  transition: 'border-color var(--duration-fast), background-color var(--duration-fast)',
-  '&:hover': { borderColor: 'var(--ion-a45)', background: 'var(--fill-row-hover)' },
+  transition: 'background-color var(--duration-fast), box-shadow var(--duration-fast)',
+  // Hover: a fill step and the link's colour along the top edge.
+  '&:hover': { background: 'var(--fill-hover)', boxShadow: 'inset 0 2px 0 var(--ion)' },
+  '&[data-kind="read"]:hover': { boxShadow: 'inset 0 2px 0 var(--synapse)' },
+  '&:focus-visible': { outlineOffset: 'var(--focus-offset-inset)' },
   '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+  '@media (max-width: 480px)': { padding: 'var(--space-4)' },
 })
 const kindStyle = css({
   flex: 'none',

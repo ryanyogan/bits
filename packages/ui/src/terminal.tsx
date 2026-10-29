@@ -87,6 +87,8 @@ export interface TerminalLogProps {
   placeholder?: string
   /** Appended entries kept on screen. */
   keepAppended?: number
+  /** No outer border: a ruled parent draws the cell's hairlines (decision 047). */
+  flush?: boolean
 }
 
 /** A run's reply: a live model reply or canned output (with a note saying why). */
@@ -212,7 +214,7 @@ export const TerminalLog = clientEntry(
       let placeholder = handle.props.placeholder ?? prompt?.placeholder ?? 'answer, ask, or type “hint”'
       let inputId = prompt ? `${prompt.id}-terminal` : 'terminal-input'
       return (
-        <section aria-label="Lesson" mix={termStyle}>
+        <section aria-label="Lesson" mix={[termStyle, handle.props.flush ? flushStyle : undefined]}>
           <div mix={titleRow}>
             <span mix={tones.volt}>bits</span>
             <span mix={pathStyle}>{path}</span>
@@ -434,6 +436,8 @@ export interface OutputPanelProps {
   command: string
   /** Scripted output lines. */
   lines: TerminalPart[][]
+  /** No outer border: a ruled parent draws the cell's hairlines (decision 047). */
+  flush?: boolean
 }
 
 /**
@@ -477,7 +481,7 @@ export const OutputPanel = clientEntry(
     return () => {
       let { command, lines } = handle.props
       return (
-        <div mix={panelStyle}>
+        <div mix={[panelStyle, handle.props.flush ? flushStyle : undefined]}>
           <div mix={panelHeader}>
             <span>OUTPUT</span>
             <Keycap size="sm" disabled={running} mix={on('click', () => void replay())}>
@@ -634,7 +638,8 @@ const inputRow = css({
   borderRadius: 'var(--radius-12)',
   background: 'var(--surface)',
   border: 'var(--border-w) solid var(--volt-a35)',
-  '&:focus-within': { borderColor: 'var(--volt-a70)', boxShadow: 'var(--focus-ring)' },
+  // Flat focus: the border goes volt and thickens to 2px, inside the box.
+  '&:focus-within': { borderColor: 'var(--volt)', boxShadow: 'inset 0 0 0 var(--border-w) var(--volt)' },
 })
 const inputStyle = css({
   flex: 1,
@@ -677,7 +682,7 @@ const checkLine = css({
   transition: 'color var(--duration-focus)',
   '&[data-passed="true"]': { color: 'var(--volt-soft)' },
 })
-const tempsRow = css({ margin: 0, padding: 0, border: 0, minWidth: 0, display: 'flex', alignItems: 'center', gap: 'var(--space-1_5)', flexWrap: 'wrap' })
+const tempsRow = css({ margin: 0, padding: 0, border: 0, minWidth: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap' })
 const tempsLegend = css({ float: 'left', padding: 0, marginRight: 'var(--space-2)', fontSize: 'var(--fs-12)', color: 'var(--dim)' })
 const tempChip = css({
   position: 'relative',
@@ -687,14 +692,15 @@ const tempChip = css({
   minHeight: '36px',
   minWidth: '48px',
   padding: '0 var(--space-2_5)',
-  borderRadius: 'var(--radius-9)',
   border: 'var(--border-w) solid var(--line-control)',
   color: 'var(--text-quiet)',
   cursor: 'pointer',
+  // One segmented control: the chips share their hairlines.
+  '& + &': { marginLeft: 'calc(-1 * var(--border-w))' },
   '&::before': { content: '""', position: 'absolute', inset: '-4px 0' },
-  '&:hover': { borderColor: 'var(--line-node-next)' },
-  '&:has(:checked)': { background: 'var(--ion)', borderColor: 'var(--ion)', color: 'var(--ink)' },
-  '&:has(:focus-visible)': focusOutline,
+  '&:hover': { zIndex: 1, borderColor: 'var(--line-node-next)', background: 'var(--fill-hover)' },
+  '&:has(:checked)': { zIndex: 1, background: 'var(--ion-a16)', borderColor: 'var(--ion)', color: 'var(--text)' },
+  '&:has(:focus-visible)': { ...focusOutline, zIndex: 2 },
   [FORCED_COLORS]: { '&:has(:checked)': forcedSelected },
 })
 const noJsStyle = css({ margin: '0 var(--space-4) var(--space-3)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
@@ -709,6 +715,8 @@ const panelStyle = css({
   minWidth: 0,
   contain: 'inline-size',
 })
+/** A cell of a ruled parent: the parent's hairlines are its edges. */
+const flushStyle = css({ border: 0, '&:focus-within': { boxShadow: 'inset 0 0 0 var(--border-w) var(--volt-a55)' } })
 const panelHeader = css({
   display: 'flex',
   alignItems: 'center',

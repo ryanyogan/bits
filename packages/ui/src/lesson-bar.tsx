@@ -2,6 +2,8 @@ import type { Handle, MixInput, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
 import { BackButton } from './back-button.tsx'
+import { Crosshair } from './crosshair.tsx'
+import { FORCED_COLORS } from './lib/states.ts'
 import { SegmentedProgress, type SegmentState } from './progress-bar.tsx'
 import { SegmentedTabs, type SegmentedTabItem } from './segmented-tabs.tsx'
 import { XpPill } from './xp-pill.tsx'
@@ -78,9 +80,28 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
     )
     if (shell) {
       // Inside the AppBar's <header> (one banner landmark), so not a <header>.
+      // The row is the page's ruled column (decision 047): the rails run
+      // through it, back and the mode tabs are cells at either end.
       return (
         <div mix={[shellStyle, mix]}>
-          <div mix={shellInner}>{children}</div>
+          <div mix={shellInner}>
+            <Crosshair placement="top-start" mix={shellMark} />
+            <Crosshair placement="top-end" mix={shellMark} />
+            <div mix={backCell}>
+              <BackButton href={backHref} label={backLabel} />
+            </div>
+            <div mix={titleBlock}>
+              <span mix={contextStyle}>{context}</span>
+              {titleAs === 'h1' ? <h1 mix={titleStyle}>{title}</h1> : <span mix={titleStyle}>{title}</span>}
+            </div>
+            <div data-lesson-progress mix={[progressStyle, wideOnly]}>
+              <SegmentedProgress segments={segments} label={progressLabel} />
+            </div>
+            <div mix={[tabsCell, wideOnly]}>
+              <SegmentedTabs label="Lesson format" items={modes} />
+            </div>
+            {xp !== undefined ? xp : neurons !== undefined ? <XpPill neurons={neurons} mix={lessonBarXpStyle} /> : null}
+          </div>
         </div>
       )
     }
@@ -136,18 +157,48 @@ const stickyStyle = css({
   WebkitBackdropFilter: 'blur(var(--blur-glass))',
   backdropFilter: 'blur(var(--blur-glass))',
 })
-// The AppBar's glass shows through; a hairline separates the two rows.
-const shellStyle = css({ borderTop: 'var(--border-w) solid var(--line-hair)' })
+// A full-bleed hairline separates the AppBar's row from this one.
+// Opaque: with no blur, lesson text scrolling under a translucent row reads
+// through it.
+const shellStyle = css({ borderTop: 'var(--border-w) solid var(--line-section)', background: 'var(--ink)' })
 const shellInner = css({
+  position: 'relative',
+  boxSizing: 'border-box',
   // Fixed height (tokens: --lessonbar-h) so the outline's sticky offset agrees.
   height: 'calc(var(--lessonbar-h) - var(--border-w))',
-  maxWidth: 'var(--page-max)',
+  // The PageFrame's column: same width, same rails.
+  width: 'min(calc(100% - 2 * var(--frame-inset)), var(--frame-max))',
   margin: '0 auto',
-  padding: '0 var(--page-gutter)',
+  borderInline: 'var(--border-w) solid var(--line-rail)',
   display: 'flex',
   alignItems: 'center',
   gap: 'var(--space-5)',
   [SHELL_NARROW]: { gap: 'var(--space-3)' },
+  // Phones: the lesson page drops its gutter, and the bar follows.
+  [NARROW]: { width: '100%', borderInline: 0 },
+  [FORCED_COLORS]: { borderColor: 'GrayText' },
+})
+// The marks sit on the row's top hairline, which is the shell's border.
+const shellMark = css({ top: 'calc((var(--mark-size) + 1px) / -2)', [NARROW]: { display: 'none' } })
+// Back is the row's first cell, a square the row's height.
+const backCell = css({
+  flex: 'none',
+  alignSelf: 'stretch',
+  display: 'grid',
+  placeItems: 'center',
+  width: 'calc(var(--lessonbar-h) - var(--border-w))',
+  borderRight: 'var(--border-w) solid var(--line-cell)',
+})
+// The mode tabs close the row as its last cell.
+const tabsCell = css({
+  alignSelf: 'stretch',
+  display: 'flex',
+  alignItems: 'center',
+  paddingInline: 'var(--space-4)',
+  borderLeft: 'var(--border-w) solid var(--line-cell)',
+  '&:last-child': { paddingRight: 'var(--space-3)' },
+  // Repeated from wideOnly: this mixin is declared later, so its layer wins.
+  [SHELL_NARROW]: { display: 'none' },
 })
 const wideOnly = css({ [SHELL_NARROW]: { display: 'none' } })
 // ≤480px (Lesson spec, 360px): row 1 back + title (truncated), row 2 mode tabs + progress.

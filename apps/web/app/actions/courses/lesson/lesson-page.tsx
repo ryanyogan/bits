@@ -1,9 +1,11 @@
 import type { Handle } from 'remix/component'
 import { css, unsafeHTML } from 'remix/component'
+import { Crosshair } from '@bits/ui/crosshair'
 import { Keycap } from '@bits/ui/keycap'
 import { LessonBar, LessonModes } from '@bits/ui/lesson-bar'
 import type { SegmentState } from '@bits/ui/progress-bar'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
+import { PageFrame } from '@bits/ui/page-frame'
 
 import type { RewardNotice } from '../../../progress/reward.ts'
 import { APP_TITLE } from '../../../config.ts'
@@ -88,35 +90,43 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
           </p>
         ) : null}
         {mode === 'terminal' ? (
-          <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, workspaceMain]}>
-            <LessonModes segments={segments} progressLabel={progressLabel} modes={modeItems} />
-            <TerminalMode view={view} />
-            <div mix={hasCode(content) ? undefined : soloFooter}>
-              <LessonFooter view={view} gated={gated} issues={issues} />
-            </div>
-          </main>
-        ) : (
-          <div mix={bodyStyle}>
-            <OutlineNav view={view} />
-            <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, mainStyle]}>
-              <LessonModes segments={segments} progressLabel={progressLabel} modes={modeItems} />
-              <OutlineDisclosure view={view} />
-              {mode === 'watch' ? <WatchMode view={view} /> : <ReadMode view={view} />}
-              <div mix={mode === 'watch' ? watchFooter : readFooter}>
-                <LessonFooter view={view} gated={gated} issues={issues} />
-              </div>
+          <PageFrame mix={frameStyle}>
+            <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, workspaceMain]}>
+              <LessonModes segments={segments} progressLabel={progressLabel} modes={modeItems} mix={modesStrip} />
+              <TerminalMode view={view} />
+              <LessonFooter view={view} gated={gated} issues={issues} width={hasCode(content) ? 'full' : 'solo'} />
             </main>
-          </div>
+          </PageFrame>
+        ) : (
+          <PageFrame mix={frameStyle}>
+            <div mix={bodyStyle}>
+              <OutlineNav view={view} />
+              <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, mainStyle]}>
+                <LessonModes segments={segments} progressLabel={progressLabel} modes={modeItems} mix={modesStrip} />
+                <OutlineDisclosure view={view} />
+                <div mix={mode === 'watch' ? watchBody : readBody}>
+                  {mode === 'watch' ? <WatchMode view={view} /> : <ReadMode view={view} />}
+                </div>
+                <LessonFooter view={view} gated={gated} issues={issues} width={mode === 'watch' ? 'watch' : 'read'} />
+              </main>
+            </div>
+          </PageFrame>
         )}
       </Layout>
     )
   }
 }
 
-/** Prev/next lesson navigation and the gated "lesson complete" key. */
-function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean; issues?: string[] }>) {
+type FooterWidth = 'read' | 'watch' | 'solo' | 'full'
+
+/**
+ * Prev/next lesson navigation and the gated "lesson complete" key: the
+ * lesson's last band, under a hairline rule with `+` marks where it meets
+ * the column's edges. Its content lines up with the column above it.
+ */
+function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean; issues?: string[]; width: FooterWidth }>) {
   return () => {
-    let { view, gated, issues } = handle.props
+    let { view, gated, issues, width } = handle.props
     let { prev, next } = view
     // Quiz answers live in the URL (GET forms); carry them into the save.
     let fields = Object.entries(view.answers).flatMap(([quiz, keys]) =>
@@ -124,23 +134,27 @@ function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean; issues?
     )
     if (view.mode !== 'read') fields.push(['mode', view.mode])
     return (
-      <nav aria-label="Lesson navigation" mix={footerStyle}>
-        {prev ? (
-          <Keycap variant="ghost-mono" size="md" href={view.href.lesson(prev.slug)} mix={prevStyle}>
-            <span aria-hidden="true">← </span>
-            <span class="sr-only">Previous lesson: </span>
-            {prev.title}
-          </Keycap>
-        ) : null}
-        <LessonComplete
-          gated={gated}
-          form={view.completeForm ? { ...view.completeForm, fields } : undefined}
-          issues={issues}
-          passed={view.lesson.state === 'done'}
-          href={next ? view.href.lesson(next.slug) : view.href.back}
-          label={next ? `Next: ${next.title} →` : 'Finish the course →'}
-          loginHref={view.viewer ? undefined : view.href.login}
-        />
+      <nav aria-label="Lesson navigation" mix={footerBand}>
+        <Crosshair placement="top-start" mix={phoneHidden} />
+        <Crosshair placement="top-end" mix={phoneHidden} />
+        <div mix={[footerStyle, footerWidths[width]]}>
+          {prev ? (
+            <Keycap variant="ghost-mono" size="md" href={view.href.lesson(prev.slug)} mix={prevStyle}>
+              <span aria-hidden="true">← </span>
+              <span class="sr-only">Previous lesson: </span>
+              {prev.title}
+            </Keycap>
+          ) : null}
+          <LessonComplete
+            gated={gated}
+            form={view.completeForm ? { ...view.completeForm, fields } : undefined}
+            issues={issues}
+            passed={view.lesson.state === 'done'}
+            href={next ? view.href.lesson(next.slug) : view.href.back}
+            label={next ? `Next: ${next.title} →` : 'Finish the course →'}
+            loginHref={view.viewer ? undefined : view.href.login}
+          />
+        </div>
       </nav>
     )
   }
@@ -190,44 +204,60 @@ const draftLink = css({
   color: 'var(--warn)',
   '&:hover': { color: 'var(--text)' },
 })
-// The outline + lesson share the AppBar's column (decision 022).
+// The lesson sits in the ruled column (decision 047): the PageFrame's rails
+// line up with the lesson bar's, and the outline is the column's first cell.
+// Phones (≤480px) give the rails the full screen width: the prose column
+// needs every pixel more than the gutter does.
+const frameStyle = css({ '@media (max-width: 480px)': { width: '100%', borderInline: 0 } })
+// Outline | lesson, sharing the outline's hairline (decision 022).
 const bodyStyle = css({
-  display: 'flex',
-  alignItems: 'flex-start',
-  width: '100%',
-  maxWidth: 'var(--page-max)',
-  margin: '0 auto',
+  display: 'grid',
+  gridTemplateColumns: 'minmax(240px, 288px) minmax(0, 1fr)',
+  alignItems: 'start',
   [MOBILE]: { display: 'block' },
 })
 // The skip link's target takes focus (tabIndex -1) without drawing a ring round the page (decision 031).
 const skipTargetStyle = css({ '&:focus': { outline: 'none' } })
-const mainStyle = css({
-  flex: '999 1 560px',
-  minWidth: 0,
-  padding: 'var(--space-10) var(--space-6) var(--space-30)',
+const mainStyle = css({ minWidth: 0, display: 'flex', flexDirection: 'column' })
+// Phones: the mode tabs and progress are the column's first strip.
+const modesStrip = css({
   [MOBILE]: {
-    padding: 'var(--space-6) var(--space-4) var(--space-24)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-5_5)',
+    padding: 'var(--space-2) var(--section-pad-x)',
+    borderBottom: 'var(--border-w) solid var(--line-cell)',
   },
+  '@media (max-width: 480px)': { paddingInline: 'var(--space-4)' },
 })
-const workspaceMain = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--space-6)',
-  padding: 'var(--space-4) var(--space-4) var(--space-12)',
+// Prose gets air: a calm column, padded like a section body.
+const readBody = css({
+  padding: 'var(--space-14) var(--section-pad-x) var(--space-20)',
+  [MOBILE]: { padding: 'var(--space-8) var(--section-pad-x) var(--space-14)' },
+  '@media (max-width: 480px)': { padding: 'var(--space-6) var(--space-4) var(--space-12)' },
 })
-const readFooter = css({ maxWidth: 'var(--read-width)', margin: 'var(--space-12) auto 0', [MOBILE]: { marginTop: 'var(--space-6)', width: '100%' } })
-const watchFooter = css({ maxWidth: 'var(--watch-width)', margin: 'var(--space-12) auto 0', [MOBILE]: { marginTop: 'var(--space-6)', width: '100%' } })
-const soloFooter = css({ width: '100%', maxWidth: '900px', margin: '0 auto' })
+const watchBody = css({
+  padding: 'var(--space-10) var(--section-pad-x) var(--space-16)',
+  [MOBILE]: { padding: 'var(--space-6) var(--section-pad-x) var(--space-12)' },
+  '@media (max-width: 480px)': { padding: 'var(--space-4) var(--space-4) var(--space-10)' },
+})
+const workspaceMain = css({ display: 'flex', flexDirection: 'column', minWidth: 0 })
+const footerBand = css({
+  position: 'relative',
+  padding: 'var(--space-6) var(--section-pad-x) var(--space-16)',
+  borderTop: 'var(--border-w) solid var(--line-section)',
+  '@media (max-width: 480px)': { padding: 'var(--space-5) var(--space-4) var(--space-12)' },
+})
+// Phones: the column has no rails for the marks to sit on.
+const phoneHidden = css({ '@media (max-width: 480px)': { display: 'none' } })
+const footerWidths: Record<FooterWidth, ReturnType<typeof css>> = {
+  read: css({ maxWidth: 'var(--read-width)', marginInline: 'auto' }),
+  watch: css({ maxWidth: 'var(--watch-width)', marginInline: 'auto' }),
+  solo: css({ maxWidth: '900px', marginInline: 'auto' }),
+  full: css({}),
+}
 const footerStyle = css({
   display: 'flex',
   alignItems: 'center',
   flexWrap: 'wrap',
   gap: 'var(--space-3)',
-  paddingTop: 'var(--space-6)',
-  borderTop: 'var(--border-w) solid var(--line-hair)',
   // Keycaps don't wrap by default; "Next: <long lesson title> →" must, or it
   // overflows a 360px screen.
   [MOBILE]: {
