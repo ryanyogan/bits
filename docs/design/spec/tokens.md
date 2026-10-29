@@ -487,6 +487,7 @@ Scripted timing: hero placeholder typewriter ticks every `55ms` (types 1 char/ti
 | `--cell-pad-lg` | `64px`; `--section-pad-x` under 1024px | Inset of a cell that holds display type |
 | `--track-cell-min` | `300px` | A landing path track cell's height from 760px |
 | `--mode-art-h` | `200px`; phones `120px` | A landing mode card's art well |
+| `--section-gap` | `80px`; 481–1023px `56px`; phones `40px` | The stripe of ground between two framed sections, and under the last one (decision 050) |
 
 ### 7.3 Grids in use
 

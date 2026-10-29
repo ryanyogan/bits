@@ -507,7 +507,7 @@ describe('layout stability', () => {
       </RuledSection>,
     )
     assert.match(html, /^<section id="how" aria-labelledby="how-title"/)
-    assert.equal(html.match(/<span aria-hidden="true"[^>]*><\/span>/g)?.length, 2, 'two crosshairs')
+    assert.equal(html.match(/<span aria-hidden="true"[^>]*><\/span>/g)?.length, 4, 'a crosshair at each corner (decision 050)')
     assert.match(html, /<span[^>]*>02<\/span><span aria-hidden="true"[^>]*> \/ <\/span>How it works/)
     assert.match(html, /3 lessons/)
     let bare = await markup(
@@ -515,8 +515,14 @@ describe('layout stability', () => {
         x
       </RuledSection>,
     )
-    assert.doesNotMatch(bare, /aria-hidden/, 'no marks without a rule')
+    assert.equal(bare.match(/<span aria-hidden="true"[^>]*><\/span>/g)?.length, 2, 'only the bottom marks without a top rule')
     assert.doesNotMatch(bare, /<p/, 'no header strip without index, label or aside')
+    let unmarked = await markup(
+      <RuledSection as="div" marks={false}>
+        x
+      </RuledSection>,
+    )
+    assert.doesNotMatch(unmarked, /aria-hidden/, 'no marks when asked')
   })
 
   it('RuledSection can make its strip label the heading', async () => {

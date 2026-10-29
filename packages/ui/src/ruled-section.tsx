@@ -40,24 +40,32 @@ export interface RuledSectionProps {
    * rail) or a component that pads itself.
    */
   pad?: RuledSectionPad
-  /** The full-bleed rule above the section (default). Off for the first section under a ruled header. */
+  /**
+   * A plate of its own (default): `--section-gap` of ground above it, then
+   * its full-bleed top rule. Off, the section continues the block above
+   * it (an app bar, a header, the section before): no gap and no top rule,
+   * since that block drew the line.
+   */
   rule?: boolean
-  /** The `+` marks where the rule crosses the rails (default, with the rule). */
+  /** The `+` marks where the rules cross the rails (default). */
   marks?: boolean
   mix?: MixInput<HTMLElement>
   children?: RemixNode
 }
 
 /**
- * One band of a ruled page (decision 047): a hairline rule above it that
- * runs the full width of the screen, `+` marks where that rule crosses the
- * `PageFrame` rails, an optional mono header strip (`02 / How it works`,
- * with an `aside` at the far end) and a padded body.
+ * One framed plate of a ruled page (decisions 047, 050): its own two
+ * hairline rails, a rule above and below it that runs the full width of
+ * the screen, `+` marks where those rules cross the rails, an optional
+ * mono header strip (`02 / How it works`, with an `aside` at the far end)
+ * and a padded body.
  *
- * Use it inside a `PageFrame`, one after another; the next section's rule
- * closes the one before, so sections never draw a bottom border. The strip
- * draws the hairline under itself, so a flush `CellGrid` right under it
- * takes `top={false}`. Static.
+ * Use it inside a `PageFrame`, one after another. Each plate keeps
+ * `--section-gap` of the page's ground above it, so the ground shows
+ * between sections; `rule={false}` joins a section to the block above
+ * instead (the first band under an app bar or header, or the grid under
+ * its toolbar). The strip draws the hairline under itself, so a flush
+ * `CellGrid` right under it takes `top={false}`. Static.
  */
 export function RuledSection(handle: Handle<RuledSectionProps>) {
   return () => {
@@ -113,9 +121,15 @@ export function RuledSection(handle: Handle<RuledSectionProps>) {
           </div>
         ) : null}
         <div mix={padStyles[pad]}>{children}</div>
+        {marks ? (
+          <>
+            <Crosshair placement="bottom-start" />
+            <Crosshair placement="bottom-end" />
+          </>
+        ) : null}
       </>
     )
-    let styles = [sectionStyle, rule ? ruleStyle : undefined, mix]
+    let styles = [sectionStyle, rule ? plateStyle : undefined, mix]
     let labelledBy = handle.props['aria-labelledby'] ?? (labelAs !== 'p' ? labelId : undefined)
     let a11y = { id, 'aria-labelledby': labelledBy, 'aria-label': handle.props['aria-label'] }
     if (as === 'div') return <div {...a11y} mix={styles}>{content}</div>
@@ -125,23 +139,37 @@ export function RuledSection(handle: Handle<RuledSectionProps>) {
   }
 }
 
-const sectionStyle = css({ position: 'relative', boxSizing: 'border-box' })
-
-// The rule is wider than the column: 100vw, centred on it (the column is
-// centred on the page). body clips horizontal overflow (base.css), so the
+// The rules are wider than the column: 100vw, centred on it (the column is
+// centred on the page). html clips horizontal overflow (base.css), so the
 // part under a classic scrollbar never makes the page scroll sideways.
-const ruleStyle = css({
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: '50%',
-    width: '100vw',
-    height: 'var(--border-w)',
-    transform: 'translateX(-50%)',
-    background: 'var(--line-section)',
-    pointerEvents: 'none',
+const fullBleedRule = {
+  content: '""',
+  position: 'absolute',
+  left: '50%',
+  width: '100vw',
+  height: 'var(--border-w)',
+  transform: 'translateX(-50%)',
+  background: 'var(--line-section)',
+  pointerEvents: 'none',
+} as const
+
+// Every section draws its rails and the rule along its bottom edge: the
+// plate is closed whatever follows it (a gap, the next plate, the page end).
+const sectionStyle = css({
+  position: 'relative',
+  boxSizing: 'border-box',
+  borderInline: 'var(--border-w) solid var(--line-rail)',
+  '&::after': { ...fullBleedRule, bottom: 0 },
+  [FORCED_COLORS]: {
+    borderColor: 'GrayText',
+    '&::after': { forcedColorAdjust: 'none', background: 'GrayText' },
   },
+})
+
+// A plate of its own: the ground shows above it, then its top rule.
+const plateStyle = css({
+  marginTop: 'var(--section-gap)',
+  '&::before': { ...fullBleedRule, top: 0 },
   [FORCED_COLORS]: { '&::before': { forcedColorAdjust: 'none', background: 'GrayText' } },
 })
 
