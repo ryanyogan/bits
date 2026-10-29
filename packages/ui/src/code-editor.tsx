@@ -5,6 +5,7 @@ import * as tabs from '@remix-run/ui/tabs'
 import { Keycap } from './keycap.tsx'
 import { readDraft, writeDraft, type DraftPersist } from './lib/drafts.ts'
 import { stackStyle } from './lib/stable.tsx'
+import { FORCED_COLORS } from './lib/states.ts'
 import { ToolButton } from './tool-button.tsx'
 
 export type SyntaxKind = 'keyword' | 'string' | 'type' | 'function' | 'plain' | 'comment' | 'number' | 'punct'
@@ -114,7 +115,7 @@ export const CodeEditor = clientEntry(
               handle.update()
             }}
           >
-            <div mix={[rootStyle, tabs.root()]}>
+            <div data-type-root="" mix={[rootStyle, tabs.root()]}>
               <div mix={toolbarStyle}>
                 <div aria-label="Files" mix={[fileTabsStyle, tabs.list()]}>
                   {files.map((file) => (
@@ -158,7 +159,7 @@ export const CodeEditor = clientEntry(
                 </div>
               ) : null}
               {/* Panels share one grid cell: the editor is as tall as its longest file, so switching tabs never moves the page (decision 023). */}
-              <div mix={[stackStyle, panelsStyle]}>
+              <div data-typing={typing ? '' : undefined} mix={[stackStyle, panelsStyle]}>
                 {files.map((file, fileIndex) => (
                   <div key={file.name} mix={[panelStyle, tabs.panel({ name: file.name })]}>
                     <div
@@ -348,7 +349,20 @@ const bannerStyle = css({
   '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
 })
 const bannerStats = css({ marginLeft: 'auto', color: 'var(--text)', fontVariantNumeric: 'tabular-nums' })
-const panelsStyle = css({ flex: 1 })
+// "Type it" (B6): the real textarea is hidden, so while it has focus the code
+// area it types into draws the focus ring (inside its edges) and the caret
+// blinks; unfocused, the caret holds still and dims.
+const TYPE_FOCUSED = '[data-type-root]:has(> textarea:focus)'
+const panelsStyle = css({
+  flex: 1,
+  '&[data-typing]': { cursor: 'text' },
+  [`${TYPE_FOCUSED} > &[data-typing]`]: {
+    boxShadow: 'inset 0 0 0 var(--focus-outline-w) var(--focus-ring-color)',
+  },
+  [FORCED_COLORS]: {
+    [`${TYPE_FOCUSED} > &[data-typing]`]: { outline: 'var(--focus-outline-w) solid Highlight', outlineOffset: 'var(--focus-offset-inset)' },
+  },
+})
 // A hidden panel keeps its box (invisible, out of the a11y tree and tab order).
 const panelStyle = css({ minWidth: 0, '&[hidden]': { display: 'block', visibility: 'hidden' } })
 const codeAreaStyle = css({
@@ -408,11 +422,15 @@ const restStyle = css({ color: 'var(--dim)' })
 const caretStyle = css({
   color: 'var(--volt)',
   marginRight: '-0.6em',
-  animation: 'bits-blink var(--duration-caret) steps(1) infinite',
-  '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+  opacity: 0.45,
+  [`${TYPE_FOCUSED} &`]: { opacity: 1, animation: 'bits-blink var(--duration-caret) steps(1) infinite' },
+  '@media (prefers-reduced-motion: reduce)': { [`${TYPE_FOCUSED} &`]: { animation: 'none' } },
+  [FORCED_COLORS]: { forcedColorAdjust: 'none', color: 'Highlight', opacity: 1 },
 })
 const typeInputStyle = css({
   position: 'absolute',
+  // Hidden, but iOS still zooms on focusing a field under 16px (decision 051).
+  fontSize: 'var(--field-size)',
   width: '1px',
   height: '1px',
   opacity: 0,
