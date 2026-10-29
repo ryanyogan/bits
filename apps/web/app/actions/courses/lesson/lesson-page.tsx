@@ -176,10 +176,20 @@ const pageStyles = `@layer app {
   /* The open lesson's progress segment fills volt once its checks pass. */
   ${PASSED_ROOT} [data-lesson-progress] [data-state="current"] { background: var(--volt); }
   /* Watch: the VideoPlayer island's player + transcript join the watch row,
-     so the transcript sits under the video beside the side card (as drawn). */
+     so the transcript sits under the video beside the side card (as drawn).
+     The row is ruled cells (decision 047): each cell draws its top and
+     leading hairline 1px outside itself and the row clips its own edges,
+     so there is one line between cells and none doubled on the frame. */
   [data-watch] > div:first-child { display: contents; }
   [data-watch] > div:first-child > section:first-child { flex: 1 1 100%; }
   [data-watch] > div:first-child > section[aria-label="Transcript"] { flex: 999 1 420px; }
+  [data-watch] > div:first-child > section,
+  [data-watch] > aside {
+    border: 0;
+    margin: calc(-1 * var(--border-w)) 0 0 calc(-1 * var(--border-w));
+    border-top: var(--border-w) solid var(--line-cell);
+    border-left: var(--border-w) solid var(--line-cell);
+  }
 }`
 
 const draftStyle = css({

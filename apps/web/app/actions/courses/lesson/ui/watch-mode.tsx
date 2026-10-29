@@ -46,26 +46,27 @@ export function WatchMode(handle: Handle<{ view: LessonView }>) {
   }
 }
 
+// One ruled box of cells: video, then transcript | this card.
 const watchStyle = css({
   maxWidth: 'var(--watch-width)',
   margin: '0 auto',
   display: 'flex',
   flexWrap: 'wrap',
-  rowGap: 'var(--space-6)',
-  columnGap: 'var(--space-5)',
+  overflow: 'hidden',
+  border: 'var(--border-w) solid var(--line-panel)',
+  background: 'var(--surface)',
   animation: 'bits-rise var(--duration-reveal) var(--ease) both',
   '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
-  // The player island's layout overrides live in lesson-page.tsx (app layer).
+  // The player island's cell overrides live in lesson-page.tsx (app layer).
 })
 const sideCard = css({
   flex: '1 1 260px',
   display: 'flex',
   flexDirection: 'column',
+  justifyContent: 'center',
   gap: 'var(--space-3_5)',
   padding: 'var(--space-5_5)',
-  borderRadius: 'var(--radius-xl)',
   background: 'var(--surface)',
-  border: 'var(--border-w) solid var(--line)',
 })
 const sideText = css({ margin: 0, fontSize: 'var(--fs-15)', lineHeight: 1.55, color: 'var(--text-body)' })
 const sideKey = css({ minHeight: '48px' })
