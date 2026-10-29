@@ -129,7 +129,7 @@ export function Catalogue(handle: Handle) {
       </Section>
 
       <Section id="sg-nav" title="Navigation">
-        <Specimen caption="AppBar — app (signed in), static position here; sticky glass on pages. Under 760px the nav becomes the menu sheet.">
+        <Specimen caption="AppBar — app (signed in), static position here; sticky and flat on pages, its column and rails the same as a PageFrame's, the nav a row of hairline cells. Under 760px the nav becomes the menu sheet.">
           <div mix={barFrame}>
             <AppBar
               brand={APP_NAME}
@@ -351,7 +351,7 @@ export function Catalogue(handle: Handle) {
           </div>
         </Specimen>
         <div mix={specimenGrid}>
-          <Specimen caption="Keycap — sizes, glow, pending (aria-busy), link">
+          <Specimen caption="Keycap — sizes, glow (the CTA key: flat since 047, no glow drawn), pending (aria-busy), link">
             <div mix={row}>
               <Keycap size="sm">sm Copy</Keycap>
               <Keycap size="md">md Resume →</Keycap>
@@ -640,7 +640,7 @@ export function Catalogue(handle: Handle) {
 
       <Section id="sg-layout" title="Labels & layout">
         <div mix={specimenGrid}>
-          <Specimen caption="Card — default · page · compact · dashed · glass">
+          <Specimen caption="Card — default · page · compact · dashed · glass (flat ink, no blur)">
             <div mix={column}>
               <Card variant="page">
                 <Eyebrow tone="muted" size="sm" uppercase>

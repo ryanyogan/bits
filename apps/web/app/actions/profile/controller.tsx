@@ -1,12 +1,9 @@
-import { css } from 'remix/component'
-import { EmptyState } from '@bits/ui/empty-state'
-import { Keycap } from '@bits/ui/keycap'
 import { createController } from 'remix/router'
 
 import { getViewer } from '../../auth/identity.ts'
 import { getCatalog } from '../../content/request.ts'
 import { routes } from '../../routes.ts'
-import { Layout } from '../../ui/layout.tsx'
+import { StatusPage } from '../../ui/not-found-page.tsx'
 import { getPublicProfile } from './data.ts'
 import { ProfilePage } from './profile-page.tsx'
 
@@ -19,20 +16,15 @@ export default createController(routes.profile, {
       let profile = await getPublicProfile(context.db, await getCatalog(context), context.params.handle)
       if (!profile) {
         return context.render(
-          <Layout title="Profile not found" viewer={viewer} currentPath={context.url.pathname}>
-            <div mix={notFoundStyle}>
-              <h1 class="sr-only">Profile not found</h1>
-              <EmptyState
-                title="This profile is private."
-                hint="Or there’s no one with that handle."
-                action={
-                  <Keycap variant="ghost-mono" href={routes.courses.index.href()}>
-                    Browse courses →
-                  </Keycap>
-                }
-              />
-            </div>
-          </Layout>,
+          <StatusPage
+            title="Profile not found"
+            code="404"
+            eyebrow="Private or unknown"
+            heading="This profile is private."
+            hint="Or there’s no one with that handle."
+            viewer={viewer}
+            currentPath={context.url.pathname}
+          />,
           { status: 404 },
         )
       }
@@ -50,5 +42,3 @@ export default createController(routes.profile, {
     },
   },
 })
-
-const notFoundStyle = css({ maxWidth: '640px', margin: '0 auto' })

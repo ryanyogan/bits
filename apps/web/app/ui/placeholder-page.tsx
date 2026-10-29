@@ -1,8 +1,10 @@
 import type { Handle, RemixNode } from 'remix/component'
-import { css } from 'remix/component'
+
+import { PageFrame } from '@bits/ui/page-frame'
 
 import type { Viewer } from '../auth/identity.ts'
 import { Layout } from './layout.tsx'
+import { PageHead } from './page-head.tsx'
 
 export interface PlaceholderPageProps {
   /** Page name, also used for the document title. */
@@ -29,49 +31,12 @@ export function PlaceholderPage(handle: Handle<PlaceholderPageProps>) {
 
     return (
       <Layout title={title} currentPath={currentPath} viewer={viewer}>
-        <section mix={sectionStyle} aria-labelledby="page-title">
-          <p mix={eyebrowStyle}>
-            {pattern}
-            {artboard ? ` · ${artboard}` : null}
-          </p>
-          <h1 id="page-title" mix={titleStyle}>
-            {title}
-          </h1>
-          <p mix={summaryStyle}>{summary}</p>
-          {children}
-        </section>
+        <PageFrame>
+          <PageHead label={artboard ? `${pattern} · ${artboard}` : pattern} title={title} lead={summary}>
+            {children}
+          </PageHead>
+        </PageFrame>
       </Layout>
     )
   }
 }
-
-const sectionStyle = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--space-5)',
-  maxWidth: '760px',
-})
-
-const eyebrowStyle = css({
-  fontFamily: 'var(--font-mono)',
-  fontWeight: 500,
-  fontSize: 'var(--type-eyebrow-size)',
-  letterSpacing: 'var(--type-eyebrow-tracking)',
-  textTransform: 'uppercase',
-  color: 'var(--ion)',
-})
-
-const titleStyle = css({
-  fontFamily: 'var(--font-display)',
-  fontWeight: 700,
-  fontSize: 'var(--type-h2-size)',
-  lineHeight: 'var(--type-h2-leading)',
-  letterSpacing: 'var(--type-h2-tracking)',
-})
-
-const summaryStyle = css({
-  maxWidth: 'var(--type-body-measure)',
-  fontSize: 'var(--type-body-size)',
-  lineHeight: 'var(--type-body-leading)',
-  color: 'var(--muted)',
-})

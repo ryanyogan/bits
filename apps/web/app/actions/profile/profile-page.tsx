@@ -69,173 +69,171 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
         canonicalPath={own ? undefined : routes.profile.index.href({ handle: profile.handle })}
         bleed
       >
-        <div mix={clipStyle}>
-          <PageFrame mix={frameStyle}>
-            <RuledSection aria-label="Profile" rule={false} pad="none">
-              <div mix={splitStyle}>
-                <div mix={identityCell}>
-                  <GeneratedAvatar seed={profile.handle} name={firstName} />
-                  <div mix={identityText}>
-                    <p mix={handleStyle}>@{profile.handle}</p>
-                    <h1 mix={nameStyle}>{profile.name}</h1>
-                    <p mix={sinceStyle}>
-                      Learning since {profile.since}
-                      {profile.goal ? <> · wants to “{profile.goal}”</> : null}
-                    </p>
-                  </div>
-                </div>
-                <div mix={levelCell}>
-                  <div mix={levelBlock}>
-                    <p mix={levelLabel}>
-                      <span mix={levelNumber}>Level {profile.level}</span>
-                      <span aria-hidden="true" mix={levelDot}>
-                        {' · '}
-                      </span>
-                      {profile.levelName}
-                    </p>
-                    <ProgressBar
-                      pct={profile.levelPct}
-                      variant="level"
-                      label={`Level ${profile.level}: ${profile.levelPct}% of the way to level ${profile.level + 1}`}
-                      mix={levelBar}
-                    />
-                    <p mix={levelNext}>
-                      {profile.toNextLevel.toLocaleString('en-US')} neurons to level {profile.level + 1}
-                    </p>
-                  </div>
-                  <div mix={actionsStyle}>
-                    {own ? (
-                      <Keycap variant="ghost-mono" href={settingsHref} mix={actionKey}>
-                        Edit profile
-                      </Keycap>
-                    ) : null}
-                    <ShareButton url={shareUrl} title={`${profile.name} on bits`} />
-                  </div>
+        <PageFrame mix={frameStyle}>
+          <RuledSection aria-label="Profile" rule={false} pad="none">
+            <div mix={splitStyle}>
+              <div mix={identityCell}>
+                <GeneratedAvatar seed={profile.handle} name={firstName} />
+                <div mix={identityText}>
+                  <p mix={handleStyle}>@{profile.handle}</p>
+                  <h1 mix={nameStyle}>{profile.name}</h1>
+                  <p mix={sinceStyle}>
+                    Learning since {profile.since}
+                    {profile.goal ? <> · wants to “{profile.goal}”</> : null}
+                  </p>
                 </div>
               </div>
-            </RuledSection>
-
-            <RuledSection aria-label="Stats" pad="none">
-              <CellGrid cols={4} colsMid={4} colsPhone={2} pad={false} mix={statsGrid}>
-                <StatTile value={profile.neurons.toLocaleString('en-US')} label="neurons" color="var(--volt)" />
-                <StatTile value={profile.streak} label={`day streak · best ${profile.bestStreak}`} color="var(--ion)" />
-                <StatTile value={profile.lessonsFinished} label="lessons finished" color="var(--synapse)" />
-                <StatTile value={profile.promptsWritten} label="prompts written" color="var(--muted)" />
-              </CellGrid>
-            </RuledSection>
-
-            <RuledSection as="div" pad="none">
-              <div mix={splitStyle}>
-                <div mix={columnStyle}>
-                  {showJournal ? (
-                    <Panel
-                      id="journal-heading"
-                      title={`Prompt journal · ${profile.journal.length} prompts`}
-                      aside={
-                        <a href={routes.me.index.href()} data-rmx-prefetch={prefetchFor(routes.me.index.href())} mix={panelLinkStyle}>
-                          ← Overview
-                        </a>
-                      }
-                      flush
-                    >
-                      <JournalList entries={profile.journal} />
-                    </Panel>
-                  ) : (
-                    <>
-                      <Panel id="activity-heading" title="Activity" aside="Last 26 weeks">
-                        <ActivityGrid
-                          variant="bare"
-                          levels={profile.activity}
-                          end={profile.activityEnd}
-                          titles={activityTitles(profile.activity, profile.activityEnd)}
-                          label={`Activity heatmap: active ${activeDays} of the last 182 days; current streak ${profile.streak} ${profile.streak === 1 ? 'day' : 'days'}`}
-                          caption={`Active ${activeDays} of 182 days · best streak ${profile.bestStreak}`}
-                        />
-                      </Panel>
-
-                      <Panel
-                        id="courses-heading"
-                        title="Courses"
-                        aside={profile.courses.length ? `${profile.courses.length} started` : undefined}
-                        flush={profile.courses.length > 0}
-                      >
-                        {profile.courses.length ? (
-                          <ul mix={panelListStyle}>
-                            {profile.courses.map((course) => (
-                              <li key={course.slug}>
-                                <CourseRow course={course} own={own} handle={profile.handle} />
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <EmptyCourses />
-                        )}
-                      </Panel>
-
-                      {own ? (
-                        <Panel
-                          id="journal-heading"
-                          title="Prompt journal"
-                          aside={
-                            <a
-                              href={journalHref}
-                              data-rmx-prefetch={prefetchFor(journalHref)}
-                              mix={panelLinkStyle}
-                              aria-label={`All ${profile.journal.length} journal entries`}
-                            >
-                              All {profile.journal.length} →
-                            </a>
-                          }
-                          flush
-                        >
-                          <JournalList entries={profile.journal.slice(0, RECENT_JOURNAL)} />
-                        </Panel>
-                      ) : null}
-                    </>
-                  )}
+              <div mix={levelCell}>
+                <div mix={levelBlock}>
+                  <p mix={levelLabel}>
+                    <span mix={levelNumber}>Level {profile.level}</span>
+                    <span aria-hidden="true" mix={levelDot}>
+                      {' · '}
+                    </span>
+                    {profile.levelName}
+                  </p>
+                  <ProgressBar
+                    pct={profile.levelPct}
+                    variant="level"
+                    label={`Level ${profile.level}: ${profile.levelPct}% of the way to level ${profile.level + 1}`}
+                    mix={levelBar}
+                  />
+                  <p mix={levelNext}>
+                    {profile.toNextLevel.toLocaleString('en-US')} neurons to level {profile.level + 1}
+                  </p>
                 </div>
-
-                <aside aria-label={own ? 'Badges and account' : 'Badges'} mix={columnStyle}>
-                  <Panel id="badges-heading" title="Badges" aside={`${earned} of ${profile.badges.length}`} flush>
-                    <CellGrid as="ul" cols={3} colsMid={4} colsPhone={3} pad={false} aria-labelledby="badges-heading">
-                      {profile.badges.map((badge) => (
-                        <BadgeTile key={badge.name} name={badge.name} glyph={badge.glyph} color={badge.color} locked={!badge.earned} />
-                      ))}
-                    </CellGrid>
-                  </Panel>
-
+                <div mix={actionsStyle}>
                   {own ? (
-                    <Panel id="account-heading" title="Account">
-                      <KeyValueList
-                        items={[
-                          { term: 'Email', value: profile.email, mono: true },
-                          { term: 'Sign-in', value: profile.signIn },
-                          { term: 'Profile', value: profile.isPublic ? 'Public' : 'Private' },
-                        ]}
-                      />
-                      <div mix={accountLinks}>
-                        <a href={`${settingsHref}#export`} data-rmx-prefetch={prefetchFor(`${settingsHref}#export`)} mix={accountLink}>
-                          Download my data
-                        </a>
-                        <a href={settingsHref} data-rmx-prefetch={prefetchFor(settingsHref)} mix={[accountLink, quietLink]}>
-                          Settings →
-                        </a>
-                        <form method="post" action={routes.logout.action.href()} mix={signOutForm}>
-                          <button type="submit" mix={[accountLink, quietLink, signOutButton, busyCaret]}>
-                            Sign out
-                          </button>
-                        </form>
-                      </div>
-                    </Panel>
+                    <Keycap variant="ghost-mono" href={settingsHref} mix={actionKey}>
+                      Edit profile
+                    </Keycap>
                   ) : null}
-                </aside>
+                  <ShareButton url={shareUrl} title={`${profile.name} on bits`} />
+                </div>
               </div>
-            </RuledSection>
+            </div>
+          </RuledSection>
 
-            {/* The closing rule: the rails end on it, with their + marks. */}
-            <RuledSection as="div" pad="none" />
-          </PageFrame>
-        </div>
+          <RuledSection aria-label="Stats" pad="none">
+            <CellGrid cols={4} colsMid={4} colsPhone={2} pad={false} mix={statsGrid}>
+              <StatTile value={profile.neurons.toLocaleString('en-US')} label="neurons" color="var(--volt)" />
+              <StatTile value={profile.streak} label={`day streak · best ${profile.bestStreak}`} color="var(--ion)" />
+              <StatTile value={profile.lessonsFinished} label="lessons finished" color="var(--synapse)" />
+              <StatTile value={profile.promptsWritten} label="prompts written" color="var(--muted)" />
+            </CellGrid>
+          </RuledSection>
+
+          <RuledSection as="div" pad="none">
+            <div mix={splitStyle}>
+              <div mix={columnStyle}>
+                {showJournal ? (
+                  <Panel
+                    id="journal-heading"
+                    title={`Prompt journal · ${profile.journal.length} prompts`}
+                    aside={
+                      <a href={routes.me.index.href()} data-rmx-prefetch={prefetchFor(routes.me.index.href())} mix={panelLinkStyle}>
+                        ← Overview
+                      </a>
+                    }
+                    flush
+                  >
+                    <JournalList entries={profile.journal} />
+                  </Panel>
+                ) : (
+                  <>
+                    <Panel id="activity-heading" title="Activity" aside="Last 26 weeks">
+                      <ActivityGrid
+                        variant="bare"
+                        levels={profile.activity}
+                        end={profile.activityEnd}
+                        titles={activityTitles(profile.activity, profile.activityEnd)}
+                        label={`Activity heatmap: active ${activeDays} of the last 182 days; current streak ${profile.streak} ${profile.streak === 1 ? 'day' : 'days'}`}
+                        caption={`Active ${activeDays} of 182 days · best streak ${profile.bestStreak}`}
+                      />
+                    </Panel>
+
+                    <Panel
+                      id="courses-heading"
+                      title="Courses"
+                      aside={profile.courses.length ? `${profile.courses.length} started` : undefined}
+                      flush={profile.courses.length > 0}
+                    >
+                      {profile.courses.length ? (
+                        <ul mix={panelListStyle}>
+                          {profile.courses.map((course) => (
+                            <li key={course.slug}>
+                              <CourseRow course={course} own={own} handle={profile.handle} />
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <EmptyCourses />
+                      )}
+                    </Panel>
+
+                    {own ? (
+                      <Panel
+                        id="journal-heading"
+                        title="Prompt journal"
+                        aside={
+                          <a
+                            href={journalHref}
+                            data-rmx-prefetch={prefetchFor(journalHref)}
+                            mix={panelLinkStyle}
+                            aria-label={`All ${profile.journal.length} journal entries`}
+                          >
+                            All {profile.journal.length} →
+                          </a>
+                        }
+                        flush
+                      >
+                        <JournalList entries={profile.journal.slice(0, RECENT_JOURNAL)} />
+                      </Panel>
+                    ) : null}
+                  </>
+                )}
+              </div>
+
+              <aside aria-label={own ? 'Badges and account' : 'Badges'} mix={columnStyle}>
+                <Panel id="badges-heading" title="Badges" aside={`${earned} of ${profile.badges.length}`} flush>
+                  <CellGrid as="ul" cols={3} colsMid={4} colsPhone={3} pad={false} aria-labelledby="badges-heading">
+                    {profile.badges.map((badge) => (
+                      <BadgeTile key={badge.name} name={badge.name} glyph={badge.glyph} color={badge.color} locked={!badge.earned} />
+                    ))}
+                  </CellGrid>
+                </Panel>
+
+                {own ? (
+                  <Panel id="account-heading" title="Account">
+                    <KeyValueList
+                      items={[
+                        { term: 'Email', value: profile.email, mono: true },
+                        { term: 'Sign-in', value: profile.signIn },
+                        { term: 'Profile', value: profile.isPublic ? 'Public' : 'Private' },
+                      ]}
+                    />
+                    <div mix={accountLinks}>
+                      <a href={`${settingsHref}#export`} data-rmx-prefetch={prefetchFor(`${settingsHref}#export`)} mix={accountLink}>
+                        Download my data
+                      </a>
+                      <a href={settingsHref} data-rmx-prefetch={prefetchFor(settingsHref)} mix={[accountLink, quietLink]}>
+                        Settings →
+                      </a>
+                      <form method="post" action={routes.logout.action.href()} mix={signOutForm}>
+                        <button type="submit" mix={[accountLink, quietLink, signOutButton, busyCaret]}>
+                          Sign out
+                        </button>
+                      </form>
+                    </div>
+                  </Panel>
+                ) : null}
+              </aside>
+            </div>
+          </RuledSection>
+
+          {/* The closing rule: the rails end on it, with their + marks. */}
+          <RuledSection as="div" pad="none" />
+        </PageFrame>
       </Layout>
     )
   }
@@ -254,9 +252,6 @@ const MOBILE = '@media (max-width: 480px)'
 const FORCED = '@media (forced-colors: active)'
 const line = 'var(--border-w) solid var(--line-cell)'
 
-// The full-bleed rules are 100vw wide; beside a classic scrollbar that is
-// wider than the page, so clip them here, as the landing's root does.
-const clipStyle = css({ overflowX: 'clip' })
 const frameStyle = css({ marginBottom: 'var(--space-16)', [MOBILE]: { marginBottom: 'var(--space-10)' } })
 
 // Two columns at 3:1 from 1024px, so the column line falls on the border

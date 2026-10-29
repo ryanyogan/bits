@@ -230,16 +230,15 @@ function VideoRow(handle: Handle<{ slug: string; video: VideoUpload }>) {
   }
 }
 
+// The report and the panels are cells of the ruled column (decision 047):
+// the band and the grid draw the hairlines; each pads itself to the inset.
 const cardStyle = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: 'var(--space-4_5)',
+  gap: 'var(--space-5)',
   minWidth: 0,
-  padding: 'var(--space-6)',
-  borderRadius: 'var(--radius-20)',
-  background: 'var(--surface)',
-  border: 'var(--border-w) solid var(--line)',
-  '@media (max-width: 480px)': { padding: 'var(--space-4_5)' },
+  padding: 'var(--space-8) var(--section-pad-x)',
+  '@media (max-width: 480px)': { padding: 'var(--space-6) var(--section-pad-x)' },
 })
 const headStyle = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-3_5)', flexWrap: 'wrap' })
 const pathStyle = css({
@@ -260,11 +259,10 @@ const actionsStyle = css({
   alignItems: 'flex-start',
   '@media (max-width: 480px)': { width: '100%', marginLeft: 0, '& > *': { flex: '1 1 0' } },
 })
-// "Preview draft": ghost-mono at 44px, radius 12, 13px (spec §2c).
+// "Preview draft": ghost-mono at 44px, 13px (spec §2c).
 const previewKey = css({
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-4)',
-  borderRadius: 'var(--radius-12)',
   fontSize: 'var(--fs-13)',
   '@media (max-width: 480px)': { width: '100%' },
 })
@@ -283,11 +281,9 @@ const confirmStyle = css({
   margin: 'auto',
   width: 'min(420px, calc(100vw - 32px))',
   padding: 'var(--space-6)',
-  borderRadius: 'var(--radius-20)',
   background: 'var(--surface)',
   border: 'var(--border-w) solid var(--line-control)',
   color: 'var(--text)',
-  boxShadow: 'var(--shadow-float)',
   '&::backdrop': { background: 'var(--ink-a70)' },
 })
 const confirmTitle = css({
@@ -305,7 +301,6 @@ const cancelKey = css({
   alignItems: 'center',
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-4)',
-  borderRadius: 'var(--radius-12)',
   border: 'var(--border-w) solid var(--line-control)',
   background: 'transparent',
   color: 'var(--text)',
@@ -319,33 +314,45 @@ const cancelKey = css({
 const noticeStyle = css({
   margin: 0,
   padding: 'var(--space-2_5) var(--space-3)',
-  borderRadius: 'var(--radius-10)',
   background: 'var(--volt-a08)',
-  border: 'var(--border-w) solid var(--volt-a35)',
+  border: 'var(--border-w) solid var(--volt-edge)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-13)',
   color: 'var(--volt)',
 })
 const noticeError = css({ background: 'var(--danger-tint)', borderColor: 'var(--danger-line)', color: 'var(--danger)' })
 
+// Checks as cells sharing hairlines (decision 047): the list draws the top
+// and left edges, each cell its right and bottom, so no line doubles.
 const itemsGrid = css({
   listStyle: 'none',
   margin: 0,
   padding: 0,
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))',
-  gap: 'var(--space-2)',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))',
+  borderTop: 'var(--border-w) solid var(--line-cell)',
+  borderLeft: 'var(--border-w) solid var(--line-cell)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-13)',
+  '@media (forced-colors: active)': { borderColor: 'GrayText', '& > li': { borderColor: 'GrayText' } },
 })
 const itemStyle = css({
-  padding: 'var(--space-2_5) var(--space-3)',
-  borderRadius: 'var(--radius-10)',
+  padding: 'var(--space-3) var(--space-3_5)',
+  borderRight: 'var(--border-w) solid var(--line-cell)',
+  borderBottom: 'var(--border-w) solid var(--line-cell)',
   background: 'var(--well)',
   color: 'var(--text-body)',
   overflowWrap: 'anywhere',
-  '&[data-level="warning"]': { background: 'var(--warn-tint)', border: 'var(--border-w) solid var(--warn-line)', color: 'var(--warn)' },
-  '&[data-level="error"]': { background: 'var(--danger-tint)', border: 'var(--border-w) solid var(--danger-line)', color: 'var(--danger)' },
+  '&[data-level="warning"]': {
+    background: 'var(--warn-tint)',
+    boxShadow: 'inset var(--border-w-strong) 0 0 var(--warn-line)',
+    color: 'var(--warn)',
+  },
+  '&[data-level="error"]': {
+    background: 'var(--danger-tint)',
+    boxShadow: 'inset var(--border-w-strong) 0 0 var(--danger-line)',
+    color: 'var(--danger)',
+  },
 })
 const glyphStyle = css({ '[data-level="ok"] > &': { color: 'var(--volt)' } })
 
@@ -354,11 +361,8 @@ const panelStyle = css({
   flexDirection: 'column',
   gap: 'var(--space-3_5)',
   minWidth: 0,
-  padding: 'var(--space-6)',
-  borderRadius: 'var(--radius-20)',
-  background: 'var(--surface)',
-  border: 'var(--border-w) solid var(--line)',
-  '@media (max-width: 480px)': { padding: 'var(--space-4_5)' },
+  padding: 'var(--space-8) var(--section-pad-x)',
+  '@media (max-width: 480px)': { padding: 'var(--space-6) var(--section-pad-x)' },
 })
 const panelHead = css({ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 'var(--space-3)' })
 const rowsStyle = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column' })

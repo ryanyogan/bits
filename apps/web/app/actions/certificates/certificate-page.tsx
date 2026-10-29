@@ -63,95 +63,93 @@ export function CertificatePage(handle: Handle<CertificatePageProps>) {
         }
         bleed
       >
-        <div mix={clipStyle}>
-          <PageFrame mix={frameStyle}>
-            {certificate.isPrivate ? (
-              <RuledSection as="div" rule={false} pad="tight" mix={noPrint}>
-                <Callout tone="info" title="Only you can see this.">
-                  Your profile is private, so this certificate is too. Make your profile public in{' '}
-                  <a href={routes.settings.index.href()} data-rmx-prefetch={prefetchFor(routes.settings.index.href())}>
-                    Settings
-                  </a>{' '}
-                  to share it.
-                </Callout>
-              </RuledSection>
-            ) : null}
-
-            <RuledSection as="div" rule={certificate.isPrivate} pad="none">
-              <article aria-labelledby="certificate-title" mix={certStyle}>
-                <div mix={stripStyle}>
-                  <p mix={brandStyle}>
-                    <BrandMark size={22} />
-                    <span>{APP_NAME}</span>
-                  </p>
-                  <p mix={kindStyle}>Certificate of completion</p>
-                </div>
-
-                <div mix={splitStyle}>
-                  <div mix={mainCell}>
-                    <p mix={leadStyle}>Every lesson of</p>
-                    <h1 id="certificate-title" mix={titleStyle}>
-                      <span class="sr-only">{`${name} finished `}</span>
-                      {course.title}
-                    </h1>
-                    <p mix={awardStyle}>
-                      Finished by{' '}
-                      <a href={profileHref} data-rmx-prefetch={prefetchFor(profileHref)} mix={nameStyle}>
-                        {name}
-                      </a>{' '}
-                      <span mix={handleStyle}>@{certificate.handle}</span>
-                    </p>
-                  </div>
-                  <div mix={artCell}>
-                    <div mix={coverWrap}>
-                      <CourseCover pattern={course.pattern} tone={course.tone} sigil={course.sigil} variant="art" mix={coverFill} />
-                      <span mix={badgeStyle}>
-                        <HexBadge name={`Badge: ${badge.name}`} glyph={badge.glyph} color={badge.color} />
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <dl mix={factsStyle}>
-                  <div>
-                    <dt>Finished</dt>
-                    <dd>{finished}</dd>
-                  </div>
-                  <div>
-                    <dt>Lessons</dt>
-                    <dd>{`${lessons} of ${lessons}`}</dd>
-                  </div>
-                  <div>
-                    <dt>Course</dt>
-                    <dd>{`${course.level} · ${course.track} · ~${course.mins} min`}</dd>
-                  </div>
-                  <div>
-                    <dt>Badge</dt>
-                    <dd>{badge.name}</dd>
-                  </div>
-                </dl>
-              </article>
+        <PageFrame mix={frameStyle}>
+          {certificate.isPrivate ? (
+            <RuledSection as="div" rule={false} pad="tight" mix={noPrint}>
+              <Callout tone="info" title="Only you can see this.">
+                Your profile is private, so this certificate is too. Make your profile public in{' '}
+                <a href={routes.settings.index.href()} data-rmx-prefetch={prefetchFor(routes.settings.index.href())}>
+                  Settings
+                </a>{' '}
+                to share it.
+              </Callout>
             </RuledSection>
+          ) : null}
 
-            <RuledSection as="div" pad="tight" mix={noPrint}>
-              <div mix={footStyle}>
-                <div mix={actionsStyle}>
-                  {certificate.isPrivate ? null : <ShareButton url={shareUrl} title={title} />}
-                  <Keycap variant="ghost-mono" href={routes.courses.course.index.href({ course: course.slug })}>
-                    Take this course →
-                  </Keycap>
-                </div>
-                <p mix={noteStyle}>
-                  Every lesson's checks were passed on {APP_TITLE}, where the server re-runs them on each save. This is a
-                  record of finishing a free course, not an accredited qualification.
+          <RuledSection as="div" rule={certificate.isPrivate} pad="none">
+            <article aria-labelledby="certificate-title" mix={certStyle}>
+              <div mix={stripStyle}>
+                <p mix={brandStyle}>
+                  <BrandMark size={22} />
+                  <span>{APP_NAME}</span>
                 </p>
+                <p mix={kindStyle}>Certificate of completion</p>
               </div>
-            </RuledSection>
 
-            {/* The closing rule: the rails end on it, with their + marks. */}
-            <RuledSection as="div" pad="none" />
-          </PageFrame>
-        </div>
+              <div mix={splitStyle}>
+                <div mix={mainCell}>
+                  <p mix={leadStyle}>Every lesson of</p>
+                  <h1 id="certificate-title" mix={titleStyle}>
+                    <span class="sr-only">{`${name} finished `}</span>
+                    {course.title}
+                  </h1>
+                  <p mix={awardStyle}>
+                    Finished by{' '}
+                    <a href={profileHref} data-rmx-prefetch={prefetchFor(profileHref)} mix={nameStyle}>
+                      {name}
+                    </a>{' '}
+                    <span mix={handleStyle}>@{certificate.handle}</span>
+                  </p>
+                </div>
+                <div mix={artCell}>
+                  <div mix={coverWrap}>
+                    <CourseCover pattern={course.pattern} tone={course.tone} sigil={course.sigil} variant="art" mix={coverFill} />
+                    <span mix={badgeStyle}>
+                      <HexBadge name={`Badge: ${badge.name}`} glyph={badge.glyph} color={badge.color} />
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <dl mix={factsStyle}>
+                <div>
+                  <dt>Finished</dt>
+                  <dd>{finished}</dd>
+                </div>
+                <div>
+                  <dt>Lessons</dt>
+                  <dd>{`${lessons} of ${lessons}`}</dd>
+                </div>
+                <div>
+                  <dt>Course</dt>
+                  <dd>{`${course.level} · ${course.track} · ~${course.mins} min`}</dd>
+                </div>
+                <div>
+                  <dt>Badge</dt>
+                  <dd>{badge.name}</dd>
+                </div>
+              </dl>
+            </article>
+          </RuledSection>
+
+          <RuledSection as="div" pad="tight" mix={noPrint}>
+            <div mix={footStyle}>
+              <div mix={actionsStyle}>
+                {certificate.isPrivate ? null : <ShareButton url={shareUrl} title={title} />}
+                <Keycap variant="ghost-mono" href={routes.courses.course.index.href({ course: course.slug })}>
+                  Take this course →
+                </Keycap>
+              </div>
+              <p mix={noteStyle}>
+                Every lesson's checks were passed on {APP_TITLE}, where the server re-runs them on each save. This is a
+                record of finishing a free course, not an accredited qualification.
+              </p>
+            </div>
+          </RuledSection>
+
+          {/* The closing rule: the rails end on it, with their + marks. */}
+          <RuledSection as="div" pad="none" />
+        </PageFrame>
       </Layout>
     )
   }
@@ -174,9 +172,6 @@ const MOBILE = '@media (max-width: 480px)'
 const FORCED = '@media (forced-colors: active)'
 const line = 'var(--border-w) solid var(--line-cell)'
 
-// The full-bleed rules are 100vw wide; beside a classic scrollbar that is
-// wider than the page, so clip them here, as the landing's root does.
-const clipStyle = css({ overflowX: 'clip' })
 const frameStyle = css({ marginBottom: 'var(--space-16)', [MOBILE]: { marginBottom: 'var(--space-10)' } })
 const noPrint = css({ '@media print': { display: 'none' } })
 

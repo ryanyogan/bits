@@ -1,14 +1,14 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
-import { Card } from '@bits/ui/card'
-import { Eyebrow } from '@bits/ui/eyebrow'
 import { Keycap } from '@bits/ui/keycap'
+import { PageFrame } from '@bits/ui/page-frame'
 import { PendingSubmit } from '@bits/ui/pending-submit'
 
 import type { Viewer } from '../../../auth/identity.ts'
 import { APP_NAME } from '../../../config.ts'
 import { routes } from '../../../routes.ts'
 import { Layout } from '../../../ui/layout.tsx'
+import { PageHead } from '../../../ui/page-head.tsx'
 
 export type InvitePageProps =
   /** Signed in as the invited address: one click accepts. */
@@ -26,14 +26,14 @@ export function InvitePage(handle: Handle<InvitePageProps>) {
   return () => {
     let props = handle.props
     return (
-      <Layout title={titles[props.kind]} viewer={props.viewer} bleed>
-        <div mix={pageStyle}>
-          <Card variant="page" mix={cardStyle}>
-            <Eyebrow as="p">Author invite</Eyebrow>
-            {props.kind === 'accept' ? (
-              <>
-                <h1 mix={headingStyle}>Write courses on {APP_NAME}?</h1>
-                <p mix={leadStyle}>
+      <Layout title={titles[props.kind]} viewer={props.viewer}>
+        <PageFrame>
+          {props.kind === 'accept' ? (
+            <PageHead
+              label="Author invite"
+              title={`Write courses on ${APP_NAME}?`}
+              lead={
+                <>
                   {props.from ? <>@{props.from} invited you to be an author. </> : <>You’re invited to be an author. </>}
                   {props.courses.length ? (
                     <>
@@ -42,40 +42,46 @@ export function InvitePage(handle: Handle<InvitePageProps>) {
                   ) : (
                     <>You can upload and publish your own courses.</>
                   )}
-                </p>
-                <form method="post" action={routes.admin.invite.action.href()}>
-                  <input type="hidden" name="token" value={props.token} />
-                  <PendingSubmit label="Accept the invite →" pendingLabel="Accepting…" block />
-                </form>
-              </>
-            ) : props.kind === 'wrong-account' ? (
-              <>
-                <h1 mix={headingStyle}>This invite is for someone else.</h1>
-                <p mix={leadStyle}>
+                </>
+              }
+            >
+              <form method="post" action={routes.admin.invite.action.href()} mix={actionStyle}>
+                <input type="hidden" name="token" value={props.token} />
+                <PendingSubmit label="Accept the invite →" pendingLabel="Accepting…" block />
+              </form>
+            </PageHead>
+          ) : props.kind === 'wrong-account' ? (
+            <PageHead
+              label="Author invite"
+              title="This invite is for someone else."
+              lead={
+                <>
                   It was sent to <span mix={monoStyle}>{props.invited}</span>, and you’re signed in as{' '}
                   <span mix={monoStyle}>{props.viewer.email}</span>. Sign out, open the link from the email again and
                   sign in with the address it was sent to.
-                </p>
-                <form method="post" action={routes.logout.action.href()}>
-                  <Keycap type="submit" variant="dark" block>
-                    Sign out
-                  </Keycap>
-                </form>
-              </>
-            ) : (
-              <>
-                <h1 mix={headingStyle}>This invite has expired.</h1>
-                <p mix={leadStyle}>
-                  It was already used, withdrawn, or is more than 7 days old. Ask the admin who invited you for a new
-                  one.
-                </p>
+                </>
+              }
+            >
+              <form method="post" action={routes.logout.action.href()} mix={actionStyle}>
+                <Keycap type="submit" variant="dark" block>
+                  Sign out
+                </Keycap>
+              </form>
+            </PageHead>
+          ) : (
+            <PageHead
+              label="Author invite"
+              title="This invite has expired."
+              lead="It was already used, withdrawn, or is more than 7 days old. Ask the admin who invited you for a new one."
+            >
+              <div mix={actionStyle}>
                 <Keycap href={routes.home.href()} variant="dark" block>
                   Back to {APP_NAME}
                 </Keycap>
-              </>
-            )}
-          </Card>
-        </div>
+              </div>
+            </PageHead>
+          )}
+        </PageFrame>
       </Layout>
     )
   }
@@ -87,20 +93,5 @@ const titles = {
   expired: 'Invite expired',
 } as const
 
-const pageStyle = css({
-  maxWidth: '560px',
-  margin: '0 auto',
-  padding: 'var(--space-14) var(--page-gutter) var(--space-24)',
-  '@media (max-width: 480px)': { padding: 'var(--space-8) var(--space-4) var(--space-16)' },
-})
-const cardStyle = css({ padding: 'var(--space-8)', gap: 'var(--space-5)', '@media (max-width: 480px)': { padding: 'var(--space-5)' } })
-const headingStyle = css({
-  margin: 0,
-  fontFamily: 'var(--font-display)',
-  fontWeight: 800,
-  fontSize: 'clamp(28px, 4vw, 40px)',
-  lineHeight: 1.05,
-  letterSpacing: 'var(--tracking-tight)',
-})
-const leadStyle = css({ margin: 0, fontSize: 'var(--fs-16)', lineHeight: 1.6, color: 'var(--text-lead)' })
+const actionStyle = css({ width: '100%', maxWidth: '360px', paddingTop: 'var(--space-3)' })
 const monoStyle = css({ fontFamily: 'var(--font-mono)', color: 'var(--text)', overflowWrap: 'anywhere' })

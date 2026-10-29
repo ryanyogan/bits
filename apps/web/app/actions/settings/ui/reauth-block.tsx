@@ -45,9 +45,12 @@ const blockStyle = css({
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--space-3)',
-  padding: 'var(--space-4)',
-  borderRadius: 'var(--radius-12)',
-  border: 'var(--border-w) dashed var(--line-strong)',
+  padding: 'var(--space-5)',
+  // Flat, squared (decision 047): a hairline box with an ion rule on its
+  // left edge, the "one more step" signal.
+  border: 'var(--border-w) solid var(--line-cell)',
+  boxShadow: 'inset var(--border-w-strong) 0 0 var(--ion-edge)',
+  background: 'var(--well)',
 })
 
 const textStyle = css({ margin: 0, fontSize: 'var(--fs-15)', lineHeight: 1.55, color: 'var(--text-body)' })

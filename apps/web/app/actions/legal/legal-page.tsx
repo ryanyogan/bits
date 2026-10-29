@@ -1,11 +1,13 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
-import { Eyebrow } from '@bits/ui/eyebrow'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
+import { PageFrame } from '@bits/ui/page-frame'
+import { RuledSection } from '@bits/ui/ruled-section'
 
 import type { Viewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
 import { Layout } from '../../ui/layout.tsx'
+import { PageHead } from '../../ui/page-head.tsx'
 
 export interface LegalPageProps {
   title: string
@@ -30,47 +32,67 @@ export function LegalPage(handle: Handle<LegalPageProps>) {
     let privacy = routes.legal.privacy.href()
     return (
       <Layout title={title} description={description} viewer={viewer} currentPath={path} canonicalPath={path}>
-        <article mix={articleStyle} aria-labelledby="legal-title">
-          <header mix={headerStyle}>
-            <Eyebrow tone="dim" size="sm">{`Last updated ${updated}`}</Eyebrow>
-            <h1 id="legal-title" mix={titleStyle}>
-              {title}
-            </h1>
-            <p mix={leadStyle}>{description}</p>
-          </header>
-          <div mix={proseStyle}>{children}</div>
-          <nav aria-label="Policies" mix={otherStyle}>
-            <a href={terms} aria-current={path === terms ? 'page' : undefined} data-rmx-prefetch={prefetchFor(terms)}>
-              Terms
-            </a>
-            <a href={privacy} aria-current={path === privacy ? 'page' : undefined} data-rmx-prefetch={prefetchFor(privacy)}>
-              Privacy
-            </a>
-            <a href={routes.settings.index.href()} data-rmx-prefetch={prefetchFor(routes.settings.index.href())}>Settings: export or delete your data</a>
-          </nav>
-        </article>
+        <PageFrame>
+          <PageHead label="Policies" aside={`Last updated ${updated}`} title={title} titleId="legal-title" lead={description} />
+          <RuledSection pad="none" aria-label={`${title} in full`}>
+            <div mix={bodyStyle}>
+              <nav aria-label="Policies" mix={sideStyle}>
+                <a href={terms} aria-current={path === terms ? 'page' : undefined} data-rmx-prefetch={prefetchFor(terms)}>
+                  Terms
+                </a>
+                <a href={privacy} aria-current={path === privacy ? 'page' : undefined} data-rmx-prefetch={prefetchFor(privacy)}>
+                  Privacy
+                </a>
+                <a href={routes.settings.index.href()} data-rmx-prefetch={prefetchFor(routes.settings.index.href())}>
+                  Settings: export or delete your data
+                </a>
+              </nav>
+              <div mix={proseStyle}>{children}</div>
+            </div>
+          </RuledSection>
+        </PageFrame>
       </Layout>
     )
   }
 }
 
-const articleStyle = css({
-  maxWidth: 'var(--read-width)',
-  margin: '0 auto',
+// A side column of policy links beside the prose, sharing one hairline;
+// stacked above it on phones.
+const bodyStyle = css({
+  display: 'grid',
+  gridTemplateColumns: '260px minmax(0, 1fr)',
+  '@media (max-width: 899.98px)': { gridTemplateColumns: 'minmax(0, 1fr)' },
+})
+const sideStyle = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: 'var(--space-10)',
+  alignSelf: 'start',
+  position: 'sticky',
+  top: 'var(--shell-h)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-13)',
+  '& a': {
+    display: 'flex',
+    alignItems: 'center',
+    minHeight: 'var(--control-field)',
+    padding: 'var(--space-3) var(--section-pad-x)',
+    boxSizing: 'border-box',
+    borderBottom: 'var(--border-w) solid var(--line-cell)',
+    color: 'var(--muted)',
+    textDecoration: 'none',
+  },
+  '& a:hover': { color: 'var(--text)', background: 'var(--fill-hover)' },
+  '& a:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
+  '& a[aria-current="page"]': { color: 'var(--text)', boxShadow: 'inset var(--border-w-strong) 0 0 var(--volt)' },
+  '@media (forced-colors: active)': { '& a': { borderColor: 'GrayText' }, '& a[aria-current="page"]': { textDecoration: 'underline' } },
+  '@media (max-width: 899.98px)': { position: 'static', borderBottom: 0 },
 })
-const headerStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' })
-const titleStyle = css({
-  margin: 0,
-  fontFamily: 'var(--font-display)',
-  fontSize: 'var(--type-h2-size)',
-  lineHeight: 'var(--type-h2-leading)',
-  letterSpacing: 'var(--type-h2-tracking)',
-})
-const leadStyle = css({ margin: 0, fontSize: 'var(--fs-17)', lineHeight: 1.6, color: 'var(--text-lead)' })
 const proseStyle = css({
+  maxWidth: 'calc(var(--read-width) + 2 * var(--section-pad-x))',
+  padding: 'var(--space-14) var(--section-pad-x) var(--section-pad-y)',
+  borderLeft: 'var(--border-w) solid var(--line-cell)',
+  '@media (max-width: 899.98px)': { borderLeft: 0, paddingTop: 'var(--space-10)' },
+  '@media (forced-colors: active)': { borderColor: 'GrayText' },
   fontSize: 'var(--type-prose-size)',
   lineHeight: 'var(--type-prose-leading)',
   color: 'var(--text-body)',
@@ -92,20 +114,4 @@ const proseStyle = css({
     textUnderlineOffset: 'var(--link-underline-offset)',
     textDecorationThickness: 'var(--link-underline-thickness)',
   },
-})
-const otherStyle = css({
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 'var(--space-2) var(--space-6)',
-  paddingTop: 'var(--space-6)',
-  borderTop: 'var(--border-w) solid var(--line)',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-13)',
-  '& a': {
-    display: 'inline-flex',
-    alignItems: 'center',
-    minHeight: 'var(--touch-target)',
-    color: 'var(--muted)',
-  },
-  '& a:hover, & a[aria-current="page"]': { color: 'var(--text)' },
 })

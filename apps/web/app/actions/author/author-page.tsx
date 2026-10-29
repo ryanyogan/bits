@@ -2,17 +2,20 @@ import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 import { CourseCover } from '@bits/ui/course-cover'
 import { EmptyState } from '@bits/ui/empty-state'
-import { MonoHeading } from '@bits/ui/eyebrow'
+import { CellGrid, cellLinkStyle } from '@bits/ui/cell-grid'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
+import { PageFrame } from '@bits/ui/page-frame'
+import { RuledSection } from '@bits/ui/ruled-section'
 
 import type { Viewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
 import { Layout } from '../../ui/layout.tsx'
+import { PageHead } from '../../ui/page-head.tsx'
 import { counts, plural, repo, type AuthorCourse } from './data.ts'
 import { DropZone } from './public/drop-zone.tsx'
 import { BlockTable } from './ui/block-table.tsx'
 import { RepoSyncCard } from './ui/repo-sync-card.tsx'
-import { AuthorHeader, authorMain } from './ui/shell.tsx'
+import { authorLeadCode, cellPad, stripLinkStyle } from './ui/shell.tsx'
 import { StatusTag, type BuildStatus } from './ui/status-tag.tsx'
 
 export interface AuthorPageProps {
@@ -30,53 +33,64 @@ export function AuthorPage(handle: Handle<AuthorPageProps>) {
   return () => {
     let { courses, viewer, currentPath, repoSaved } = handle.props
     return (
-      <Layout title="Write a course" viewer={viewer} currentPath={currentPath} bleed>
-        <div mix={authorMain}>
-          <AuthorHeader
-            eyebrow="AUTHORS"
+      <Layout title="Write a course" viewer={viewer} currentPath={currentPath}>
+        <PageFrame>
+          <PageHead
+            label="Authors"
             title="Courses are just markdown."
+            aside={
+              viewer?.role === 'admin' ? (
+                <a
+                  href={routes.admin.authors.index.href()}
+                  data-rmx-prefetch={prefetchFor(routes.admin.authors.index.href())}
+                  mix={stripLinkStyle}
+                >
+                  Manage authors →
+                </a>
+              ) : undefined
+            }
             lead={
-              <>
+              <span mix={authorLeadCode}>
                 A folder of <code>.md</code> files plus a few <code data-tone="volt">:::blocks</code> for the
                 interactive bits. Push to GitHub or drop the folder here — it's validated, built and published.
-              </>
+              </span>
             }
           />
-          {viewer?.role === 'admin' ? (
-            <a
-              href={routes.admin.authors.index.href()}
-              data-rmx-prefetch={prefetchFor(routes.admin.authors.index.href())}
-              mix={adminLinkStyle}
-            >
-              Manage authors and invites →
-            </a>
-          ) : null}
 
-          <section aria-label="Upload or sync" mix={uploadGrid}>
-            <DropZone action={routes.api.authorUpload.href()} />
-            <RepoSyncCard repo={repo} saved={repoSaved} />
-          </section>
+          <RuledSection aria-label="Upload or sync" pad="none">
+            <CellGrid cols={2} colsMid={2} pad={false}>
+              <div mix={cellPad}>
+                <DropZone action={routes.api.authorUpload.href()} />
+              </div>
+              <RepoSyncCard repo={repo} saved={repoSaved} />
+            </CellGrid>
+          </RuledSection>
 
-          <section aria-labelledby="your-courses" mix={sectionStyle}>
-            <MonoHeading id="your-courses">YOUR COURSES</MonoHeading>
+          <RuledSection
+            aria-labelledby="your-courses"
+            label={<span id="your-courses">Your courses</span>}
+            aside={courses.length ? plural(courses.length, 'course') : undefined}
+            pad="none"
+          >
             {courses.length ? (
-              <ul mix={listStyle}>
+              <CellGrid as="ul" cols={1} colsMid={1} pad={false} aria-labelledby="your-courses">
                 {courses.map((item) => (
                   <li key={item.course.slug}>
                     <AuthorCourseRow item={item} />
                   </li>
                 ))}
-              </ul>
+              </CellGrid>
             ) : (
-              <EmptyState title="No courses yet." hint="Drop a folder above or connect a repo." />
+              <div mix={cellPad}>
+                <EmptyState title="No courses yet." hint="Drop a folder above or connect a repo." />
+              </div>
             )}
-          </section>
+          </RuledSection>
 
-          <section aria-labelledby="the-blocks" mix={sectionStyle}>
-            <MonoHeading id="the-blocks">THE BLOCKS</MonoHeading>
+          <RuledSection aria-labelledby="the-blocks" label={<span id="the-blocks">The blocks</span>} pad="none">
             <BlockTable />
-          </section>
-        </div>
+          </RuledSection>
+        </PageFrame>
       </Layout>
     )
   }
@@ -104,7 +118,7 @@ function AuthorCourseRow(handle: Handle<{ item: AuthorCourse }>) {
       `last push ${item.lastPush}`,
     ].join(' · ')
     return (
-      <a href={routes.author.course.index.href({ course: course.slug })} data-rmx-prefetch={prefetchFor(routes.author.course.index.href({ course: course.slug }))} mix={rowStyle}>
+      <a href={routes.author.course.index.href({ course: course.slug })} data-rmx-prefetch={prefetchFor(routes.author.course.index.href({ course: course.slug }))} mix={[cellLinkStyle, rowStyle]}>
         <CourseCover pattern={course.pattern} tone={course.tone} sigil={course.sigil} variant="thumb" mix={thumbStyle} />
         <span mix={bodyStyle}>
           <span mix={titleStyle}>{course.title}</span>
@@ -125,43 +139,19 @@ function AuthorCourseRow(handle: Handle<{ item: AuthorCourse }>) {
   }
 }
 
-// Admins only (decision 037): a mono volt link, like Settings' secondary links.
-const adminLinkStyle = css({
-  alignSelf: 'flex-start',
-  display: 'inline-flex',
-  alignItems: 'center',
-  minHeight: 'var(--touch-target)',
-  marginTop: 'calc(var(--space-6) * -1)',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-13)',
-  color: 'var(--volt)',
-  textDecoration: 'none',
-  '&:hover': { color: 'var(--volt-link-hover)' },
-})
-
-const uploadGrid = css({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(min(380px, 100%), 1fr))',
-  gap: 'var(--space-4)',
-})
-const sectionStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', minWidth: 0 })
-const listStyle = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-3_5)' })
+// A whole-cell link (cellLinkStyle) laid out as a row: thumb, title, tags.
 const rowStyle = css({
-  display: 'flex',
+  // The grid's cells are unpadded: a slimmer row than a card cell.
+  margin: 0,
+  padding: 'var(--space-4) var(--section-pad-x)',
+  boxSizing: 'border-box',
+  flexDirection: 'row',
   alignItems: 'center',
   gap: 'var(--space-4_5)',
   flexWrap: 'wrap',
-  padding: 'var(--space-4)',
-  borderRadius: 'var(--radius-16)',
-  background: 'var(--surface)',
-  border: 'var(--border-w) solid var(--line)',
-  color: 'var(--text)',
-  textDecoration: 'none',
-  transition: 'border-color var(--duration-fast)',
-  '&:hover': { color: 'var(--text)', borderColor: 'var(--line-control)' },
   '@media (max-width: 480px)': { gap: 'var(--space-3_5)' },
 })
-const thumbStyle = css({ '@media (max-width: 480px)': { width: '48px', height: '48px', borderRadius: 'var(--radius-12)' } })
+const thumbStyle = css({ '@media (max-width: 480px)': { width: '48px', height: '48px' } })
 const bodyStyle = css({ flex: '1 1 220px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-1_5)' })
 const titleStyle = css({ fontSize: 'var(--fs-16)', fontWeight: 600 })
 const metaStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })

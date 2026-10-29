@@ -103,8 +103,7 @@ const rowStyle = css({
   flexWrap: 'wrap',
   gap: 'var(--space-2) var(--space-3)',
   padding: 'var(--space-1_5) var(--space-2) var(--space-1_5) var(--space-4)',
-  borderRadius: 'var(--radius-12)',
-  border: 'var(--border-w) solid var(--line-strong)',
+  // A row of the method list's box, which draws the hairlines (decision 047).
   background: 'var(--well)',
 })
 
