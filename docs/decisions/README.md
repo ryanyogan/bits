@@ -57,3 +57,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 049 | [Scroll restoration and the scrollbar gutter](049-scroll-restoration-and-gutter.md) |
 | 050 | [Sections breathe: framed plates with the ground between them](050-sections-breathe.md) |
 | 051 | [One field spec, one row of phone lesson chrome](051-shared-field-spec.md) |
+| 052 | [Quick checks in the prompt window: the `:::ask` block](052-ask-block.md) |

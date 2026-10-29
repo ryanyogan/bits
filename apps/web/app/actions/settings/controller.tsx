@@ -3,6 +3,7 @@ import {
   deleteUserAndInvites,
   deleteUserSessions,
   findUserByHandle,
+  listAskAttempts,
   listAttempts,
   listCompletedLessons,
   listUserBadges,
@@ -53,11 +54,12 @@ export default createController(routes.settings, {
 
     async export(context) {
       let user = context.auth.identity
-      let [account, lessons, attempts, badges] = await Promise.all([
+      let [account, lessons, attempts, badges, answers] = await Promise.all([
         getAccountSettings(context.db, user, context.session.id),
         listCompletedLessons(context.db, user.id),
         listAttempts(context.db, user.id, 10_000),
         listUserBadges(context.db, user.id),
+        listAskAttempts(context.db, user.id, 10_000),
       ])
       let body = {
         format: 'bits-export',
@@ -98,6 +100,15 @@ export default createController(routes.settings, {
                 model: row.model,
                 tokens: { input: row.input_tokens, output: row.output_tokens },
               }),
+          at: new Date(row.created_at).toISOString(),
+        })),
+        // Quick-check answers, graded on the server (decision 052).
+        answers: answers.map((row) => ({
+          course: row.course_id,
+          lesson: row.lesson_slug,
+          ask: row.ask_id,
+          answer: row.answer,
+          correct: row.correct,
           at: new Date(row.created_at).toISOString(),
         })),
       }

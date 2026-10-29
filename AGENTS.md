@@ -350,6 +350,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | CodeInput | code-input.tsx | name, length, error, autoSubmit, autoFocus, value | island (one input without JS) |
 | Switch | switch.tsx | name, legend, options, value | static (native radios) |
 | QuizChoice | quiz-choice.tsx | name, question, options, multiple, explanation, action, formAction, label (header strip, default "quick check") | static (POST form) |
+| AskPanel | ask-panel.tsx | id, question, placeholder, choices, multiple, xp, endpoint (`/api/ask`; absent in the preview), initial (flashed verdict), passed, label; a native form to `/api/ask` without JS, `bits:gate` + `bits:reward` on a right answer (decision 052) | island |
 | PageFrame | page-frame.tsx | as div/main, id, rails (the centred column, `--frame-max` wide, `--section-gap` under its last plate; `rails` only for a sectionless workspace like the lesson page; decisions 047, 050) | static |
 | RuledSection | ruled-section.tsx | as, id, aria-labelledby, index, label, labelAs p/h2/h3 + labelId (the strip label is the section's heading and labels it), aside, tone, pad default/tight/none, rule (off: joins the block above, no gap or top rule), marks (a framed plate: own rails, full-bleed rules above and below, `+` marks at the corners, `02 / label` strip; the strip draws the hairline under itself) | static |
 | Panel / panelLinkStyle / panelListStyle | panel.tsx | id, title, level 2/3, aside, flush (a block inside a grid cell: the strip with a real heading, then a padded or flush body; stacked panels share a hairline) / aside link / flush list rows | static |
@@ -534,6 +535,11 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   A toy island renders its no-JS fallback on the server and switches to
   the interactive view on the client. Valid and broken examples:
   `content/fixtures/toys/` and `content/fixtures/broken-toys/`.
+- Quick checks (decision 052): `:::ask` (and `:::quiz`, which builds into
+  one) is graded only by `POST /api/ask` and journalled in `ask_attempts`;
+  the save reads right answers from the journal, never form fields, and
+  patterns and right choices never reach the browser. Tests answer with
+  `answerAsk(cookie, course, lesson, ask, answer)`.
 - Read published content with `const catalog = await getCatalog(context)`
   (`app/content/request.ts`; an isolate memo, stale-while-revalidate, 5 s
   fresh and 60 s at most, so usually no D1 query; change the live pointer
