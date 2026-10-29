@@ -194,8 +194,13 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
 const PHONE = '@media (max-width: 480px)'
 const STACKED = '@media (max-width: 1023.98px)'
 
-/** Holds the page and its background layer (z-index -1 stays inside it). */
-const stageStyle = css({ position: 'relative', isolation: 'isolate' })
+/**
+ * Holds the page and its background layer (z-index -1 stays inside it).
+ * It clips sideways overflow: a RuledSection's rule is 100vw wide, which
+ * counts a classic scrollbar, and body's own clip propagates to the
+ * viewport, where it no longer stops a scroll.
+ */
+const stageStyle = css({ position: 'relative', isolation: 'isolate', overflowX: 'clip' })
 
 const titleBlock = css({
   display: 'flex',

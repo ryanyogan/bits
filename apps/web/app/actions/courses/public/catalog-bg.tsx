@@ -100,9 +100,11 @@ const holeStyle = css({
   top: '24%',
   translate: '-50% -50%',
   '@media (max-width: 760px)': {
-    '--rim': '130vw',
-    left: '82%',
-    top: '92px',
+    '--rim': '110vw',
+    left: '88%',
+    top: '84px',
+    // Under the title on a phone: quieter, so the frames never fight the text.
+    opacity: 0.6,
   },
 })
 
