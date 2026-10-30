@@ -19,6 +19,7 @@ import type { LessonView } from '../lesson-view.ts'
 import { TokenizerToy } from '../public/tokenizer-toy.tsx'
 import { askProps, codeEditorProps, draftPersist, exerciseProps, runLines } from './exercise.ts'
 import { inlineNodes } from './inline.tsx'
+import { proseNodes } from './prose.tsx'
 
 /**
  * The lesson (Lesson artboard): the chat-style tutor, the lesson's one view
@@ -85,11 +86,7 @@ function ReadBlock(handle: Handle<{ view: LessonView; block: Block; index: numbe
         return (
           <>
             {block.ask ? <LearnerBubble variant="plain">{block.ask}</LearnerBubble> : null}
-            <TutorMessage>
-              {block.paragraphs.map((paragraph, i) => (
-                <p key={i}>{inlineNodes(paragraph)}</p>
-              ))}
-            </TutorMessage>
+            <TutorMessage>{proseNodes(block.paragraphs)}</TutorMessage>
           </>
         )
       case 'odds':

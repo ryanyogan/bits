@@ -204,6 +204,23 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await expectClean(page, 'lesson depth: phone row, outline open', 360)
   })
 
+  it('lesson prose (decision 061): lists, a ### subheading and ``` samples at both depths, one copied', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    let href = lesson(plainCourse.slug, plainCourse.lessons[1])
+    for (let depth of ['new', 'engineer']) {
+      await page.goto(`${href}?depth=${depth}`)
+      await settled(page)
+      await page.locator('main ul').first().waitFor()
+      await page.locator('main figure pre[role="region"]').first().waitFor()
+      await expectClean(page, `lesson prose: ${depth}`)
+    }
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+    await page.setViewportSize({ width: 360, height: 800 })
+    await page.locator('main figure button').first().click()
+    await page.locator('main figure button', { hasText: 'Copied ✓' }).waitFor()
+    await expectClean(page, 'lesson prose: sample copied', 360)
+  })
+
   it('interactive states: mobile menu, attention pick, transcript, toy steps', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.setViewportSize({ width: 360, height: 800 })

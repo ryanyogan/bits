@@ -6,6 +6,7 @@ import { Keycap } from './keycap.tsx'
 import { readDraft, writeDraft, type DraftPersist } from './lib/drafts.ts'
 import { stackStyle } from './lib/stable.tsx'
 import { FORCED_COLORS } from './lib/states.ts'
+import { syntaxStyle } from './lib/syntax.ts'
 import { ToolButton } from './tool-button.tsx'
 
 export type SyntaxKind = 'keyword' | 'string' | 'type' | 'function' | 'plain' | 'comment' | 'number' | 'punct'
@@ -406,16 +407,7 @@ const gutterStyle = css({
   '@media (max-width: 480px)': { width: '36px', paddingRight: 'var(--space-3)' },
 })
 const codeStyle = css({ whiteSpace: 'pre', paddingRight: 'var(--space-4)' })
-const syntax: Record<SyntaxKind, ReturnType<typeof css>> = {
-  keyword: css({ color: 'var(--syntax-keyword)' }),
-  string: css({ color: 'var(--syntax-string)' }),
-  type: css({ color: 'var(--syntax-type)' }),
-  function: css({ color: 'var(--syntax-function)' }),
-  plain: css({ color: 'var(--syntax-plain)' }),
-  comment: css({ color: 'var(--syntax-comment)' }),
-  number: css({ color: 'var(--syntax-number)' }),
-  punct: css({ color: 'var(--text-quiet)' }),
-}
+const syntax = syntaxStyle
 const typedChar = css({ color: 'var(--text)' })
 const wrongChar = css({ color: 'var(--warn)', background: 'var(--warn-tint)', borderRadius: 'var(--radius-tiny)' })
 const restStyle = css({ color: 'var(--dim)' })

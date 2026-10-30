@@ -171,6 +171,20 @@ describe('lesson page and author preview', () => {
     assert.match((await page(plain('lesson-1', '?depth=expert'))).html, NEW)
   })
 
+  it('renders lists, ### as an h2 and ``` samples in the tutor turns (decision 061)', async () => {
+    let { html } = await page(plain('lesson-2', '?depth=engineer'))
+    assert.match(html, /<ul[^>]*><li[^>]*><p>a bulleted list with <code>code<\/code> and <strong>strong<\/strong> text<\/p><\/li>/)
+    // The nested list sits inside its item.
+    assert.match(html, /<p>an item with a nested list:<\/p><ul[^>]*><li[^>]*><p>one level deep<\/p><\/li>/)
+    assert.match(html, /<ol[^>]*><li[^>]*><p>An ordered list\.<\/p><\/li>/)
+    assert.match(html, /<h2[^>]*>A subheading<\/h2>/)
+    // The engineer sample: named, focusable, highlighted; the new depth's isn't there.
+    assert.match(html, /<figure[^>]*><figcaption[^>]*><span>TypeScript<\/span>/)
+    assert.match(html, /<pre role="region" aria-label="TypeScript sample" tabindex="0"[^>]*><span><span[^>]*>const<\/span>/)
+    assert.doesNotMatch(html, /a plain sample: no language/)
+    assert.match((await page(plain('lesson-2', '?depth=new'))).html, /aria-label="Plain text sample"[^>]*><span><span[^>]*>a plain sample: no language/)
+  })
+
   it('draws the depth control only on lessons with depth blocks: links, aria-current, no prefetch', async () => {
     let { html } = await page(plain('lesson-1', '?q=hi&mode=terminal&depth=engineer'))
 
