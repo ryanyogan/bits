@@ -402,6 +402,8 @@ Rationale: `docs/decisions/010-component-library.md`.
 | RabbitHole | rabbit-hole.tsx | links {kind video/read, title, by, url, mins, deep}, id (`:::rabbithole`) | static |
 | PromptComposer | prompt-composer.tsx | id, task, checks, temperatures, examples, reward, keepRuns, submit, run (/api/run); runs fill a fixed window (`--run-log-height`) that follows the newest reply; compact (`--run-log-empty-height`) until the first run, which grows it once and scrolls so the composer stays put | island (Enter runs, Shift+Enter newline) |
 | CodeEditor | code-editor.tsx | files, highlight, focusLine, typeMode, persist, flush (no outer border inside a ruled cell) | island (@remix-run/ui tabs) |
+| CodeSample | code-sample.tsx | lines (build-highlighted), language, copy (a ``` fence in lesson prose: language strip, sideways-scrolling `<pre>` region; decision 061) | static (Copy is the island) |
+| CopyButton | copy-button.tsx | text, label (Copy → Copied ✓, disabled until hydrated, status region) | island |
 | TerminalLog | terminal.tsx | path, entries, replies, placeholder, flush (no outer border inside a ruled cell); a Run/Send Keycap inside the field frame; fixed height (`--terminal-height`, capped below the header; all the room under it on phones), log scrolls inside | island |
 | TerminalOutput | terminal.tsx | lines | static |
 | OutputPanel | terminal.tsx | command, lines (replayed), flush; a Ghost holds the full size, scrolls past `--output-panel-height` | island |
@@ -557,8 +559,9 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   one reading depth (anything outside is shared); blocks compile flat with
   a `depth` tag, and `contentAtDepth()` filters them. `:::prompt`,
   `:::ask`, `:::quiz` and `:::rabbithole` stay shared (an error inside),
-  depth blocks don't nest, and one holding a block needs a longer fence
-  (`::::engineer … ::::`). The depth is `?depth=`, then
+  depth blocks don't nest, and one holding a `:::` block needs a longer
+  fence (`::::engineer … ::::`); prose, lists and ``` samples need only
+  `:::`. The depth is `?depth=`, then
   `users.lesson_depth`, then the session, then `new` (`lessonDepth()` in
   `app/progress/depth.ts`, which remembers a `?depth=`); the depth tabs
   never prefetch, since following one saves the choice.
@@ -604,6 +607,15 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
 - Lesson prose links: `[text](/courses/...)` or `https` only (anything
   else is a build error). Prompt `draft`/`placeholder`/`example` strings
   take `\n` for line breaks.
+- Lesson prose (decision 061) takes paragraphs, `-`/`1.` lists (one level
+  of nesting, items hold inline text only), bare ``` fences (a static,
+  highlighted `CodeSample` with Copy; `:::code` is still the editor) and
+  `###` subheadings (rendered as `<h2>`, starting a new turn). Other
+  heading levels, indented code, task items outside `:::quiz`, tables,
+  quotes, images and raw HTML are build errors. A turn's
+  `MarkdownBlock.paragraphs` is `Prose[]`: `Array.isArray(part)` is a
+  paragraph, else `heading`, `list` or `sample`. Valid and broken
+  examples: `content/fixtures/prose/` and `content/fixtures/broken-prose/`.
 - Tests: the test platform uploads and publishes every folder in
   `content/courses/` at startup, so a broken course fails every test run.
   It also publishes `content/fixtures/plain-course/` (tests only): tests
