@@ -1,16 +1,12 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
-import { Document } from '@bits/ui/document'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
-import { Logo } from '@bits/ui/logo'
 import { PageFrame } from '@bits/ui/page-frame'
 import { RuledSection } from '@bits/ui/ruled-section'
 import { SegmentedTabs } from '@bits/ui/segmented-tabs'
 
-import { platform } from '#platform'
-
-import { APP_NAME, pageTitle } from '../../../config.ts'
 import { routes } from '../../../routes.ts'
+import { Layout } from '../../../ui/layout.tsx'
 import { lessonOneHref } from '../../home/links.ts'
 import type { LoginMode } from '../schema.ts'
 import { BrainPane } from './brain-pane.tsx'
@@ -24,39 +20,33 @@ export interface AuthShellProps {
   children?: RemixNode
 }
 
-/** The Auth artboard frame: the "living brain" pane and the form pane with the account tabs and footer. */
+/**
+ * The Auth artboard frame under the one header (decision 059): the
+ * "living brain" pane and the form pane with the account tabs and footer.
+ * The header holds the nav but no account actions: this page is the way in.
+ */
 export function AuthShell(handle: Handle<AuthShellProps>) {
   return () => {
     let { title, mode, next, children } = handle.props
     let nextParam = next ? { next } : {}
 
     return (
-      <Document
-        assets={platform.assets}
-        title={pageTitle(title)}
+      <Layout
+        title={title}
         description="Sign in or create a free bits account to save your progress, streaks and prompts."
+        currentPath={routes.login.index.href()}
+        account={false}
+        bare
       >
-        <a href="#main" mix={skipLinkStyle}>
-          Skip to content
-        </a>
         {/*
-          The squared grid (decision 047): one PageFrame, a header band with
-          the logo, then one ruled band of two cells sharing a hairline: the
-          brain and the form. Stacked under 1040px (brain first), and under
-          760px the form comes first (resolutions §8).
+          The squared grid (decision 047): one PageFrame under the header,
+          one ruled band of two cells sharing a hairline: the brain and the
+          form. Stacked under 1040px (brain first), and under 760px the form
+          comes first (resolutions §8). The header's logo is the only
+          href="/" here (decision 044).
         */}
         <PageFrame mix={rootStyle}>
-          {/*
-            One logo for every breakpoint and every auth state, in the same
-            spot the app bar puts it (decision 044): an --appbar-h row,
-            top-left, at the section inset. It is the only href="/" here.
-          */}
-          <RuledSection as="header" rule={false} pad="none">
-            <div mix={brandRowStyle}>
-              <Logo brand={APP_NAME} href={routes.home.href()} variant="app" />
-            </div>
-          </RuledSection>
-          {/* One block with the brand row (decision 050): its rule closes the row. */}
+          {/* Joined to the header (decision 050): the bar's rule closes it. */}
           <RuledSection as="div" rule={false} pad="none" mix={bodyStyle}>
             <div mix={cellsStyle}>
               <BrainPane />
@@ -94,7 +84,7 @@ export function AuthShell(handle: Handle<AuthShellProps>) {
             </div>
           </RuledSection>
         </PageFrame>
-      </Document>
+      </Layout>
     )
   }
 }
@@ -125,19 +115,9 @@ export const subStyle = css({
   color: 'var(--muted)',
 })
 
-const skipLinkStyle = css({
-  position: 'absolute',
-  left: 'var(--space-4)',
-  top: '-100px',
-  zIndex: 10,
-  padding: 'var(--space-3) var(--space-4)',
-  background: 'var(--volt)',
-  color: 'var(--on-volt)',
-  '&:focus': { top: 'var(--space-4)' },
-})
-
+// The frame fills the screen under the header, so the rails reach the foot.
 const rootStyle = css({
-  minHeight: '100vh',
+  minHeight: 'calc(100dvh - var(--shell-h))',
   display: 'flex',
   flexDirection: 'column',
   color: 'var(--text)',
@@ -186,14 +166,6 @@ const columnStyle = css({
   flexDirection: 'column',
   gap: 'var(--space-6_5)',
   '@media (max-width: 759px)': { maxWidth: '100%' },
-})
-
-const brandRowStyle = css({
-  boxSizing: 'border-box',
-  height: 'var(--appbar-h)',
-  padding: '0 var(--section-pad-x)',
-  display: 'flex',
-  alignItems: 'center',
 })
 
 const footerStyle = css({
