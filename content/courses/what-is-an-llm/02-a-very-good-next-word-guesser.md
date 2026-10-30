@@ -30,14 +30,8 @@ again. And again. Until it guesses that it's done.
 
 ---
 
-Slow it right down and one reply is a loop of five moves. Read everything so
-far, your prompt included. Give every token it knows a score, and it knows
-tens of thousands. Turn the scores into **odds** that add up to 100%. Draw
-one. Add it to the text, and go back to the start. A reply is that loop
-running until the model draws the token that means “I'm done”.
-
-Step through a reply below and watch the odds at each draw. The numbers are
-illustrative, but the shape is real.
+Slow it right down and one reply is a loop of five moves. Play it below,
+then step through a real reply and watch the odds at each draw.
 :::
 
 :::engineer
@@ -49,8 +43,17 @@ runs again. That is **autoregressive decoding**, and it ends when the model
 emits an end-of-turn token or hits `max_tokens`.
 
 So a reply is never computed as a whole. It is a sequence of draws, each one
-conditioned on everything before it, your prompt included. Step through one
-below; the probabilities are illustrative, the shape is real.
+conditioned on everything before it, your prompt included. Play the loop
+below, then step through one reply; the probabilities are illustrative, the
+shape is real.
+:::
+
+:::steps{title="One reply, five moves" loop}
+- "Read" "Everything so far: your prompt, and every token it has already written."
+- "Score" "One score for every token in its vocabulary, tens of thousands of them."
+- "Odds" "The scores become odds that add up to 100%."
+- "Draw" "One token is sampled from those odds. Not always the top one."
+- "Append" "It joins the text. Back to Read, until it draws the token that means “done”."
 :::
 
 :::nexttoken{prompt="Finish the sentence: The best thing about rainy days is" illustrative}

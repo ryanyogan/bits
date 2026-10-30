@@ -130,6 +130,24 @@ that, context engineering is the whole job: decide what goes in the window,
 in what order, at what cost.
 :::
 
+Here's the limit in miniature: a window of twelve tokens and a chat arriving
+one turn at a time. Watch what has to go once it's full.
+
+:::flow{capacity=12 title="A window of 12 tokens, one turn at a time" illustrative}
+- "system prompt" 3
+- "Hi, I'm Sam." 2
+- "Hi Sam! What can I do for you?" 3
+- "What's my name?" 2
+- "Sam." 1
+- "Tell me a joke about rain." 3
+- "Why did the cloud stay in? It felt under the weather." 4
+:::
+
+Real windows hold a million tokens, and real apps don't drop the system
+prompt: they trim or summarise the middle turns instead. The shape is the
+same. Once the window is full, something has to go, and whatever went, the
+model never saw it.
+
 The flip side is the most useful habit in this course. If Claude needs a
 fact, **put it in the prompt**. Try it: tell Claude something it can't know,
 then ask it to use that fact in the same message.

@@ -470,6 +470,78 @@ describe('content build', () => {
     )
   })
 
+  it('builds the animation blocks from the toys fixture (decision 060)', async () => {
+    let dir = path.join(coursesDir, '../fixtures/toys')
+    let result = buildCourse(await readCourseFolder(dir), { folder: 'toys' })
+    assert.deepEqual(result.report.filter((item) => item.level !== 'ok').map(formatItem), [])
+    let blocks = result.lessons!.get('animation')!.blocks.filter((block) => block.type !== 'markdown')
+    assert.deepEqual(blocks.map((block) => block.type), ['steps', 'flow', 'marbles'])
+    let [steps, flow, marbles] = blocks
+    assert.deepEqual(steps, {
+      type: 'steps',
+      title: 'One reply, five moves',
+      loop: true,
+      steps: [
+        { label: 'Read', caption: 'Everything so far, your prompt included.' },
+        { label: 'Score', caption: 'One number for every token it knows.' },
+        { label: 'Odds', caption: 'The scores become odds that add up to 100%.' },
+        { label: 'Draw', caption: 'One token is sampled from those odds.' },
+        { label: 'Append', caption: 'It joins the text, and the loop starts again.' },
+      ],
+      illustrative: true,
+    })
+    assert.deepEqual(flow, {
+      type: 'flow',
+      capacity: 8,
+      unit: 'tokens',
+      title: 'A window of 8 tokens',
+      items: [
+        { name: 'system prompt', size: 3 },
+        { name: "Hi, I'm Sam.", size: 2 },
+        { name: 'Hi Sam!', size: 2 },
+        { name: "What's my name?", size: 2 },
+        { name: 'Sam.', size: 1 },
+      ],
+      illustrative: true,
+    })
+    // illustrative=false on the block beats the frontmatter.
+    assert.deepEqual(marbles, {
+      type: 'marbles',
+      duration: 5,
+      unit: 's',
+      title: 'One agent turn',
+      lanes: [
+        { name: 'You', events: [{ at: 0, label: 'prompt' }] },
+        { name: 'Claude', events: [{ at: 0.8, label: 'tool call' }, { at: 4.6, label: 'answer' }] },
+        { name: 'Tool', events: [{ at: 1.2, label: 'running' }, { at: 3.9, label: 'result' }] },
+      ],
+    })
+  })
+
+  it('a :::marbles without a duration ends at its last event, rounded up; a :::flow nothing leaves warns', () => {
+    let result = build({
+      '01-one.md': lesson(
+        [
+          ':::marbles',
+          '- "Tokens" 0.3 "The" 0.5 " cat" 0.7 " sat"',
+          ':::',
+          '',
+          ':::flow{capacity=32}',
+          '- "a" 1',
+          '- "b" 1',
+          ':::',
+        ].join('\n'),
+      ),
+    })
+    assert.equal(errors(result).join('\n'), '')
+    let marbles = result.lessons!.get('one')!.blocks.find((block) => block.type === 'marbles')
+    assert.equal(marbles?.type === 'marbles' && marbles.duration, 1)
+    assert.equal(
+      result.report.filter((item) => item.level === 'warning').map(formatItem).join('\n'),
+      '01-one.md:12 → every item fits in the window at once (32); nothing ever falls out, so :::flow shows no flow',
+    )
+  })
+
   it('reports each toy’s validation errors at their lines (broken-toys fixture)', async () => {
     let dir = path.join(coursesDir, '../fixtures/broken-toys')
     let result = buildCourse(await readCourseFolder(dir), { folder: 'broken-toys' })
@@ -503,6 +575,22 @@ describe('content build', () => {
       '07-depth.md:20 → :::new can’t go inside :::engineer: depth blocks don’t nest, so close :::engineer first',
       '07-depth.md:25 → :::new holds :::nexttoken, so it needs a longer fence: write ::::new … :::: around it',
       '07-depth.md:36 → :::rabbithole can’t go inside :::engineer: prompts, quick checks and rabbit holes are shared by both depths, so progress never depends on depth; move it outside',
+      '08-steps.md:12 → steps lines are a label, then a caption: - "Read" "Everything so far, your prompt included."',
+      '08-steps.md:13 → step label “A label that runs far too long” is 30 characters; keep it to 24',
+      '08-steps.md:14 → step “Draw” needs a caption',
+      '08-steps.md:15 → step “Read” is listed twice',
+      '08-steps.md:18 → :::steps needs 3 to 8 - "label" "caption" lines (got 2)',
+      '09-flow.md:10 → :::flow needs a capacity, like :::flow{capacity=12} (2–32 tokens)',
+      '09-flow.md:16 → “a long document” is 9, bigger than the window (capacity=4): it could never fit',
+      '09-flow.md:17 → “nothing” has size 0; every item takes at least 1',
+      '09-flow.md:18 → flow lines are a name, then its size: - "system prompt" 3',
+      '09-flow.md:22 → capacity=99 is out of range: use a whole number from 2 to 32',
+      '10-marbles.md:10 → an event is at 6, past duration=4',
+      '10-marbles.md:11 → lane “Claude”: events must be in time order (1 comes after 2)',
+      '10-marbles.md:13 → marbles lines are a lane, then time and event pairs: - "Claude" 1.2 "tool call" 6.5 "answer"',
+      '10-marbles.md:14 → couldn’t read “oops”: marbles lines are a lane, then time and event pairs: - "Claude" 1.2 "tool call" 6.5 "answer"',
+      '10-marbles.md:17 → duration=0 is out of range: use a number above 0 and up to 3600',
+      '10-marbles.md:17 → :::marbles needs at least one - "lane" time "event" line',
     ])
   })
 

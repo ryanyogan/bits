@@ -1,8 +1,11 @@
 import { css } from 'remix/component'
 import type { CodeFile, CodeSegment } from '@bits/ui/code-editor'
 import type { AttentionLink } from '@bits/ui/attention-map'
+import type { FlowItem } from '@bits/ui/flow'
+import type { MarbleLane } from '@bits/ui/marbles'
 import type { NextTokenStep } from '@bits/ui/next-token'
 import type { RabbitHoleLink } from '@bits/ui/rabbit-hole'
+import type { Step } from '@bits/ui/steps'
 import type { TerminalEntry, TerminalPart } from '@bits/ui/terminal'
 import type { TrainingSnapshot } from '@bits/ui/training-scrubber'
 
@@ -268,6 +271,31 @@ export const attentionLinks: AttentionLink[] = [
   { from: 3, to: 0, weight: 0.2 },
   { from: 5, to: 4, weight: 0.55 },
   { from: 5, to: 3, weight: 0.3 },
+]
+
+// Animation blocks (decision 060).
+export const loopSteps: Step[] = [
+  { label: 'Read', caption: 'Everything so far, your prompt included.' },
+  { label: 'Score', caption: 'One number for every token it knows, tens of thousands of them.' },
+  { label: 'Odds', caption: 'The scores become odds that add up to 100%.' },
+  { label: 'Draw', caption: 'One token is sampled from those odds.' },
+  { label: 'Append', caption: 'It joins the text, and the loop starts again.' },
+]
+
+export const windowItems: FlowItem[] = [
+  { name: 'system prompt', size: 3 },
+  { name: 'Hi, I’m Sam.', size: 2 },
+  { name: 'Hi Sam! What can I do for you?', size: 3 },
+  { name: 'What’s my name?', size: 2 },
+  { name: 'Sam.', size: 1 },
+  { name: 'Tell me a joke about rain.', size: 3 },
+  { name: 'Why did the cloud…', size: 4 },
+]
+
+export const agentLanes: MarbleLane[] = [
+  { name: 'You', events: [{ at: 0, label: 'prompt' }] },
+  { name: 'Claude', events: [{ at: 0.8, label: 'tool call' }, { at: 4.6, label: 'answer' }] },
+  { name: 'Tool', events: [{ at: 1.2, label: 'running' }, { at: 3.9, label: 'result' }] },
 ]
 
 export const rabbitHoleLinks: RabbitHoleLink[] = [

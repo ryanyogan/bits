@@ -23,11 +23,13 @@ import {
   type CodeBlock,
   type CodeBlockFile,
   type CompareBlock,
+  type FlowBlock,
   type Inline,
   depthsOf,
   type LessonContent,
   type LessonDepth,
   type LessonVideo,
+  type MarblesBlock,
   type MarkdownBlock,
   type NextTokenBlock,
   type OddsBlock,
@@ -39,6 +41,7 @@ import {
   type PromptBlock,
   type QuizBlock,
   type RabbitHoleBlock,
+  type StepsBlock,
   type TerminalBlock,
   type TokenizerBlock,
   type TrainingBlock,
@@ -241,6 +244,9 @@ const BLOCK_NAMES = [
   'attention',
   'compare',
   'rabbithole',
+  'steps',
+  'flow',
+  'marbles',
 ] as const
 
 /** Lesson-wide defaults for blocks (from the frontmatter). */
@@ -591,6 +597,12 @@ function compileDirective(
       return compileCompare(node, body, report, defaults)
     case 'rabbithole':
       return compileRabbitHole(node, body, report)
+    case 'steps':
+      return compileSteps(node, body, report, defaults)
+    case 'flow':
+      return compileFlow(node, body, report, defaults)
+    case 'marbles':
+      return compileMarbles(node, body, report, defaults)
   }
   return undefined
 }
@@ -1490,6 +1502,153 @@ function compileRabbitHole(node: Directive, raw: RawBody, report: FileReport): R
   if (links.length > MAX_RABBIT_HOLES) report.error(`:::rabbithole has ${links.length} links; pick the best ${MAX_RABBIT_HOLES}`, line)
   if (!links.length) return undefined
   return { type: 'rabbithole', links: links.slice(0, MAX_RABBIT_HOLES) }
+}
+
+// ---- Animation blocks: :::steps, :::flow, :::marbles (decision 060). Plain
+// lines like the toys; the islands play them one move at a time.
+
+export const STEPS_RANGE = [3, 8] as const
+const MAX_STEP_LABEL = 24
+
+function compileSteps(node: Directive, raw: RawBody, report: FileReport, defaults: BlockDefaults): StepsBlock | undefined {
+  let line = node.position?.start.line ?? 1
+  let attrs = attributes(node, ['title', 'loop', 'illustrative'], report)
+  let steps: StepsBlock['steps'] = []
+  let shape = new RegExp(`^[-*]\\s+${QUOTED}\\s+${QUOTED}$`)
+  for (let { text, at } of bodyItems(raw)) {
+    let match = shape.exec(text)
+    if (!match) {
+      report.error('steps lines are a label, then a caption: - "Read" "Everything so far, your prompt included."', at)
+      continue
+    }
+    let label = unescapeText(match[1]!).trim()
+    let caption = unescapeText(match[2]!).trim()
+    if (!label) report.error('a step needs a label', at)
+    else if (label.length > MAX_STEP_LABEL) report.error(`step label “${label}” is ${label.length} characters; keep it to ${MAX_STEP_LABEL}`, at)
+    if (!caption) report.error(`step “${label}” needs a caption`, at)
+    if (steps.some((step) => step.label === label)) report.error(`step “${label}” is listed twice`, at)
+    steps.push({ label, caption })
+  }
+  let [min, max] = STEPS_RANGE
+  if (steps.length < min) report.error(`:::steps needs ${min} to ${max} - "label" "caption" lines (got ${steps.length})`, line)
+  if (steps.length > max) report.error(`:::steps has ${steps.length} steps; keep it to ${max}, or split the sequence`, line)
+  if (steps.length < min) return undefined
+  let block: StepsBlock = { type: 'steps', steps: steps.slice(0, max) }
+  let title = attrs.string('title')
+  if (title) block.title = title
+  if (attrs.flag('loop')) block.loop = true
+  if (illustrativeOf(attrs, defaults)) block.illustrative = true
+  return block
+}
+
+export const FLOW_CAPACITY_RANGE = [2, 32] as const
+export const FLOW_ITEMS_RANGE = [2, 16] as const
+
+function compileFlow(node: Directive, raw: RawBody, report: FileReport, defaults: BlockDefaults): FlowBlock | undefined {
+  let line = node.position?.start.line ?? 1
+  let attrs = attributes(node, ['capacity', 'unit', 'title', 'illustrative'], report)
+  let [minCap, maxCap] = FLOW_CAPACITY_RANGE
+  let capacity = attrs.number('capacity')
+  if (capacity === undefined) report.error(`:::flow needs a capacity, like :::flow{capacity=12} (${minCap}–${maxCap} ${attrs.string('unit') ?? 'tokens'})`, line)
+  else if (!Number.isInteger(capacity) || capacity < minCap || capacity > maxCap) {
+    report.error(`capacity=${capacity} is out of range: use a whole number from ${minCap} to ${maxCap}`, line)
+    capacity = undefined
+  }
+  let items: FlowBlock['items'] = []
+  let shape = new RegExp(`^[-*]\\s+${QUOTED}\\s+(\\d+)$`)
+  for (let { text, at } of bodyItems(raw)) {
+    let match = shape.exec(text)
+    if (!match) {
+      report.error('flow lines are a name, then its size: - "system prompt" 3', at)
+      continue
+    }
+    let name = unescapeText(match[1]!).trim()
+    let size = Number(match[2])
+    if (!name) report.error('a flow item needs a name', at)
+    if (size < 1) report.error(`“${name}” has size 0; every item takes at least 1`, at)
+    else if (capacity !== undefined && size > capacity) report.error(`“${name}” is ${size}, bigger than the window (capacity=${capacity}): it could never fit`, at)
+    items.push({ name, size })
+  }
+  let [minItems, maxItems] = FLOW_ITEMS_RANGE
+  if (items.length < minItems) report.error(`:::flow needs ${minItems} to ${maxItems} - "name" size lines (got ${items.length})`, line)
+  if (items.length > maxItems) report.error(`:::flow has ${items.length} items; keep it to ${maxItems}`, line)
+  if (capacity !== undefined && items.reduce((sum, item) => sum + item.size, 0) <= capacity) {
+    report.warning(`every item fits in the window at once (${capacity}); nothing ever falls out, so :::flow shows no flow`, line)
+  }
+  if (capacity === undefined || items.length < minItems) return undefined
+  let block: FlowBlock = { type: 'flow', capacity, unit: attrs.string('unit') ?? 'tokens', items: items.slice(0, maxItems) }
+  let title = attrs.string('title')
+  if (title) block.title = title
+  if (illustrativeOf(attrs, defaults)) block.illustrative = true
+  return block
+}
+
+export const MARBLES_LANES_RANGE = [1, 5] as const
+export const MAX_MARBLE_EVENTS = 12
+const MAX_MARBLES_DURATION = 3600
+
+function compileMarbles(node: Directive, raw: RawBody, report: FileReport, defaults: BlockDefaults): MarblesBlock | undefined {
+  let line = node.position?.start.line ?? 1
+  let attrs = attributes(node, ['duration', 'unit', 'title', 'illustrative'], report)
+  let duration = attrs.number('duration')
+  if (duration !== undefined && !(duration > 0 && duration <= MAX_MARBLES_DURATION)) {
+    report.error(`duration=${duration} is out of range: use a number above 0 and up to ${MAX_MARBLES_DURATION}`, line)
+    duration = undefined
+  }
+  let lanes: MarblesBlock['lanes'] = []
+  let head = new RegExp(`^[-*]\\s+${QUOTED}\\s+(.*)$`)
+  let event = new RegExp(`\\s*${NUMBER}\\s+${QUOTED}`, 'y')
+  let example = 'marbles lines are a lane, then time and event pairs: - "Claude" 1.2 "tool call" 6.5 "answer"'
+  let latest = 0
+  for (let { text, at } of bodyItems(raw)) {
+    let match = head.exec(text)
+    if (!match) {
+      report.error(example, at)
+      continue
+    }
+    let name = unescapeText(match[1]!).trim()
+    let rest = match[2]!.trimEnd()
+    let events: MarblesBlock['lanes'][number]['events'] = []
+    // A failed sticky exec resets lastIndex, so keep the consumed length here.
+    let consumed = 0
+    while (consumed < rest.length) {
+      event.lastIndex = consumed
+      let pair = event.exec(rest)
+      if (!pair) break
+      consumed = event.lastIndex
+      events.push({ at: Number(pair[1]), label: unescapeText(pair[2]!).trim() })
+    }
+    if (consumed < rest.length) {
+      report.error(`couldn’t read “${rest.slice(consumed).trim()}”: ${example}`, at)
+      continue
+    }
+    if (!name) report.error('a marbles lane needs a name', at)
+    if (!events.length) report.error(`lane “${name}” needs at least one time "event" pair`, at)
+    if (events.length > MAX_MARBLE_EVENTS) report.error(`lane “${name}” has ${events.length} events; keep it to ${MAX_MARBLE_EVENTS}`, at)
+    let bad = events.find((e) => !(e.at >= 0))
+    if (bad) report.error(`time ${bad.at} is negative`, at)
+    let out = events.find((e, i) => i > 0 && e.at < events[i - 1]!.at)
+    if (out) report.error(`lane “${name}”: events must be in time order (${out.at} comes after ${events[events.indexOf(out) - 1]!.at})`, at)
+    if (events.some((e) => !e.label)) report.error(`lane “${name}” has an event with no label`, at)
+    if (lanes.some((lane) => lane.name === name)) report.error(`lane “${name}” is listed twice`, at)
+    for (let e of events) latest = Math.max(latest, e.at)
+    lanes.push({ name, events })
+  }
+  let [minLanes, maxLanes] = MARBLES_LANES_RANGE
+  if (lanes.length < minLanes) report.error(`:::marbles needs at least one - "lane" time "event" line`, line)
+  if (lanes.length > maxLanes) report.error(`:::marbles has ${lanes.length} lanes; keep it to ${maxLanes}`, line)
+  if (duration !== undefined && latest > duration) report.error(`an event is at ${latest}, past duration=${duration}`, line)
+  if (lanes.length < minLanes) return undefined
+  let block: MarblesBlock = {
+    type: 'marbles',
+    duration: duration ?? Math.max(1, Math.ceil(latest)),
+    unit: attrs.string('unit') ?? 's',
+    lanes: lanes.slice(0, maxLanes),
+  }
+  let title = attrs.string('title')
+  if (title) block.title = title
+  if (illustrativeOf(attrs, defaults)) block.illustrative = true
+  return block
 }
 
 function isHttpsUrl(text: string): boolean {

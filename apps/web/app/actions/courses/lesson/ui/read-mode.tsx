@@ -4,10 +4,13 @@ import { AskPanel } from '@bits/ui/ask-panel'
 import { AttentionMap } from '@bits/ui/attention-map'
 import { CodeEditor } from '@bits/ui/code-editor'
 import { ComparePanel } from '@bits/ui/compare-panel'
+import { FlowWindow } from '@bits/ui/flow'
+import { MarblesTimeline } from '@bits/ui/marbles'
 import { NextTokenPlayer } from '@bits/ui/next-token'
 import { OddsBars } from '@bits/ui/odds-bars'
 import { PromptComposer } from '@bits/ui/prompt-composer'
 import { RabbitHole } from '@bits/ui/rabbit-hole'
+import { StepsPlayer } from '@bits/ui/steps'
 import { OutputPanel } from '@bits/ui/terminal'
 import { TrainingScrubber } from '@bits/ui/training-scrubber'
 import { attachedBlock, LearnerBubble, TutorMessage } from '@bits/ui/tutor'
@@ -25,8 +28,8 @@ import { proseNodes } from './prose.tsx'
  * The lesson (Lesson artboard): the chat-style tutor, the lesson's one view
  * (decision 055). A lesson with a video opens with the player. Every block
  * renders on the server; only the interactive blocks (video, odds, prompt,
- * code, terminal, tokenizer, nexttoken, training, attention) hydrate as
- * islands.
+ * code, terminal, tokenizer, nexttoken, training, attention, steps, flow,
+ * marbles) hydrate as islands.
  */
 export function ReadMode(handle: Handle<{ view: LessonView }>) {
   return () => {
@@ -170,6 +173,31 @@ function ReadBlock(handle: Handle<{ view: LessonView; block: Block; index: numbe
         return (
           <div mix={attachedBlock}>
             <RabbitHole id={`rabbit-hole-${index}`} links={block.links} />
+          </div>
+        )
+      case 'steps':
+        return (
+          <div mix={attachedBlock}>
+            <StepsPlayer title={block.title} steps={block.steps} loop={block.loop} illustrative={block.illustrative} />
+          </div>
+        )
+      case 'flow':
+        return (
+          <div mix={attachedBlock}>
+            <FlowWindow title={block.title} capacity={block.capacity} unit={block.unit} items={block.items} illustrative={block.illustrative} />
+          </div>
+        )
+      case 'marbles':
+        return (
+          <div mix={attachedBlock}>
+            <MarblesTimeline
+              id={`marbles-${index}`}
+              title={block.title}
+              duration={block.duration}
+              unit={block.unit}
+              lanes={block.lanes}
+              illustrative={block.illustrative}
+            />
           </div>
         )
     }

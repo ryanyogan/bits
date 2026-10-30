@@ -65,4 +65,5 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 057 | [Bits in motion: the three.js scenes draw bits, bytes and graphs](057-bits-in-motion.md) |
 | 058 | [The bits motif: one ornament, the bit cell](058-bits-motif.md) |
 | 059 | [One header on every page: the centred bar](059-one-header.md) |
+| 060 | [Animation blocks: `:::steps`, `:::flow` and `:::marbles`](060-animation-blocks.md) |
 | 061 | [Lists, ``` samples and ### subheadings in lesson prose](061-lists-and-fences-in-lessons.md) |

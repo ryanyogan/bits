@@ -400,6 +400,9 @@ Rationale: `docs/decisions/010-component-library.md`.
 | AttentionMap | attention-map.tsx | tokens, links {from, to, weight}, caption, illustrative (`:::attention`) | island (fallback: from → to table) |
 | ComparePanel | compare-panel.tsx | left, right, rows {prompt?, left, right}, illustrative (`:::compare`) | static |
 | RabbitHole | rabbit-hole.tsx | links {kind video/read, title, by, url, mins, deep}, id (`:::rabbithole`) | static |
+| StepsPlayer | steps.tsx | title, steps {label, caption}, loop, illustrative (`:::steps`; a chain of 3–8 nodes, one lit, a bit row counting; nodes jump, Prev/Play/Next, plays once in view) | island (fallback: ordered list) |
+| FlowWindow | flow.tsx | title, capacity, unit, items {name, size}, illustrative (`:::flow`; items arrive into a window, the oldest fall out when full; `flowAt()` is the pure state) | island (fallback: arrivals table) |
+| MarblesTimeline | marbles.tsx | id, title, duration, unit, lanes {name, events {at, label}}, illustrative (`:::marbles`; lanes of timed events, a play head sweeps once, a slider scrubs) | island (fallback: events table) |
 | PromptComposer | prompt-composer.tsx | id, task, checks, temperatures, examples, reward, keepRuns, submit, run (/api/run); runs fill a fixed window (`--run-log-height`) that follows the newest reply; compact (`--run-log-empty-height`) until the first run, which grows it once and scrolls so the composer stays put | island (Enter runs, Shift+Enter newline) |
 | CodeEditor | code-editor.tsx | files, highlight, focusLine, typeMode, persist, flush (no outer border inside a ruled cell) | island (@remix-run/ui tabs) |
 | CodeSample | code-sample.tsx | lines (build-highlighted), language, copy (a ``` fence in lesson prose: language strip, sideways-scrolling `<pre>` region; decision 061) | static (Copy is the island) |
@@ -550,6 +553,12 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   A toy island renders its no-JS fallback on the server and switches to
   the interactive view on the client. Valid and broken examples:
   `content/fixtures/toys/` and `content/fixtures/broken-toys/`.
+- Animation blocks (decision 060): `:::steps` (3–8 `- "Label" "Caption"`
+  lines, `loop`), `:::flow` (`capacity=`, `- "name" size` lines) and
+  `:::marbles` (`- "Lane" t "event" t "event"` lines, `duration=`). Each
+  plays once when 60% of it is on screen, never under reduced motion, and
+  keeps its size while it plays (the stack + `Ghost` rule of decision
+  023). They take `illustrative` and may sit inside a depth block.
 - Quick checks (decision 052): `:::ask` (and `:::quiz`, which builds into
   one) is graded only by `POST /api/ask` and journalled in `ask_attempts`;
   the save reads right answers from the journal, never form fields, and
