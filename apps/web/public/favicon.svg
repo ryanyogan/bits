@@ -1,19 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
   <!-- The bits brand mark (packages/ui/src/brand-mark.tsx, decision 058) on an ink square. Keep in step with the component. -->
-  <rect width="32" height="32" fill="#07080d"/>
+  <rect width="32" height="32" fill="#0f131a"/>
   <g transform="translate(1 1)">
-    <g fill="#eceef5" fill-opacity="0.18">
+    <g fill="#e3e6ed" fill-opacity="0.18">
       <rect x="11" y="1" width="8" height="8"/>
       <rect x="21" y="1" width="8" height="8"/>
       <rect x="1" y="11" width="8" height="8"/>
       <rect x="11" y="11" width="8" height="8"/>
       <rect x="11" y="21" width="8" height="8"/>
     </g>
-    <g fill="#eceef5">
+    <g fill="#e3e6ed">
       <rect x="1" y="1" width="8" height="8"/>
       <rect x="1" y="21" width="8" height="8"/>
       <rect x="21" y="11" width="8" height="8"/>
     </g>
-    <rect x="21" y="21" width="8" height="8" fill="#b8e05a"/>
+    <rect x="21" y="21" width="8" height="8" fill="#a7cf66"/>
   </g>
 </svg>

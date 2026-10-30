@@ -278,6 +278,8 @@ async function copyPublic() {
       '  Cache-Control: public, max-age=86400',
       '/favicon.ico',
       '  Cache-Control: public, max-age=86400',
+      '/apple-touch-icon.png',
+      '  Cache-Control: public, max-age=86400',
       '',
     ].join('\n'),
   )
