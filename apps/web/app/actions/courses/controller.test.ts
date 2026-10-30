@@ -178,14 +178,20 @@ describe('catalog and course pages', () => {
     assert.match(html, /href="\/courses\/tokens-and-temperature"/)
   })
 
-  it('draws the rabbit-hole background as pure CSS, hidden from assistive tech (decision 041)', async () => {
+  it('renders the course-graph background layer hidden from assistive tech, with the courses as its data (decision 057)', async () => {
     let { html } = await page(routes.courses.index.href(), { anonymous: true })
-    assert.match(html, /@keyframes catalog-bg-drop/)
-    assert.match(html, /<main[^>]*>\s*<div[^>]*>\s*<div aria-hidden="true"/)
+    // The layer is the first thing in the page's stage (after the island's hydration marker).
+    assert.match(html, /<main[^>]*>\s*<div[^>]*>\s*(?:<!--[^>]*-->\s*)?<div aria-hidden="true"/)
     assert.match(html, /data-rmx-key="catalog-bg:all"/)
-    // Eight rings, five neurons: no script and nothing focusable in the layer.
-    assert.equal(count(html, /<span style="--i: ?\d+;?"/), 8)
-    assert.equal(count(html, /<i [^>]*style="--i:/), 5)
+    // The canvas is empty until the island loads three; the graph paper is the fallback.
+    assert.match(html, /<canvas data-catalog-graph=""/)
+    assert.doesNotMatch(html, /@keyframes catalog-bg/)
+    // The island gets one node per course on the page, in path order.
+    let graph = html.match(/"courses":(\[[^\]]*\])/)
+    assert.ok(graph, 'the island carries its courses')
+    let nodes = JSON.parse(graph![1]!) as { tone: string; lessons: number }[]
+    let key = (node: { tone: string; lessons: number }) => `${node.tone}:${node.lessons}`
+    assert.deepEqual(nodes.map(key).sort(), courses.map(key).sort())
   })
 
   let path = routes.courses.course.index.href({ course: 'tokens-and-temperature' })

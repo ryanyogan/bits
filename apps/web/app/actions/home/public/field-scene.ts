@@ -1,12 +1,30 @@
-// The landing page's 3D neural field, ported from the Main artboard
-// (docs/design/artboards/Main.dc.html lines 415–685; port guide in
-// docs/design/spec/pages/Main.md §NeuralField). ~3,400 points in one
-// ShaderMaterial morph through four formations (network → token ribbon →
-// agent loop → galaxy) as `uMorph` goes 0 → 3.
+// The landing page's 3D field (decision 057, "bits in motion"; it began as
+// the Main artboard's neural field, docs/design/spec/pages/Main.md
+// §NeuralField). Thousands of bits, square cells that read 0 (outline) or 1
+// (fill), morph through four formations as the page scrolls:
+//
+//   01 Bits    stacked bit-planes, cells flipping in slow waves
+//   02 Tokens  tapes of bytes streaming through, sliced into words
+//   03 Agents  a graph that closes into a loop, signals running its edges
+//   04 You     a galaxy of bits
+//
+// One ShaderMaterial carries all four positions per point and blends them
+// by `uMorph` (0 → 3). Colours are the CSS accent tokens, read at run time.
 //
 // `three` is passed in by the island after a dynamic import, so this module
 // only needs its types and never pulls three into the initial page load.
 import type * as THREE_NS from '../../public/three.ts'
+import {
+  bell,
+  bitGlsl,
+  ease,
+  hashGlsl,
+  readTokenColors,
+  sceneTokens,
+  seeded,
+  smooth,
+  type Rgb,
+} from '../../public/bits-gl.ts'
 
 type Three = typeof THREE_NS
 
@@ -22,7 +40,7 @@ export interface FieldOptions {
   input: FieldInput
   /** Called only when the rounded formation index changes (0–3). */
   onStage(stage: number): void
-  /** Point count: 3,400 at ≥760px, ~1,500 below. */
+  /** Point count: the island picks it from the viewport (1,600 → 4,800). */
   count: number
   reducedMotion: boolean
 }
@@ -43,78 +61,84 @@ export interface Field {
   dispose(): void
 }
 
-// The toned accents of decision 047 (tokens.css --volt, --ion, --synapse,
-// --volt-soft): calmer than the old neon, still the same three hues.
-const PALETTE = [
-  ['#B8E05A', '#5EC8DC'],
-  ['#5EC8DC', '#9B8CE6'],
-  ['#9B8CE6', '#B8E05A'],
-  ['#D9EEAA', '#9B8CE6'],
-] as const
-
 const MORPH_EASE = 0.055
 const PARALLAX_EASE = 0.04
 
+/** Cell pitch of the bit-planes, in scene units (≈ 30px at 1440×900); the tapes use ¾ of it. */
+const PITCH = 0.5
+/** Pixel size of a unit cell at the camera's resting distance. */
+const CELL_PX = 190
+
 const pointsVertex = /* glsl */ `
-uniform float uMorph; uniform float uTime; uniform float uPx;
-attribute vec3 aB; attribute vec3 aC; attribute vec3 aD; attribute float aR; attribute float aS;
-varying float vR;
+uniform float uMorph; uniform float uTime; uniform float uPx; uniform float uCell; uniform float uStream; uniform float uClear;
+attribute vec3 aB; attribute vec3 aC; attribute vec3 aD; attribute float aR; attribute vec4 aSz; attribute vec4 aW;
+varying float vR; varying float vOn; varying float vW; varying float vSmall;
+${hashGlsl}
 void main(){
   vec3 from = position; vec3 to = aB; float f = uMorph;
-  if (uMorph >= 2.0) { from = aC; to = aD; f = uMorph - 2.0; }
-  else if (uMorph >= 1.0) { from = aB; to = aC; f = uMorph - 1.0; }
+  vec2 sz = aSz.xy; vec2 w = aW.xy;
+  if (uMorph >= 2.0) { from = aC; to = aD; f = uMorph - 2.0; sz = aSz.zw; w = aW.zw; }
+  else if (uMorph >= 1.0) { from = aB; to = aC; f = uMorph - 1.0; sz = aSz.yz; w = aW.yz; }
   f = clamp((f - aR * 0.35) / 0.65, 0.0, 1.0);
   f = f * f * (3.0 - 2.0 * f);
   vec3 p = mix(from, to, f);
   float mid = sin(f * 3.14159);
-  p += vec3(sin(uTime * 0.6 + aR * 43.0), cos(uTime * 0.5 + aR * 31.0), sin(uTime * 0.7 + aR * 17.0)) * (0.03 + mid * 1.1);
+  p += vec3(sin(uTime * 0.6 + aR * 43.0), cos(uTime * 0.5 + aR * 31.0), sin(uTime * 0.7 + aR * 17.0)) * (0.02 + mid * 1.1);
+
+  // The bit: each cell runs its own slow clock (a flip every few seconds,
+  // a third of the time on). In the tapes the pattern streams instead: a
+  // byte's bits are a hash of the column passing, so the data flows while
+  // the cells stand.
+  float clock = fract(uTime * (0.05 + aR * 0.09) + aR * 7.0);
+  float own = step(clock, 0.34);
+  float column = floor(p.x / ${PITCH.toFixed(2)} - uTime * 2.2);
+  float row = floor(p.y / ${(PITCH * 0.75).toFixed(3)} + aR * 0.5);
+  float streamed = step(0.42, hash2(vec2(column, row)));
+  vOn = mix(own, streamed, uStream);
+  vW = mix(w.x, w.y, f);
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
-  float tw = 0.7 + 0.3 * sin(uTime * 2.2 + aR * 60.0);
-  gl_PointSize = aS * tw * uPx * (42.0 / -mv.z);
+  // The planes clear the middle of the screen, where the hero copy sits,
+  // and frame it instead (uClear is 1 at stage 01, 0 elsewhere).
+  vec2 ndc = gl_Position.xy / max(gl_Position.w, 0.001);
+  float clearing = smoothstep(0.22, 1.0, length(ndc * vec2(1.0, 1.1)));
+  vW *= mix(1.0, clearing, uClear);
+  float size = mix(sz.x, sz.y, f) * uPx * (uCell / -mv.z) * (0.82 + 0.18 * vOn) * (1.0 - mid * 0.35);
+  gl_PointSize = size;
+  vSmall = 1.0 - smoothstep(6.0 * uPx, 9.0 * uPx, size);
   vR = aR;
 }`
 
 const pointsFragment = /* glsl */ `
 uniform vec3 uC1; uniform vec3 uC2; uniform float uAlpha;
-varying float vR;
+varying float vR; varying float vOn; varying float vW; varying float vSmall;
+${bitGlsl}
 void main(){
-  vec2 c = gl_PointCoord - 0.5; float d = length(c);
-  if (d > 0.5) discard;
-  float a = smoothstep(0.5, 0.0, d); a *= a;
+  float a = bitAlpha(vOn, vSmall);
+  if (a < 0.004) discard;
   vec3 col = mix(uC1, uC2, smoothstep(0.15, 0.85, vR));
-  col = mix(col, vec3(1.0), smoothstep(0.16, 0.0, d) * 0.55);
-  gl_FragColor = vec4(col, a * uAlpha * (0.5 + vR * 0.5));
+  gl_FragColor = vec4(col, a * uAlpha * vW * (0.6 + vR * 0.4));
 }`
 
 const signalVertex = /* glsl */ `
-uniform float uTime; uniform float uPx; attribute vec3 aEnd; attribute float aOff; varying float vA;
+uniform float uTime; uniform float uPx; uniform float uCell; attribute vec3 aEnd; attribute float aOff; varying float vA;
 void main(){
-  float t = fract(uTime * 0.3 + aOff);
+  float t = fract(uTime * 0.28 + aOff);
   vec3 p = mix(position, aEnd, t);
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
-  gl_PointSize = uPx * (64.0 / -mv.z);
+  gl_PointSize = uPx * (uCell * 0.55 / -mv.z);
   vA = sin(t * 3.14159);
 }`
 
 const signalFragment = /* glsl */ `
-uniform float uAlpha; varying float vA;
+uniform vec3 uColor; uniform float uAlpha; varying float vA;
+${bitGlsl}
 void main(){
-  float d = length(gl_PointCoord - 0.5); if (d > 0.5) discard;
-  float a = smoothstep(0.5, 0.0, d); a *= a;
-  gl_FragColor = vec4(mix(vec3(0.72, 0.88, 0.35), vec3(1.0), 0.4), a * vA * uAlpha);
+  float a = bitAlpha(1.0, 0.0);
+  if (a < 0.004) discard;
+  gl_FragColor = vec4(uColor, a * vA * uAlpha);
 }`
-
-function smooth(a: number, b: number, x: number) {
-  let t = Math.min(1, Math.max(0, (x - a) / (b - a)))
-  return t * t * (3 - 2 * t)
-}
-
-/** Frame-rate independent version of `value += (target − value) * k` at 60fps. */
-function ease(k: number, dt: number) {
-  return 1 - Math.pow(1 - k, dt * 60)
-}
 
 interface Formations {
   A: Float32Array
@@ -122,149 +146,188 @@ interface Formations {
   C: Float32Array
   D: Float32Array
   R: Float32Array
-  S: Float32Array
-  edges: Float32Array
+  /** Cell size per formation (xyzw = A B C D), relative to a unit cell. */
+  size: Float32Array
+  /** Visibility per formation: 0 hides a point there, fractions dim it. */
+  weight: Float32Array
+  /** Bit-plane outlines (stage 01). */
+  planeLines: Float32Array
+  /** Graph edges (stage 03). */
+  graphLines: Float32Array
   signalStart: Float32Array
   signalEnd: Float32Array
   signalOffset: Float32Array
 }
 
-/** Generates the four formations with the artboard's seeded PRNG (Park–Miller, seed 11). */
+/** Lays out the four formations for N points with the artboard's seeded PRNG (seed 11). */
 function buildFormations(N: number): Formations {
-  let seed = 11
-  let rnd = () => {
-    seed = (seed * 16807) % 2147483647
-    return (seed - 1) / 2147483646
-  }
-  let gauss = () => {
-    let u = 0
-    let v = 0
-    while (!u) u = rnd()
-    while (!v) v = rnd()
-    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)
-  }
+  let { rnd, gauss } = seeded(11)
 
   let A = new Float32Array(N * 3)
   let B = new Float32Array(N * 3)
   let C = new Float32Array(N * 3)
   let D = new Float32Array(N * 3)
   let R = new Float32Array(N)
-  let S = new Float32Array(N)
+  let size = new Float32Array(N * 4)
+  let weight = new Float32Array(N * 4)
+  let put = (arr: Float32Array, i: number, x: number, y: number, z: number) => {
+    arr[i * 3] = x
+    arr[i * 3 + 1] = y
+    arr[i * 3 + 2] = z
+  }
+  for (let i = 0; i < N; i++) R[i] = rnd()
 
-  // Formation A: a layered neural network.
-  let layers = [5, 9, 13, 13, 9, 5]
-  let nodes: { x: number; y: number; z: number; li: number }[] = []
-  layers.forEach((count, li) => {
-    let x = (li - (layers.length - 1) / 2) * 2.7
-    for (let k = 0; k < count; k++) nodes.push({ x, y: (k - (count - 1) / 2) * 0.92, z: (rnd() - 0.5) * 1.4, li })
-  })
-  let edges: [number, number][] = []
-  for (let i = 0; i < nodes.length; i++) {
-    for (let j = 0; j < nodes.length; j++) {
-      if (nodes[j]!.li === nodes[i]!.li + 1 && rnd() < 0.5) edges.push([i, j])
+  // 01 Bits: four bit-planes, each a grid of cells, stacked in depth and
+  // staggered half a cell so the stack reads when the group tilts.
+  let planes = 4
+  let perPlane = Math.ceil(N / planes)
+  let cols = Math.ceil(Math.sqrt(perPlane * 1.9))
+  let rows = Math.ceil(perPlane / cols)
+  let planeGap = 2.3
+  for (let i = 0; i < N; i++) {
+    let plane = Math.floor(i / perPlane)
+    let k = i - plane * perPlane
+    let col = k % cols
+    let row = Math.floor(k / cols)
+    let x = (col - (cols - 1) / 2) * PITCH + (plane % 2) * PITCH * 0.5
+    let y = (row - (rows - 1) / 2) * PITCH + (plane % 3) * PITCH * 0.33
+    let z = (plane - (planes - 1) / 2) * planeGap
+    put(A, i, x, y, z)
+    size[i * 4] = 1
+    weight[i * 4] = 1
+  }
+  let planeLines = new Float32Array(planes * 4 * 6)
+  for (let plane = 0; plane < planes; plane++) {
+    let hw = (cols * PITCH) / 2 + PITCH * 0.25
+    let hh = (rows * PITCH) / 2 + PITCH * 0.4
+    let ox = (plane % 2) * PITCH * 0.5
+    let oy = (plane % 3) * PITCH * 0.33
+    let z = (plane - (planes - 1) / 2) * planeGap
+    let corners = [
+      [-hw + ox, -hh + oy],
+      [hw + ox, -hh + oy],
+      [hw + ox, hh + oy],
+      [-hw + ox, hh + oy],
+    ]
+    for (let s = 0; s < 4; s++) {
+      let a = corners[s]!
+      let b = corners[(s + 1) % 4]!
+      planeLines.set([a[0]!, a[1]!, z, b[0]!, b[1]!, z], (plane * 4 + s) * 6)
     }
   }
+
+  // 02 Tokens: four tapes of bytes (a column is one byte, eight cells
+  // tall; four columns make a word, then a gap) winding through the view
+  // and off both sides. What doesn't fit a tape is dust around them.
+  let tapes = 4
+  let tapeRows = 8
+  let tapeShare = Math.floor((N * 0.86) / (tapes * tapeRows))
+  let tapePitch = PITCH * 0.75
+  let columns = tapeShare
+  let tapeLen = columns * tapePitch + Math.floor(columns / 4) * tapePitch
   for (let i = 0; i < N; i++) {
-    R[i] = rnd()
-    let x: number, y: number, z: number
-    if (i < N * 0.58) {
-      let n = nodes[i % nodes.length]!
-      x = n.x + gauss() * 0.08
-      y = n.y + gauss() * 0.08
-      z = n.z + gauss() * 0.08
-      S[i] = 1.1 + rnd() * 0.9
+    let tape = Math.floor(i / (tapeShare * tapeRows))
+    if (tape < tapes) {
+      let k = i - tape * tapeShare * tapeRows
+      let col = Math.floor(k / tapeRows)
+      let row = k % tapeRows
+      let phase = tape * 1.9
+      let x = col * tapePitch + Math.floor(col / 4) * tapePitch - tapeLen / 2
+      let y0 = (tape - (tapes - 1) / 2) * 3.4
+      let y = y0 + (row - (tapeRows - 1) / 2) * tapePitch + Math.sin(x * 0.22 + phase) * 1.4
+      let z = Math.cos(x * 0.16 + phase) * 2.4
+      put(B, i, x, y, z)
+      size[i * 4 + 1] = 0.78
+      weight[i * 4 + 1] = 1
+    } else {
+      put(B, i, (rnd() - 0.5) * 30, (rnd() - 0.5) * 15, (rnd() - 0.5) * 7)
+      size[i * 4 + 1] = 0.5
+      weight[i * 4 + 1] = 0.22
+    }
+  }
+
+  // 03 Agents: a graph. Shell nodes on a squashed sphere, joined in a loop
+  // around it (the agent's cycle) and to their two nearest neighbours; a
+  // few spokes reach a small core. Half the points sit on the nodes, half
+  // along the edges, and signals run the edges.
+  let shellCount = 34
+  let nodes: { x: number; y: number; z: number; az: number }[] = []
+  let golden = Math.PI * (3 - Math.sqrt(5))
+  for (let k = 0; k < shellCount; k++) {
+    let y = 1 - (k / (shellCount - 1)) * 2
+    let r = Math.sqrt(1 - y * y)
+    let th = golden * k
+    let x = Math.cos(th) * r * 6.2 + gauss() * 0.25
+    let z = Math.sin(th) * r * 6.2 + gauss() * 0.25
+    nodes.push({ x, y: y * 4.4 + gauss() * 0.25, z, az: Math.atan2(z, x) })
+  }
+  nodes.sort((a, b) => a.az - b.az)
+  let coreStart = nodes.length
+  for (let k = 0; k < 5; k++) {
+    let a = (k / 5) * Math.PI * 2
+    nodes.push({ x: Math.cos(a) * 1.1, y: (rnd() - 0.5) * 0.8, z: Math.sin(a) * 1.1, az: a })
+  }
+  let edgeSet = new Set<string>()
+  let edges: [number, number][] = []
+  let link = (i: number, j: number) => {
+    if (i === j) return
+    let key = i < j ? `${i}:${j}` : `${j}:${i}`
+    if (edgeSet.has(key)) return
+    edgeSet.add(key)
+    edges.push([i, j])
+  }
+  let dist = (a: (typeof nodes)[number], b: (typeof nodes)[number]) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)
+  for (let i = 0; i < coreStart; i++) {
+    link(i, (i + 1) % coreStart)
+    let near = nodes
+      .slice(0, coreStart)
+      .map((n, j) => [dist(nodes[i]!, n), j] as const)
+      .filter(([, j]) => j !== i)
+      .sort((a, b) => a[0] - b[0])
+      .slice(0, 2)
+    for (let [, j] of near) link(i, j)
+    if (i % 4 === 0) link(i, coreStart + (i % 5))
+  }
+  for (let k = 0; k < 5; k++) link(coreStart + k, coreStart + ((k + 1) % 5))
+  let degree = new Array<number>(nodes.length).fill(0)
+  for (let [i, j] of edges) {
+    degree[i]!++
+    degree[j]!++
+  }
+  // A node is a chip: its points in a small square grid of cells, facing
+  // the viewer, the busier the node the bigger the chip.
+  let nodePoints = Math.floor(N * 0.42)
+  let perNode = Math.floor(nodePoints / nodes.length)
+  let chipPitch = 0.2
+  for (let i = 0; i < N; i++) {
+    if (i < perNode * nodes.length) {
+      let ni = Math.floor(i / perNode)
+      let n = nodes[ni]!
+      let side = Math.max(2, Math.round(Math.sqrt(perNode) * (0.7 + Math.min(4, degree[ni]!) * 0.1)))
+      let k = i - ni * perNode
+      let col = k % side
+      let row = Math.floor(k / side)
+      let w = Math.ceil(perNode / side)
+      put(C, i, n.x + (col - (side - 1) / 2) * chipPitch, n.y + (row - (w - 1) / 2) * chipPitch, n.z)
+      size[i * 4 + 2] = row < w ? 0.5 : 0
+      weight[i * 4 + 2] = 1
     } else {
       let e = edges[Math.floor(rnd() * edges.length)]!
       let a = nodes[e[0]]!
       let b = nodes[e[1]]!
       let t = rnd()
-      x = a.x + (b.x - a.x) * t
-      y = a.y + (b.y - a.y) * t
-      z = a.z + (b.z - a.z) * t
-      S[i] = 0.45 + rnd() * 0.35
+      put(C, i, a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t)
+      size[i * 4 + 2] = 0.42
+      weight[i * 4 + 2] = 0.85
     }
-    A[i * 3] = x
-    A[i * 3 + 1] = y
-    A[i * 3 + 2] = z
   }
-
-  // Formation B: a ribbon of token blocks.
-  let blocks = 26
-  for (let i = 0; i < N; i++) {
-    let cx = ((i % blocks) - (blocks - 1) / 2) * 1.0
-    let w = 0.78
-    let h = 0.52
-    let lx: number, ly: number
-    if (rnd() < 0.72) {
-      let t = rnd() * 2 * (w + h)
-      if (t < w) {
-        lx = t - w / 2
-        ly = -h / 2
-      } else if (t < w + h) {
-        lx = w / 2
-        ly = t - w - h / 2
-      } else if (t < 2 * w + h) {
-        lx = t - w - h - w / 2
-        ly = h / 2
-      } else {
-        lx = -w / 2
-        ly = t - 2 * w - h - h / 2
-      }
-    } else {
-      lx = (rnd() - 0.5) * w * 0.7
-      ly = (rnd() - 0.5) * h * 0.5
-    }
-    B[i * 3] = cx + lx
-    B[i * 3 + 1] = ly + Math.sin(cx * 0.42) * 1.7
-    B[i * 3 + 2] = Math.cos(cx * 0.3) * 2.4 + (rnd() - 0.5) * 0.12
-  }
-
-  // Formation C: an agent loop (a (2,3) torus knot) around a core.
-  for (let i = 0; i < N; i++) {
-    let x: number, y: number, z: number
-    if (i < N * 0.74) {
-      let t = rnd() * Math.PI * 2
-      let r = Math.cos(3 * t) + 2.4
-      x = r * Math.cos(2 * t) * 1.5 + gauss() * 0.1
-      y = r * Math.sin(2 * t) * 1.5 + gauss() * 0.1
-      z = -Math.sin(3 * t) * 1.5 + gauss() * 0.1
-    } else {
-      let u = rnd() * 2 - 1
-      let th = rnd() * Math.PI * 2
-      let s = Math.sqrt(1 - u * u)
-      let rr = 1.05 + gauss() * 0.04
-      x = s * Math.cos(th) * rr
-      y = s * Math.sin(th) * rr
-      z = u * rr
-    }
-    C[i * 3] = x
-    C[i * 3 + 1] = y
-    C[i * 3 + 2] = z
-  }
-
-  // Formation D: a three-armed galaxy, tilted toward the viewer.
-  let ct = Math.cos(-1.0)
-  let st = Math.sin(-1.0)
-  for (let i = 0; i < N; i++) {
-    let arm = i % 3
-    let r = Math.pow(rnd(), 0.62) * 8.2
-    let ang = arm * ((2 * Math.PI) / 3) + r * 0.55 + gauss() * 0.2
-    let x = Math.cos(ang) * r
-    let z0 = Math.sin(ang) * r
-    let y0 = gauss() * 0.16 * (1.3 - r / 9)
-    D[i * 3] = x
-    D[i * 3 + 1] = y0 * ct - z0 * st
-    D[i * 3 + 2] = y0 * st + z0 * ct
-  }
-
-  // Network edges, then 170 signals travelling along random edges.
-  let lines = new Float32Array(edges.length * 6)
+  let graphLines = new Float32Array(edges.length * 6)
   edges.forEach(([i, j], k) => {
     let a = nodes[i]!
     let b = nodes[j]!
-    lines.set([a.x, a.y, a.z, b.x, b.y, b.z], k * 6)
+    graphLines.set([a.x, a.y, a.z, b.x, b.y, b.z], k * 6)
   })
-  let M = 170
+  let M = 180
   let signalStart = new Float32Array(M * 3)
   let signalEnd = new Float32Array(M * 3)
   let signalOffset = new Float32Array(M)
@@ -277,12 +340,27 @@ function buildFormations(N: number): Formations {
     signalOffset[k] = rnd()
   }
 
-  return { A, B, C, D, R, S, edges: lines, signalStart, signalEnd, signalOffset }
+  // 04 You: a three-armed galaxy of bits, tilted toward the viewer.
+  let ct = Math.cos(-1.0)
+  let st = Math.sin(-1.0)
+  for (let i = 0; i < N; i++) {
+    let arm = i % 3
+    let r = Math.pow(rnd(), 0.62) * 9.2
+    let ang = arm * ((2 * Math.PI) / 3) + r * 0.55 + gauss() * 0.2
+    let x = Math.cos(ang) * r
+    let z0 = Math.sin(ang) * r
+    let y0 = gauss() * 0.16 * (1.3 - r / 10)
+    put(D, i, x, y0 * ct - z0 * st, y0 * st + z0 * ct)
+    size[i * 4 + 3] = 0.38 + rnd() * 0.5
+    weight[i * 4 + 3] = 1
+  }
+
+  return { A, B, C, D, R, size, weight, planeLines, graphLines, signalStart, signalEnd, signalOffset }
 }
 
 /**
  * Builds the scene on `canvas`. Throws if WebGL cannot be created; the
- * caller treats that as "no field" and leaves the static dot grid.
+ * caller treats that as "no field" and leaves the static graph paper.
  */
 export function createField(T: Three, options: FieldOptions): Field {
   let { canvas, input, onStage, count, reducedMotion } = options
@@ -295,6 +373,20 @@ export function createField(T: Three, options: FieldOptions): Field {
   })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
   renderer.setClearColor(0x000000, 0)
+
+  // The accents, as the page has them right now (lane-independent: a token
+  // change recolours the field with no code change). Shader uniforms take
+  // the sRGB floats as they are: a ShaderMaterial writes them unconverted,
+  // so the cells match the CSS exactly.
+  let tokens = readTokenColors(canvas, sceneTokens)
+  let raw = (c: Rgb) => new T.Color().setRGB(c[0], c[1], c[2], T.LinearSRGBColorSpace)
+  let managed = (c: Rgb) => new T.Color().setRGB(c[0], c[1], c[2], T.SRGBColorSpace)
+  let palette = [
+    [tokens['--volt'], tokens['--ion']],
+    [tokens['--ion'], tokens['--synapse']],
+    [tokens['--synapse'], tokens['--volt']],
+    [tokens['--volt-soft'], tokens['--synapse']],
+  ].map(([a, b]) => [raw(a!), raw(b!)] as const)
 
   let scene = new T.Scene()
   let camera = new T.PerspectiveCamera(50, 1, 0.1, 200)
@@ -311,19 +403,21 @@ export function createField(T: Three, options: FieldOptions): Field {
   geo.setAttribute('aC', new T.BufferAttribute(f.C, 3))
   geo.setAttribute('aD', new T.BufferAttribute(f.D, 3))
   geo.setAttribute('aR', new T.BufferAttribute(f.R, 1))
-  geo.setAttribute('aS', new T.BufferAttribute(f.S, 1))
+  geo.setAttribute('aSz', new T.BufferAttribute(f.size, 4))
+  geo.setAttribute('aW', new T.BufferAttribute(f.weight, 4))
   let mat = new T.ShaderMaterial({
     transparent: true,
     depthWrite: false,
-    blending: T.AdditiveBlending,
     uniforms: {
       uMorph: { value: 0 },
       uTime: { value: 0 },
       uPx: { value: px },
-      uC1: { value: new T.Color(PALETTE[0][0]) },
-      uC2: { value: new T.Color(PALETTE[0][1]) },
-      // Full strength: copy cells sit on a veil now, so the field can be seen (048).
-      uAlpha: { value: 1.0 },
+      uCell: { value: CELL_PX },
+      uStream: { value: 0 },
+      uClear: { value: 1 },
+      uC1: { value: palette[0]![0].clone() },
+      uC2: { value: palette[0]![1].clone() },
+      uAlpha: { value: 0.92 },
     },
     vertexShader: pointsVertex,
     fragmentShader: pointsFragment,
@@ -332,17 +426,19 @@ export function createField(T: Three, options: FieldOptions): Field {
   points.frustumCulled = false
   group.add(points)
 
-  let lineGeo = new T.BufferGeometry()
-  lineGeo.setAttribute('position', new T.BufferAttribute(f.edges, 3))
-  let lineMat = new T.LineBasicMaterial({
-    color: 0xb8e05a,
-    transparent: true,
-    opacity: 0.2,
-    blending: T.AdditiveBlending,
-    depthWrite: false,
-  })
-  let lines = new T.LineSegments(lineGeo, lineMat)
-  group.add(lines)
+  let lineMaterial = (c: Rgb) =>
+    new T.LineBasicMaterial({ color: managed(c), transparent: true, opacity: 0, depthWrite: false })
+  let planeGeo = new T.BufferGeometry()
+  planeGeo.setAttribute('position', new T.BufferAttribute(f.planeLines, 3))
+  let planeMat = lineMaterial(tokens['--ion'])
+  let planeLines = new T.LineSegments(planeGeo, planeMat)
+  group.add(planeLines)
+
+  let graphGeo = new T.BufferGeometry()
+  graphGeo.setAttribute('position', new T.BufferAttribute(f.graphLines, 3))
+  let graphMat = lineMaterial(tokens['--synapse'])
+  let graphLines = new T.LineSegments(graphGeo, graphMat)
+  group.add(graphLines)
 
   let signalGeo = new T.BufferGeometry()
   signalGeo.setAttribute('position', new T.BufferAttribute(f.signalStart, 3))
@@ -351,8 +447,13 @@ export function createField(T: Three, options: FieldOptions): Field {
   let signalMat = new T.ShaderMaterial({
     transparent: true,
     depthWrite: false,
-    blending: T.AdditiveBlending,
-    uniforms: { uTime: { value: 0 }, uPx: { value: px }, uAlpha: { value: 1 } },
+    uniforms: {
+      uTime: { value: 0 },
+      uPx: { value: px },
+      uCell: { value: CELL_PX },
+      uAlpha: { value: 0 },
+      uColor: { value: raw(tokens['--volt-soft']) },
+    },
     vertexShader: signalVertex,
     fragmentShader: signalFragment,
   })
@@ -360,7 +461,6 @@ export function createField(T: Three, options: FieldOptions): Field {
   signals.frustumCulled = false
   group.add(signals)
 
-  let palette = PALETTE.map(([a, b]) => [new T.Color(a), new T.Color(b)] as const)
   let c1 = new T.Color()
   let c2 = new T.Color()
 
@@ -412,26 +512,41 @@ export function createField(T: Three, options: FieldOptions): Field {
     mat.uniforms.uC2!.value.copy(c2)
     mat.uniforms.uMorph!.value = morph
     mat.uniforms.uTime!.value = time
+    mat.uniforms.uStream!.value = bell(morph, 1, 0.8)
+    // The planes sit behind the hero copy, so they are the quietest stage
+    // and keep clear of the middle of the screen.
+    let planeAlpha = bell(morph, 0, 0.7)
+    let phone = width < 760
+    mat.uniforms.uAlpha!.value = 0.95 - (phone ? 0.45 : 0.3) * bell(morph, 0, 1)
+    mat.uniforms.uClear!.value = planeAlpha
+    // On a phone the hero copy fills the middle of the screen, so the deck
+    // sits low, under the prompt bar, instead of behind the paragraph.
+    group.position.y = phone ? -3.2 * planeAlpha : 0
     signalMat.uniforms.uTime!.value = time
 
-    // Edges and signals fade out during the first morph.
-    let netAlpha = 1 - Math.min(1, morph * 1.6)
-    lineMat.opacity = 0.18 * netAlpha
-    signalMat.uniforms.uAlpha!.value = netAlpha
-    lines.visible = netAlpha > 0.01
-    signals.visible = netAlpha > 0.01
+    // Each stage's lines show only around it: the plane outlines at 01,
+    // the graph's edges and signals at 03.
+    planeMat.opacity = 0.28 * planeAlpha
+    planeLines.visible = planeAlpha > 0.01
+    let graphAlpha = bell(morph, 2, 0.7)
+    graphMat.opacity = 0.3 * graphAlpha
+    graphLines.visible = graphAlpha > 0.01
+    signalMat.uniforms.uAlpha!.value = graphAlpha
+    signals.visible = graphAlpha > 0.01
 
-    // Cursor parallax plus a slow drift; the galaxy spins once it forms.
-    // Reduced motion keeps the spec's ¼-speed drift but drops cursor
-    // parallax: motion that follows the pointer is the vestibular trigger
-    // the setting exists for (decision 031).
+    // Cursor parallax plus a slow drift; the graph turns and the galaxy
+    // spins once it forms. Reduced motion keeps the spec's ¼-speed drift
+    // but drops cursor parallax: motion that follows the pointer is the
+    // vestibular trigger the setting exists for (decision 031).
     let k = reducedMotion || still ? 0 : ease(PARALLAX_EASE, dt)
     mouse.x += (input.pointer.x - mouse.x) * k
     mouse.y += (input.pointer.y - mouse.y) * k
-    group.rotation.y =
-      Math.sin(time * 0.09) * 0.45 + mouse.x * 0.35 + (morph > 2 ? (morph - 2) * time * 0.04 : 0)
-    group.rotation.x = mouse.y * 0.18 + Math.sin(time * 0.07) * 0.08
-    camera.position.z = (width < 760 ? 25 : 16) + Math.sin(Math.min(3, morph) * Math.PI) * 1.4
+    let spin = morph > 2 ? (morph - 2) * time * 0.04 : 0
+    // The stack of planes tilts away like a deck seen from above, so each
+    // plane shows; the graph turns slowly; the galaxy spins once it forms.
+    group.rotation.y = Math.sin(time * 0.09) * 0.42 + mouse.x * 0.3 + spin + graphAlpha * time * 0.03
+    group.rotation.x = mouse.y * 0.16 + Math.sin(time * 0.07) * 0.07 + planeAlpha * 0.62
+    camera.position.z = (width < 760 ? 25 : 16) + Math.sin(Math.min(3, morph) * Math.PI) * 1.4 + planeAlpha * 2.5
 
     renderer.render(scene, camera)
 
@@ -473,7 +588,7 @@ export function createField(T: Three, options: FieldOptions): Field {
       cancelAnimationFrame(stillRaf)
       raf = 0
       stillRaf = 0
-      for (let d of [geo, mat, lineGeo, lineMat, signalGeo, signalMat]) d.dispose()
+      for (let d of [geo, mat, planeGeo, planeMat, graphGeo, graphMat, signalGeo, signalMat]) d.dispose()
       renderer.dispose()
     },
   }
