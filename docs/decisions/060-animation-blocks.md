@@ -102,10 +102,11 @@ answer), which is the styleguide's specimen.
 
 ## Consequences
 
-- Browser JS per island (minified, gzip): steps 2.1 KB, flow 2.3 KB,
-  marbles 2.4 KB, on modules the lesson page already loads (toy-panel,
-  tool-button, icon, bit-cells, stable). Worker startup unchanged: the
-  islands load with the lesson chunk (decision 052).
+- Browser JS per island (minified / gzip): steps 8.4 / 2.6 KB, flow
+  7.5 / 2.6 KB, marbles 8.3 / 2.9 KB, on modules the lesson page already
+  loads (toy-panel, tool-button, icon, bit-cells, stable). The Worker
+  loads them with the lesson chunk (decision 052); startup went from 724
+  to 726 KiB (the block registry and types).
 - Fixtures: `content/fixtures/toys/04-animation.md` builds clean;
   `content/fixtures/broken-toys/08-steps.md`, `09-flow.md` and
   `10-marbles.md` hold each block's errors, pinned in

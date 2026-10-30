@@ -231,14 +231,9 @@ const nodeStyle = css({
   transition: 'background-color var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast)',
   '&:focus-visible': focusOutline,
   '[data-state="done"] &': { borderColor: 'var(--volt-a40)', color: 'var(--text-body)' },
-  '[data-state="done"] & > span:first-child': { background: 'var(--volt)', color: 'var(--on-volt)', borderColor: 'var(--volt)' },
   '[data-state="current"] &': { borderColor: 'var(--volt)', background: 'var(--volt-tint-on)', color: 'var(--text)' },
-  '[data-state="current"] & > span:first-child': { background: 'var(--volt)', color: 'var(--on-volt)', borderColor: 'var(--volt)' },
   '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-  [FORCED_COLORS]: {
-    '[data-state="current"] &': forcedSelected,
-    '[data-state="done"] & > span:first-child': { forcedColorAdjust: 'none', background: 'CanvasText', color: 'Canvas' },
-  },
+  [FORCED_COLORS]: { '[data-state="current"] &': forcedSelected },
 })
 // The step's number as a bit cell: empty ahead, filled once reached.
 const nodeIndex = css({
@@ -252,6 +247,11 @@ const nodeIndex = css({
   fontSize: 'var(--fs-11)',
   color: 'var(--dim)',
   fontVariantNumeric: 'tabular-nums',
+  // The lit states live here, with the colour they replace (a mixin is its own layer).
+  '[data-state="done"] &, [data-state="current"] &': { background: 'var(--volt)', color: 'var(--on-volt)', borderColor: 'var(--volt)' },
+  [FORCED_COLORS]: {
+    '[data-state="done"] &, [data-state="current"] &': { forcedColorAdjust: 'none', background: 'CanvasText', color: 'Canvas', borderColor: 'CanvasText' },
+  },
 })
 const nodeLabel = css({ whiteSpace: 'nowrap' })
 const loopStyle = css({

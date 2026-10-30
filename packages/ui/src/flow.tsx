@@ -244,9 +244,9 @@ const chipStyle = css({
   lineHeight: 1.4,
   transition: 'background-color var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast), opacity var(--duration-fast)',
   '&[data-state="in"]': { borderColor: 'var(--volt)', background: 'var(--volt-tint-on)', color: 'var(--text)' },
-  '&[data-state="out"]': { borderStyle: 'dashed', color: 'var(--dim)', textDecoration: 'line-through', opacity: 0.7 },
+  '&[data-state="out"]': { borderStyle: 'dashed', borderColor: 'var(--line-dashed)', color: 'var(--dim)', textDecoration: 'line-through' },
   '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-  [FORCED_COLORS]: { '&[data-state="in"]': forcedSelected, '&[data-state="out"]': { opacity: 1 } },
+  [FORCED_COLORS]: { '&[data-state="in"]': forcedSelected },
 })
 const chipName = css({ overflowWrap: 'anywhere' })
 const chipSize = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-11)', color: 'var(--muted)', whiteSpace: 'nowrap' })
