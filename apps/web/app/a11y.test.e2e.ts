@@ -237,36 +237,56 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await expectClean(page, 'training scrubber at the end')
   })
 
-  it('landing: the phone menu sheet, and the frosted header after a scroll (decision 040)', async (t) => {
+  it('one header everywhere (decision 059): the phone menu sheet, and the same bar on landing, app and sign-in pages', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.setViewportSize({ width: 360, height: 800 })
-    await page.goto(routes.home.href())
-    await settled(page)
-    let header = page.locator('header').first()
-    await header.getByRole('button', { name: 'Menu' }).click()
-    let sheet = page.locator('#landing-nav-sheet:popover-open')
-    await sheet.waitFor()
-    // The sheet lists the page's links and Sign in.
-    assert.ok(await sheet.getByRole('link', { name: 'Sign in' }).isVisible(), 'Sign in is in the sheet')
-    await expectClean(page, 'landing menu sheet open', 360)
-    await page.keyboard.press('Escape')
-    await page.locator('#landing-nav-sheet:popover-open').waitFor({ state: 'detached' })
+    for (let href of [routes.home.href(), routes.login.index.href()]) {
+      await page.goto(href)
+      await settled(page)
+      let header = page.locator('body > header')
+      await header.getByRole('button', { name: 'Menu' }).click()
+      let sheet = page.locator('#app-nav-sheet:popover-open')
+      await sheet.waitFor()
+      assert.ok(await sheet.getByRole('link', { name: 'Courses' }).isVisible(), `${href}: the nav is in the sheet`)
+      if (href === routes.home.href()) {
+        // Signed out, the bar hides Sign in under 420px; the sheet keeps it.
+        assert.ok(await sheet.getByRole('link', { name: 'Sign in' }).isVisible(), 'Sign in is in the sheet')
+      }
+      await expectClean(page, `${href} menu sheet open`, 360)
+      await page.keyboard.press('Escape')
+      await sheet.waitFor({ state: 'detached' })
+    }
 
-    // Past the 120px range the header is sticky and its full-bleed ground
-    // (::before, decision 047) is opaque ink (a scroll-driven animation, so
-    // it follows the scroll position).
+    // The same bar on every page: --appbar-h tall, the logo and the row at
+    // the same spot, sticky at the top on an opaque ground after a scroll.
     for (let width of [360, 1440]) {
       await page.setViewportSize({ width, height: width === 360 ? 800 : 900 })
-      await page.evaluate(() => window.scrollTo(0, 600))
-      await page.waitForFunction(() => {
-        let bar = document.querySelector('header')
-        return (
-          bar != null &&
-          bar.getBoundingClientRect().top === 0 &&
-          getComputedStyle(bar, '::before').backgroundColor !== 'rgba(0, 0, 0, 0)'
-        )
-      })
-      await expectClean(page, `landing header scrolled @ ${width}`, width)
+      let shapes: string[] = []
+      for (let href of [routes.home.href(), routes.courses.index.href(), routes.login.index.href()]) {
+        await page.goto(href)
+        await settled(page)
+        await page.evaluate(() => window.scrollTo(0, 600))
+        await page.waitForFunction(() => document.querySelector('body > header')?.getBoundingClientRect().top === 0)
+        let shape = await page.evaluate(() => {
+          let bar = document.querySelector('body > header') as HTMLElement
+          let row = bar.firstElementChild as HTMLElement
+          let logo = row.querySelector('a') as HTMLElement
+          let appbar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--appbar-h'))
+          let r = row.getBoundingClientRect()
+          let l = logo.getBoundingClientRect()
+          return {
+            tall: bar.getBoundingClientRect().height === appbar,
+            ground: getComputedStyle(bar).backgroundColor,
+            row: [r.left, r.width, r.height].join(),
+            logo: [l.left, l.top, l.width, l.height].join(),
+          }
+        })
+        assert.ok(shape.tall, `${href} @ ${width}: the bar is --appbar-h tall`)
+        assert.notEqual(shape.ground, 'rgba(0, 0, 0, 0)', `${href} @ ${width}: an opaque ground`)
+        shapes.push(JSON.stringify({ row: shape.row, logo: shape.logo, ground: shape.ground }))
+        await expectClean(page, `${href} header scrolled @ ${width}`, width)
+      }
+      assert.equal(new Set(shapes).size, 1, `one bar shape @ ${width}: ${shapes.join(' | ')}`)
     }
   })
 

@@ -63,3 +63,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 055 | [One lesson view: Read, with the video at the top](055-one-lesson-view.md) |
 | 056 | [Softer palette: a slate ground, a moss volt](056-softer-palette.md) |
 | 058 | [The bits motif: one ornament, the bit cell](058-bits-motif.md) |
+| 059 | [One header on every page: the centred bar](059-one-header.md) |

@@ -57,6 +57,7 @@ outline couldn't be reached without scrolling the whole page back up.
   navigation. Without JS the outline starts at the top.
 - **Exceptions, by design:** the landing page keeps its transparent marketing
   bar over the 3D field, and sign-in keeps the Auth artboard's split frame.
+  (Superseded by 059: the landing and sign-in now render the same bar.)
 
 ## Consequences
 

@@ -148,7 +148,9 @@ content/fixtures/         deliberately broken folders for tests
 2. Create `app/actions/badges/controller.tsx`:
    `export default createController(routes.badges, { actions: { index(context) { return context.render(<BadgesPage />) } } })`.
    Put page components next to it (`badges-page.tsx`), wrap them in `Layout`
-   from `app/ui/layout.tsx`, and use `context.db` for data.
+   from `app/ui/layout.tsx`, and use `context.db` for data. `Layout` draws
+   the one header (decision 059); a page never builds its own, it only
+   changes what the bar holds (`links`, `account`, `startHref`, `sub`).
 3. Map it in `app/router.ts`: `router.map(routes.badges, badgesController)`.
 4. Add a case to `app/actions/controller.test.ts` (or a test next to the
    controller). Run `pnpm test`, `pnpm typecheck` and `pnpm remix:doctor`.
@@ -180,6 +182,9 @@ the new page into the old DOM. Write for that:
 - A link that leaves the origin (an OAuth start) or a form whose answer
   isn't a page (JSON) needs `data-rmx-document`. Use `<Keycap document>`
   for keycaps. A file link needs `download` (`<Keycap download>`).
+- Every page, the landing and sign-in included, has the same `AppBar`
+  (decision 059), so client navigation reconciles the header in place
+  (the menu sheet island, `#app-nav-sheet`, included) instead of swapping it.
 - Islands keep their setup state when the next page puts them in the same
   spot. Reset per-page state with a `data-rmx-key` on a wrapping element,
   as the lesson `<main>` does (`view.key`).
@@ -336,8 +341,8 @@ Rationale: `docs/decisions/010-component-library.md`.
 |---|---|---|---|
 | Document | document.tsx | assets, title, description, url (canonical + og:url), siteName, image (og:image; `summary_large_image`), head; nonces its scripts from `CspNonce` | static |
 | CspNonce / cspNonce | csp-nonce.tsx | nonce (provider; the app's renderer wraps every page) / `cspNonce(handle)` reads it | static |
-| AppBar | app-bar.tsx | brand, homeHref, links, currentPath, actions, variant, position, sub (second header row; `--appbar-h` tall, decision 022) | static |
-| AppBarMenu | app-bar-menu.tsx | links, currentPath, label (mobile sheet <760px from `--appbar-h`, native popover) | island |
+| AppBar | app-bar.tsx | brand, homeHref, links (`section` on a link: lit while that in-page section is on screen), menuExtras (sheet-only links), currentPath, actions, position, sub (second header row; decision 022). The one header on every page (decision 059): logo left, nav centred in hairline cells, actions right, `--appbar-h` tall, sticky on ink | static |
+| AppBarMenu | app-bar-menu.tsx | links, currentPath, label, id (mobile sheet <760px from `--appbar-h`, native popover; `app-nav-sheet` on pages) | island |
 | Logo / BrandMark | logo.tsx / brand-mark.tsx | brand, href, variant, prefetch / size | static |
 | NavLink | nav-link.tsx | href, variant, current, prefetch | static |
 | Icon | icon.tsx | name (`iconNames`), size, color, label | static |

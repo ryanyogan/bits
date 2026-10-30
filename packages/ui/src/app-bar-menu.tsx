@@ -8,6 +8,12 @@ import { ACTIVE, FORCED_COLORS, forcedSelected, HOVER } from './lib/states.ts'
 export interface AppBarLink {
   href: string
   label: string
+  /**
+   * An in-page section (`#how` → `'how'`): in the bar, the link is lit while
+   * that section is on screen (a view timeline named `--<section>`). Never
+   * prefetched, never `aria-current`.
+   */
+  section?: string
 }
 
 export interface AppBarMenuProps {
@@ -59,8 +65,8 @@ export const AppBarMenu = clientEntry(
                 <a
                   key={link.href}
                   href={link.href}
-                  aria-current={link.href === currentPath ? 'page' : undefined}
-                  data-rmx-prefetch={prefetchFor(link.href)}
+                  aria-current={!link.section && link.href === currentPath ? 'page' : undefined}
+                  data-rmx-prefetch={link.section ? undefined : prefetchFor(link.href)}
                   mix={linkStyle}
                 >
                   {link.label}

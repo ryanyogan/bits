@@ -1,6 +1,6 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css, Fragment } from 'remix/component'
-import { AppBar } from '@bits/ui/app-bar'
+import { AppBar, type AppBarLink } from '@bits/ui/app-bar'
 import { Document, type DocumentImage } from '@bits/ui/document'
 import { AvatarButton } from '@bits/ui/avatar-button'
 import { Keycap } from '@bits/ui/keycap'
@@ -20,13 +20,25 @@ import { pageShell } from './page-shell.ts'
 export interface LayoutProps {
   /** Page name; the document title becomes "<title> · Bits". Omit on the landing page. */
   title?: string
+  /** The whole document title, as is, instead of "<title> · Bits" (the landing page). */
+  documentTitle?: string
   description?: string
   /** Pathname of this page, to mark the active nav link. */
   currentPath?: string
   /** This page's own path, for the canonical URL and link previews (shareable pages only). */
   canonicalPath?: string
-  /** `sticky` for app pages, `static` over the landing hero. */
-  bar?: 'static' | 'sticky'
+  /**
+   * The header's centred nav (decision 059): the app links by default; the
+   * landing passes its own (with in-page `section` links).
+   */
+  links?: AppBarLink[]
+  /**
+   * The header's account actions. Off on the sign-in pages, which are
+   * themselves the way in (decision 059).
+   */
+  account?: boolean
+  /** Where the signed-out "Start free" key goes (the course list by default). */
+  startHref?: string
   head?: RemixNode
   /** The link-preview card (`ogImage()` from ui/og.ts); the landing card when omitted. */
   image?: DocumentImage
@@ -58,7 +70,8 @@ export interface LayoutProps {
   children?: RemixNode
 }
 
-const appLinks = [
+/** The app's nav: the header on every page but the landing (decision 059). */
+export const appLinks: AppBarLink[] = [
   { href: routes.courses.index.href(), label: 'Courses' },
   { href: routes.me.index.href(), label: 'My learning' },
   { href: routes.author.index.href(), label: 'Write a course' },
@@ -74,10 +87,12 @@ export function canonicalUrl(path: string): string | undefined {
 }
 
 /**
- * The app's page shell (decision 022): the design-system Document wired to
+ * The page shell (decisions 022, 059): the design-system Document wired to
  * this runtime's assets, the skip link and the sticky AppBar, the same on
- * every app page. Lesson pages add their sub-bar with `sub`. The landing and
- * sign-in pages draw their own frames.
+ * every page, the landing and sign-in included. Pages change only what the
+ * header holds: the landing passes its own `links`, the sign-in pages drop
+ * the account actions (`account={false}`), and lesson pages add their
+ * sub-bar with `sub`.
  *
  * The squared grid (decision 047): the page brings the frame. Wrap the
  * page body in `<PageFrame>` (as `<main>`'s top-level child) and lay it out
@@ -91,10 +106,13 @@ export function Layout(handle: Handle<LayoutProps>) {
   return () => {
     let {
       title,
+      documentTitle,
       description = APP_TAGLINE,
       currentPath,
       canonicalPath,
-      bar = 'sticky',
+      links = appLinks,
+      account = true,
+      startHref = routes.courses.index.href(),
       head,
       image = ogImage('home', HOME_ALT),
       reward,
@@ -106,6 +124,7 @@ export function Layout(handle: Handle<LayoutProps>) {
       children,
     } = handle.props
     let framed = !bare && hasPageFrame(children)
+    let loginHref = routes.login.index.href()
 
     return (
       <Document
@@ -113,7 +132,7 @@ export function Layout(handle: Handle<LayoutProps>) {
         url={canonicalPath ? canonicalUrl(canonicalPath) : undefined}
         siteName={APP_NAME}
         image={image}
-        title={pageTitle(title)}
+        title={documentTitle ?? pageTitle(title)}
         description={description}
         head={
           <>
@@ -133,12 +152,14 @@ export function Layout(handle: Handle<LayoutProps>) {
         <AppBar
           brand={APP_NAME}
           homeHref={routes.home.href()}
-          links={appLinks}
+          links={links}
           currentPath={currentPath}
-          position={bar}
           sub={sub}
+          // Under 420px the bar keeps Start free and the menu; Sign in moves
+          // into the menu sheet, so it is never out of reach.
+          menuExtras={account && !viewer ? [{ href: loginHref, label: 'Sign in' }] : undefined}
           actions={
-            viewer ? (
+            !account ? null : viewer ? (
               <AvatarButton
                 initials={viewer.initials}
                 href={routes.me.index.href()}
@@ -146,10 +167,10 @@ export function Layout(handle: Handle<LayoutProps>) {
               />
             ) : (
               <>
-                <a href={routes.login.index.href()} data-rmx-prefetch={prefetchFor(routes.login.index.href())} mix={signInStyle}>
+                <a href={loginHref} data-rmx-prefetch={prefetchFor(loginHref)} mix={signInStyle}>
                   Sign in
                 </a>
-                <Keycap href={routes.courses.index.href()}>Start free</Keycap>
+                <Keycap href={startHref}>Start free</Keycap>
               </>
             )
           }
@@ -184,11 +205,15 @@ const signInStyle = css({
   display: 'inline-flex',
   alignItems: 'center',
   minHeight: 'var(--touch-target)',
-  padding: '0 var(--space-2)',
+  padding: '0 var(--space-3)',
   color: 'var(--text-lead)',
   textDecoration: 'none',
-  fontSize: 'var(--type-ui-size)',
+  fontSize: 'var(--fs-14)',
+  transition: 'color var(--duration-fast)',
   '&:hover': { color: 'var(--text)' },
+  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+  '@media (forced-colors: active)': { '&:hover': { textDecoration: 'underline' } },
+  // In the menu sheet instead (menuExtras).
   '@media (max-width: 420px)': { display: 'none' },
 })
 

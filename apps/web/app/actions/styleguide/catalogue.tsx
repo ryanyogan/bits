@@ -193,7 +193,7 @@ export function Catalogue(handle: Handle) {
       </Section>
 
       <Section id="sg-nav" title="Navigation">
-        <Specimen caption="AppBar — app (signed in), static position here; sticky and flat on pages, its column and rails the same as a PageFrame's, the nav a row of hairline cells. Under 760px the nav becomes the menu sheet.">
+        <Specimen caption="AppBar — the one header on every page (decision 059), signed in. Static here; sticky on an ink ground on pages. Logo left, the nav centred as a row of hairline cells, actions right, --appbar-h tall; its column and rails are a PageFrame's, with + marks where its rule crosses them. Under 760px the nav becomes the menu sheet.">
           <div mix={barFrame}>
             <AppBar
               brand={APP_NAME}
@@ -211,20 +211,21 @@ export function Catalogue(handle: Handle) {
             />
           </div>
         </Specimen>
-        <Specimen caption="AppBar — marketing (signed out)">
+        <Specimen caption="AppBar — same bar, other content: the landing's links (signed out). In-page links take `section` and light up while that section is on screen; Sign in also goes in the sheet (menuExtras) because the bar hides it under 420px.">
           <div mix={barFrame}>
             <AppBar
               brand={APP_NAME}
               homeHref="#sg-nav"
-              variant="marketing"
               position="static"
               navLabel="Primary (sample)"
-              menuId="sg-nav-sheet-marketing"
+              menuId="sg-nav-sheet-landing"
               links={[
                 { href: '#sg-nav-c', label: 'Courses' },
-                { href: '#sg-nav-h', label: 'How it works' },
-                { href: '#sg-nav-p', label: 'The path' },
+                { href: '#sg-nav-h', label: 'How it works', section: 'sg-how' },
+                { href: '#sg-nav-p', label: 'The path', section: 'sg-path' },
+                { href: '#sg-nav-a', label: 'For authors' },
               ]}
+              menuExtras={[{ href: '#sg-nav-s', label: 'Sign in' }]}
               actions={
                 <>
                   <NavLink href="#sg-nav" variant="marketing">
