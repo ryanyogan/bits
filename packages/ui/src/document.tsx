@@ -95,7 +95,7 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <meta name="color-scheme" content="dark" />
-          <meta name="theme-color" content="#07080D" />
+          <meta name="theme-color" content="#0F131A" />
           <title>{title}</title>
           {description ? <meta name="description" content={description} /> : null}
           {url ? <link data-rmx-key="canonical" rel="canonical" href={url} /> : null}

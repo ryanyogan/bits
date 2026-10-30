@@ -203,6 +203,38 @@ Note that a course card's sigil colour is per *course*, not per track (e.g. "Tok
 - Auth brain: `mix(vec3(0.24, 0.89, 1.0) /*ion*/, vec3(0.78, 1.0, 0.24) /*volt*/, smoothstep(-0.2, 0.6, vH))`; orbit ring `PointsMaterial` `0x9D85FF`, size `.045`, opacity `.7`.
 - Renderer clear colour `0x000000` alpha 0 (transparent over `--ink`).
 
+### 1.x Addendum: decision 056, the softer palette (2026-10-29)
+
+The tables above are the artboard values; 047 toned the accents and 056
+lifted the ground and softened the text and volt. Live values, with the
+WCAG 2.x ratios on `--ink` / `--surface` / `--selected`:
+
+| Token | 047 | 056 | Ratios (ink / surface / selected) |
+|---|---|---|---|
+| `--ink` | `#07080d` | `#0f131a` | ground |
+| `--terminal` / `--well` / `--surface` | `#090a10` / `#0a0c14` / `#0e1018` | `#11151d` / `#12161f` / `#171c26` | surfaces |
+| `--raised` / `--bubble` / `--selected` | `#151826` / `#1a1e2d` / `#1c2030` | `#1f2531` / `#242b39` / `#272e3d` | surfaces |
+| `--text` | `#eceef5` | `#e3e6ed` | 14.9 / 13.7 / 10.9 |
+| `--text-body` | `#d5d8e3` | `#cdd1db` | 12.2 / 11.2 / 8.9 |
+| `--text-quiet` | `#c6cad6` | `#bec3cf` | 10.5 / 9.7 / 7.7 |
+| `--text-lead` | `#b4b9ca` | `#acb2c2` | 8.8 / 8.1 / 6.4 |
+| `--muted` | `#9aa0b4` | `#949bae` | 6.7 / 6.1 / 4.9 |
+| `--dim` | `#7a8098` | `#838a9f` | 5.4 / 5.0 / 3.9 (never on selected) |
+| `--on-volt` | `#0a0c05` | `#0c1008` | 10.8 on volt |
+| `--volt` | `#b8e05a` | `#a7cf66` | 10.4 / 9.6 / 7.6 |
+| `--volt-edge` / `-hover` / `-link-hover` / `-soft` | `#6f8a2e` / `#c6ea70` / `#d3f08e` / `#d9eeaa` | `#66833a` / `#b5d97c` / `#c3e194` / `#d0e6ac` | soft 13.8 on ink |
+| `--ion` / `--ion-edge` | `#5ec8dc` / `#2e8595` | `#66c4d5` / `#2f8292` | 9.2 / 8.5 / 6.8 |
+| `--synapse` / `--synapse-soft` | `#9b8ce6` / `#b3a8ec` | `#9d93de` / `#b3abe6` | 6.8 / 6.2 / 5.0 |
+| `--warn` | `#ffd08a` | `#f5cf95` | 12.6 on ink |
+| `--danger` / `--danger-edge` | `#ff7a6b` / `#8f3a31` | `#f58477` / `#8a3f38` | 7.5 / 6.9 / 5.5 |
+| `--code-gutter` / `-faint` / `--skeleton` / `-bubble` | `#4a5068` / `#3b4157` / `#262b3c` / `#1f2436` | `#525871` / `#434960` / `#2d3344` / `#272d3e` | decorative |
+
+Every alpha family moved to the new channels: volt `167 207 102`, ion
+`102 196 213`, synapse `157 147 222`, ink `15 19 26`, danger `245 132 119`,
+warn `245 207 149`. The white-alpha lines are unchanged. The three.js
+palettes above (field, catalog, brain) are superseded by decision 057,
+which reads the tokens at runtime.
+
 ---
 
 ## 2. Typography

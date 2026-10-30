@@ -1,6 +1,12 @@
 /*
  * Bits design tokens. Dark only (v1).
  *
+ * Softer palette (decision 056): the ground is a deep cool slate, not a
+ * near-black, the text ramp is a step softer than white, and volt is a moss
+ * lime rather than a yellow-green. Values moved, names stayed. Contrast
+ * ratios for every text colour are in its comment; the grounds they are
+ * measured on are --ink, --surface and --selected.
+ *
  * Squared grid (decision 047): corners are square, depth is a 1px hairline
  * and a quiet fill change (no drop edges, glows or float shadows), and the
  * accents are toned down and used as signals. Most of that lives in the
@@ -29,52 +35,54 @@
     /* ------------------------------------------------------------------
      * 1.1 Ground and surfaces
      * ------------------------------------------------------------------ */
-    --ink: #07080d; /* page ground, never pure black */
-    --surface: #0e1018; /* cards, panels, tab-group track */
-    --well: #0a0c14; /* sunken wells: inputs, composer, editor body, cover base */
-    --terminal: #090a10; /* terminal lesson + output panels */
-    --raised: #151826; /* dark keycap face, avatar button */
-    --selected: #1c2030; /* selected segmented tab; disabled keycap face */
-    --bubble: #1a1e2d; /* learner bubble */
-    --glass: rgb(12 14 22 / 0.78); /* #0C0E16 @ 78%: frosted panels */
-    --glass-80: rgb(12 14 22 / 0.8); /* mode cards */
-    --glass-82: rgb(12 14 22 / 0.82); /* progress card */
-    --glass-well: rgb(10 12 20 / 0.78); /* --well @ 78% (Auth session panel) */
-    --key-dark-edge: #020305; /* shadow edge under dark keycaps */
+    --ink: #0f131a; /* page ground, never pure black */
+    --surface: #171c26; /* cards, panels, tab-group track */
+    --well: #12161f; /* sunken wells: inputs, composer, editor body, cover base */
+    --terminal: #11151d; /* terminal lesson + output panels */
+    --raised: #1f2531; /* dark keycap face, avatar button */
+    --selected: #272e3d; /* selected segmented tab; disabled keycap face */
+    --bubble: #242b39; /* learner bubble */
+    --glass: rgb(20 25 34 / 0.78); /* #141922 @ 78%: frosted panels */
+    --glass-80: rgb(20 25 34 / 0.8); /* mode cards */
+    --glass-82: rgb(20 25 34 / 0.82); /* progress card */
+    --glass-well: rgb(18 22 31 / 0.78); /* --well @ 78% (Auth session panel) */
+    --key-dark-edge: #090c11; /* shadow edge under dark keycaps */
 
     /* 1.2 Text */
-    --text: #eceef5; /* headlines, primary copy (17.3:1 on ink) */
-    --text-body: #d5d8e3; /* lesson body copy, labels */
-    --text-quiet: #c6cad6; /* mono hex values, unselected filters, code punctuation */
-    --text-lead: #b4b9ca; /* lead paragraphs, marketing nav, unselected chips */
-    --muted: #9aa0b4; /* secondary copy, app nav, mono meta (7.7:1) */
-    --dim: #7a8098; /* hints, placeholders: lightest grey allowed for text (5.1:1); never on --selected */
-    --on-volt: #0a0c05; /* text and icons on volt fills (16.6:1) */
+    --text: #e3e6ed; /* headlines, primary copy (14.9:1 on ink, 13.7 on surface, 10.9 on selected) */
+    --text-body: #cdd1db; /* lesson body copy, labels (12.2 / 11.2 / 8.9) */
+    --text-quiet: #bec3cf; /* mono hex values, unselected filters, code punctuation (10.5 / 9.7 / 7.7) */
+    --text-lead: #acb2c2; /* lead paragraphs, marketing nav, unselected chips (8.8 / 8.1 / 6.4) */
+    --muted: #949bae; /* secondary copy, app nav, mono meta (6.7 on ink, 6.1 on surface, 4.9 on selected) */
+    --dim: #838a9f; /* hints, placeholders: darkest grey allowed for text (5.4 on ink, 5.0 on surface); never on --selected (3.9) */
+    --on-volt: #0c1008; /* text and icons on volt fills (10.8:1) */
 
     /* 1.3 Accents */
-    /* Toned down in decision 047 (was #c6ff3d / #3de3ff / #9d85ff): less
-     * saturated, so they read as signals, not neon. Contrast (WCAG 2.x):
-     *   volt    13.19 on ink, 12.52 on surface, 10.66 on selected; --on-volt on it 12.97
-     *   ion     10.26 on ink,  9.74 on surface,  8.29 on selected; --ink on it 10.26
-     *   synapse  6.94 on ink,  6.59 on surface,  5.61 on selected
+    /* Toned down in decision 047 (was #c6ff3d / #3de3ff / #9d85ff), then
+     * softened again in 056 (was #b8e05a / #5ec8dc / #9b8ce6): volt is a
+     * moss lime now, not a yellow-green, and ion and synapse lost a little
+     * chroma to sit with it. Contrast (WCAG 2.x) on the 056 grounds:
+     *   volt    10.42 on ink,  9.56 on surface,  7.61 on selected; --on-volt on it 10.76
+     *   ion      9.24 on ink,  8.47 on surface,  6.75 on selected; --ink on it 9.24
+     *   synapse  6.79 on ink,  6.23 on surface,  4.96 on selected
      * All pass AA for text (4.5:1) and UI (3:1). */
-    --volt: #b8e05a; /* primary action, your turn, success, focus */
-    --volt-edge: #6f8a2e; /* the underline inside a volt key (was a drop edge) */
-    --volt-hover: #c6ea70; /* hover face of a volt key (14.68 on ink) */
-    --volt-link-hover: #d3f08e; /* a:hover (15.84 on ink) */
-    --volt-soft: #d9eeaa; /* text on volt tints: selected chips, XP pill, passed checks (15.97 on ink) */
-    --ion: #5ec8dc; /* model output, in progress, video */
-    --ion-edge: #2e8595; /* underline inside an ion key ("Copied ✓") */
-    --synapse: #9b8ce6; /* 3D field, Tools track, shell prompt, code/project kinds */
-    --synapse-soft: #b3a8ec; /* syntax keywords, directive attributes */
-    --warn: #ffd08a; /* warning text */
+    --volt: #a7cf66; /* primary action, your turn, success, focus */
+    --volt-edge: #66833a; /* the underline inside a volt key (was a drop edge) */
+    --volt-hover: #b5d97c; /* hover face of a volt key (11.68 on ink) */
+    --volt-link-hover: #c3e194; /* a:hover (12.9 on ink) */
+    --volt-soft: #d0e6ac; /* text on volt tints: selected chips, XP pill, passed checks (13.82 on ink) */
+    --ion: #66c4d5; /* model output, in progress, video */
+    --ion-edge: #2f8292; /* underline inside an ion key ("Copied ✓") */
+    --synapse: #9d93de; /* 3D field, Tools track, shell prompt, code/project kinds */
+    --synapse-soft: #b3abe6; /* syntax keywords, directive attributes */
+    --warn: #f5cf95; /* warning text (12.62 on ink) */
     /* Resolutions §1: proposed danger colour, provisional until design sign-off. */
-    --danger: #ff7a6b; /* 7.86:1 on ink */
-    --danger-tint: rgb(255 122 107 / 0.12);
-    --danger-line: rgb(255 122 107 / 0.4);
-    --danger-edge: #8f3a31; /* keycap edge under the danger face (Settings, proposed) */
-    --danger-a04: rgb(255 122 107 / 0.04); /* danger-zone card fill (Settings, proposed) */
-    --danger-a35: rgb(255 122 107 / 0.35); /* danger-zone dashed border (Settings, proposed) */
+    --danger: #f58477; /* 7.49:1 on ink, 6.87 on surface */
+    --danger-tint: rgb(245 132 119 / 0.12);
+    --danger-line: rgb(245 132 119 / 0.4);
+    --danger-edge: #8a3f38; /* keycap edge under the danger face (Settings, proposed) */
+    --danger-a04: rgb(245 132 119 / 0.04); /* danger-zone card fill (Settings, proposed) */
+    --danger-a35: rgb(245 132 119 / 0.35); /* danger-zone dashed border (Settings, proposed) */
 
     /* 1.10 Semantic aliases */
     --success: var(--volt);
@@ -83,10 +91,10 @@
     --warning: var(--warn);
 
     /* 1.4 Code and skeleton greys (decorative; see resolutions §6 for text use) */
-    --code-gutter: #4a5068; /* decorative only: real line numbers use --dim */
-    --code-gutter-faint: #3b4157; /* locked badge chip fill (Main) */
-    --skeleton: #262b3c;
-    --skeleton-bubble: #1f2436;
+    --code-gutter: #525871; /* decorative only: real line numbers use --dim */
+    --code-gutter-faint: #434960; /* locked badge chip fill (Main) */
+    --skeleton: #2d3344;
+    --skeleton-bubble: #272d3e;
     /* Syntax palette (CodeLesson `C` map). Comments use --dim (resolutions §6). */
     --syntax-keyword: var(--synapse-soft);
     --syntax-string: var(--volt);
@@ -122,72 +130,72 @@
     --field-grid-step: 64px;
     --inset-highlight: rgb(255 255 255 / 0.55); /* keycap top highlight */
     --kbd-edge: rgb(255 255 255 / 0.08);
-    --strike-muted: rgb(154 160 180 / 0.4); /* done lesson strike-through */
-    --avatar-edge: rgb(236 238 245 / 0.35);
-    --on-volt-a12: rgb(10 12 5 / 0.12); /* ↵ tile inside a volt keycap */
+    --strike-muted: rgb(148 155 174 / 0.4); /* done lesson strike-through */
+    --avatar-edge: rgb(227 230 237 / 0.35);
+    --on-volt-a12: rgb(12 16 8 / 0.12); /* ↵ tile inside a volt keycap */
 
     /* 1.6 Volt alphas */
-    --volt-a0: rgb(184 224 90 / 0);
-    --volt-a035: rgb(184 224 90 / 0.035); /* highlighted code range */
-    --volt-a04: rgb(184 224 90 / 0.04);
-    --volt-a05: rgb(184 224 90 / 0.05);
-    --volt-a06: rgb(184 224 90 / 0.06);
-    --volt-a08: rgb(184 224 90 / 0.08); /* XP pill, type-mode banner */
-    --volt-tint: rgb(184 224 90 / 0.1); /* search focus glow, focused code line */
-    --volt-tint-on: rgb(184 224 90 / 0.12); /* selected chip, passed check, focus glow */
-    --volt-a14: rgb(184 224 90 / 0.14);
-    --volt-a22: rgb(184 224 90 / 0.22);
-    --volt-a25: rgb(184 224 90 / 0.25); /* XP pill border, heatmap 1, toast glow */
-    --volt-a28: rgb(184 224 90 / 0.28);
-    --volt-a30: rgb(184 224 90 / 0.3);
-    --volt-a35: rgb(184 224 90 / 0.35);
-    --volt-a40: rgb(184 224 90 / 0.4); /* composer border, card hover border */
-    --volt-a45: rgb(184 224 90 / 0.45); /* passed check border */
-    --volt-a50: rgb(184 224 90 / 0.5);
-    --volt-a55: rgb(184 224 90 / 0.55); /* heatmap 2, pulse start */
-    --volt-a60: rgb(184 224 90 / 0.6); /* selected chip border, search focus */
-    --volt-a70: rgb(184 224 90 / 0.7); /* field focus border */
-    --volt-a75: rgb(184 224 90 / 0.75); /* composer focus border */
+    --volt-a0: rgb(167 207 102 / 0);
+    --volt-a035: rgb(167 207 102 / 0.035); /* highlighted code range */
+    --volt-a04: rgb(167 207 102 / 0.04);
+    --volt-a05: rgb(167 207 102 / 0.05);
+    --volt-a06: rgb(167 207 102 / 0.06);
+    --volt-a08: rgb(167 207 102 / 0.08); /* XP pill, type-mode banner */
+    --volt-tint: rgb(167 207 102 / 0.1); /* search focus glow, focused code line */
+    --volt-tint-on: rgb(167 207 102 / 0.12); /* selected chip, passed check, focus glow */
+    --volt-a14: rgb(167 207 102 / 0.14);
+    --volt-a22: rgb(167 207 102 / 0.22);
+    --volt-a25: rgb(167 207 102 / 0.25); /* XP pill border, heatmap 1, toast glow */
+    --volt-a28: rgb(167 207 102 / 0.28);
+    --volt-a30: rgb(167 207 102 / 0.3);
+    --volt-a35: rgb(167 207 102 / 0.35);
+    --volt-a40: rgb(167 207 102 / 0.4); /* composer border, card hover border */
+    --volt-a45: rgb(167 207 102 / 0.45); /* passed check border */
+    --volt-a50: rgb(167 207 102 / 0.5);
+    --volt-a55: rgb(167 207 102 / 0.55); /* heatmap 2, pulse start */
+    --volt-a60: rgb(167 207 102 / 0.6); /* selected chip border, search focus */
+    --volt-a70: rgb(167 207 102 / 0.7); /* field focus border */
+    --volt-a75: rgb(167 207 102 / 0.75); /* composer focus border */
 
     /* 1.7 Ion alphas */
-    --ion-a0: rgb(94 200 220 / 0);
-    --ion-a04: rgb(94 200 220 / 0.04);
-    --ion-a06: rgb(94 200 220 / 0.06);
-    --ion-a08: rgb(94 200 220 / 0.08);
-    --ion-a12: rgb(94 200 220 / 0.12);
-    --ion-a16: rgb(94 200 220 / 0.16);
-    --ion-a18: rgb(94 200 220 / 0.18);
-    --ion-a22: rgb(94 200 220 / 0.22);
-    --ion-a25: rgb(94 200 220 / 0.25);
-    --ion-a28: rgb(94 200 220 / 0.28);
-    --ion-a30: rgb(94 200 220 / 0.3);
-    --ion-a35: rgb(94 200 220 / 0.35);
-    --ion-a45: rgb(94 200 220 / 0.45);
-    --ion-a50: rgb(94 200 220 / 0.5);
-    --ion-a55: rgb(94 200 220 / 0.55);
-    --ion-a60: rgb(94 200 220 / 0.6);
+    --ion-a0: rgb(102 196 213 / 0);
+    --ion-a04: rgb(102 196 213 / 0.04);
+    --ion-a06: rgb(102 196 213 / 0.06);
+    --ion-a08: rgb(102 196 213 / 0.08);
+    --ion-a12: rgb(102 196 213 / 0.12);
+    --ion-a16: rgb(102 196 213 / 0.16);
+    --ion-a18: rgb(102 196 213 / 0.18);
+    --ion-a22: rgb(102 196 213 / 0.22);
+    --ion-a25: rgb(102 196 213 / 0.25);
+    --ion-a28: rgb(102 196 213 / 0.28);
+    --ion-a30: rgb(102 196 213 / 0.3);
+    --ion-a35: rgb(102 196 213 / 0.35);
+    --ion-a45: rgb(102 196 213 / 0.45);
+    --ion-a50: rgb(102 196 213 / 0.5);
+    --ion-a55: rgb(102 196 213 / 0.55);
+    --ion-a60: rgb(102 196 213 / 0.6);
 
     /* 1.8 Synapse alphas */
-    --syn-a14: rgb(155 140 230 / 0.14);
-    --syn-a25: rgb(155 140 230 / 0.25);
-    --syn-a40: rgb(155 140 230 / 0.4);
-    --syn-a42: rgb(155 140 230 / 0.42);
-    --syn-a50: rgb(155 140 230 / 0.5);
-    --syn-a60: rgb(155 140 230 / 0.6);
+    --syn-a14: rgb(157 147 222 / 0.14);
+    --syn-a25: rgb(157 147 222 / 0.25);
+    --syn-a40: rgb(157 147 222 / 0.4);
+    --syn-a42: rgb(157 147 222 / 0.42);
+    --syn-a50: rgb(157 147 222 / 0.5);
+    --syn-a60: rgb(157 147 222 / 0.6);
 
     /* 1.9 Ink, black and warn alphas */
-    --ink-a55: rgb(7 8 13 / 0.55);
-    --ink-a60: rgb(7 8 13 / 0.6);
-    --ink-a70: rgb(7 8 13 / 0.7); /* text on --text fills (selected filter count) */
-    --ink-a78: rgb(7 8 13 / 0.78); /* video control bar */
-    --appbar-bg: rgb(7 8 13 / 0.94); /* app-bar ground, cover track tag (047: nearly opaque, no blur) */
-    --ink-a86: rgb(7 8 13 / 0.86);
-    --lessonbar-bg: rgb(7 8 13 / 0.88);
+    --ink-a55: rgb(15 19 26 / 0.55);
+    --ink-a60: rgb(15 19 26 / 0.6);
+    --ink-a70: rgb(15 19 26 / 0.7); /* text on --text fills (selected filter count) */
+    --ink-a78: rgb(15 19 26 / 0.78); /* video control bar */
+    --appbar-bg: rgb(15 19 26 / 0.94); /* app-bar ground, cover track tag (047: nearly opaque, no blur) */
+    --ink-a86: rgb(15 19 26 / 0.86);
+    --lessonbar-bg: rgb(15 19 26 / 0.88);
     --shadow-a45: rgb(0 0 0 / 0.45);
     --shadow-a50: rgb(0 0 0 / 0.5);
     --shadow-a55: rgb(0 0 0 / 0.55);
-    --warn-tint: rgb(255 184 77 / 0.08);
-    --warn-line: rgb(255 184 77 / 0.35);
+    --warn-tint: rgb(245 207 149 / 0.08);
+    --warn-line: rgb(245 207 149 / 0.35);
 
     /* 1.11 Track colours */
     --track-foundations: var(--volt);
@@ -351,13 +359,13 @@
     --section-pad-y: var(--space-24); /* RuledSection body, top and bottom */
     --section-pad-x: var(--space-10); /* RuledSection and cell content, inside the rails */
     --cell-pad: var(--section-pad-x); /* CellGrid cells: the same inset, so every left edge lines up */
-    --cell-fill: rgb(7 8 13 / 0.9); /* a cell over the landing field: ink, nearly opaque, no blur */
-    --cell-fill-hover: rgb(20 23 33 / 0.9); /* a linked cell on hover */
+    --cell-fill: rgb(15 19 26 / 0.9); /* a cell over the landing field: ink, nearly opaque, no blur */
+    --cell-fill-hover: rgb(31 37 49 / 0.9); /* a linked cell on hover */
     /* Decision 048: a copy cell over the field (headline + lead) takes the
        veil, so the field reads through; an "object" cell (preview card, mode
        art, tracks, showcase) keeps --cell-fill. Same hue as --ink, so text
        contrast on the ground is unchanged. No blur (047). */
-    --cell-fill-veil: rgb(7 8 13 / 0.55);
+    --cell-fill-veil: rgb(15 19 26 / 0.55);
     --cell-pad-lg: var(--space-16); /* a cell holding display type; --section-pad-x under 1024px */
     /* Decision 050: sections are framed plates (own rails, a rule above and
        below, marks at the four corners) with the page's ground showing
