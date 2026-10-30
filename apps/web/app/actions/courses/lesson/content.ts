@@ -16,10 +16,46 @@ export type Inline = string | { strong: string } | { code: string } | { mark: st
 /** One markdown paragraph. */
 export type Paragraph = Inline[]
 
-/** Plain markdown: a tutor message in Read mode, `◆ tutor` output in Terminal mode. */
+/** A `###` subheading in lesson prose (decision 061). It starts a new tutor turn. */
+export interface ProseHeading {
+  heading: Paragraph
+}
+
+/** A `-` or `1.` list in lesson prose (decision 061). */
+export interface ProseList {
+  list: 'bullet' | 'ordered'
+  /** An ordered list's first number, when it isn't 1. */
+  start?: number
+  items: ProseListItem[]
+}
+
+/** One list item: its paragraphs, then at most one nested list (one level deep; the build refuses deeper). */
+export interface ProseListItem {
+  paragraphs: Paragraph[]
+  list?: ProseList
+}
+
+/**
+ * A bare ``` fence in lesson prose (decision 061): a static, read-only
+ * sample, highlighted at build time. Not the `:::code` editor: no tabs, no
+ * drafts, no type mode.
+ */
+export interface ProseFence {
+  sample: CodeSegment[][]
+  /** As written after the fence (`text` when none). */
+  lang: string
+  /** Language name, e.g. "TypeScript" ("Plain text" when it isn't highlighted). */
+  language: string
+}
+
+/** A part of a tutor turn: a paragraph (an `Inline[]`), a subheading, a list or a code sample. */
+export type Prose = Paragraph | ProseHeading | ProseList | ProseFence
+
+/** Plain markdown: a tutor message in Read mode. */
 export interface MarkdownBlock {
   type: 'markdown'
-  paragraphs: Paragraph[]
+  /** The turn's parts in order. Builds before decision 061 stored paragraphs only, which still read. */
+  paragraphs: Prose[]
   /**
    * The learner line that leads into this turn (a scripted question). Read
    * mode shows it as a learner bubble, Terminal mode as `› ask`.

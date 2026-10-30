@@ -1,12 +1,13 @@
 // One lesson file → LessonContent (lesson/content.ts).
 //
 // The body is markdown parsed with unified + remark (frontmatter, GFM,
-// directives). Paragraphs become tutor messages; `:::name{attrs}` blocks
+// directives). Paragraphs, lists, ``` samples and ### subheadings become
+// tutor messages (decision 061); `:::name{attrs}` blocks
 // become the interactive blocks. Bodies that are code or data (`:::code`,
 // `:::terminal`, `:::odds`, `:::prompt`) are read from the raw source lines
 // between the fences, so markdown never mangles a regex or an indent. Every
 // problem is reported with the line it is on.
-import type { Paragraph as MdParagraph, PhrasingContent, Root, RootContent } from 'mdast'
+import type { Code, List, Paragraph as MdParagraph, PhrasingContent, Root, RootContent } from 'mdast'
 import remarkDirective from 'remark-directive'
 import remarkFrontmatter from 'remark-frontmatter'
 import remarkGfm from 'remark-gfm'
@@ -31,6 +32,10 @@ import {
   type NextTokenBlock,
   type OddsBlock,
   type Paragraph,
+  type Prose,
+  type ProseFence,
+  type ProseList,
+  type ProseListItem,
   type PromptBlock,
   type QuizBlock,
   type RabbitHoleBlock,
@@ -187,11 +192,21 @@ const BLOCK_WORDS = 60
 
 function wordsIn(block: Block): number {
   if (block.type !== 'markdown') return BLOCK_WORDS
-  let text = block.paragraphs
-    .flat()
+  let text = block.paragraphs.map(proseText).join(' ')
+  return `${block.ask ?? ''} ${text}`.split(/\s+/).filter(Boolean).length
+}
+
+const inlineText = (paragraph: Paragraph) =>
+  paragraph
     .map((part) => (typeof part === 'string' ? part : 'strong' in part ? part.strong : 'code' in part ? part.code : 'mark' in part ? part.mark : part.link))
     .join(' ')
-  return `${block.ask ?? ''} ${text}`.split(/\s+/).filter(Boolean).length
+
+/** The words of one part of a turn: a paragraph, a subheading, a list or a code sample (decision 061). */
+function proseText(part: Prose): string {
+  if (Array.isArray(part)) return inlineText(part)
+  if ('heading' in part) return inlineText(part.heading)
+  if ('sample' in part) return part.sample.map((line) => line.map(([, text]) => text).join('')).join(' ')
+  return part.items.map((item) => [...item.paragraphs.map(inlineText), item.list ? proseText(item.list) : ''].join(' ')).join(' ')
 }
 
 /**
@@ -267,7 +282,15 @@ function compileBlocks(
     if (depth) block.depth = depth
     blocks.push(block)
   }
+  /** The line of the `###` that ends the open turn, if one does. */
+  let headingAt: number | undefined
+  let addProse = (part: Prose) => {
+    ;(turn ??= { type: 'markdown', paragraphs: [] }).paragraphs.push(part)
+    headingAt = undefined
+  }
   let closeTurn = () => {
+    if (headingAt !== undefined) report.warning('this ### subheading has nothing under it: put its text before the next block', headingAt)
+    headingAt = undefined
     if (turn && turn.paragraphs.length) push(turn)
     else if (turn?.ask) push(turn)
     turn = undefined
@@ -313,7 +336,38 @@ function compileBlocks(
     switch (node.type) {
       case 'paragraph': {
         let paragraph = inline(node.children, report, line)
-        if (paragraph.length) (turn ??= { type: 'markdown', paragraphs: [] }).paragraphs.push(paragraph)
+        if (paragraph.length) addProse(paragraph)
+        break
+      }
+      // Lists, ``` samples and ### subheadings (decision 061) are parts of a
+      // tutor turn, like paragraphs; a subheading starts a new turn.
+      case 'list': {
+        let list = proseList(node, report, false)
+        if (list) addProse(list)
+        break
+      }
+      case 'code': {
+        let sample = proseFence(node, lines, report, depth)
+        if (sample) addProse(sample)
+        break
+      }
+      case 'heading': {
+        if (node.depth !== 3) {
+          report.error(
+            `${'#'.repeat(node.depth)} headings aren’t supported in lessons (the lesson title is the page’s heading): use ### for a subheading`,
+            line,
+          )
+          break
+        }
+        let heading = inline(node.children, report, line)
+        if (!heading.length) {
+          report.error('### needs its text, like: ### Why it works', line)
+          break
+        }
+        // An ::ask line keeps its turn: the subheading opens the answer.
+        if (turn?.paragraphs.length) closeTurn()
+        addProse({ heading })
+        headingAt = line
         break
       }
       case 'thematicBreak':
@@ -381,15 +435,6 @@ function compileBlocks(
       case 'html':
         report.error('raw HTML isn’t allowed in lessons', line)
         break
-      case 'heading':
-        report.error('headings aren’t supported in lessons (the page has its own); write a paragraph', line)
-        break
-      case 'list':
-        report.error('lists aren’t supported in lesson text yet; write paragraphs', line)
-        break
-      case 'code':
-        report.error('use :::code{file="…" lang="…"} for code, not a bare code fence', line)
-        break
       default:
         report.error(`${describe(node.type)} isn’t supported in lessons`, line)
     }
@@ -412,6 +457,92 @@ function compileBlocks(
 
 function fence(node: Directive) {
   return node.type === 'containerDirective' ? ':::' : '::'
+}
+
+// ---- Lists and code samples in prose (decision 061) ---------------------------
+
+/**
+ * A `-` / `*` / `1.` list: items hold inline text (several paragraphs when
+ * the list is loose) and at most one nested list, one level deep.
+ */
+function proseList(node: List, report: FileReport, nested: boolean): ProseList | undefined {
+  let line = node.position?.start.line ?? 1
+  let items: ProseListItem[] = []
+  for (let item of node.children) {
+    let at = item.position?.start.line ?? line
+    if (item.checked !== null && item.checked !== undefined) {
+      report.error('- [ ] task items are :::quiz options; in lesson text, write a plain - item', at)
+      continue
+    }
+    let entry: ProseListItem = { paragraphs: [] }
+    for (let child of item.children) {
+      let childAt = child.position?.start.line ?? at
+      if (child.type === 'paragraph') {
+        let paragraph = inline(child.children, report, childAt)
+        if (paragraph.length) entry.paragraphs.push(paragraph)
+      } else if (child.type === 'list') {
+        if (nested) report.error('lists nest one level deep: move this item up a level, or make it its own list', childAt)
+        else if (entry.list) report.error('a list item holds one nested list: keep one marker (-) for all of its items', childAt)
+        else entry.list = proseList(child, report, true)
+      } else {
+        let what = child.type === 'code' ? 'a ``` code sample' : child.type === 'heading' ? 'a heading' : describe(child.type)
+        report.error(`${what} can’t go inside a list item (items hold text and one nested list): put it after the list`, childAt)
+      }
+    }
+    if (!entry.paragraphs.length) {
+      report.error(entry.list ? 'a list item needs its own text before a nested list' : 'this list item is empty', at)
+      continue
+    }
+    if (!entry.list) delete entry.list
+    items.push(entry)
+  }
+  if (!items.length) return undefined
+  let list: ProseList = { list: node.ordered ? 'ordered' : 'bullet', items }
+  if (node.ordered && typeof node.start === 'number' && node.start !== 1) list.start = node.start
+  return list
+}
+
+/** Longer than this, a sample is better as a `:::code` editor. */
+const MAX_SAMPLE_LINES = 40
+
+/**
+ * A bare ``` fence: a static, highlighted sample. An indented code block
+ * (four spaces) is still an error, since it is nearly always an accident.
+ */
+function proseFence(node: Code, lines: string[], report: FileReport, depth?: LessonDepth): ProseFence | undefined {
+  let line = node.position?.start.line ?? 1
+  let end = node.position?.end.line ?? line
+  let open = /^\s*(`{3,}|~{3,})/.exec(lines[line - 1] ?? '')
+  if (!open) {
+    report.error('indented code isn’t supported in lessons: put the code between ``` lines', line)
+    return undefined
+  }
+  let marker = open[1]!
+  let closing = (lines[end - 1] ?? '').trim()
+  if (end === line || !(closing.startsWith(marker) && /^(`+|~+)$/.test(closing) && closing[0] === marker[0])) {
+    // remark runs an unclosed fence to the end of its container, so a depth
+    // block's ::: (or the rest of the file) would end up inside the sample.
+    if (depth && /^:{3,}$/.test(closing)) {
+      report.error(
+        `this ${marker} code sample has a ${closing} line in it, which closes :::${depth}: write ::::${depth} … :::: around the depth block`,
+        line,
+      )
+    } else {
+      report.error(`this ${marker} code sample is never closed: add a ${marker} line after the code`, line)
+    }
+    return undefined
+  }
+  if (node.meta) report.warning(`a code sample takes only a language after the fence: “${node.meta}” is ignored`, line)
+  let lang = node.lang ?? 'text'
+  if (node.lang && !isKnownLanguage(lang)) report.warning(`\`\`\`${lang} isn’t highlighted (known: ts, js, py, sh, json, env)`, line)
+  let source = node.value.replace(/\s+$/, '')
+  if (!source.trim()) {
+    report.error('this code sample is empty', line)
+    return undefined
+  }
+  let count = source.split('\n').length
+  if (count > MAX_SAMPLE_LINES) report.warning(`this code sample is ${count} lines; over ${MAX_SAMPLE_LINES}, a :::code editor reads better`, line)
+  return { sample: highlight(source, lang), lang, language: languageOf(lang).name }
 }
 
 function describe(type: string): string {

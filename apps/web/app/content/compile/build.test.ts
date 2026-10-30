@@ -177,6 +177,104 @@ describe('content build', () => {
     ])
   })
 
+  // ---- Lists, ``` samples and ### subheadings (decision 061) ----
+
+  it('builds lists, ### subheadings and ``` samples into tutor turns, at both depths (prose fixture)', async () => {
+    let dir = path.join(coursesDir, '../fixtures/prose')
+    let result = buildCourse(await readCourseFolder(dir), { folder: 'prose' })
+    assert.deepEqual(result.report.filter((item) => item.level !== 'ok').map(formatItem), [])
+    let blocks = result.lessons!.get('lists-and-fences')!.blocks
+    // A subheading starts a turn; depth blocks keep theirs.
+    assert.deepEqual(
+      blocks.map((block) => [block.type, block.depth ?? 'shared']),
+      [
+        ['markdown', 'shared'],
+        ['markdown', 'shared'],
+        ['markdown', 'new'],
+        ['markdown', 'engineer'],
+        ['markdown', 'shared'],
+      ],
+    )
+    let [intro, section, fresh, engineer] = blocks.map((block) => (block.type === 'markdown' ? block.paragraphs : []))
+    assert.deepEqual(intro?.[1], {
+      list: 'bullet',
+      items: [
+        { paragraphs: [['a bulleted item with ', { code: 'code' }, ' and a ', { link: 'link', href: '/courses/prose' }]] },
+        {
+          paragraphs: [['an item with a nested list:']],
+          list: {
+            list: 'bullet',
+            items: [{ paragraphs: [['one level deep is enough']] }, { paragraphs: [[{ mark: 'marks' }, ' work here too']] }],
+          },
+        },
+        { paragraphs: [['a last item']] },
+      ],
+    })
+    assert.deepEqual(intro?.[2], {
+      list: 'ordered',
+      items: [{ paragraphs: [['Ordered lists count.']] }, { paragraphs: [['They can hold ', { strong: 'strong' }, ' text.']] }],
+    })
+    assert.deepEqual(section?.[0], { heading: ['A subheading'] })
+    let sample = section?.[2]
+    assert.ok(sample && 'sample' in sample)
+    assert.equal(sample.lang, 'ts')
+    assert.equal(sample.language, 'TypeScript')
+    assert.deepEqual(sample.sample[0]?.slice(0, 2), [
+      ['keyword', 'const'],
+      ['plain', ' reply = '],
+    ])
+    // An ordered list keeps its first number; a fence without a language is plain text.
+    assert.equal(fresh?.[1] && 'list' in fresh[1] && fresh[1].start, 3)
+    assert.deepEqual(fresh?.[2], { sample: [[['plain', 'plain text, no language']]], lang: 'text', language: 'Plain text' })
+    // Inside :::engineer, with a plain ::: fence.
+    assert.ok(engineer?.some((part) => 'sample' in part && part.lang === 'sh'))
+    assert.ok(engineer?.some((part) => 'list' in part))
+  })
+
+  it('reports broken lists, headings and samples at their lines (broken-prose fixture)', async () => {
+    let dir = path.join(coursesDir, '../fixtures/broken-prose')
+    let result = buildCourse(await readCourseFolder(dir), { folder: 'broken-prose' })
+    assert.deepEqual(result.report.filter((item) => item.level !== 'ok').map(formatItem), [
+      '01-lists.md:10 → - [ ] task items are :::quiz options; in lesson text, write a plain - item',
+      '01-lists.md:16 → lists nest one level deep: move this item up a level, or make it its own list',
+      '01-lists.md:22 → a ``` code sample can’t go inside a list item (items hold text and one nested list): put it after the list',
+      '01-lists.md:28 → this list item is empty',
+      '01-lists.md:32 → link “click” points at “javascript:alert(1)”: links must be a path on this site (/courses/…) or an https:// URL',
+      '02-headings-and-code.md:8 → ## headings aren’t supported in lessons (the lesson title is the page’s heading): use ### for a subheading',
+      '02-headings-and-code.md:10 → ### needs its text, like: ### Why it works',
+      '02-headings-and-code.md:14 → indented code isn’t supported in lessons: put the code between ``` lines',
+      '02-headings-and-code.md:16 → this code sample is empty',
+      '02-headings-and-code.md:29 → this ``` code sample is never closed: add a ``` line after the code',
+      '03-depth.md:13 → this ``` code sample has a ::: line in it, which closes :::engineer: write ::::engineer … :::: around the depth block',
+      '03-depth.md:16 → this ``` code sample is never closed: add a ``` line after the code',
+      '02-headings-and-code.md:19 → ```ruby isn’t highlighted (known: ts, js, py, sh, json, env)',
+      '02-headings-and-code.md:23 → this ### subheading has nothing under it: put its text before the next block',
+      '03-depth.md → the lesson has :::engineer but no :::new, so the new depth shows only the shared text',
+    ])
+  })
+
+  it('keeps a ::: line inside a sample when the depth block has the longer fence', () => {
+    let result = build({
+      '01-one.md': lesson(['::::engineer', 'A depth block, in markdown:', '', '```md', ':::new', 'Hi.', ':::', '```', '::::', '', ':::new', 'N.', ':::'].join('\n')),
+    })
+    assert.deepEqual(errors(result), [])
+    let [engineer] = result.lessons!.get('one')!.blocks
+    let sample = engineer?.type === 'markdown' ? engineer.paragraphs[1] : undefined
+    assert.equal(engineer?.depth, 'engineer')
+    assert.deepEqual(sample && 'sample' in sample && sample.sample.map((line) => line.map(([, text]) => text).join('')), [':::new', 'Hi.', ':::'])
+  })
+
+  it('counts list and sample words toward the reading time at each depth', () => {
+    let words = Array.from({ length: 120 }, (_, i) => `w${i}`).join(' ')
+    let result = build({
+      '01-one.md': lesson(`Shared.\n\n:::new\nShort.\n:::\n\n:::engineer\n- ${words}\n\n\`\`\`ts\n${words}\n\`\`\`\n:::`),
+    })
+    assert.deepEqual(errors(result), [])
+    let info = result.manifest!.modules.flatMap((m) => m.lessons)[0]!
+    assert.equal(info.minsByDepth?.engineer, 5)
+    assert.equal(info.minsByDepth?.new, 1)
+  })
+
   it('reads \\n in :::prompt draft, placeholder and example strings as a line break', () => {
     let result = build({
       '01-one.md': lesson(
@@ -221,7 +319,7 @@ describe('content build', () => {
     assert.deepEqual(errors(result), [
       '01-one.md → duplicate order: 1 (also in 02-two.md)',
       '01-one.md:10 → check “bad”: /(a+)+/ uses repetition (*, + or {n}), which isn’t allowed in checks; list the alternatives instead, like /words?|short/',
-      '01-one.md:13 → headings aren’t supported in lessons (the page has its own); write a paragraph',
+      '01-one.md:13 → # headings aren’t supported in lessons (the lesson title is the page’s heading): use ### for a subheading',
       '01-one.md:15 → raw HTML isn’t allowed in lessons',
       '02-two.md:8 → :::quiz has 2 right answers: add multiple to allow several',
       '02-two.md:14 → :::code is never closed: add a ::: line after it',
