@@ -61,3 +61,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 053 | [Two reading depths in one lesson: `:::new` and `:::engineer`](053-lesson-depth.md) |
 | 054 | [One object for the published catalog, shared per colo](054-one-object-catalog.md) |
 | 055 | [One lesson view: Read, with the video at the top](055-one-lesson-view.md) |
+| 057 | [Bits in motion: the three.js scenes draw bits, bytes and graphs](057-bits-in-motion.md) |

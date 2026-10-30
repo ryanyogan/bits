@@ -70,7 +70,10 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
         bleed
       >
         <div mix={stageStyle}>
-          <CatalogBackground replayKey={`catalog-bg:${query.track ?? 'all'}`} />
+          <CatalogBackground
+            replayKey={`catalog-bg:${query.track ?? 'all'}`}
+            courses={results.map((course) => ({ tone: course.tone, lessons: course.lessons }))}
+          />
           <PageFrame>
             <RuledSection as="header" rule={false} pad="none">
               <div mix={titleBlock}>

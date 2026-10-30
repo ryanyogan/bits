@@ -105,7 +105,7 @@ describe('landing page', () => {
   it('renders the field layer hidden from assistive tech, with the lesson preview inert', async () => {
     let { html } = await page(routes.home.href())
     assert.match(html, /<div aria-hidden="true"[^>]*><canvas data-field=""/)
-    assert.match(html, /01 · Neurons/)
+    assert.match(html, /01 · Bits/)
     assert.match(html, /<div inert[^>]*aria-hidden="true"/)
     assert.match(html, /<figcaption class="sr-only">Example lesson:/)
     // three is loaded lazily by the island, never preloaded.

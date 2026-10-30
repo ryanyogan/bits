@@ -1,11 +1,13 @@
 import { clientEntry, css, ref, type Handle } from 'remix/component'
 
+import { afterLoadAndIdle, canDrawScene } from '../../public/bits-gl.ts'
 import { fieldMotion, onFieldMotion, setFieldLive } from './field-motion.ts'
 import type { Field, FieldInput } from './field-scene.ts'
 import { createField } from './field-scene.ts'
 
+// The four formations (decision 057): bit-planes, byte tapes, a graph, a galaxy.
 const stages = [
-  ['01', 'Neurons'],
+  ['01', 'Bits'],
   ['02', 'Tokens'],
   ['03', 'Agents'],
   ['04', 'You'],
@@ -13,13 +15,14 @@ const stages = [
 
 /**
  * The landing page's sticky 3D field layer (Main.md §NeuralField,
- * components §12.6–12.7): canvas + static dot grid + vignette + StageHud.
+ * components §12.6–12.7; decision 057): canvas + graph paper + vignette +
+ * StageHud.
  *
- * Server-rendered as the static dot grid, which is also the fallback. In the
- * browser it waits until the page has loaded and the main thread is idle,
- * checks for WebGL 2, then dynamically imports `three` and starts the scene.
- * Any failure leaves the dot grid alone, silently. The whole layer is
- * `aria-hidden` and ignores the pointer.
+ * Server-rendered as the static graph paper, which is also the fallback. In
+ * the browser it waits until the page has loaded and the main thread is
+ * idle, checks for WebGL 2, then dynamically imports `three` and starts the
+ * scene. Any failure leaves the graph paper alone, silently. The whole layer
+ * is `aria-hidden` and ignores the pointer.
  *
  * The loop runs only while the page is visible, the layer is on screen and
  * the viewer hasn't paused it (`FieldMotionToggle` in the hero, decision
@@ -41,7 +44,7 @@ export const NeuralField = clientEntry(import.meta.url, function NeuralField(han
   async function boot() {
     let signal = handle.signal
     await afterLoadAndIdle()
-    if (signal.aborted || !canvas || !layer || !hasWebGL2()) return
+    if (signal.aborted || !canvas || !layer || !canDrawScene()) return
 
     let THREE: typeof import('../../public/three.ts')
     try {
@@ -78,7 +81,8 @@ export const NeuralField = clientEntry(import.meta.url, function NeuralField(han
       field = createField(THREE, {
         canvas,
         input,
-        count: window.innerWidth < 760 ? 1500 : 3400,
+        // Denser on wide screens, where the planes and tapes have room.
+        count: window.innerWidth < 760 ? 1600 : window.innerWidth < 1180 ? 3600 : 4800,
         reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
         onStage(next) {
           stage = next
@@ -205,29 +209,6 @@ export const NeuralField = clientEntry(import.meta.url, function NeuralField(han
   )
 })
 
-function afterLoadAndIdle(): Promise<void> {
-  return new Promise((resolve) => {
-    let idle = () =>
-      'requestIdleCallback' in window
-        ? requestIdleCallback(() => resolve(), { timeout: 1500 })
-        : setTimeout(resolve, 200)
-    if (document.readyState === 'complete') idle()
-    else window.addEventListener('load', idle, { once: true })
-  })
-}
-
-/** three r163+ needs WebGL 2. Probe on a throwaway canvas so a failure logs nothing. */
-function hasWebGL2(): boolean {
-  try {
-    let gl = document.createElement('canvas').getContext('webgl2')
-    if (!gl) return false
-    gl.getExtension('WEBGL_lose_context')?.loseContext()
-    return true
-  } catch {
-    return false
-  }
-}
-
 const FIELD_HEIGHT = 'min(100vh, 960px)'
 
 const layerStyle = css({
@@ -249,6 +230,7 @@ const canvasStyle = css({
   opacity: 0,
   transition: 'opacity 900ms var(--ease)',
   '&[data-live="true"]': { opacity: 1 },
+  '@media (forced-colors: active)': { display: 'none' },
 })
 
 // Graph paper under the field (decision 047): a faint square grid, centred
@@ -264,13 +246,14 @@ const dotGridStyle = css({
   maskImage: 'radial-gradient(ellipse at 50% 40%, #000 0%, transparent 75%)',
 })
 
-// Wide enough that the ribbon and galaxy reach the rails; the edges still
-// fall to ink so text at the rails stays clean (decision 048).
+// Wide enough that the tapes and galaxy reach the rails; the edges still
+// fall to ink so text at the rails stays clean (decision 048). The ink is
+// the token, mixed to each stop's alpha, so a palette change carries here.
 const vignetteStyle = css({
   position: 'absolute',
   inset: 0,
   background:
-    'radial-gradient(ellipse 85% 75% at 50% 45%, rgb(7 8 13 / 0) 0%, rgb(7 8 13 / 0.22) 65%, rgb(7 8 13 / 0.82) 100%)',
+    'radial-gradient(ellipse 90% 80% at 50% 45%, transparent 0%, color-mix(in srgb, var(--ink) 16%, transparent) 68%, color-mix(in srgb, var(--ink) 78%, transparent) 100%)',
 })
 
 const hudStyle = css({

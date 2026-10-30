@@ -192,6 +192,16 @@ Additional rules for 360px (not shown in the design):
 
 ## NeuralField (port guide)
 
+> **Addendum (decision 057, 2026-10-29).** The field now draws *bits*: square
+> cells that read 0 (outline) or 1 (fill), in four formations: bit-planes →
+> tapes of bytes → a graph of chips → a galaxy of bits, coloured from the
+> CSS tokens at run time. The scroll mapping, holds, easing, HUD mechanics
+> and pause control below still apply; the formations, sprite, palette
+> source and point counts are as `docs/decisions/057-bits-in-motion.md`
+> records, and `apps/web/app/actions/home/public/field-scene.ts` is the
+> source of truth. The rest of this section describes the artboard's port.
+
+
 Client-only island. Handoff: `three` as a dependency, dynamically imported after the hero paints; ~3,400 points, single `ShaderMaterial`, 4 formations blended by `uMorph` 0–3; edges + signals fade during the first morph; scroll → `uMorph` with holds, eased 0.055/frame; per-stage palette; cursor parallax; stage label re-rendered only on change; DPR cap 2; ~1,500 points under 760px; pause when hidden/off-screen; reduced motion → ¼ speed + no caret; WebGL failure → static dot grid, no error.
 
 ### Source map (Main.dc.html line ranges)
