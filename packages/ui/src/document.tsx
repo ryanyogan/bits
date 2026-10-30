@@ -118,6 +118,7 @@ export function Document(handle: Handle<DocumentProps>) {
           {/* The .ico for browsers without SVG favicons (older Safari); sizes="32x32" keeps SVG-capable ones on the SVG. */}
           <link data-rmx-key="icon-ico" rel="icon" href="/favicon.ico" sizes="32x32" />
           <link data-rmx-key="icon" rel="icon" type="image/svg+xml" href="/favicon.svg" />
+          <link data-rmx-key="icon-touch" rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
           <style>{LAYER_ORDER}</style>
           {fontPreloads.map((href) => (
             <link key={href} data-rmx-key={`preload:${href}`} rel="preload" as="font" type="font/woff2" href={href} crossOrigin="anonymous" />

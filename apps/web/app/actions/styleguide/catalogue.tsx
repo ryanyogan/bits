@@ -5,6 +5,7 @@ import { AttentionMap } from '@bits/ui/attention-map'
 import { AppBar } from '@bits/ui/app-bar'
 import { AvatarButton } from '@bits/ui/avatar-button'
 import { BackButton } from '@bits/ui/back-button'
+import { BitCells } from '@bits/ui/bit-cells'
 import { BrandMark } from '@bits/ui/brand-mark'
 import { Callout } from '@bits/ui/callout'
 import { Card } from '@bits/ui/card'
@@ -108,11 +109,14 @@ export function Catalogue(handle: Handle) {
               <Logo brand={APP_NAME} href="#sg-brand" variant="footer" />
             </div>
           </Specimen>
-          <Specimen caption="BrandMark — 26 · 30 · 48">
+          <Specimen caption="BrandMark (decision 058) — 26 · 30 · 48 · 96; favicon.svg and apple-touch-icon.png are the same lattice on ink">
             <div mix={row}>
               <BrandMark size={26} />
               <BrandMark size={30} />
               <BrandMark size={48} />
+              <BrandMark size={96} />
+              <img src="/favicon.svg" width={32} height={32} alt="The favicon: the mark on an ink square" />
+              <img src="/apple-touch-icon.png" width={48} height={48} alt="The 180px touch icon" />
             </div>
           </Specimen>
           <Specimen caption={`Icons — ${iconNames.length}, decorative unless labelled`} wide>
@@ -131,6 +135,61 @@ export function Catalogue(handle: Handle) {
             </ul>
           </Specimen>
         </div>
+      </Section>
+
+      <Section
+        id="sg-bits"
+        title="Bits motif"
+        intro="Decision 058: one ornament, the bit cell, carried through the marks. A lit bit is a filled square, an unlit one a hairline frame, 8px with a 2px gap (--bit-cell, --bit-gap). It is the brand mark, the empty-state row, the status readout, the progress bars and the cover patterns. It never decorates prose."
+      >
+        <div mix={specimenGrid}>
+          <Specimen caption="BitCells — a number in binary (404 · 403 · 429), a string (0000 · 1011), tones text · volt · ion · synapse · dim, sizes 6 · 8 · 10">
+            <div mix={column}>
+              <div mix={row}>
+                <BitCells bits={404} tone="ion" label="404 in binary" />
+                <BitCells bits={403} tone="ion" />
+                <BitCells bits={429} tone="ion" />
+              </div>
+              <div mix={row}>
+                <BitCells bits="0000" />
+                <BitCells bits="1011" />
+                <BitCells bits="1011" tone="volt" />
+                <BitCells bits="1011" tone="ion" />
+                <BitCells bits="1011" tone="synapse" />
+                <BitCells bits="1011" tone="dim" />
+              </div>
+              <div mix={row}>
+                <BitCells bits="10110010" size={6} />
+                <BitCells bits="10110010" size={8} />
+                <BitCells bits="10110010" size={10} />
+              </div>
+            </div>
+          </Specimen>
+          <Specimen caption="Status readout — the page's HTTP status as bits, under the lead on every StatusPage">
+            <div mix={column}>
+              <p mix={readout}>
+                <BitCells bits={404} size={10} tone="ion" />
+                <span>404 in bits</span>
+              </p>
+              <p mix={readout}>
+                <BitCells bits={429} size={10} tone="ion" />
+                <span>429 in bits</span>
+              </p>
+            </div>
+          </Specimen>
+          <Specimen caption="ProgressBar as a bit row — the track is unlit bits, the fill lights them from the left; 0 · 33 · 62 · 100">
+            <div mix={column}>
+              <ProgressBar pct={0} variant="level" label="Level progress, 0 percent" />
+              <ProgressBar pct={33} variant="level" label="Level progress, 33 percent" />
+              <ProgressBar pct={62} variant="level" color="var(--ion)" label="Level progress, 62 percent" />
+              <ProgressBar pct={100} variant="level" label="Level progress, 100 percent" />
+            </div>
+          </Specimen>
+          <Specimen caption="EmptyState — the ∅ became a row of four unlit bits">
+            <EmptyState title="0 results for “quantum”" hint="Try a track filter or a shorter word." />
+          </Specimen>
+        </div>
+        <span mix={note}>Cover patterns (Courses, below) are bits too: lattices, bit streams, nodes on graph paper, dashed rings and rays, byte rows.</span>
       </Section>
 
       <Section id="sg-nav" title="Navigation">
@@ -870,7 +929,7 @@ export function Catalogue(handle: Handle) {
           </li>
         </CellGrid>
         <span mix={note}>CourseCard variant cell in a CellGrid: started (bar) · done (DoneTag) · hover (fill step, sigil scale) with access="pro" (Pro tag; none when owned) · WriteCourseCard. The default card variant keeps its own hairline box. Under 760px a cell is a compact row: a 64px thumbnail cover, two-line description, no track or format tags (decision 051).</span>
-        <Specimen caption="CourseCover — the 8 named patterns">
+        <Specimen caption="CourseCover — the 8 named patterns, drawn from bits since decision 058: lattice · bit stream · ruled with bits · graph paper with nodes · dashed rings · checker with bits · dashed rays · byte rows">
           <ul mix={coverGrid}>
             {coverPatterns.map((pattern, index) => (
               <li key={pattern} mix={coverCell}>
@@ -1156,6 +1215,15 @@ export function Catalogue(handle: Handle) {
 
 const cardCell = css({ display: 'flex' })
 const note = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-11)', color: 'var(--dim)' })
+const readout = css({
+  margin: 0,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--space-3)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-12)',
+  color: 'var(--dim)',
+})
 const iconGrid = css({
   listStyle: 'none',
   margin: 0,
