@@ -87,7 +87,7 @@ export function Hero(handle: Handle<{ signedIn?: boolean }>) {
 
       <div mix={[cueStyle, rise[4]]}>
         <div aria-hidden="true" mix={cueTextStyle}>
-          Scroll · the network rewires itself
+          Scroll · the bits rearrange themselves
           <span mix={cueLine} />
         </div>
         {/* Pauses the field's own motion (WCAG 2.2.2, decision 034). */}

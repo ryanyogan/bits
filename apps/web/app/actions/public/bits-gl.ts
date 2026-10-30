@@ -39,13 +39,13 @@ function parseColor(ctx: CanvasRenderingContext2D | null, value: string): Rgb | 
   return [r / 255, g / 255, b / 255]
 }
 
-/** The accent tokens every scene reads, with decision 047's values as the fallback. */
+/** The accent tokens every scene reads, with decision 056's values as the fallback. */
 export const sceneTokens = {
-  '--volt': '#b8e05a',
-  '--volt-soft': '#d9eeaa',
-  '--ion': '#5ec8dc',
-  '--synapse': '#9b8ce6',
-  '--text': '#eceef5',
+  '--volt': '#a7cf66',
+  '--volt-soft': '#d0e6ac',
+  '--ion': '#66c4d5',
+  '--synapse': '#9d93de',
+  '--text': '#e3e6ed',
 } as const
 
 export type SceneTokens = Record<keyof typeof sceneTokens, Rgb>
