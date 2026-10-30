@@ -19,7 +19,12 @@ export interface ProgressBarProps {
   mix?: MixInput<HTMLElement>
 }
 
-/** Track + fill (components §9.5). Static. */
+/**
+ * Track + fill (components §9.5), drawn as a row of bits (decision 058):
+ * the track is a run of unlit cells, `--bar-bit` wide with `--bit-gap`
+ * between them, and the fill lights them from the left. The fill's width
+ * is still the exact percentage (it can end inside a bit). Static.
+ */
 export function ProgressBar(handle: Handle<ProgressBarProps>) {
   return () => {
     let { pct, variant = 'card', color = 'var(--volt)', label, mix } = handle.props
@@ -34,28 +39,37 @@ export function ProgressBar(handle: Handle<ProgressBarProps>) {
         aria-hidden={label ? undefined : 'true'}
         mix={[trackStyle, trackVariants[variant], mix]}
       >
-        <span mix={[fillStyle, fillVariants[variant]]} style={{ width: `${value}%`, background: color }} />
+        <span mix={fillStyle} style={{ width: `${value}%`, '--fill': color }} />
       </div>
     )
   }
 }
 
-const trackStyle = css({ display: 'block', background: 'var(--fill-btn)', overflow: 'hidden', minWidth: 0, [FORCED_COLORS]: forcedTrack })
+// The same stripes for the track and the fill, both starting at the track's
+// left edge, so the lit bits sit exactly on the unlit ones.
+const bitRow = (color: string) =>
+  `repeating-linear-gradient(90deg, ${color} 0 var(--bar-bit), transparent var(--bar-bit) calc(var(--bar-bit) + var(--bit-gap)))`
+
+const trackStyle = css({
+  display: 'block',
+  background: bitRow('var(--bit-off-fill)'),
+  overflow: 'hidden',
+  minWidth: 0,
+  [FORCED_COLORS]: forcedTrack,
+})
 const trackVariants: Record<ProgressBarVariant, ReturnType<typeof css>> = {
-  card: css({ flex: 1, height: '4px', borderRadius: 'var(--radius-2)' }),
-  banner: css({ flex: 1, minWidth: '160px', height: '6px', borderRadius: 'var(--radius-3)' }),
-  art: css({ flex: 1, height: '6px', borderRadius: 'var(--radius-3)' }),
-  row: css({ flex: 1, height: '5px', borderRadius: 'var(--radius-3)' }),
-  level: css({ width: '100%', maxWidth: '420px', height: '8px', borderRadius: 'var(--radius-4)' }),
+  card: css({ flex: 1, height: '4px', '--bar-bit': '8px' }),
+  banner: css({ flex: 1, minWidth: '160px', height: '6px', '--bar-bit': '12px' }),
+  art: css({ flex: 1, height: '6px', '--bar-bit': '12px' }),
+  row: css({ flex: 1, height: '5px', '--bar-bit': '10px' }),
+  level: css({ width: '100%', maxWidth: '420px', height: '8px', '--bar-bit': '16px' }),
 }
-const fillStyle = css({ display: 'block', height: '100%', [FORCED_COLORS]: forcedInlineFill })
-const fillVariants: Record<ProgressBarVariant, ReturnType<typeof css>> = {
-  card: css({}),
-  banner: css({ borderRadius: 'var(--radius-3)' }),
-  art: css({}),
-  row: css({}),
-  level: css({}),
-}
+const fillStyle = css({
+  display: 'block',
+  height: '100%',
+  background: bitRow('var(--fill)'),
+  [FORCED_COLORS]: forcedInlineFill,
+})
 
 export type SegmentState = 'done' | 'current' | 'passed' | 'upcoming'
 

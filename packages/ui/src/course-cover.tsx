@@ -18,24 +18,48 @@ export const coverPatterns: CoverPattern[] = [
 ]
 
 /**
- * Pattern backgrounds, each on `--well`. Colours come from `--tone` through
- * `color-mix()`, so one recipe serves volt, ion and synapse at the alphas the
- * Catalog script uses. `thumb` is the scaled Profile-thumbnail recipe.
+ * A bit of `size` px (a number for a square, `[width, height]` for a dash)
+ * in the top-left corner of each `tile` (decision 058): a conic gradient
+ * centred on the bit's far corner paints only its top-left quadrant. `at`
+ * offsets the tiling so the bits land where a line layer underneath crosses.
+ */
+function bits(size: number | [number, number], color: string, tile: string, at = '0 0'): string {
+  let [w, h] = typeof size === 'number' ? [size, size] : size
+  return `conic-gradient(at ${w}px ${h}px, transparent 75%, ${color} 0) ${at} / ${tile}`
+}
+
+/**
+ * Pattern backgrounds, each on `--well`, all drawn from bits (decision 058):
+ * lattices of square cells, rows of bits, nodes on a graph, dashed rings and
+ * rays. The eight names are the ones `course.md` uses (components §9.1), so
+ * a course keeps its pattern and only its drawing changed. Colours come
+ * from `--tone` through `color-mix()`, so one recipe serves volt, ion and
+ * synapse. Layers are listed top first; a `--well` layer on top cuts a line
+ * layer under it into dashes. `thumb` is the scaled Profile-thumbnail recipe.
  */
 const patternBackground: Record<CoverPattern, string> = {
-  dots: `radial-gradient(${toneAlpha(45)} 1.2px, transparent 1.6px) 0 0 / 14px 14px, var(--well)`,
-  'stripes-115': `repeating-linear-gradient(115deg, ${toneAlpha(0)} 0 12px, ${toneAlpha(30)} 12px 13px), var(--well)`,
-  rules: `linear-gradient(${toneAlpha(22)} 1px, transparent 1px) 0 0 / 100% 18px, var(--well)`,
-  grid: `linear-gradient(90deg, ${toneAlpha(28)} 1px, transparent 1px) 0 0 / 22px 100%, linear-gradient(${toneAlpha(28)} 1px, transparent 1px) 0 0 / 100% 22px, var(--well)`,
-  rings: `repeating-radial-gradient(circle at 85% 110%, transparent 0 14px, ${toneAlpha(42)} 14px 15px), var(--well)`,
-  'dots-offset': `radial-gradient(${toneAlpha(50)} 1.4px, transparent 1.8px) 0 0 / 18px 18px, radial-gradient(${toneAlpha(25)} 1px, transparent 1.4px) 9px 9px / 18px 18px, var(--well)`,
-  rays: `repeating-conic-gradient(from 0deg at 50% 120%, ${toneAlpha(28)} 0 2deg, transparent 2deg 12deg), var(--well)`,
-  crosshatch: `repeating-linear-gradient(45deg, ${toneAlpha(22)} 0 1px, transparent 1px 16px), repeating-linear-gradient(-45deg, ${toneAlpha(22)} 0 1px, transparent 1px 16px), var(--well)`,
+  // A lattice of 2px bits every 14px, with one in nine lit brighter.
+  dots: `${bits(3, toneAlpha(80), '42px 42px', '14px 14px')}, ${bits(2, toneAlpha(45), '14px 14px')}, var(--well)`,
+  // A bit stream: rows of 2px dashes, two rhythms interleaved.
+  'stripes-115': `${bits([6, 2], toneAlpha(38), '10px 18px')}, ${bits([9, 2], toneAlpha(20), '16px 18px', '5px 9px')}, var(--well)`,
+  // Ruled lines with a bit on each rule every 54px.
+  rules: `${bits(3, toneAlpha(55), '54px 18px', '0 -1px')}, linear-gradient(${toneAlpha(22)} 1px, transparent 1px) 0 0 / 100% 18px, var(--well)`,
+  // Graph paper with a node on every other crossing.
+  grid: `${bits(3, toneAlpha(60), '44px 44px', '-1px -1px')}, linear-gradient(90deg, ${toneAlpha(28)} 1px, transparent 1px) 0 0 / 22px 100%, linear-gradient(${toneAlpha(28)} 1px, transparent 1px) 0 0 / 100% 22px, var(--well)`,
+  // Rings cut into dashes by well-coloured wedges: bits around an origin.
+  rings: `repeating-conic-gradient(from 0deg at 85% 110%, transparent 0 5deg, var(--well) 5deg 8deg), repeating-radial-gradient(circle at 85% 110%, transparent 0 14px, ${toneAlpha(42)} 14px 15px), var(--well)`,
+  // A faint checkerboard of 18px cells with a bit in every cell's corner.
+  'dots-offset': `${bits(3, toneAlpha(55), '18px 18px')}, conic-gradient(${toneAlpha(4)} 25%, transparent 0 50%, ${toneAlpha(4)} 0 75%, transparent 0) 0 0 / 36px 36px, var(--well)`,
+  // Rays cut into dashes by well-coloured rings.
+  rays: `repeating-radial-gradient(circle at 50% 120%, transparent 0 10px, var(--well) 10px 14px), repeating-conic-gradient(from 0deg at 50% 120%, ${toneAlpha(28)} 0 2deg, transparent 2deg 12deg), var(--well)`,
+  // Byte rows: 3px bits every 6px, in groups of eight, every fourth on alternate rows lit brighter.
+  crosshatch: `repeating-linear-gradient(90deg, transparent 0 48px, var(--well) 48px 54px), ${bits(3, toneAlpha(65), '24px 28px', '12px 0')}, ${bits(3, toneAlpha(36), '6px 14px')}, var(--well)`,
 }
 
 const thumbOverrides: Partial<Record<CoverPattern, string>> = {
-  'stripes-115': `repeating-linear-gradient(115deg, ${toneAlpha(0)} 0 6px, ${toneAlpha(35)} 6px 7px), var(--well)`,
-  rays: `repeating-conic-gradient(from 0deg at 50% 120%, ${toneAlpha(30)} 0 3deg, transparent 3deg 14deg), var(--well)`,
+  'stripes-115': `${bits([4, 2], toneAlpha(40), '7px 12px')}, ${bits([5, 2], toneAlpha(22), '11px 12px', '3px 6px')}, var(--well)`,
+  rays: `repeating-radial-gradient(circle at 50% 120%, transparent 0 7px, var(--well) 7px 10px), repeating-conic-gradient(from 0deg at 50% 120%, ${toneAlpha(30)} 0 3deg, transparent 3deg 14deg), var(--well)`,
+  crosshatch: `repeating-linear-gradient(90deg, transparent 0 32px, var(--well) 32px 36px), ${bits(2, toneAlpha(40), '4px 10px')}, var(--well)`,
 }
 
 const patternStyles = Object.fromEntries(

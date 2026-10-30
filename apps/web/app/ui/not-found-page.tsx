@@ -1,5 +1,6 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
+import { BitCells } from '@bits/ui/bit-cells'
 import { Keycap } from '@bits/ui/keycap'
 import { PageFrame } from '@bits/ui/page-frame'
 
@@ -82,16 +83,23 @@ export interface StatusPageProps {
 
 /**
  * A ruled status page (decision 047): one PageHead band with the HTTP status
- * as its index, the message, and the way back (courses, home). For any 4xx
- * that has nothing else to show.
+ * as its index, the message, the status as a row of bits (decision 058) and
+ * the way back (courses, home). For any 4xx that has nothing else to show.
  */
 export function StatusPage(handle: Handle<StatusPageProps>) {
   return () => {
     let { title, code, eyebrow, heading, hint, viewer, currentPath } = handle.props
+    let status = Number(code)
     return (
       <Layout title={title} viewer={viewer} currentPath={currentPath}>
         <PageFrame>
           <PageHead index={code} tone="ion" label={eyebrow} title={heading} titleId="status-title" lead={hint}>
+            {Number.isInteger(status) ? (
+              <p aria-hidden="true" mix={readoutStyle}>
+                <BitCells bits={status} size={10} tone="ion" />
+                <span>{code} in bits</span>
+              </p>
+            ) : null}
             <div mix={actionsStyle}>
               <Keycap size="lg" href={routes.courses.index.href()}>
                 Browse courses →
@@ -109,3 +117,12 @@ export function StatusPage(handle: Handle<StatusPageProps>) {
 
 const codeStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-15)', color: 'var(--text-quiet)', overflowWrap: 'anywhere' })
 const actionsStyle = css({ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', paddingTop: 'var(--space-3)' })
+const readoutStyle = css({
+  margin: 0,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--space-3)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-12)',
+  color: 'var(--dim)',
+})

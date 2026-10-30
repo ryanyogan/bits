@@ -573,3 +573,18 @@
     }
   }
 }
+
+/* 058 bits motif */
+/* The bit cell (decision 058): the unit behind the brand mark, BitCells,
+ * the empty-state row, the status-page readout and the bit-row progress
+ * bars. A lit bit is text-coloured, an unlit one a hairline frame; the
+ * cover patterns draw theirs from `--tone` instead. */
+@layer tokens {
+  :root {
+    --bit-cell: 8px; /* a BitCells cell */
+    --bit-gap: 2px; /* between cells, and between the bits of a progress bar */
+    --bit-on: var(--text); /* a lit bit (BitCells default tone) */
+    --bit-off: var(--line-control); /* an unlit bit's frame (white @ 14%) */
+    --bit-off-fill: var(--fill-seg); /* an unlit bit's face in a progress bar */
+  }
+}
