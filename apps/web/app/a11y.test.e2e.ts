@@ -106,6 +106,9 @@ const publicPages: Array<{ name: string; href: string; ready?: (page: Page) => P
   // A lesson with each toy (one view, decision 055): nexttoken + composer, training, attention, compare, rabbithole, odds, tokenizer + quiz.
   { name: 'lesson read: nexttoken + composer', href: lesson('tokens-and-temperature', 'probabilities-not-answers') },
   { name: 'lesson read: training', href: lesson('what-is-an-llm', 'where-it-learned-pretraining') },
+  // Animation blocks (decision 060): steps in lesson 2, flow in lesson 6; marbles on the styleguide.
+  { name: 'lesson read: steps', href: lesson('what-is-an-llm', 'a-very-good-next-word-guesser') },
+  { name: 'lesson read: flow', href: lesson('what-is-an-llm', 'your-prompt-is-all-it-sees') },
   { name: 'lesson read: attention', href: lesson('what-is-an-llm', 'attention-how-it-keeps-track') },
   { name: 'lesson read: compare', href: lesson('tokens-and-temperature', 'greedy-vs-sampled') },
   { name: 'lesson read: tokenizer + quiz', href: lesson('tokens-and-temperature', 'what-is-a-token') },
@@ -235,6 +238,37 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await slider.focus()
     await slider.press('End')
     await expectClean(page, 'training scrubber at the end')
+  })
+
+  it('animation blocks (decision 060): a step picked, the window full, the timeline scrubbed to the end', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    await page.setViewportSize({ width: 360, height: 800 })
+    // Reduced motion: no autoplay, so the states below are the ones we set.
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+
+    await page.goto(lesson('what-is-an-llm', 'a-very-good-next-word-guesser'))
+    await settled(page)
+    let steps = page.getByRole('group', { name: 'step by step' })
+    await steps.getByRole('button', { name: 'Next step' }).click()
+    await steps.getByRole('button', { name: 'Next step' }).click()
+    assert.equal(await steps.locator('[aria-current="step"]').count(), 1, 'one current step')
+    await expectClean(page, 'steps: third step current', 360)
+
+    await page.goto(lesson('what-is-an-llm', 'your-prompt-is-all-it-sees'))
+    await settled(page)
+    let flow = page.getByRole('group', { name: 'context window' })
+    let next = flow.getByRole('button', { name: 'Next arrival' })
+    while (await next.isEnabled()) await next.click()
+    assert.ok((await flow.locator('[data-state="out"]').count()) > 0, 'something fell out of the window')
+    await expectClean(page, 'flow: every item arrived', 360)
+
+    await page.goto(routes.styleguide.index.href())
+    await settled(page)
+    let time = page.getByRole('slider', { name: 'time' })
+    await time.focus()
+    await time.press('End')
+    assert.equal(await page.locator('#sg-marbles').getAttribute('aria-valuetext'), '5 s')
+    await expectClean(page, 'marbles at the end', 360)
   })
 
   it('one header everywhere (decision 059): the phone menu sheet, and the same bar on landing, app and sign-in pages', async (t) => {

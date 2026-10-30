@@ -209,7 +209,45 @@ export interface RabbitHoleBlock {
   links: { kind: 'video' | 'read'; title: string; by: string; url: string; mins?: number; deep?: boolean }[]
 }
 
-export type ToyBlock = NextTokenBlock | TrainingBlock | AttentionBlock | CompareBlock | RabbitHoleBlock
+// ---- Animation blocks (decision 060) ----
+
+/** `:::steps`: a sequence played one move at a time (3–8 labelled steps). */
+export interface StepsBlock {
+  type: 'steps'
+  /** Mono context in the panel header. */
+  title?: string
+  /** The last step leads back to the first (a loop). */
+  loop?: boolean
+  steps: { label: string; caption: string }[]
+  illustrative?: boolean
+}
+
+/** `:::flow`: items arriving in order into a window of fixed capacity; the oldest fall out when it is full. */
+export interface FlowBlock {
+  type: 'flow'
+  capacity: number
+  /** What the sizes count ("tokens"). */
+  unit: string
+  title?: string
+  items: { name: string; size: number }[]
+  illustrative?: boolean
+}
+
+/** `:::marbles`: lanes of timed events (a marble diagram) with a play head that sweeps once. */
+export interface MarblesBlock {
+  type: 'marbles'
+  /** The timeline's length, in `unit`. */
+  duration: number
+  /** The time unit ("s"). */
+  unit: string
+  title?: string
+  lanes: { name: string; events: { at: number; label: string }[] }[]
+  illustrative?: boolean
+}
+
+export type AnimationBlock = StepsBlock | FlowBlock | MarblesBlock
+
+export type ToyBlock = NextTokenBlock | TrainingBlock | AttentionBlock | CompareBlock | RabbitHoleBlock | AnimationBlock
 
 /**
  * How deep a lesson explains its idea (decision 053): `new` for someone

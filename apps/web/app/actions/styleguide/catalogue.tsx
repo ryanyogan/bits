@@ -55,6 +55,9 @@ import { TextField } from '@bits/ui/text-field'
 import { TokenizerPanel } from '@bits/ui/token-pill'
 import { ToolButton } from '@bits/ui/tool-button'
 import { TrainingScrubber } from '@bits/ui/training-scrubber'
+import { StepsPlayer } from '@bits/ui/steps'
+import { FlowWindow } from '@bits/ui/flow'
+import { MarblesTimeline } from '@bits/ui/marbles'
 import { LearnerBubble, ModelOutput, TutorAvatar, TutorMessage, attachedBlock } from '@bits/ui/tutor'
 import { VideoPlayer } from '@bits/ui/video-player'
 import { XpPill } from '@bits/ui/xp-pill'
@@ -80,6 +83,9 @@ import {
   tokens,
   toolsFile,
   trainingSnapshots,
+  loopSteps,
+  windowItems,
+  agentLanes,
 } from './samples.tsx'
 
 const navLinks = [
@@ -1186,6 +1192,24 @@ export function Catalogue(handle: Handle) {
         </div>
         <Specimen caption="RabbitHole (static) — up to 3 external links; new tab, data-rmx-document, noopener" wide>
           <RabbitHole id="sg-rabbit-hole" links={rabbitHoleLinks} />
+        </Specimen>
+      </Section>
+
+      <Section
+        id="sg-animation"
+        title="Animation blocks"
+        intro="The :::steps, :::flow and :::marbles blocks (decision 060): islands that play one move at a time, once, when most of the block is on screen; never under reduced motion, where the controls remain. The current state is lit in volt, the rest are empty bits. With JS off each renders its list or table."
+      >
+        <div mix={specimenGrid}>
+          <Specimen caption="StepsPlayer (island) — a chain of moves; the nodes jump to a step; loop marks the way back to 01">
+            <StepsPlayer title="One reply, five moves" steps={loopSteps} loop />
+          </Specimen>
+          <Specimen caption="FlowWindow (island) — items arrive into a window of 8 tokens; the oldest fall out when it is full; the bit row is the fill">
+            <FlowWindow title="A context window of 8 tokens" capacity={8} unit="tokens" items={windowItems} illustrative />
+          </Specimen>
+        </div>
+        <Specimen caption="MarblesTimeline (island) — lanes of timed events; the head sweeps once, then the slider scrubs" wide>
+          <MarblesTimeline id="sg-marbles" title="One agent turn" duration={5} unit="s" lanes={agentLanes} illustrative />
         </Specimen>
       </Section>
 
