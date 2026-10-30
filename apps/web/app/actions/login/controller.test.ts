@@ -20,6 +20,17 @@ function post(fields: Array<[string, string]>) {
 }
 
 describe('/login', () => {
+  it('renders the one header (decision 059): the app nav, no account actions', async () => {
+    let html = await (await request(routes.login.index.href())).text()
+    let header = html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? ''
+    assert.equal(html.match(/<header[\s>]/g)?.length, 1, 'one banner')
+    assert.match(header, /<nav aria-label="Primary"/)
+    assert.match(header, /href="\/courses"[^>]*>Courses<\/a>/)
+    assert.match(header, /href="\/me"[^>]*>My learning<\/a>/)
+    // This page is the way in: no Sign in / Start free in the bar or the sheet.
+    assert.doesNotMatch(header, />Sign in<|>Start free</)
+  })
+
   it('renders sign in: title, one h1, tabs, passkey first, providers keep ?next', async () => {
     let response = await request(routes.login.index.href(undefined, { searchParams: { next: '/courses' } }))
     assert.equal(response.status, 200)

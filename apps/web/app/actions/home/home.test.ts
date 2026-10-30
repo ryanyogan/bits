@@ -98,7 +98,7 @@ describe('landing page', () => {
 
   it('keeps Sign in reachable on phones through the menu sheet', async () => {
     let { html } = await page(routes.home.href())
-    let sheet = html.slice(html.indexOf('id="landing-nav-sheet"'))
+    let sheet = html.slice(html.indexOf('id="app-nav-sheet"'))
     assert.match(sheet, /href="\/login"[^>]*>Sign in<\/a>/)
   })
 
