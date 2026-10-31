@@ -1,0 +1,357 @@
+/*
+ * Bits light theme (decision 062). The dark tokens in tokens.css are the
+ * system; this file re-declares only the colour tokens for a paper ground.
+ * Names, spacing, type, radii and motion are untouched, so no layout moves.
+ *
+ * Two selectors, one block (the contract with the theme preference):
+ *   - `:root[data-theme="light"]`: the viewer pinned light.
+ *   - `@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) }`:
+ *     no preference stored, the system is light.
+ * `<html>` carries `data-theme` (set on the server from the preference);
+ * no attribute means "follow the system". CSS has no way to share one
+ * declaration block between a plain selector and one inside a media query,
+ * so the block is written twice. EDIT THE FIRST BLOCK ONLY, then run
+ * `pnpm --filter @bits/ui theme:sync` to copy it into the second;
+ * `theme.test.ts` fails when the two differ, or when a colour token in
+ * tokens.css has no light value here (a dark colour would leak through).
+ *
+ * The palette, in short (ratios are WCAG 2.x, measured on the grounds named):
+ *   ground   --ink #f5f6f8, a cool paper; surfaces step towards the text
+ *            (surface #eceef2, raised #e4e7ec, selected #dbdfe6), so depth
+ *            is still "a hairline plus a fill step" (047), only darker.
+ *   text     #141a24 deep slate (16.1:1 on ink, 15.0 on surface, 13.1 on
+ *            selected); muted #586274 (5.7 / 5.3 / 4.6); dim #5f697b (5.1 /
+ *            4.8; 4.7 on a highlighted code line; never on --selected, 4.1).
+ *   accents  re-derived, not reused: the dark accents are tints that fail on
+ *            paper (volt #a7cf66 is 1.6:1). volt #426e19 (5.6 on ink, 5.2 on
+ *            surface, 4.7 on its own focus-line tint), ion #086678 (6.1 /
+ *            5.7; 4.5 on a chip fill), synapse #5a4ec0 (5.9 / 5.5), warn
+ *            #85570a (5.8 / 5.4), danger #b3302a (5.8 / 5.4). The axe suite
+ *            found the tinted-ground pairs; volt, ion and dim went a step
+ *            deeper for them rather than lightening the tints.
+ *   volt key the face is the deep moss and the label is --on-volt #f5f8ee
+ *            (5.6:1 on volt, 6.0 on volt-hover). The other way round (a
+ *            light volt face with dark text) would have needed two volt
+ *            tokens, one for text and one for fills; one token is the system.
+ *   lines    the white alphas become slate alphas (rgb 20 26 36) at about
+ *            1.25× the opacity: black at 10% on paper (1.25:1) reads like
+ *            white at 8% on ink (1.22:1), so rails, rules and cell borders
+ *            keep their weight at 360 and 1440.
+ *   code     code surfaces go light too (terminal #f0f2f5, well #eff1f4): a
+ *            dark island on a paper page would break the one-system feel.
+ *            The syntax palette follows the accents (keyword synapse-soft
+ *            #4e43ae 7.1:1 on well, string volt 5.3, type/number ion 5.8,
+ *            comment dim 4.9).
+ */
+@layer tokens {
+  /* theme-light:begin (the source block) */
+  :root[data-theme="light"] {
+    color-scheme: light;
+
+    /* 1.1 Ground and surfaces: paper, stepping towards the ink */
+    --ink: #f5f6f8; /* page ground, a cool paper, never pure white */
+    --surface: #eceef2; /* cards, panels, tab-group track */
+    --well: #eff1f4; /* sunken wells: inputs, composer, editor body, cover base */
+    --terminal: #f0f2f5; /* terminal lesson + output panels */
+    --raised: #e4e7ec; /* "dark" keycap face, avatar button: a grey key on paper */
+    --selected: #dbdfe6; /* selected segmented tab; disabled keycap face */
+    --bubble: #e0e4ea; /* learner bubble */
+    --glass: rgb(239 241 244 / 0.78); /* --well @ 78%: frosted panels */
+    --glass-80: rgb(239 241 244 / 0.8);
+    --glass-82: rgb(239 241 244 / 0.82);
+    --glass-well: rgb(239 241 244 / 0.78);
+    --key-dark-edge: #c6ccd6; /* edge under grey keycaps */
+
+    /* 1.2 Text: a deep slate, never pure black (ink / surface / selected) */
+    --text: #141a24; /* 16.14 / 15.03 / 13.06 */
+    --text-body: #2a3240; /* 11.92 / 11.10 / 9.65 */
+    --text-quiet: #3a4352; /* 9.23 / 8.59 / 7.46 */
+    --text-lead: #4a5365; /* 7.15 / 6.66 / 5.78 */
+    --muted: #586274; /* 5.69 / 5.30 / 4.60 */
+    --dim: #5f697b; /* 5.12 / 4.77; 4.69 on a highlighted code line; never on --selected (4.14) */
+    --on-volt: #f5f8ee; /* text and icons on the volt face (5.62 on volt, 5.99 on volt-hover) */
+
+    /* 1.3 Accents: the same hues, deep enough to be text on paper
+     * (ink / surface / well) */
+    --volt: #426e19; /* 5.59 / 5.20 / 5.34; 4.68 on its own focus-line tint: primary action, links, focus, success */
+    --volt-edge: #28400e; /* the underline inside a volt key */
+    --volt-hover: #41691a; /* hover face of a volt key (5.96 on ink); a deep key darkens on hover */
+    --volt-link-hover: #3a5e17; /* a:hover (6.95 on ink) */
+    --volt-soft: #375a15; /* text on volt tints: 6.28 on --volt-tint-on over ink */
+    --ion: #086678; /* 6.10 / 5.68 / 5.83; 4.54 on a chip fill; paper on it 6.10 */
+    --ion-edge: #084f5b;
+    --synapse: #5a4ec0; /* 5.91 / 5.50 / 5.65 */
+    --synapse-soft: #4e43ae; /* 7.09 / 6.60 / 6.78: syntax keywords */
+    --warn: #85570a; /* 5.77 / 5.37 / 5.52 */
+    --danger: #b3302a; /* 5.76 / 5.36 / 5.50; --on-volt on it 5.79 */
+    --danger-tint: rgb(179 48 42 / 0.1);
+    --danger-line: rgb(179 48 42 / 0.4);
+    --danger-edge: #7d1f18;
+    --danger-a04: rgb(179 48 42 / 0.04);
+    --danger-a35: rgb(179 48 42 / 0.35);
+
+    /* 1.4 Code and skeleton greys (decorative) */
+    --code-gutter: #9aa2b4;
+    --code-gutter-faint: #b6bcc9;
+    --skeleton: #d9dde5;
+    --skeleton-bubble: #dfe3ea;
+
+    /* 1.5 Slate alphas: lines and fills (the white alphas, inverted, ×1.25) */
+    --line-hair: rgb(20 26 36 / 0.08);
+    --line-bar: rgb(20 26 36 / 0.09);
+    --line: rgb(20 26 36 / 0.1);
+    --line-glass: rgb(20 26 36 / 0.11);
+    --line-panel: rgb(20 26 36 / 0.12);
+    --line-strong: rgb(20 26 36 / 0.15);
+    --line-control: rgb(20 26 36 / 0.17);
+    --line-dashed: rgb(20 26 36 / 0.2);
+    --line-dashed-strong: rgb(20 26 36 / 0.24);
+    --line-drop: rgb(20 26 36 / 0.27);
+    --line-node-next: rgb(20 26 36 / 0.36);
+    --fill-row-hover: rgb(20 26 36 / 0.035);
+    --fill-hover: rgb(20 26 36 / 0.05);
+    --fill-seg: rgb(20 26 36 / 0.06);
+    --fill-ghost-hover: rgb(20 26 36 / 0.07);
+    --fill-btn: rgb(20 26 36 / 0.09);
+    --fill-tab-on: rgb(20 26 36 / 0.12);
+    --fill-seg-off: rgb(20 26 36 / 0.12);
+    --fill-codeline-hover: rgb(20 26 36 / 0.03);
+    --dot-grid: rgb(20 26 36 / 0.06);
+    --dot-grid-field: rgb(20 26 36 / 0.065);
+    --field-grid: rgb(20 26 36 / 0.045);
+    --inset-highlight: rgb(255 255 255 / 0.55);
+    --kbd-edge: rgb(20 26 36 / 0.1);
+    --strike-muted: rgb(88 98 116 / 0.5);
+    --avatar-edge: rgb(20 26 36 / 0.35);
+    --on-volt-a12: rgb(245 248 238 / 0.12);
+
+    /* Ground-dependent effects: on paper a key darkens on hover, the
+     * native search × keeps the browser's own dark glyph, and text keeps
+     * the platform's default smoothing (grayscale AA thins dark-on-light). */
+    --key-hover-filter: brightness(0.94);
+    --key-hover-filter-strong: brightness(0.96);
+    --search-cancel-filter: none;
+    --font-smoothing: auto;
+    --font-smoothing-moz: auto;
+
+    /* 1.6 Volt alphas */
+    --volt-a0: rgb(66 110 25 / 0);
+    --volt-a035: rgb(66 110 25 / 0.035);
+    --volt-a04: rgb(66 110 25 / 0.04);
+    --volt-a05: rgb(66 110 25 / 0.05);
+    --volt-a06: rgb(66 110 25 / 0.06);
+    --volt-a08: rgb(66 110 25 / 0.08);
+    --volt-tint: rgb(66 110 25 / 0.1);
+    --volt-tint-on: rgb(66 110 25 / 0.12);
+    --volt-a14: rgb(66 110 25 / 0.14);
+    --volt-a22: rgb(66 110 25 / 0.22);
+    --volt-a25: rgb(66 110 25 / 0.25);
+    --volt-a28: rgb(66 110 25 / 0.28);
+    --volt-a30: rgb(66 110 25 / 0.3);
+    --volt-a35: rgb(66 110 25 / 0.35);
+    --volt-a40: rgb(66 110 25 / 0.4);
+    --volt-a45: rgb(66 110 25 / 0.45);
+    --volt-a50: rgb(66 110 25 / 0.5);
+    --volt-a55: rgb(66 110 25 / 0.55);
+    --volt-a60: rgb(66 110 25 / 0.6);
+    --volt-a70: rgb(66 110 25 / 0.7);
+    --volt-a75: rgb(66 110 25 / 0.75);
+
+    /* 1.7 Ion alphas */
+    --ion-a0: rgb(8 102 120 / 0);
+    --ion-a04: rgb(8 102 120 / 0.04);
+    --ion-a06: rgb(8 102 120 / 0.06);
+    --ion-a08: rgb(8 102 120 / 0.08);
+    --ion-a12: rgb(8 102 120 / 0.12);
+    --ion-a16: rgb(8 102 120 / 0.16);
+    --ion-a18: rgb(8 102 120 / 0.18);
+    --ion-a22: rgb(8 102 120 / 0.22);
+    --ion-a25: rgb(8 102 120 / 0.25);
+    --ion-a28: rgb(8 102 120 / 0.28);
+    --ion-a30: rgb(8 102 120 / 0.3);
+    --ion-a35: rgb(8 102 120 / 0.35);
+    --ion-a45: rgb(8 102 120 / 0.45);
+    --ion-a50: rgb(8 102 120 / 0.5);
+    --ion-a55: rgb(8 102 120 / 0.55);
+    --ion-a60: rgb(8 102 120 / 0.6);
+
+    /* 1.8 Synapse alphas */
+    --syn-a14: rgb(90 78 192 / 0.14);
+    --syn-a25: rgb(90 78 192 / 0.25);
+    --syn-a40: rgb(90 78 192 / 0.4);
+    --syn-a42: rgb(90 78 192 / 0.42);
+    --syn-a50: rgb(90 78 192 / 0.5);
+    --syn-a60: rgb(90 78 192 / 0.6);
+
+    /* 1.9 Paper (the ink's role), shadow and warn alphas */
+    --ink-a55: rgb(245 246 248 / 0.55);
+    --ink-a60: rgb(245 246 248 / 0.6);
+    --ink-a70: rgb(245 246 248 / 0.7); /* text on --text fills (8.41 on text) */
+    --ink-a78: rgb(245 246 248 / 0.78);
+    --appbar-bg: rgb(245 246 248 / 0.94);
+    --ink-a86: rgb(245 246 248 / 0.86);
+    --lessonbar-bg: rgb(245 246 248 / 0.88);
+    --shadow-a45: rgb(20 26 36 / 0.18);
+    --shadow-a50: rgb(20 26 36 / 0.2);
+    --shadow-a55: rgb(20 26 36 / 0.22);
+    --warn-tint: rgb(133 87 10 / 0.1);
+    --warn-line: rgb(133 87 10 / 0.35);
+
+    /* 7. The ruled frame (047) and the landing cells (048) */
+    --line-rail: rgb(20 26 36 / 0.1);
+    --line-section: rgb(20 26 36 / 0.1);
+    --line-cell: rgb(20 26 36 / 0.09);
+    --mark-cross: rgb(20 26 36 / 0.4);
+    --cell-fill: rgb(245 246 248 / 0.9);
+    --cell-fill-hover: rgb(228 231 236 / 0.9);
+    --cell-fill-veil: rgb(245 246 248 / 0.55);
+
+    /* 057 / 062: the scenes draw the deep accents on paper, so the canvas
+     * sits at 78%: tried at 62% (faint, the field read as a texture) and
+     * 100% (ink-dark cells read as spatter on paper); 78% keeps the deck,
+     * the graph and the sphere striking and the hero copy clear. */
+    --scene-strength: 0.78;
+  }
+  /* theme-light:end */
+
+              /* theme-light:system (generated from the block above; do not edit) */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      color-scheme: light;
+      --ink: #f5f6f8;
+      --surface: #eceef2;
+      --well: #eff1f4;
+      --terminal: #f0f2f5;
+      --raised: #e4e7ec;
+      --selected: #dbdfe6;
+      --bubble: #e0e4ea;
+      --glass: rgb(239 241 244 / 0.78);
+      --glass-80: rgb(239 241 244 / 0.8);
+      --glass-82: rgb(239 241 244 / 0.82);
+      --glass-well: rgb(239 241 244 / 0.78);
+      --key-dark-edge: #c6ccd6;
+      --text: #141a24;
+      --text-body: #2a3240;
+      --text-quiet: #3a4352;
+      --text-lead: #4a5365;
+      --muted: #586274;
+      --dim: #5f697b;
+      --on-volt: #f5f8ee;
+      --volt: #426e19;
+      --volt-edge: #28400e;
+      --volt-hover: #41691a;
+      --volt-link-hover: #3a5e17;
+      --volt-soft: #375a15;
+      --ion: #086678;
+      --ion-edge: #084f5b;
+      --synapse: #5a4ec0;
+      --synapse-soft: #4e43ae;
+      --warn: #85570a;
+      --danger: #b3302a;
+      --danger-tint: rgb(179 48 42 / 0.1);
+      --danger-line: rgb(179 48 42 / 0.4);
+      --danger-edge: #7d1f18;
+      --danger-a04: rgb(179 48 42 / 0.04);
+      --danger-a35: rgb(179 48 42 / 0.35);
+      --code-gutter: #9aa2b4;
+      --code-gutter-faint: #b6bcc9;
+      --skeleton: #d9dde5;
+      --skeleton-bubble: #dfe3ea;
+      --line-hair: rgb(20 26 36 / 0.08);
+      --line-bar: rgb(20 26 36 / 0.09);
+      --line: rgb(20 26 36 / 0.1);
+      --line-glass: rgb(20 26 36 / 0.11);
+      --line-panel: rgb(20 26 36 / 0.12);
+      --line-strong: rgb(20 26 36 / 0.15);
+      --line-control: rgb(20 26 36 / 0.17);
+      --line-dashed: rgb(20 26 36 / 0.2);
+      --line-dashed-strong: rgb(20 26 36 / 0.24);
+      --line-drop: rgb(20 26 36 / 0.27);
+      --line-node-next: rgb(20 26 36 / 0.36);
+      --fill-row-hover: rgb(20 26 36 / 0.035);
+      --fill-hover: rgb(20 26 36 / 0.05);
+      --fill-seg: rgb(20 26 36 / 0.06);
+      --fill-ghost-hover: rgb(20 26 36 / 0.07);
+      --fill-btn: rgb(20 26 36 / 0.09);
+      --fill-tab-on: rgb(20 26 36 / 0.12);
+      --fill-seg-off: rgb(20 26 36 / 0.12);
+      --fill-codeline-hover: rgb(20 26 36 / 0.03);
+      --dot-grid: rgb(20 26 36 / 0.06);
+      --dot-grid-field: rgb(20 26 36 / 0.065);
+      --field-grid: rgb(20 26 36 / 0.045);
+      --inset-highlight: rgb(255 255 255 / 0.55);
+      --kbd-edge: rgb(20 26 36 / 0.1);
+      --strike-muted: rgb(88 98 116 / 0.5);
+      --avatar-edge: rgb(20 26 36 / 0.35);
+      --on-volt-a12: rgb(245 248 238 / 0.12);
+      --key-hover-filter: brightness(0.94);
+      --key-hover-filter-strong: brightness(0.96);
+      --search-cancel-filter: none;
+      --font-smoothing: auto;
+      --font-smoothing-moz: auto;
+      --volt-a0: rgb(66 110 25 / 0);
+      --volt-a035: rgb(66 110 25 / 0.035);
+      --volt-a04: rgb(66 110 25 / 0.04);
+      --volt-a05: rgb(66 110 25 / 0.05);
+      --volt-a06: rgb(66 110 25 / 0.06);
+      --volt-a08: rgb(66 110 25 / 0.08);
+      --volt-tint: rgb(66 110 25 / 0.1);
+      --volt-tint-on: rgb(66 110 25 / 0.12);
+      --volt-a14: rgb(66 110 25 / 0.14);
+      --volt-a22: rgb(66 110 25 / 0.22);
+      --volt-a25: rgb(66 110 25 / 0.25);
+      --volt-a28: rgb(66 110 25 / 0.28);
+      --volt-a30: rgb(66 110 25 / 0.3);
+      --volt-a35: rgb(66 110 25 / 0.35);
+      --volt-a40: rgb(66 110 25 / 0.4);
+      --volt-a45: rgb(66 110 25 / 0.45);
+      --volt-a50: rgb(66 110 25 / 0.5);
+      --volt-a55: rgb(66 110 25 / 0.55);
+      --volt-a60: rgb(66 110 25 / 0.6);
+      --volt-a70: rgb(66 110 25 / 0.7);
+      --volt-a75: rgb(66 110 25 / 0.75);
+      --ion-a0: rgb(8 102 120 / 0);
+      --ion-a04: rgb(8 102 120 / 0.04);
+      --ion-a06: rgb(8 102 120 / 0.06);
+      --ion-a08: rgb(8 102 120 / 0.08);
+      --ion-a12: rgb(8 102 120 / 0.12);
+      --ion-a16: rgb(8 102 120 / 0.16);
+      --ion-a18: rgb(8 102 120 / 0.18);
+      --ion-a22: rgb(8 102 120 / 0.22);
+      --ion-a25: rgb(8 102 120 / 0.25);
+      --ion-a28: rgb(8 102 120 / 0.28);
+      --ion-a30: rgb(8 102 120 / 0.3);
+      --ion-a35: rgb(8 102 120 / 0.35);
+      --ion-a45: rgb(8 102 120 / 0.45);
+      --ion-a50: rgb(8 102 120 / 0.5);
+      --ion-a55: rgb(8 102 120 / 0.55);
+      --ion-a60: rgb(8 102 120 / 0.6);
+      --syn-a14: rgb(90 78 192 / 0.14);
+      --syn-a25: rgb(90 78 192 / 0.25);
+      --syn-a40: rgb(90 78 192 / 0.4);
+      --syn-a42: rgb(90 78 192 / 0.42);
+      --syn-a50: rgb(90 78 192 / 0.5);
+      --syn-a60: rgb(90 78 192 / 0.6);
+      --ink-a55: rgb(245 246 248 / 0.55);
+      --ink-a60: rgb(245 246 248 / 0.6);
+      --ink-a70: rgb(245 246 248 / 0.7);
+      --ink-a78: rgb(245 246 248 / 0.78);
+      --appbar-bg: rgb(245 246 248 / 0.94);
+      --ink-a86: rgb(245 246 248 / 0.86);
+      --lessonbar-bg: rgb(245 246 248 / 0.88);
+      --shadow-a45: rgb(20 26 36 / 0.18);
+      --shadow-a50: rgb(20 26 36 / 0.2);
+      --shadow-a55: rgb(20 26 36 / 0.22);
+      --warn-tint: rgb(133 87 10 / 0.1);
+      --warn-line: rgb(133 87 10 / 0.35);
+      --line-rail: rgb(20 26 36 / 0.1);
+      --line-section: rgb(20 26 36 / 0.1);
+      --line-cell: rgb(20 26 36 / 0.09);
+      --mark-cross: rgb(20 26 36 / 0.4);
+      --cell-fill: rgb(245 246 248 / 0.9);
+      --cell-fill-hover: rgb(228 231 236 / 0.9);
+      --cell-fill-veil: rgb(245 246 248 / 0.55);
+      --scene-strength: 0.78;
+    }
+  }
+}

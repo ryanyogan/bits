@@ -249,7 +249,7 @@ const variantStyles: Record<KeycapVariant, ReturnType<typeof css>> = {
     background: 'var(--on-volt)',
     color: 'var(--volt)',
     fontWeight: 400,
-    [HOVER]: { filter: 'brightness(1.3)' },
+    [HOVER]: { filter: 'var(--key-hover-filter-strong)' },
     [ACTIVE]: { transform: 'translateY(1px)' },
     [DISABLED]: { opacity: 0.5, filter: 'none', transform: 'none' },
   }),
@@ -257,7 +257,7 @@ const variantStyles: Record<KeycapVariant, ReturnType<typeof css>> = {
     background: 'var(--ion)',
     color: 'var(--ink)',
     boxShadow: 'var(--shadow-keycap-ion)',
-    [HOVER]: { filter: 'brightness(1.06)' },
+    [HOVER]: { filter: 'var(--key-hover-filter)' },
     [ACTIVE]: {
       transform: 'translateY(var(--keycap-travel))',
       boxShadow: 'var(--shadow-keycap-ion-pressed)',
@@ -269,7 +269,7 @@ const variantStyles: Record<KeycapVariant, ReturnType<typeof css>> = {
     background: 'var(--danger)',
     color: 'var(--on-volt)',
     boxShadow: 'var(--shadow-keycap-danger)',
-    [HOVER]: { filter: 'brightness(1.06)' },
+    [HOVER]: { filter: 'var(--key-hover-filter)' },
     [ACTIVE]: {
       transform: 'translateY(var(--keycap-travel))',
       boxShadow: 'var(--shadow-keycap-danger-pressed)',

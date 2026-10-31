@@ -282,6 +282,31 @@ the new page into the old DOM. Write for that:
   stays out of startup. `pnpm build` prints the startup size; check it
   when you add a heavy dependency.
 
+## Theme (decision 062)
+
+- Source of truth: `users.theme` (null = follow the system), else the
+  session's `theme` key, else `system` (`themeFor()` in
+  `app/progress/theme.ts`). A signed-out pick isn't copied to the account
+  at sign-in; the session keeps it until the account has its own, as with
+  the lesson depth. `user.theme` comes with the session read, so a page
+  pays no extra D1 read.
+- `Document` sets `<html data-theme>` and the `color-scheme` and
+  `theme-color` metas on the server, through the `ThemeScope` the `theme()`
+  middleware wraps around every render. No attribute means follow the
+  system. No client script ever picks the theme.
+- Saving is a POST, never a GET: `POST /theme` (the landing footer's
+  switch; rate limited, covered by `cop()`, always 303 to `/`) and
+  `POST /settings/appearance`. Save only through `rememberTheme()`. There
+  is no `?theme=`: unlike `?depth=`, it isn't a read with a side effect.
+  Neither form needs `data-rmx-document`: client navigation reconciles
+  `<html>` attributes and the keyed metas (`app/theme.test.e2e.ts`).
+- The switch is only in the landing footer and Settings, so a signed-out
+  learner on any other page can't reach it.
+- Light tokens live in `packages/ui/src/styles/theme-light.css`, in two
+  copies of one block. Edit the first, then run
+  `pnpm --filter @bits/ui theme:sync`; `theme.test.ts` fails when they
+  differ or when a colour token has no light value.
+
 ## Building components (packages/ui)
 
 - One component per file, kebab-case filename, named export:
@@ -376,7 +401,8 @@ Rationale: `docs/decisions/010-component-library.md`.
 | KeyValueList | key-value-list.tsx | items, variant default/course | static |
 | EmptyState | empty-state.tsx | title, hint, action, variant boxed/bare (`boxed`: flat hairline box with a mono `∅`; `bare`: no box, for a state that fills a cell or band) | static |
 | LiveDot | live-dot.tsx | tone, pulse | static |
-| Footer | footer.tsx | brand, homeHref, links, copyright | static |
+| Footer | footer.tsx | brand, homeHref, links, copyright, themes {current, action, options} (the System / Dark / Light switch: a native POST form of submit buttons with `aria-pressed`; decision 062) | static |
+| ThemeScope / themePreference | theme.tsx | preference (provider; the app's renderer wraps every page) / `themePreference(handle)` reads it, for `Document` and the theme controls | static |
 | XpPill / StreakPill / AvatarButton | xp-pill.tsx / streak-pill.tsx / avatar-button.tsx | neurons / days / initials, href, current, prefetch | static |
 | CourseCover / Sigil | course-cover.tsx | pattern (8 `coverPatterns`), tone volt/ion/synapse, sigil, variant card/banner/art/thumb | static |
 | CourseCard / WriteCourseCard | course-card.tsx | href, title, desc, level, lessons, mins, sigil, tone, pattern, formats, pct, prefetch, variant card/cell (`cell`: a whole-cell link in a `CellGrid`, built on `cellLinkStyle`) | static |

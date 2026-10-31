@@ -8,6 +8,7 @@ import { Keycap } from '@bits/ui/keycap'
 import { KeyValueList } from '@bits/ui/key-value-list'
 import { Switch } from '@bits/ui/switch'
 import { Tag } from '@bits/ui/tag'
+import { themePreference } from '@bits/ui/theme'
 import { TextField } from '@bits/ui/text-field'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
 import { PageFrame } from '@bits/ui/page-frame'
@@ -26,7 +27,7 @@ import { ReauthBlock } from './ui/reauth-block.tsx'
 import { Layout } from '../../ui/layout.tsx'
 import { PageHead } from '../../ui/page-head.tsx'
 
-export type SettingsSection = 'profile' | 'email' | 'sign-in' | 'data' | 'sessions' | 'danger'
+export type SettingsSection = 'profile' | 'appearance' | 'email' | 'sign-in' | 'data' | 'sessions' | 'danger'
 
 export interface SettingsNotice {
   section: SettingsSection
@@ -52,6 +53,7 @@ export interface SettingsPageProps {
 
 const outline: Array<{ id: SettingsSection; label: string }> = [
   { id: 'profile', label: 'Profile' },
+  { id: 'appearance', label: 'Appearance' },
   { id: 'email', label: 'Email' },
   { id: 'sign-in', label: 'Sign-in methods' },
   { id: 'data', label: 'Your data' },
@@ -77,6 +79,8 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
     let visibility = val('profile', 'visibility', viewer.isPublic ? 'public' : 'private')
     let profileHandle = viewer.handle
     let passkeyCount = account.methods.filter((m) => m.kind === 'passkey').length
+    // The resolved theme, from the page's <ThemeScope> (decision 062).
+    let theme = themePreference(handle)
 
     return (
       <Layout title="Settings" description="Your sign-in, your profile, your data." viewer={viewer}>
@@ -176,7 +180,32 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                 </form>
               </Section>
 
-              {/* 2. Email */}
+              {/* 2. Appearance (decision 062) */}
+              <Section
+                id="appearance"
+                title="Appearance"
+                description="Dark or light. System follows your device and switches with it."
+              >
+                <form method="post" action={routes.settings.appearance.href()} mix={formStyle}>
+                  <Switch
+                    name="theme"
+                    legend="Theme"
+                    options={[
+                      { value: 'system', label: 'System' },
+                      { value: 'dark', label: 'Dark' },
+                      { value: 'light', label: 'Light' },
+                    ]}
+                    value={theme}
+                  />
+                  <div mix={footerStyle}>
+                    <Keycap type="submit" variant="dark" mix={footerKeyStyle}>
+                      Save theme
+                    </Keycap>
+                  </div>
+                </form>
+              </Section>
+
+              {/* 3. Email */}
               <Section id="email" title="Email" description="Where your sign-in links and codes go.">
                 <KeyValueList
                   mix={centeredTermsStyle}
@@ -263,7 +292,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                 )}
               </Section>
 
-              {/* 3. Sign-in methods */}
+              {/* 4. Sign-in methods */}
               <Section id="sign-in" title="Sign-in methods" description="Use any of these to get in. Keep at least one.">
                 <ul mix={methodListStyle}>
                   {account.methods.map((method) => (
@@ -283,7 +312,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                 </p>
               </Section>
 
-              {/* 4. Your data */}
+              {/* 5. Your data */}
               <Section
                 id="data"
                 title="Your data"
@@ -299,7 +328,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                 </p>
               </Section>
 
-              {/* 5. Sessions */}
+              {/* 6. Sessions */}
               <Section
                 id="sessions"
                 title="Sessions"
@@ -324,7 +353,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                 </form>
               </Section>
 
-              {/* 6. Delete account */}
+              {/* 7. Delete account */}
               <Section
                 id="danger"
                 title="Delete account"
@@ -573,6 +602,7 @@ const centeredTermsStyle = css({ '& dt': { alignSelf: 'center' } })
 
 const noticeTitles: Record<SettingsSection, string> = {
   profile: 'Profile',
+  appearance: 'Appearance',
   email: 'Email',
   'sign-in': 'Sign-in methods',
   data: 'Your data',

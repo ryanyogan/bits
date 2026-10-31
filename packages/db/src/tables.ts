@@ -13,6 +13,13 @@ export type UserRole = (typeof userRoles)[number]
 export const lessonDepths = ['new', 'engineer'] as const
 export type LessonDepth = (typeof lessonDepths)[number]
 
+/**
+ * A theme the learner pinned (decision 062). `users.theme` is null when they
+ * follow the system, so "system" is never stored.
+ */
+export const themes = ['dark', 'light'] as const
+export type Theme = (typeof themes)[number]
+
 export const oauthProviders = ['github', 'google'] as const
 export type OAuthProvider = (typeof oauthProviders)[number]
 
@@ -56,6 +63,8 @@ export const users = table({
     is_public: c.boolean(),
     /** The lesson depth the learner picked (decision 053); null until they pick one. */
     lesson_depth: c.enum(lessonDepths).nullable(),
+    /** The theme the learner pinned (decision 062); null follows the system. */
+    theme: c.enum(themes).nullable(),
     created_at: c.integer(),
     updated_at: c.integer(),
   },

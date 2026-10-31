@@ -56,6 +56,11 @@ export const routes = route({
     action: post('/'), // actions/logout/controller.tsx
   }),
 
+  // The footer's theme switch (decision 062): saves, then 303 to the landing.
+  theme: route('/theme', {
+    action: post('/'), // actions/theme/controller.tsx
+  }),
+
   me: route('/me', {
     index: get('/'), // actions/me/controller.tsx
   }),
@@ -68,6 +73,7 @@ export const routes = route({
     index: get('/'), // actions/settings/controller.tsx
     export: get('/export'), // JSON download
     profile: post('/profile'),
+    appearance: post('/appearance'), // the theme (decision 062)
     email: post('/email'),
     emailConfirm: post('/email/confirm'), // the 6-digit code for a new email (decision 030)
     reauth: post('/reauth'), // mail a sign-in code to the current address to confirm it's you

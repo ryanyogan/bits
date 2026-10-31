@@ -32,7 +32,8 @@ import { routes } from '../../routes.ts'
 import { emailFailures } from '../login/controller.tsx'
 import { issueField, readText, type FormIssue } from '../login/schema.ts'
 import { deviceLabel, getAccountSettings } from './data.ts'
-import { deleteForm, emailCodeForm, emailForm, methodsForm, passkeyNameForm, profileForm } from './schema.ts'
+import { rememberTheme } from '../../progress/theme.ts'
+import { appearanceForm, deleteForm, emailCodeForm, emailForm, methodsForm, passkeyNameForm, profileForm } from './schema.ts'
 import { SettingsPage, type SettingsErrors, type SettingsNotice, type SettingsSection } from './settings-page.tsx'
 
 // Signed-in only (requireUser sends everyone else to /login?next=). Each form
@@ -74,6 +75,8 @@ export default createController(routes.settings, {
           timezone: user.timezone,
           // The reading depth picked on a lesson (decision 053); null until one is picked.
           lessonDepth: user.lesson_depth ?? null,
+          // The theme (decision 062): system, dark or light.
+          theme: user.theme ?? 'system',
           createdAt: new Date(user.created_at).toISOString(),
         },
         signInMethods: account.methods.filter((m) => m.connected).map(({ kind, meta }) => ({ kind, meta })),
@@ -146,6 +149,17 @@ export default createController(routes.settings, {
         return invalid(context, user, 'profile', { handle: 'That handle is taken.' }, ['name', 'handle', 'visibility'])
       }
       return saved('profile')
+    },
+
+    // The theme (decision 062): system, dark or light, into users.theme.
+    appearance: {
+      middleware: [rateLimit('RL_WRITES')],
+      async handler(context) {
+        let parsed = s.parseSafe(appearanceForm, context.formData)
+        if (!parsed.success) return saved('appearance-error')
+        await rememberTheme(context, parsed.value.theme)
+        return saved('appearance')
+      },
     },
 
     // Change the sign-in email (decision 030): mail a code + link to the new
@@ -341,6 +355,8 @@ function fieldOf(issue: FormIssue): string | undefined {
 
 const anchors: Record<string, SettingsSection> = {
   profile: 'profile',
+  appearance: 'appearance',
+  'appearance-error': 'appearance',
   'email-sent': 'email',
   'email-changed': 'email',
   'email-cancelled': 'email',
@@ -375,6 +391,10 @@ export function noticeFor(params: URLSearchParams): SettingsNotice | undefined {
   switch (params.get('saved')) {
     case 'profile':
       return { section: 'profile', tone: 'ok', text: 'Saved. Your profile is up to date.' }
+    case 'appearance':
+      return { section: 'appearance', tone: 'ok', text: 'Saved. Every page uses this theme now, on any device you sign in on.' }
+    case 'appearance-error':
+      return { section: 'appearance', tone: 'warning', text: 'Pick System, Dark or Light.' }
     case 'email-sent':
       return { section: 'email', tone: 'ok', text: 'Check your new inbox. Your email changes once you confirm it.' }
     case 'email-changed':

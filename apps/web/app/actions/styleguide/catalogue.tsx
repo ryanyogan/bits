@@ -63,6 +63,7 @@ import { VideoPlayer } from '@bits/ui/video-player'
 import { XpPill } from '@bits/ui/xp-pill'
 
 import { APP_NAME } from '../../config.ts'
+import { routes } from '../../routes.ts'
 import { PathCourseTag, type PathCourse } from '../home/the-path.tsx'
 import { FieldSpecimen } from './field-specimen.tsx'
 import { GridSection } from './grid.tsx'
@@ -376,6 +377,15 @@ export function Catalogue(handle: Handle) {
                 { href: '#sg-f2', label: 'Write a course' },
                 { href: '#sg-f3', label: 'Privacy' },
               ]}
+              themes={{
+                current: 'system',
+                action: routes.theme.action.href(),
+                options: [
+                  { value: 'system', label: 'System' },
+                  { value: 'dark', label: 'Dark' },
+                  { value: 'light', label: 'Light' },
+                ],
+              }}
             />
           </div>
         </Specimen>

@@ -1,9 +1,10 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 import type { AppBarLink } from '@bits/ui/app-bar'
-import { Footer } from '@bits/ui/footer'
+import { Footer, type FooterThemeOption } from '@bits/ui/footer'
 import { PageFrame } from '@bits/ui/page-frame'
 import { RuledSection } from '@bits/ui/ruled-section'
+import { themePreference } from '@bits/ui/theme'
 
 import { APP_NAME, APP_TAGLINE } from '../config.ts'
 import type { Viewer } from '../auth/identity.ts'
@@ -39,6 +40,13 @@ const footerLinks = [
   { href: routes.me.index.href(), label: 'Profile' },
   { href: routes.legal.terms.href(), label: 'Terms' },
   { href: routes.legal.privacy.href(), label: 'Privacy' },
+]
+
+// The footer's theme switch (decision 062): `POST /theme`, then back here.
+const themeOptions: FooterThemeOption[] = [
+  { value: 'system', label: 'System' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'light', label: 'Light' },
 ]
 
 /**
@@ -86,6 +94,7 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
                 homeHref={routes.home.href()}
                 links={footerLinks}
                 copyright={`© 2026 ${brandName}`}
+                themes={{ current: themePreference(handle), action: routes.theme.action.href(), options: themeOptions }}
                 mix={footerStyle}
               />
             </RuledSection>

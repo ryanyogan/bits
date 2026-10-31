@@ -137,7 +137,7 @@ export function SystemBoard(handle: Handle) {
             <dl mix={shapeGrid}>
               {[
                 ['radius', '0 (squared, decision 047) · round for dots'],
-                ['lines', 'hairlines white @ 7–8% · + marks @ 32%'],
+                ['lines', 'hairlines white @ 7–8% on ink, slate @ 9–10% on paper · + marks @ 32 / 40%'],
                 ['space', '4-pt; sections 96 / 64 · cell inset 40 / 20'],
                 ['depth', 'flat: a hairline and a fill step · no shadow, no blur'],
                 ['cells', 'ink @ 90% over a canvas'],
@@ -159,15 +159,16 @@ export function SystemBoard(handle: Handle) {
   )
 }
 
-function Swatch(handle: Handle<{ name: string; token: string; hex: string; use: string }>) {
+function Swatch(handle: Handle<{ name: string; token: string; hex: string; light: string; use: string }>) {
   return () => {
-    let { name, token, hex, use } = handle.props
+    let { name, token, hex, light, use } = handle.props
     return (
       <li mix={swatchStyle}>
         <span aria-hidden="true" mix={chipStyle} style={{ background: `var(${token})` }} />
         <span mix={swatchText}>
           <span mix={swatchName}>{name}</span>
-          <span mix={swatchHex}>{`${hex} · ${token}`}</span>
+          {/* The chip shows the theme you're in; the labels name both values (decision 062). */}
+          <span mix={swatchHex}>{`${token} · dark ${hex} · light ${light}`}</span>
           <span mix={swatchUse}>{use}</span>
         </span>
       </li>

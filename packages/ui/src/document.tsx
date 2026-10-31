@@ -2,6 +2,7 @@ import type { Handle, RemixNode } from 'remix/component'
 import { ImportMap, type ImportMapData } from 'remix/component/server'
 
 import { cspNonce } from './csp-nonce.tsx'
+import { themeColors, themePreference } from './theme.tsx'
 import { WEB_ANALYTICS_BEACON_SRC, webAnalyticsToken } from './web-analytics.tsx'
 
 /** The browser runtime entry, as returned by the app's asset layer. */
@@ -54,7 +55,14 @@ export interface DocumentImage {
 const LAYER_ORDER = '@layer reset, tokens, base, rmx-reset, rmx, app;'
 
 /**
- * The HTML document shell every page renders through. Dark only.
+ * The HTML document shell every page renders through.
+ *
+ * The theme (decision 062) comes from the nearest `ThemeScope`. A pinned
+ * theme sets `<html data-theme="dark|light">`, `color-scheme` to that one
+ * scheme and one `theme-color`. Following the system sets no attribute,
+ * `color-scheme: dark light` and a `theme-color` per scheme (`media=`).
+ * The tokens pick their values from the attribute or, without one, from
+ * `prefers-color-scheme`, so the server's HTML paints right the first time.
  *
  * The layer order is declared inline first so it is established before any
  * stylesheet or Remix's generated `rmx` styles load.
@@ -88,14 +96,33 @@ export function Document(handle: Handle<DocumentProps>) {
     let { entry, stylesheets, fontPreloads } = assets
     let nonce = cspNonce(handle)
     let analyticsToken = webAnalyticsToken(handle)
+    let theme = themePreference(handle)
+    let pinned = theme === 'system' ? undefined : theme
 
     return (
-      <html lang="en">
+      <html lang="en" data-theme={pinned}>
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <meta name="color-scheme" content="dark" />
-          <meta name="theme-color" content="#0F131A" />
+          <meta data-rmx-key="color-scheme" name="color-scheme" content={pinned ?? 'dark light'} />
+          {pinned ? (
+            <meta data-rmx-key={`theme-color:${pinned}`} name="theme-color" content={themeColors[pinned]} />
+          ) : (
+            <>
+              <meta
+                data-rmx-key="theme-color:dark"
+                name="theme-color"
+                media="(prefers-color-scheme: dark)"
+                content={themeColors.dark}
+              />
+              <meta
+                data-rmx-key="theme-color:light"
+                name="theme-color"
+                media="(prefers-color-scheme: light)"
+                content={themeColors.light}
+              />
+            </>
+          )}
           <title>{title}</title>
           {description ? <meta name="description" content={description} /> : null}
           {url ? <link data-rmx-key="canonical" rel="canonical" href={url} /> : null}

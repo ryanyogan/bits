@@ -134,6 +134,15 @@
     --avatar-edge: rgb(227 230 237 / 0.35);
     --on-volt-a12: rgb(12 16 8 / 0.12); /* ↵ tile inside a volt keycap */
 
+    /* Ground-dependent effects (decision 062). Each has a light value in
+     * theme-light.css: a filter or a smoothing mode is not a colour, so it
+     * says which way is "up" for the ground it sits on. */
+    --key-hover-filter: brightness(1.06); /* ion and danger keys: a tinted face lifts on ink, darkens on paper */
+    --key-hover-filter-strong: brightness(1.3); /* the inverse key's --on-volt face (near-black here, paper there) */
+    --search-cancel-filter: invert(0.6); /* the native search ×, drawn in the scheme's colour */
+    --font-smoothing: antialiased; /* light text on a near-black ground: grayscale AA on macOS (base.css) */
+    --font-smoothing-moz: grayscale;
+
     /* 1.6 Volt alphas */
     --volt-a0: rgb(167 207 102 / 0);
     --volt-a035: rgb(167 207 102 / 0.035); /* highlighted code range */
@@ -594,5 +603,9 @@
     --bit-on: var(--text); /* a lit bit (BitCells default tone) */
     --bit-off: var(--line-control); /* an unlit bit's frame (white @ 14%) */
     --bit-off-fill: var(--fill-seg); /* an unlit bit's face in a progress bar */
+    /* How strongly the three.js scenes draw (decision 062): the canvas's
+     * opacity. Lit cells on ink take full strength; the light theme lowers
+     * it, since ink-dark cells at full strength read as spatter on paper. */
+    --scene-strength: 1;
   }
 }
