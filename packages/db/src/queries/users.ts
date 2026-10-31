@@ -3,7 +3,7 @@
 import type { Database } from 'remix/data-table'
 
 import type { D1DataTableDatabase } from '../d1/database.ts'
-import { decodeBoolean, decodeJsonArray, users, type LessonDepth, type User, type UserRole, type UserRow } from '../tables.ts'
+import { decodeBoolean, decodeJsonArray, users, type LessonDepth, type Theme, type User, type UserRole, type UserRow } from '../tables.ts'
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase()
@@ -117,6 +117,19 @@ export async function saveLessonDepth(db: D1DataTableDatabase, userId: string, d
   let result = await db.d1
     .prepare('update users set lesson_depth = ?2 where id = ?1 and lesson_depth is not ?2')
     .bind(userId, depth)
+    .run()
+  return (result.meta?.changes ?? 0) > 0
+}
+
+/**
+ * Saves the learner's theme (decision 062): `dark`, `light`, or null to
+ * follow the system. One statement, and a no-op when it already holds
+ * `theme`. Resolves true when a row changed.
+ */
+export async function saveTheme(db: D1DataTableDatabase, userId: string, theme: Theme | null): Promise<boolean> {
+  let result = await db.d1
+    .prepare('update users set theme = ?2 where id = ?1 and theme is not ?2')
+    .bind(userId, theme)
     .run()
   return (result.meta?.changes ?? 0) > 0
 }

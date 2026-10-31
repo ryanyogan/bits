@@ -43,6 +43,7 @@ import { responseHeaders } from './middleware/headers.ts'
 import { serveMedia } from './middleware/media.ts'
 import { serveRobots, serveSitemap } from './middleware/site-files.ts'
 import { logServerErrors } from './middleware/server-errors.ts'
+import { theme } from './middleware/theme.tsx'
 import { webAnalytics } from './middleware/web-analytics.tsx'
 import { routes } from './routes.ts'
 
@@ -98,6 +99,9 @@ export const router = createRouter({
     cspNonce(),
     // With WEB_ANALYTICS_TOKEN set, pages also get the nonced beacon (decision 033).
     webAnalytics(),
+    // The theme (decision 062): `?theme=` saves and redirects; pages render
+    // inside <ThemeScope>, so Document sets <html data-theme>.
+    theme(),
   ],
 })
 

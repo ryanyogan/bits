@@ -22,6 +22,11 @@ export const profileForm = f.object({
   visibility: f.field(s.defaulted(s.enum_(['public', 'private'] as const), 'public')),
 })
 
+/** POST /settings/appearance: the theme (decision 062). */
+export const appearanceForm = f.object({
+  theme: f.field(s.enum_(['system', 'dark', 'light'] as const)),
+})
+
 /** POST /settings/email */
 export const emailForm = f.object({
   email: f.field(

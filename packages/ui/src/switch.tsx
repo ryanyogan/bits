@@ -14,16 +14,17 @@ export interface SwitchProps {
   /** Visible legend; set `hideLegend` to keep it for screen readers only. */
   legend: string
   hideLegend?: boolean
-  options: [SwitchOption, SwitchOption]
+  /** Two options (Public / Private), or three (System / Dark / Light). */
+  options: [SwitchOption, SwitchOption] | [SwitchOption, SwitchOption, SwitchOption]
   value?: string
   disabled?: boolean
   mix?: MixInput<HTMLElement>
 }
 
 /**
- * Two-option switch (components §7.7, proposed): no toggle is drawn, so it is
- * the `account` segmented flavour bound to two native radios (e.g. Public /
- * Private). Works in plain forms; selection styled with `:has(:checked)`.
+ * Two- or three-option switch (components §7.7, proposed): no toggle is
+ * drawn, so it is the `account` segmented flavour bound to native radios
+ * (Public / Private; System / Dark / Light). Works in plain forms; selection styled with `:has(:checked)`.
  */
 export function Switch(handle: Handle<SwitchProps>) {
   return () => {
@@ -61,7 +62,9 @@ const legendStyle = css({ padding: 0, marginBottom: 'var(--space-2)', fontSize: 
 
 const trackStyle = css({
   display: 'grid',
-  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  // One equal column per option (two or three).
+  gridAutoFlow: 'column',
+  gridAutoColumns: 'minmax(0, 1fr)',
   gap: 'var(--space-1)',
   padding: 'var(--space-1)',
   borderRadius: 'var(--radius-13)',
