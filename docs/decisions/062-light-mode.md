@@ -143,11 +143,29 @@ The suite also exposed a Chromium quirk. The reduced-motion rule set
 transition on every background, and `getComputedStyle` then reported the
 *previous* theme's background while paint was already right; axe read
 dark-theme text on light-theme ground. The rule now sets
-`transition-property: none` instead. Nothing listened for `transitionend`.
+`transition-property: none` instead (nothing listened for
+`transitionend`), and the suite also waits for every running
+`CSSTransition` to finish after a flip (`colourTransitionsDone`), so a
+future transition that survives reduced motion can't be read mid-way
+either. The suite audits the pinned themes too: the footer keys on the
+landing, and Settings after a save.
 
 ### Preference
 
-See `062-light-mode-plumbing.md` (the lead merges it here).
+The choice lives in `users.theme` (migration 0013, nullable: null is
+"follow the system") for a signed-in learner and in the session's `theme`
+key signed out; `themeFor()` reads the column, then the session, then
+`system`, and the column rides along with the session read, so a pinned
+theme costs no D1 round trip. The `theme()` middleware wraps
+`context.render` in `<ThemeScope>` and `Document` sets `<html
+data-theme>`, `color-scheme` and `theme-color` from it, so the first paint
+is right without a client script (the strict CSP rules one out). Saving is
+a `POST /theme` from the footer's three keys (and `POST
+/settings/appearance` from Settings), under `cop()` and `RL_WRITES`, with
+a fixed redirect; the first draft's `?theme=` GET was dropped after a
+security review (an open redirect and a write on GET). A signed-out pick
+is not merged into the account at sign-in, as with `lesson_depth` (053).
+The full record is `062-light-mode-plumbing.md`.
 
 ## Rejected
 
