@@ -13,12 +13,11 @@ export function isThemePreference(value: unknown): value is ThemePreference {
 
 /**
  * The browser-chrome colour (`<meta name="theme-color">`) per theme: the
- * `--ink` ground. The light value is a placeholder until the light tokens
- * (decision 062, lane L) settle the paper ground; keep the two in step.
+ * `--ink` ground. Keep them in step with the tokens.
  */
 export const themeColors: Record<PinnedTheme, string> = {
   dark: '#0F131A',
-  light: '#f6f7f9',
+  light: '#F5F6F8',
 }
 
 export interface ThemeScopeProps {
