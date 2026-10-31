@@ -27,6 +27,7 @@ import meController from './actions/me/controller.tsx'
 import profileController from './actions/profile/controller.tsx'
 import settingsController from './actions/settings/controller.tsx'
 import styleguideController from './actions/styleguide/controller.tsx'
+import themeController from './actions/theme/controller.tsx'
 import webhooksController from './actions/webhooks/controller.tsx'
 import legalController from './actions/legal/controller.tsx'
 import certificatesController from './actions/certificates/controller.tsx'
@@ -99,8 +100,8 @@ export const router = createRouter({
     cspNonce(),
     // With WEB_ANALYTICS_TOKEN set, pages also get the nonced beacon (decision 033).
     webAnalytics(),
-    // The theme (decision 062): `?theme=` saves and redirects; pages render
-    // inside <ThemeScope>, so Document sets <html data-theme>.
+    // The theme (decision 062): pages render inside <ThemeScope>, so
+    // Document sets <html data-theme>.
     theme(),
   ],
 })
@@ -127,6 +128,7 @@ router.map(routes.logout, logoutController)
 router.map(routes.me, meController)
 router.map(routes.profile, profileController)
 router.map(routes.settings, settingsController)
+router.map(routes.theme, themeController)
 router.map(routes.styleguide, styleguideController)
 router.map(routes.author, authorController)
 router.map(routes.author.course, authorCourseController)
