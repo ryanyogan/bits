@@ -94,7 +94,8 @@ const fieldStyle = css({
 
 const inputStyle = css({
   fontFamily: 'var(--font-sans)',
-  '&::-webkit-search-cancel-button': { filter: 'invert(0.6)' },
+  // The browser draws the × in the scheme's colour; the dark theme lifts it to a grey (decision 062).
+  '&::-webkit-search-cancel-button': { filter: 'var(--search-cancel-filter)' },
 })
 
 const cellFormStyle = css({ maxWidth: 'none', display: 'flex' })
