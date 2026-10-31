@@ -56,6 +56,11 @@ export const routes = route({
     action: post('/'), // actions/logout/controller.tsx
   }),
 
+  // The footer's theme switch (decision 062): saves, then 303 to the landing.
+  theme: route('/theme', {
+    action: post('/'), // actions/theme/controller.tsx
+  }),
+
   me: route('/me', {
     index: get('/'), // actions/me/controller.tsx
   }),

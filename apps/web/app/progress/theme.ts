@@ -4,7 +4,7 @@
 // server resolves it for every page, and `Document` sets `<html data-theme>`
 // from it, so no client script ever picks the theme.
 import { saveTheme } from '@bits/db'
-import { isThemePreference, type ThemePreference } from '@bits/ui/theme'
+import type { ThemePreference } from '@bits/ui/theme'
 import type { RequestContext } from 'remix/router'
 import { Session } from 'remix/session'
 
@@ -15,15 +15,6 @@ type AnyContext = RequestContext<any, any>
 
 /** Session key: the theme a signed-out learner pinned. */
 const THEME_KEY = 'theme'
-
-/** The query parameter the footer's theme links use. */
-export const THEME_PARAM = 'theme'
-
-/** The `?theme=` on a URL, when it names a preference. */
-export function requestedTheme(url: URL): ThemePreference | undefined {
-  let value = url.searchParams.get(THEME_PARAM)
-  return isThemePreference(value) ? value : undefined
-}
 
 /**
  * The theme to render with: the signed-in user's column, then the
@@ -60,11 +51,4 @@ export async function rememberTheme(context: AnyContext, preference: ThemePrefer
   } else if (session.get(THEME_KEY) !== pinned) {
     session.set(THEME_KEY, pinned)
   }
-}
-
-/** `url` without its `?theme=`: where a theme link redirects once it has saved. */
-export function withoutThemeParam(url: URL): string {
-  let next = new URL(url)
-  next.searchParams.delete(THEME_PARAM)
-  return next.pathname + next.search
 }

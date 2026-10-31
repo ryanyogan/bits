@@ -1,7 +1,7 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 import type { AppBarLink } from '@bits/ui/app-bar'
-import { Footer, type FooterThemeLink } from '@bits/ui/footer'
+import { Footer, type FooterThemeOption } from '@bits/ui/footer'
 import { PageFrame } from '@bits/ui/page-frame'
 import { RuledSection } from '@bits/ui/ruled-section'
 import { themePreference } from '@bits/ui/theme'
@@ -42,15 +42,12 @@ const footerLinks = [
   { href: routes.legal.privacy.href(), label: 'Privacy' },
 ]
 
-// The footer's theme switch (decision 062): `?theme=` saves the choice and
-// redirects back to the landing without it.
-const themeLinks: FooterThemeLink[] = (
-  [
-    ['system', 'System'],
-    ['dark', 'Dark'],
-    ['light', 'Light'],
-  ] as const
-).map(([value, label]) => ({ value, label, href: routes.home.href(undefined, { searchParams: { theme: value } }) }))
+// The footer's theme switch (decision 062): `POST /theme`, then back here.
+const themeOptions: FooterThemeOption[] = [
+  { value: 'system', label: 'System' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'light', label: 'Light' },
+]
 
 /**
  * The landing page (docs/design/spec/pages/Main.md). Every section is
@@ -97,7 +94,7 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
                 homeHref={routes.home.href()}
                 links={footerLinks}
                 copyright={`© 2026 ${brandName}`}
-                themes={{ current: themePreference(handle), links: themeLinks }}
+                themes={{ current: themePreference(handle), action: routes.theme.action.href(), options: themeOptions }}
                 mix={footerStyle}
               />
             </RuledSection>

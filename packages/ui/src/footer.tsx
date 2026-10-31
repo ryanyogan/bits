@@ -6,10 +6,8 @@ import { Logo } from './logo.tsx'
 import { NavLink } from './nav-link.tsx'
 import type { ThemePreference } from './theme.tsx'
 
-export interface FooterThemeLink {
+export interface FooterThemeOption {
   value: ThemePreference
-  /** `?theme=<value>` on the current page: the server saves it and redirects back (decision 062). */
-  href: string
   label: string
 }
 
@@ -21,10 +19,10 @@ export interface FooterProps {
   copyright: string
   /**
    * The theme switch (decision 062): System / Dark / Light as three small
-   * links beside the copyright. They never prefetch (following one saves a
-   * choice) and load the whole document, so `<html data-theme>` changes.
+   * submit buttons beside the copyright, in a native form that POSTs
+   * `theme` to `action`. Saving is a write, so it is never a link.
    */
-  themes?: { current: ThemePreference; links: FooterThemeLink[] }
+  themes?: { current: ThemePreference; action: string; options: FooterThemeOption[] }
   mix?: MixInput<HTMLElement>
 }
 
@@ -45,19 +43,20 @@ export function Footer(handle: Handle<FooterProps>) {
           </nav>
           <div mix={endStyle}>
             {themes ? (
-              <nav aria-label="Theme" mix={themeStyle}>
-                {themes.links.map((link) => (
-                  <a
-                    key={link.value}
-                    href={link.href}
-                    aria-current={link.value === themes.current ? 'true' : undefined}
-                    data-rmx-document
-                    mix={themeLinkStyle}
+              <form method="post" action={themes.action} aria-label="Theme" mix={themeStyle}>
+                {themes.options.map((option) => (
+                  <button
+                    key={option.value}
+                    type="submit"
+                    name="theme"
+                    value={option.value}
+                    aria-pressed={option.value === themes.current ? 'true' : 'false'}
+                    mix={themeButtonStyle}
                   >
-                    {link.label}
-                  </a>
+                    {option.label}
+                  </button>
                 ))}
-              </nav>
+              </form>
             ) : null}
             <p mix={copyStyle}>{copyright}</p>
           </div>
@@ -79,7 +78,7 @@ const innerStyle = css({
   flexWrap: 'wrap',
 })
 const navStyle = css({ display: 'flex', gap: 'var(--space-6)', flexWrap: 'wrap', fontSize: 'var(--fs-14)' })
-// The theme links and the copyright: one row on phones (where they have a
+// The theme switch and the copyright: one row on phones (where they have a
 // row of their own), stacked from 800px, so the logo, the links and this
 // still fit on one 44px row and the footer keeps its height. (Between
 // 760px and 800px the copyright used to just fit beside the links; there
@@ -93,7 +92,7 @@ const endStyle = css({
 })
 const copyStyle = css({ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--dim)' })
 
-// Mono 12px like the copyright. Each link keeps a 44px touch target, but
+// Mono 12px like the copyright. Each button keeps a 44px touch target, but
 // the strip's negative block margins give the row only the type's height,
 // so the footer is as tall as before (the overhang sits in its padding).
 const themeStyle = css({
@@ -101,7 +100,12 @@ const themeStyle = css({
   gap: 'var(--space-3)',
   marginBlock: 'calc((var(--fs-12) * 1.5 - var(--touch-target)) / 2)',
 })
-const themeLinkStyle = css({
+const themeButtonStyle = css({
+  appearance: 'none',
+  background: 'none',
+  border: 0,
+  padding: 0,
+  cursor: 'pointer',
   display: 'inline-flex',
   alignItems: 'center',
   minHeight: 'var(--touch-target)',
@@ -117,7 +121,7 @@ const themeLinkStyle = css({
   transition: 'color var(--duration-fast)',
   [HOVER]: { color: 'var(--text)' },
   [FOCUS]: { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset)', borderRadius: 'var(--radius-4)' },
-  '&[aria-current="true"]': { color: 'var(--text)', textDecorationLine: 'underline', textDecorationColor: 'var(--volt)' },
+  '&[aria-pressed="true"]': { color: 'var(--text)', textDecorationLine: 'underline', textDecorationColor: 'var(--volt)' },
   '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-  [FORCED_COLORS]: { '&[aria-current="true"]': { textDecorationColor: 'Highlight' } },
+  [FORCED_COLORS]: { '&[aria-pressed="true"]': { textDecorationColor: 'Highlight' } },
 })
