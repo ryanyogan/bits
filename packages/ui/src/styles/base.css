@@ -80,9 +80,11 @@
     font-size: var(--type-ui-size);
     line-height: 1.5;
     /* Light text on a near-black ground: macOS subpixel AA makes it look
-     * heavy and blurry, so use grayscale there (no effect elsewhere). */
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+     * heavy and blurry, so the dark theme uses grayscale there (no effect
+     * elsewhere). The light theme keeps the platform default: grayscale AA
+     * thins dark text on paper (decision 062). */
+    -webkit-font-smoothing: var(--font-smoothing);
+    -moz-osx-font-smoothing: var(--font-smoothing-moz);
     /* A long URL or token breaks instead of widening the page. */
     overflow-wrap: break-word;
     overflow-x: clip;
@@ -213,7 +215,12 @@
 }
 
 /* Reduced motion: collapse transitions and animations everywhere. Components
- * with motion that carries meaning (the 3D field) handle this themselves. */
+ * with motion that carries meaning (the 3D field) handle this themselves.
+ * Transitions are switched off, not shortened (decision 062): a 0.01ms
+ * transition on `all` still starts on every element whose colour changes
+ * when the theme flips, and Chromium then reports the old background from
+ * getComputedStyle (paint is right), which axe reads as text on the other
+ * theme's ground. Nothing listens for transitionend. */
 @media (prefers-reduced-motion: reduce) {
   @layer base {
     *,
@@ -221,7 +228,7 @@
     *::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
+      transition-property: none !important;
       scroll-behavior: auto !important;
     }
   }
