@@ -31,8 +31,8 @@ const viewports = [
   { width: 360, height: 800 },
   { width: 1440, height: 900 },
 ] as const
-// The app is dark-only today (`color-scheme: dark`, one token set), so light
-// renders the same; it stays in the matrix so a light theme can't land unchecked.
+// Every page in both themes (decision 062): with no pinned theme, the emulated
+// scheme picks the tokens.
 const schemes = ['dark', 'light'] as const
 
 /** Audits the page as it stands at both widths (or `only` one) and in both schemes; returns readable failures. */
@@ -44,6 +44,7 @@ async function audit(page: Page, label: string, only?: number): Promise<string[]
       await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' })
       // Let layout and transitions settle after the resize/scheme change.
       await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+      await colourTransitionsDone(page)
       let results = await runAxe(page)
       for (let violation of results.violations) {
         if (violation.impact !== 'serious' && violation.impact !== 'critical') continue
@@ -58,6 +59,21 @@ async function audit(page: Page, label: string, only?: number): Promise<string[]
     }
   }
   return failures
+}
+
+/**
+ * A scheme flip restarts every colour transition, and inherited colours chain
+ * (a parent's finishing starts its child's). Reading mid-way would report a
+ * ground from one theme under text from the other, so wait for them all.
+ */
+async function colourTransitionsDone(page: Page) {
+  await page.evaluate(async () => {
+    let running = () => document.getAnimations().filter((animation) => animation instanceof CSSTransition)
+    for (let round = 0; round < 20 && running().length > 0; round++) {
+      await Promise.allSettled(running().map((animation) => animation.finished))
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    }
+  })
 }
 
 async function runAxe(page: Page): Promise<AxeResults> {
@@ -446,6 +462,27 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await page.goto(routes.settings.index.href())
     await settled(page)
     await expectClean(page, 'settings reauth')
+  })
+
+  it('theme switch (decision 062): the footer and Settings with a pinned theme', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    await page.goto(routes.home.href())
+    await settled(page)
+    let footer = page.getByRole('form', { name: 'Theme' })
+    await footer.getByRole('button', { name: 'Light' }).click()
+    await footer.getByRole('button', { name: 'Light', pressed: true }).waitFor()
+    await expectClean(page, 'landing pinned light')
+    await footer.getByRole('button', { name: 'Dark' }).click()
+    await footer.getByRole('button', { name: 'Dark', pressed: true }).waitFor()
+    await expectClean(page, 'landing pinned dark')
+
+    await signInBrowser(page, uniqueEmail('theme'))
+    await page.goto(routes.settings.index.href())
+    await settled(page)
+    await page.locator('label', { hasText: 'Light' }).click()
+    await page.getByRole('button', { name: 'Save theme' }).click()
+    await page.getByText('Every page uses this theme now').waitFor()
+    await expectClean(page, 'settings appearance saved')
   })
 
   it('author: /author, /author/:course and a preview', async (t) => {
