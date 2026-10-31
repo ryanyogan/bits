@@ -9,35 +9,36 @@ import type { Step } from '@bits/ui/steps'
 import type { TerminalEntry, TerminalPart } from '@bits/ui/terminal'
 import type { TrainingSnapshot } from '@bits/ui/training-scrubber'
 
+// `hex` is the dark value (tokens.css), `light` the paper one (theme-light.css, decision 062).
 export const swatches = [
-  { name: 'Ink', token: '--ink', hex: '#0F131A', use: 'Page ground. Never pure black.' },
-  { name: 'Surface', token: '--surface', hex: '#171C26', use: 'Cards, panels, inputs.' },
-  { name: 'Raised', token: '--raised', hex: '#1F2531', use: 'Dark keycaps, selected tabs.' },
-  { name: 'Text', token: '--text', hex: '#E3E6ED', use: 'Headlines and primary copy.' },
-  { name: 'Muted', token: '--muted', hex: '#949BAE', use: 'Body secondary, descriptions.' },
-  { name: 'Dim', token: '--dim', hex: '#838A9F', use: 'Hints and meta. Darkest allowed grey (5.4:1).' },
-  { name: 'Volt', token: '--volt', hex: '#A7CF66', use: 'Primary action, your turn, success. Text on it is Ink.' },
-  { name: 'Volt edge', token: '--volt-edge', hex: '#66833A', use: 'The underline inside a Volt key.' },
-  { name: 'Ion', token: '--ion', hex: '#66C4D5', use: 'Model output, in-progress, video.' },
-  { name: 'Synapse', token: '--synapse', hex: '#9D93DE', use: '3D field and Tools track only.' },
+  { name: 'Ink', token: '--ink', hex: '#0F131A', light: '#F5F6F8', use: 'Page ground. Never pure black, never pure white.' },
+  { name: 'Surface', token: '--surface', hex: '#171C26', light: '#ECEEF2', use: 'Cards, panels, inputs.' },
+  { name: 'Raised', token: '--raised', hex: '#1F2531', light: '#E4E7EC', use: 'Dark keycaps, selected tabs.' },
+  { name: 'Text', token: '--text', hex: '#E3E6ED', light: '#141A24', use: 'Headlines and primary copy.' },
+  { name: 'Muted', token: '--muted', hex: '#949BAE', light: '#586274', use: 'Body secondary, descriptions.' },
+  { name: 'Dim', token: '--dim', hex: '#838A9F', light: '#5F697B', use: 'Hints and meta. Darkest allowed grey (5.4:1 / 5.1:1).' },
+  { name: 'Volt', token: '--volt', hex: '#A7CF66', light: '#426E19', use: 'Primary action, your turn, success. Text on it is On volt.' },
+  { name: 'Volt edge', token: '--volt-edge', hex: '#66833A', light: '#28400E', use: 'The underline inside a Volt key.' },
+  { name: 'Ion', token: '--ion', hex: '#66C4D5', light: '#086678', use: 'Model output, in-progress, video.' },
+  { name: 'Synapse', token: '--synapse', hex: '#9D93DE', light: '#5A4EC0', use: '3D field and Tools track only.' },
 ]
 
 export const extendedSwatches = [
-  { name: 'Well', token: '--well', hex: '#12161F', use: 'Inputs, composer, editor body, cover base.' },
-  { name: 'Terminal', token: '--terminal', hex: '#11151D', use: 'Terminal lesson and output panels.' },
-  { name: 'Selected', token: '--selected', hex: '#272E3D', use: 'Selected tab; disabled keycap face.' },
-  { name: 'Bubble', token: '--bubble', hex: '#242B39', use: 'Learner bubble.' },
-  { name: 'Text body', token: '--text-body', hex: '#CDD1DB', use: 'Lesson body copy, labels.' },
-  { name: 'Text quiet', token: '--text-quiet', hex: '#BEC3CF', use: 'Mono values, unselected filters.' },
-  { name: 'Text lead', token: '--text-lead', hex: '#ACB2C2', use: 'Lead paragraphs, marketing nav, chips.' },
-  { name: 'On volt', token: '--on-volt', hex: '#0C1008', use: 'Text and icons on volt fills.' },
-  { name: 'Volt hover', token: '--volt-hover', hex: '#B5D97C', use: 'Primary keycap hover face.' },
-  { name: 'Volt soft', token: '--volt-soft', hex: '#D0E6AC', use: 'Text on volt tints.' },
-  { name: 'Ion edge', token: '--ion-edge', hex: '#2F8292', use: 'Edge under the “Copied ✓” key.' },
-  { name: 'Synapse soft', token: '--synapse-soft', hex: '#B3ABE6', use: 'Syntax keywords.' },
-  { name: 'Warn', token: '--warn', hex: '#F5CF95', use: 'Warnings, wrong quiz answer.' },
-  { name: 'Danger', token: '--danger', hex: '#F58477', use: 'Errors, delete (provisional, resolutions §1).' },
-  { name: 'Key dark edge', token: '--key-dark-edge', hex: '#090C11', use: 'Edge under dark keycaps.' },
+  { name: 'Well', token: '--well', hex: '#12161F', light: '#EFF1F4', use: 'Inputs, composer, editor body, cover base.' },
+  { name: 'Terminal', token: '--terminal', hex: '#11151D', light: '#F0F2F5', use: 'Terminal lesson and output panels.' },
+  { name: 'Selected', token: '--selected', hex: '#272E3D', light: '#DBDFE6', use: 'Selected tab; disabled keycap face.' },
+  { name: 'Bubble', token: '--bubble', hex: '#242B39', light: '#E0E4EA', use: 'Learner bubble.' },
+  { name: 'Text body', token: '--text-body', hex: '#CDD1DB', light: '#2A3240', use: 'Lesson body copy, labels.' },
+  { name: 'Text quiet', token: '--text-quiet', hex: '#BEC3CF', light: '#3A4352', use: 'Mono values, unselected filters.' },
+  { name: 'Text lead', token: '--text-lead', hex: '#ACB2C2', light: '#4A5365', use: 'Lead paragraphs, marketing nav, chips.' },
+  { name: 'On volt', token: '--on-volt', hex: '#0C1008', light: '#F5F8EE', use: 'Text and icons on volt fills.' },
+  { name: 'Volt hover', token: '--volt-hover', hex: '#B5D97C', light: '#41691A', use: 'Primary keycap hover face.' },
+  { name: 'Volt soft', token: '--volt-soft', hex: '#D0E6AC', light: '#375A15', use: 'Text on volt tints.' },
+  { name: 'Ion edge', token: '--ion-edge', hex: '#2F8292', light: '#084F5B', use: 'Edge under the “Copied ✓” key.' },
+  { name: 'Synapse soft', token: '--synapse-soft', hex: '#B3ABE6', light: '#4E43AE', use: 'Syntax keywords.' },
+  { name: 'Warn', token: '--warn', hex: '#F5CF95', light: '#85570A', use: 'Warnings, wrong quiz answer.' },
+  { name: 'Danger', token: '--danger', hex: '#F58477', light: '#B3302A', use: 'Errors, delete (provisional, resolutions §1).' },
+  { name: 'Key dark edge', token: '--key-dark-edge', hex: '#090C11', light: '#C6CCD6', use: 'Edge under dark keycaps.' },
 ]
 
 const display = css({
