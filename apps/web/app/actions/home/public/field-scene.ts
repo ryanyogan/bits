@@ -19,8 +19,10 @@ import {
   bitGlsl,
   ease,
   hashGlsl,
+  onThemeChange,
   readTokenColors,
   sceneTokens,
+  type SceneTokens,
   seeded,
   smooth,
   type Rgb,
@@ -381,12 +383,14 @@ export function createField(T: Three, options: FieldOptions): Field {
   let tokens = readTokenColors(canvas, sceneTokens)
   let raw = (c: Rgb) => new T.Color().setRGB(c[0], c[1], c[2], T.LinearSRGBColorSpace)
   let managed = (c: Rgb) => new T.Color().setRGB(c[0], c[1], c[2], T.SRGBColorSpace)
-  let palette = [
-    [tokens['--volt'], tokens['--ion']],
-    [tokens['--ion'], tokens['--synapse']],
-    [tokens['--synapse'], tokens['--volt']],
-    [tokens['--volt-soft'], tokens['--synapse']],
-  ].map(([a, b]) => [raw(a!), raw(b!)] as const)
+  let buildPalette = (t: SceneTokens) =>
+    [
+      [t['--volt'], t['--ion']],
+      [t['--ion'], t['--synapse']],
+      [t['--synapse'], t['--volt']],
+      [t['--volt-soft'], t['--synapse']],
+    ].map(([a, b]) => [raw(a!), raw(b!)] as const)
+  let palette = buildPalette(tokens)
 
   let scene = new T.Scene()
   let camera = new T.PerspectiveCamera(50, 1, 0.1, 200)
@@ -463,6 +467,16 @@ export function createField(T: Three, options: FieldOptions): Field {
 
   let c1 = new T.Color()
   let c2 = new T.Color()
+
+  // The theme flipped (decision 062): read the accents again and redraw.
+  let stopThemeWatch = onThemeChange(() => {
+    tokens = readTokenColors(canvas, sceneTokens)
+    palette = buildPalette(tokens)
+    planeMat.color = managed(tokens['--ion'])
+    graphMat.color = managed(tokens['--synapse'])
+    signalMat.uniforms.uColor!.value = raw(tokens['--volt-soft'])
+    if (!raf) draw()
+  })
 
   let width = 0
   let morph = 0
@@ -557,6 +571,14 @@ export function createField(T: Three, options: FieldOptions): Field {
     }
   }
 
+  function draw() {
+    if (raf || stillRaf) return
+    stillRaf = requestAnimationFrame(() => {
+      stillRaf = 0
+      step(0, true)
+    })
+  }
+
   return {
     start() {
       if (raf) return
@@ -569,13 +591,7 @@ export function createField(T: Three, options: FieldOptions): Field {
       cancelAnimationFrame(raf)
       raf = 0
     },
-    draw() {
-      if (raf || stillRaf) return
-      stillRaf = requestAnimationFrame(() => {
-        stillRaf = 0
-        step(0, true)
-      })
-    },
+    draw,
     resize(w, h) {
       if (!w || !h) return
       width = w
@@ -584,6 +600,7 @@ export function createField(T: Three, options: FieldOptions): Field {
       camera.updateProjectionMatrix()
     },
     dispose() {
+      stopThemeWatch()
       cancelAnimationFrame(raf)
       cancelAnimationFrame(stillRaf)
       raf = 0

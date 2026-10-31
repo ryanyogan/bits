@@ -594,5 +594,9 @@
     --bit-on: var(--text); /* a lit bit (BitCells default tone) */
     --bit-off: var(--line-control); /* an unlit bit's frame (white @ 14%) */
     --bit-off-fill: var(--fill-seg); /* an unlit bit's face in a progress bar */
+    /* How strongly the three.js scenes draw (decision 062): the canvas's
+     * opacity. Lit cells on ink take full strength; the light theme lowers
+     * it, since ink-dark cells at full strength read as spatter on paper. */
+    --scene-strength: 1;
   }
 }

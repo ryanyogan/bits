@@ -1,7 +1,7 @@
 import type { Handle } from 'remix/component'
 import { clientEntry, css, ref } from 'remix/component'
 
-import { afterLoadAndIdle, bitGlsl, canDrawScene, readTokenColors, sceneTokens, seeded } from '../../public/bits-gl.ts'
+import { afterLoadAndIdle, bitGlsl, canDrawScene, onThemeChange, readTokenColors, sceneTokens, seeded } from '../../public/bits-gl.ts'
 
 const FORCED_COLORS = '@media (forced-colors: active)'
 
@@ -241,7 +241,14 @@ async function start(canvas: HTMLCanvasElement, courses: CatalogCourseNode[], si
     }
   })
   resize.observe(canvas)
+  // The theme flipped (decision 062): the tones are read again and, at rest, the frame is redrawn.
+  let stopThemeWatch = onThemeChange(() => {
+    let t = readTokenColors(canvas, sceneTokens)
+    mat.uniforms.uTones!.value = [raw(t['--volt']), raw(t['--ion']), raw(t['--synapse'])]
+    if (time >= END) raf ||= requestAnimationFrame(frame)
+  })
   signal.addEventListener('abort', () => {
+    stopThemeWatch()
     cancelAnimationFrame(raf)
     resize.disconnect()
     for (let d of [geo, mat, renderer]) d.dispose()
@@ -295,7 +302,7 @@ const canvasStyle = css({
   display: 'block',
   opacity: 0,
   transition: 'opacity var(--duration-pop) var(--ease-out)',
-  '&[data-ready]': { opacity: 1 },
+  '&[data-ready]': { opacity: 'var(--scene-strength)' },
   '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
   [FORCED_COLORS]: { display: 'none' },
 })

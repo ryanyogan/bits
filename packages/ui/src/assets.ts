@@ -10,6 +10,7 @@ function file(relative: string): string {
 /** Global stylesheets in cascade order. Link every one, in this order, from the document head. */
 export const stylesheetFiles: readonly string[] = [
   file('./styles/tokens.css'),
+  file('./styles/theme-light.css'),
   file('./styles/fonts.css'),
   file('./styles/base.css'),
 ]
