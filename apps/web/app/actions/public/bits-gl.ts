@@ -50,6 +50,23 @@ export const sceneTokens = {
 
 export type SceneTokens = Record<keyof typeof sceneTokens, Rgb>
 
+/**
+ * Calls `onChange` when the theme flips (decision 062): the `data-theme`
+ * attribute on `<html>` changes, or, with no attribute, the system scheme
+ * does. A long-lived scene re-reads its tokens then, so it never keeps the
+ * other theme's accents. Returns the disposer.
+ */
+export function onThemeChange(onChange: () => void): () => void {
+  let observer = new MutationObserver(onChange)
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+  let scheme = matchMedia('(prefers-color-scheme: light)')
+  scheme.addEventListener('change', onChange)
+  return () => {
+    observer.disconnect()
+    scheme.removeEventListener('change', onChange)
+  }
+}
+
 /** Resolves after the page's `load` event and the next idle moment: decorative work never races first paint. */
 export function afterLoadAndIdle(timeout = 1500): Promise<void> {
   return new Promise((resolve) => {

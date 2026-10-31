@@ -229,7 +229,7 @@ const canvasStyle = css({
   display: 'block',
   opacity: 0,
   transition: 'opacity 900ms var(--ease)',
-  '&[data-live="true"]': { opacity: 1 },
+  '&[data-live="true"]': { opacity: 'var(--scene-strength)' },
   '@media (forced-colors: active)': { display: 'none' },
 })
 

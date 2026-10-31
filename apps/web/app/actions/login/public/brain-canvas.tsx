@@ -1,7 +1,7 @@
 import type { Handle } from 'remix/component'
 import { clientEntry, css, ref } from 'remix/component'
 
-import { afterLoadAndIdle, bitGlsl, canDrawScene, readTokenColors, sceneTokens } from '../../public/bits-gl.ts'
+import { afterLoadAndIdle, bitGlsl, canDrawScene, onThemeChange, readTokenColors, sceneTokens } from '../../public/bits-gl.ts'
 
 /**
  * BrainCanvas (Auth spec, left pane; decision 057): a sphere of bits being
@@ -36,7 +36,7 @@ const canvasStyle = css({
   display: 'block',
   opacity: 0,
   transition: 'opacity var(--duration-pop) var(--ease-out)',
-  '&[data-ready]': { opacity: 1 },
+  '&[data-ready]': { opacity: 'var(--scene-strength)' },
   '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
   '@media (max-width: 759px)': { display: 'none' },
   '@media (forced-colors: active)': { display: 'none' },
@@ -252,7 +252,16 @@ async function start(canvas: HTMLCanvasElement, signal: AbortSignal) {
     if (time >= END && !raf) raf = requestAnimationFrame(frame)
   })
   resize.observe(canvas)
+  // The theme flipped (decision 062): the accents are read again and, at rest, the frame is redrawn.
+  let stopThemeWatch = onThemeChange(() => {
+    let t = readTokenColors(canvas, sceneTokens)
+    mat.uniforms.uC1!.value = raw(t['--ion'])
+    mat.uniforms.uC2!.value = raw(t['--volt'])
+    rmat.uniforms.uColor!.value = raw(t['--synapse'])
+    if (time >= END && !raf) raf = requestAnimationFrame(frame)
+  })
   signal.addEventListener('abort', () => {
+    stopThemeWatch()
     cancelAnimationFrame(raf)
     observer.disconnect()
     resize.disconnect()

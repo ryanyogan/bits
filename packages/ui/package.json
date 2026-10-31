@@ -16,6 +16,7 @@
   },
   "scripts": {
     "fonts": "node scripts/copy-fonts.ts",
+    "theme:sync": "node scripts/sync-theme.ts",
     "typecheck": "tsc --noEmit",
     "test": "cd ../.. && remix test --config packages/ui/remix.json"
   },

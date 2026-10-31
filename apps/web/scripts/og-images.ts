@@ -37,7 +37,8 @@ let origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
 let browser = await chromium.launch()
 
 try {
-  let page = await browser.newPage({ viewport: { width: OG_WIDTH, height: OG_HEIGHT }, deviceScaleFactor: 1 })
+  // The cards are shared images and stay dark (decision 062): Playwright's default scheme is light.
+  let page = await browser.newPage({ viewport: { width: OG_WIDTH, height: OG_HEIGHT }, deviceScaleFactor: 1, colorScheme: 'dark' })
   await fs.rm(outDir, { recursive: true, force: true })
   await fs.mkdir(outDir, { recursive: true })
   let hashes: Record<string, string> = {}
