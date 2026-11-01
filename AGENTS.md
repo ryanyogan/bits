@@ -302,6 +302,10 @@ the new page into the old DOM. Write for that:
   `<html>` attributes and the keyed metas (`app/theme.test.e2e.ts`).
 - The switch is only in the landing footer and Settings, so a signed-out
   learner on any other page can't reach it.
+- Depth on paper (decision 063): the ground sits below the surfaces, as in
+  dark. A `RuledSection` over a scene takes `open`, or `--plate-fill` hides
+  the scene; copy on an open scene sits on `--copy-wash`. Both tokens are
+  clear in dark.
 - Light tokens live in `packages/ui/src/styles/theme-light.css`, in two
   copies of one block. Edit the first, then run
   `pnpm --filter @bits/ui theme:sync`; `theme.test.ts` fails when they
@@ -389,7 +393,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | QuizChoice | quiz-choice.tsx | name, question, options, multiple, explanation, action, formAction, label (header strip, default "quick check") | static (POST form) |
 | AskPanel | ask-panel.tsx | id, question, placeholder, choices, multiple, xp, endpoint (`/api/ask`; absent in the preview), initial (flashed verdict), passed, label; a native form to `/api/ask` without JS, `bits:gate` + `bits:reward` on a right answer (decision 052) | island |
 | PageFrame | page-frame.tsx | as div/main, id, rails (the centred column, `--frame-max` wide, `--section-gap` under its last plate; `rails` only for a sectionless workspace like the lesson page; decisions 047, 050) | static |
-| RuledSection | ruled-section.tsx | as, id, aria-labelledby, index, label, labelAs p/h2/h3 + labelId (the strip label is the section's heading and labels it), aside, tone, pad default/tight/none, rule (off: joins the block above, no gap or top rule), marks (a framed plate: own rails, full-bleed rules above and below, `+` marks at the corners, `02 / label` strip; the strip draws the hairline under itself) | static |
+| RuledSection | ruled-section.tsx | as, open (no plate fill, for a section over a scene; decision 063), id, aria-labelledby, index, label, labelAs p/h2/h3 + labelId (the strip label is the section's heading and labels it), aside, tone, pad default/tight/none, rule (off: joins the block above, no gap or top rule), marks (a framed plate: own rails, full-bleed rules above and below, `+` marks at the corners, `02 / label` strip; the strip draws the hairline under itself) | static |
 | Panel / panelLinkStyle / panelListStyle | panel.tsx | id, title, level 2/3, aside, flush (a block inside a grid cell: the strip with a real heading, then a padded or flush body; stacked panels share a hairline) / aside link / flush list rows | static |
 | CellGrid / cellLinkStyle | cell-grid.tsx | cols, colsMid, colsPhone, edge flush/boxed, fill none/ink, top (`false` right under a strip, which already draws that line), pad, as ul/ol/div (cells share 1px borders) / mixin for a whole-cell `<a>` | static |
 | Crosshair | crosshair.tsx | placement top-start/top-end/bottom-start/bottom-end (the `+` where a rule meets a rail) | static |

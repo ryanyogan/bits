@@ -17,7 +17,7 @@ export function isThemePreference(value: unknown): value is ThemePreference {
  */
 export const themeColors: Record<PinnedTheme, string> = {
   dark: '#0F131A',
-  light: '#F5F6F8',
+  light: '#E9ECF1',
 }
 
 export interface ThemeScopeProps {

@@ -4,13 +4,13 @@ import { RuledSection } from '@bits/ui/ruled-section'
 
 import { routes } from '../../routes.ts'
 import { lessonOneHref } from './links.ts'
-import { dotBreak, monoNote, PHONE } from './styles.ts'
+import { centreWash, dotBreak, monoNote, PHONE } from './styles.ts'
 
 /** Closing CTA (Main.md §7): one wide band, centred, the field glowing through. */
 export function ClosingCta(_handle: Handle) {
   return () => (
-    <RuledSection aria-labelledby="cta-title" pad="none">
-      <div mix={ctaStyle}>
+    <RuledSection aria-labelledby="cta-title" pad="none" open>
+      <div mix={[ctaStyle, centreWash]}>
         <h2 id="cta-title" mix={titleStyle}>
           Your first prompt is waiting.
         </h2>

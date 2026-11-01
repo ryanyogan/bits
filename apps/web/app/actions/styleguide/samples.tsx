@@ -11,13 +11,13 @@ import type { TrainingSnapshot } from '@bits/ui/training-scrubber'
 
 // `hex` is the dark value (tokens.css), `light` the paper one (theme-light.css, decision 062).
 export const swatches = [
-  { name: 'Ink', token: '--ink', hex: '#0F131A', light: '#F5F6F8', use: 'Page ground. Never pure black, never pure white.' },
-  { name: 'Surface', token: '--surface', hex: '#171C26', light: '#ECEEF2', use: 'Cards, panels, inputs.' },
-  { name: 'Raised', token: '--raised', hex: '#1F2531', light: '#E4E7EC', use: 'Dark keycaps, selected tabs.' },
-  { name: 'Text', token: '--text', hex: '#E3E6ED', light: '#141A24', use: 'Headlines and primary copy.' },
+  { name: 'Ink', token: '--ink', hex: '#0F131A', light: '#E9ECF1', use: 'Page ground. Never pure black, never pure white.' },
+  { name: 'Surface', token: '--surface', hex: '#171C26', light: '#FCFDFE', use: 'Cards, panels, inputs.' },
+  { name: 'Raised', token: '--raised', hex: '#1F2531', light: '#DDE1E8', use: 'Dark keycaps, selected tabs.' },
+  { name: 'Text', token: '--text', hex: '#E3E6ED', light: '#10151E', use: 'Headlines and primary copy.' },
   { name: 'Muted', token: '--muted', hex: '#949BAE', light: '#586274', use: 'Body secondary, descriptions.' },
   { name: 'Dim', token: '--dim', hex: '#838A9F', light: '#5F697B', use: 'Hints and meta. Darkest allowed grey (5.4:1 / 5.1:1).' },
-  { name: 'Volt', token: '--volt', hex: '#A7CF66', light: '#426E19', use: 'Primary action, your turn, success. Text on it is On volt.' },
+  { name: 'Volt', token: '--volt', hex: '#A7CF66', light: '#3A6315', use: 'Primary action, your turn, success. Text on it is On volt.' },
   { name: 'Volt edge', token: '--volt-edge', hex: '#66833A', light: '#28400E', use: 'The underline inside a Volt key.' },
   { name: 'Ion', token: '--ion', hex: '#66C4D5', light: '#086678', use: 'Model output, in-progress, video.' },
   { name: 'Synapse', token: '--synapse', hex: '#9D93DE', light: '#5A4EC0', use: '3D field and Tools track only.' },
@@ -26,7 +26,7 @@ export const swatches = [
 export const extendedSwatches = [
   { name: 'Well', token: '--well', hex: '#12161F', light: '#EFF1F4', use: 'Inputs, composer, editor body, cover base.' },
   { name: 'Terminal', token: '--terminal', hex: '#11151D', light: '#F0F2F5', use: 'Terminal lesson and output panels.' },
-  { name: 'Selected', token: '--selected', hex: '#272E3D', light: '#DBDFE6', use: 'Selected tab; disabled keycap face.' },
+  { name: 'Selected', token: '--selected', hex: '#272E3D', light: '#D0D5DE', use: 'Selected tab; disabled keycap face.' },
   { name: 'Bubble', token: '--bubble', hex: '#242B39', light: '#E0E4EA', use: 'Learner bubble.' },
   { name: 'Text body', token: '--text-body', hex: '#CDD1DB', light: '#2A3240', use: 'Lesson body copy, labels.' },
   { name: 'Text quiet', token: '--text-quiet', hex: '#BEC3CF', light: '#3A4352', use: 'Mono values, unselected filters.' },

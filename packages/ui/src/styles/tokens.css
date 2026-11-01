@@ -375,6 +375,11 @@
        art, tracks, showcase) keeps --cell-fill. Same hue as --ink, so text
        contrast on the ground is unchanged. No blur (047). */
     --cell-fill-veil: rgb(15 19 26 / 0.55);
+    /* Decision 063: a wash under copy that sits on an open scene. Clear on ink,
+       where a scene is dimmer than the text; paper needs it. */
+    --copy-wash: rgb(15 19 26 / 0);
+    /* A section's plate: clear on ink (the rules alone frame it), a lifted fill on paper. */
+    --plate-fill: rgb(15 19 26 / 0);
     --cell-pad-lg: var(--space-16); /* a cell holding display type; --section-pad-x under 1024px */
     /* Decision 050: sections are framed plates (own rails, a rule above and
        below, marks at the four corners) with the page's ground showing

@@ -7,7 +7,7 @@ import { RuledSection } from '@bits/ui/ruled-section'
 import { agentLessonHref, lessonOneHref } from './links.ts'
 import { FieldMotionToggle } from './public/field-motion-toggle.tsx'
 import { HeroPromptInput } from './public/hero-prompt-input.tsx'
-import { dotBreak, FORCED, monoNote, PHONE, REDUCED, voltText } from './styles.ts'
+import { centreWash, dotBreak, FORCED, monoNote, PHONE, REDUCED, voltText } from './styles.ts'
 
 export const typewriterPrompts = [
   "Explain tokens like I'm ten",
@@ -38,8 +38,8 @@ export function Hero(handle: Handle<{ signedIn?: boolean }>) {
   return () => (
     // The hero continues the header's block (decision 050): no gap above it,
     // the header's rule closes it from above, its own rule closes the fold.
-    <RuledSection as="div" rule={false} pad="none">
-    <section aria-labelledby="hero-title" mix={heroStyle}>
+    <RuledSection as="div" rule={false} pad="none" open>
+    <section aria-labelledby="hero-title" mix={[heroStyle, centreWash]}>
       <h1 id="hero-title" mix={h1Style}>
         Learn AI by <span mix={voltText}>typing</span> to it.
         <span aria-hidden="true" mix={caretStyle} />

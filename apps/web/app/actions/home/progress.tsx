@@ -25,7 +25,7 @@ const badges = [
  */
 export function Progress(_handle: Handle) {
   return () => (
-    <RuledSection aria-labelledby="you-title" label="Progress" pad="none">
+    <RuledSection open aria-labelledby="you-title" label="Progress" pad="none">
       <CellGrid cols={2} pad={false} top={false}>
         <div mix={[cellVeilStyle, copyCell]}>
           <div mix={introStyle}>

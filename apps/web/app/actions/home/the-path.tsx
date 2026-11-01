@@ -5,7 +5,7 @@ import { RuledSection } from '@bits/ui/ruled-section'
 import { Tag } from '@bits/ui/tag'
 
 import { trackHref } from './links.ts'
-import { cardDesc, cardTitle, cellLabel, FORCED, h2Style, introStyle, leadStyle, REDUCED } from './styles.ts'
+import { cardDesc, cardTitle, cellLabel, FORCED, h2Style, introStyle, leadStyle, leftWash, REDUCED } from './styles.ts'
 
 type TrackKey = 'foundations' | 'prompting' | 'tools' | 'agents'
 
@@ -45,8 +45,8 @@ const tracks: {
  */
 export function ThePath(_handle: Handle) {
   return () => (
-    <RuledSection id="path" aria-labelledby="path-title" label="The path" pad="none" mix={timeline}>
-      <div mix={introCell}>
+    <RuledSection open id="path" aria-labelledby="path-title" label="The path" pad="none" mix={timeline}>
+      <div mix={[introCell, leftWash]}>
         <div mix={introStyle}>
           <h2 id="path-title" mix={h2Style}>
             From one prompt to a team of agents.

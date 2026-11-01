@@ -2,7 +2,7 @@ import { css, type Handle, type RemixNode } from 'remix/component'
 import { CellGrid } from '@bits/ui/cell-grid'
 import { RuledSection } from '@bits/ui/ruled-section'
 
-import { cardDesc, cardTitle, cellLabel, h2Style, introStyle, leadStyle, PHONE } from './styles.ts'
+import { cardDesc, cardTitle, cellLabel, h2Style, introStyle, leadStyle, leftWash, PHONE } from './styles.ts'
 
 /**
  * "Modes" (Main.md §5): the same stacked intro as the other bands, then three
@@ -11,8 +11,8 @@ import { cardDesc, cardTitle, cellLabel, h2Style, introStyle, leadStyle, PHONE }
  */
 export function Modes(_handle: Handle) {
   return () => (
-    <RuledSection aria-labelledby="modes-title" label="Modes" pad="none">
-      <div mix={introCell}>
+    <RuledSection open aria-labelledby="modes-title" label="Modes" pad="none">
+      <div mix={[introCell, leftWash]}>
         <div mix={introStyle}>
           <h2 id="modes-title" mix={h2Style}>
             {/* No-break spaces keep each "… it." whole when the line wraps. */}

@@ -30,6 +30,8 @@ export interface RuledSectionProps {
   labelAs?: 'p' | 'h2' | 'h3'
   /** id of the strip label, for `aria-labelledby`. */
   labelId?: string
+  /** No plate fill: a scene behind the section shows through (decision 063). */
+  open?: boolean
   /** Right-hand end of the header strip: a count, a link, a status. */
   aside?: RemixNode
   /** Colour of the index (default `volt`). */
@@ -71,6 +73,7 @@ export function RuledSection(handle: Handle<RuledSectionProps>) {
   return () => {
     let {
       as = 'section',
+      open = false,
       id,
       index,
       label,
@@ -115,7 +118,7 @@ export function RuledSection(handle: Handle<RuledSectionProps>) {
           </>
         ) : null}
         {hasHead ? (
-          <div mix={stripStyle}>
+          <div mix={open ? [stripStyle, stripWashStyle] : stripStyle}>
             {labelEl}
             {aside !== undefined ? <div mix={stripAsideStyle}>{aside}</div> : null}
           </div>
@@ -129,7 +132,7 @@ export function RuledSection(handle: Handle<RuledSectionProps>) {
         ) : null}
       </>
     )
-    let styles = [sectionStyle, rule ? plateStyle : undefined, mix]
+    let styles = [sectionStyle, open ? undefined : fillStyle, rule ? plateStyle : undefined, mix]
     let labelledBy = handle.props['aria-labelledby'] ?? (labelAs !== 'p' ? labelId : undefined)
     let a11y = { id, 'aria-labelledby': labelledBy, 'aria-label': handle.props['aria-label'] }
     if (as === 'div') return <div {...a11y} mix={styles}>{content}</div>
@@ -138,6 +141,11 @@ export function RuledSection(handle: Handle<RuledSectionProps>) {
     return <section {...a11y} mix={styles}>{content}</section>
   }
 }
+
+// On paper a section is a plate lifted off the ground; an open one leaves the
+// scene behind it showing, and its strip label sits on the copy wash (decision 063).
+const fillStyle = css({ background: 'var(--plate-fill)' })
+const stripWashStyle = css({ background: 'var(--copy-wash)' })
 
 // The rules are wider than the column: 100vw, centred on it (the column is
 // centred on the page). html clips horizontal overflow (base.css), so the

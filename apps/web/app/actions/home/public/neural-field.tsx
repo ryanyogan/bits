@@ -272,6 +272,7 @@ const hudStyle = css({
 })
 
 const hudItem = css({
+  background: 'var(--copy-wash)',
   display: 'flex',
   alignItems: 'center',
   gap: 'var(--space-3)',

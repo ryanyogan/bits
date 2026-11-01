@@ -47,7 +47,7 @@ export function AuthShell(handle: Handle<AuthShellProps>) {
         */}
         <PageFrame mix={rootStyle}>
           {/* Joined to the header (decision 050): the bar's rule closes it. */}
-          <RuledSection as="div" rule={false} pad="none" mix={bodyStyle}>
+          <RuledSection as="div" rule={false} pad="none" open mix={bodyStyle}>
             <div mix={cellsStyle}>
               <BrainPane />
               <main id="main" tabIndex={-1} mix={[skipTargetStyle, formPaneStyle]}>

@@ -82,3 +82,15 @@ export const cellLabel = css({
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',
 })
+
+/** Copy on the open field, left-aligned: the wash fades out to leave the scene on the right (decision 063). */
+export const leftWash = css({
+  background: 'linear-gradient(90deg, var(--copy-wash) 0, var(--copy-wash) 52%, transparent 78%)',
+  [PHONE]: { background: 'var(--copy-wash)' },
+})
+
+/** Centred copy on the open field: an oval wash under it, the scene around it. */
+export const centreWash = css({
+  background: 'radial-gradient(ellipse 50% 56% at 50% 54%, var(--copy-wash) 0, var(--copy-wash) 66%, transparent 100%)',
+  [PHONE]: { background: 'var(--copy-wash)' },
+})

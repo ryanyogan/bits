@@ -32,7 +32,7 @@ const sampleTokens: [string, string][] = [
  */
 export function HowItWorks(_handle: Handle) {
   return () => (
-    <RuledSection id="how" aria-labelledby="how-title" label="How it works" pad="none" mix={timeline}>
+    <RuledSection open id="how" aria-labelledby="how-title" label="How it works" pad="none" mix={timeline}>
       <CellGrid cols={2} pad={false} top={false}>
         <div mix={[cellVeilStyle, copyCell]}>
           <div mix={introStyle}>

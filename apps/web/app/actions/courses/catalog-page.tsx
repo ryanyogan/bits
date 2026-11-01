@@ -75,7 +75,7 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
             courses={results.map((course) => ({ tone: course.tone, lessons: course.lessons }))}
           />
           <PageFrame>
-            <RuledSection as="header" rule={false} pad="none">
+            <RuledSection as="header" rule={false} pad="none" open>
               <div mix={titleBlock}>
                 <Eyebrow>All courses · free</Eyebrow>
                 <h1 mix={h1Style}>
@@ -87,7 +87,7 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
             </RuledSection>
 
             {continueTarget ? (
-              <RuledSection aria-label="Continue where you left off" pad="none">
+              <RuledSection aria-label="Continue where you left off" pad="none" open>
                 <ContinueBanner
                   href={continueTarget.href}
                   courseTitle={continueTarget.courseTitle}
@@ -105,6 +105,7 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
 
             <RuledSection
               as="div"
+              open
               label="Find a course"
               aside={
                 <p aria-live="polite" mix={resultStyle}>
@@ -143,7 +144,7 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
             </RuledSection>
 
             {/* The grid continues the toolbar's block (decision 050): the toolbar heads it. */}
-            <RuledSection aria-labelledby="courses-heading" pad="none" rule={false}>
+            <RuledSection aria-labelledby="courses-heading" pad="none" rule={false} open>
               <h2 id="courses-heading" class="sr-only">
                 Courses
               </h2>

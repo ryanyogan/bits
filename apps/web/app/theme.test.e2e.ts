@@ -13,7 +13,7 @@ import { routes } from './routes.ts'
 import { requestCode } from './test/auth.ts'
 
 const DARK_GROUND = 'rgb(15, 19, 26)'
-const LIGHT_GROUND = 'rgb(245, 246, 248)'
+const LIGHT_GROUND = 'rgb(233, 236, 241)'
 
 const attribute = (page: Page) => page.evaluate(() => document.documentElement.getAttribute('data-theme'))
 const ground = (page: Page) => page.evaluate(() => getComputedStyle(document.body).backgroundColor)
@@ -61,7 +61,7 @@ describe('the theme switch in the browser', () => {
     let theme = page.getByRole('form', { name: 'Theme' })
     await theme.getByRole('button', { name: 'Light' }).click()
     await settledTheme(page, 'light', LIGHT_GROUND)
-    assert.deepEqual(await metas(page), ['color-scheme=light', 'theme-color=#F5F6F8'])
+    assert.deepEqual(await metas(page), ['color-scheme=light', 'theme-color=#E9ECF1'])
     await theme.getByRole('button', { name: 'Light', pressed: true }).waitFor()
 
     await theme.getByRole('button', { name: 'Dark' }).click()
@@ -70,7 +70,7 @@ describe('the theme switch in the browser', () => {
 
     await theme.getByRole('button', { name: 'System' }).click()
     await settledTheme(page, null, DARK_GROUND)
-    assert.deepEqual(await metas(page), ['color-scheme=dark light', 'theme-color=#0F131A', 'theme-color=#F5F6F8'])
+    assert.deepEqual(await metas(page), ['color-scheme=dark light', 'theme-color=#0F131A', 'theme-color=#E9ECF1'])
     assert.equal(await marked(page), 1, 'all three stayed on the enhanced path')
   })
 
@@ -104,7 +104,7 @@ describe('the theme switch in the browser', () => {
     await page.locator('label', { hasText: 'Light' }).click()
     await page.getByRole('button', { name: 'Save theme' }).click()
     await settledTheme(page, 'light', LIGHT_GROUND)
-    assert.deepEqual(await metas(page), ['color-scheme=light', 'theme-color=#F5F6F8'])
+    assert.deepEqual(await metas(page), ['color-scheme=light', 'theme-color=#E9ECF1'])
 
     await page.locator('label', { hasText: 'System' }).click()
     await page.getByRole('button', { name: 'Save theme' }).click()

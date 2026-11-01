@@ -88,7 +88,7 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
               <Progress />
               <ClosingCta />
             </main>
-            <RuledSection as="div" pad="none">
+            <RuledSection as="div" pad="none" open>
               <Footer
                 brand={APP_NAME}
                 homeHref={routes.home.href()}
