@@ -40,7 +40,8 @@ shadows, glows or blur.
 - **Hairlines about 1.75× dark's opacity** (062 used 1.25×): `--line` at 14% is
   ΔL\* 10.4 on ink and 11.1 on a card, where 10% was 7.7 and 7.5 (dark: 9.2).
 - **Cells are plates over a scene.** `--cell-fill` is `rgb(246 247 250 / 0.97)`,
-  and hover lifts to the surface. `--cell-fill-veil` is ground at 84%: the field
+  and hover lifts to the surface (since darkened: see the hover audit below).
+  `--cell-fill-veil` is ground at 84%: the field
   stays a texture under the copy. `--glass*` goes near-white at 90 to 92%.
 - **`--plate-fill` lifts sections off the ground.** A `RuledSection` paints it
   (`#f6f7fa` on paper, clear on ink), so the ground shows between sections, as
@@ -70,3 +71,28 @@ shadows, glows or blur.
 - Dark's `--copy-wash` and `--plate-fill` are clear ink, so its pixels don't
   change.
 - `theme-color` for light follows the ground (`#E9ECF1`, `packages/ui/src/theme.tsx`).
+
+## Hover audit (2026-11-01)
+
+Measured every interactive component at rest and under a real hover, on the
+composited pixels, in both themes. Most hover fills held at about 0.8× dark's
+step, darkening where dark lightens. Four did not, and the first amends the
+Decision above: a cell no longer lifts on hover.
+
+- **`--cell-fill-hover` darkens.** Lifting to the surface was ΔL\* +2.0 on a
+  plate against dark's +7.8, and 0 on a card, so a badge tile had no hover at
+  all. White itself is only +2.6 above a plate: paper has no room to lift. It
+  is now `rgb(226 229 235 / 0.98)`, -6.0 on a plate and -8.1 on a card, which
+  matches every other hover on paper. The least any text pair gets on it is
+  5.53 (dim).
+- **`--fill-well-hover` is a new token,** for a quiz choice. Its rest fill is
+  an opaque `--well` and `--fill-hover` replaced that with an alpha over the
+  lighter card, so the two nearly cancelled (-1.8; dark +7.0). Light is opaque
+  `#e4e7ed`; dark is the same alpha as before, so dark's pixels don't change.
+- **`--volt-a06` is 14% on paper.** Only the suggestion chip uses it, and at
+  6% it cancelled the chip's rest fill (-0.3 on a card; dark +7.4).
+- **`--key-hover-filter` is `brightness(0.92)`,** which puts the ion and danger
+  keys near the volt key's -3.05 (ion was -1.96).
+
+Most of `theme-light.css`'s per-token ratio comments still carried 062's
+values; they now match 063. So do the styleguide's swatches.

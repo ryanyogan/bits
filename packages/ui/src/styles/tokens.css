@@ -118,6 +118,7 @@
     --line-node-next: rgb(255 255 255 / 0.3); /* dashed "next" node, filter hover border */
     --fill-row-hover: rgb(255 255 255 / 0.03);
     --fill-hover: rgb(255 255 255 / 0.04);
+    --fill-well-hover: rgb(255 255 255 / 0.04); /* a --well row on hover: a quiz choice */
     --fill-seg: rgb(255 255 255 / 0.05); /* segmented track, odds track, heatmap 0 */
     --fill-ghost-hover: rgb(255 255 255 / 0.06);
     --fill-btn: rgb(255 255 255 / 0.08); /* video controls, tool-button hover, progress tracks */

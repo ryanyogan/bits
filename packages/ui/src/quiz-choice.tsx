@@ -108,7 +108,7 @@ const optionStyle = css({
   '& + &': { marginTop: 'calc(-1 * var(--border-w))' },
   // A marked row draws its whole border over its neighbours'.
   '&:hover, &:has(:checked), &[data-result]': { zIndex: 1 },
-  '&:not([data-result]):hover': { borderColor: 'var(--line-node-next)', background: 'var(--fill-hover)' },
+  '&:not([data-result]):hover': { borderColor: 'var(--line-node-next)', background: 'var(--fill-well-hover)' },
   // The pick: a 2px bar on the leading edge, a tint, the accent as a signal.
   '&:has(:checked)': { borderColor: 'var(--volt-a45)', background: 'var(--volt-tint-on)', color: 'var(--volt-soft)', boxShadow: 'inset 2px 0 0 var(--volt)' },
   '&:has(:focus-visible)': { ...focusOutline, outlineOffset: 'var(--focus-offset-inset)', zIndex: 2 },

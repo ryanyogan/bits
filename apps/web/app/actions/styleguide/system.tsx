@@ -29,7 +29,7 @@ export function SystemBoard(handle: Handle) {
           <h1 mix={h1Style}>Ink, Volt &amp; Ion.</h1>
         </div>
         <p mix={headerLead}>
-          A dark ink ground ruled by hairlines, one green accent for “do this”, one cool accent for “the model said
+          An ink or paper ground ruled by hairlines, one green accent for “do this”, one cool accent for “the model said
           this”, both calm. Unbounded shouts, Geist reads, Geist Mono is anything you type.
         </p>
       </header>
@@ -137,7 +137,7 @@ export function SystemBoard(handle: Handle) {
             <dl mix={shapeGrid}>
               {[
                 ['radius', '0 (squared, decision 047) · round for dots'],
-                ['lines', 'hairlines white @ 7–8% on ink, slate @ 9–10% on paper · + marks @ 32 / 40%'],
+                ['lines', 'hairlines white @ 7–8% on ink, slate @ 14% on paper · + marks @ 32 / 40%'],
                 ['space', '4-pt; sections 96 / 64 · cell inset 40 / 20'],
                 ['depth', 'flat: a hairline and a fill step · no shadow, no blur'],
                 ['cells', 'ink @ 90% over a canvas'],
