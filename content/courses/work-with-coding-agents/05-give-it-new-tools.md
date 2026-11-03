@@ -5,6 +5,8 @@
 #   project (writes .mcp.json), user; claude mcp list; /mcp for status and OAuth login;
 #   "Verify you trust each server"; servers that fetch external content risk prompt injection)
 #   https://code.claude.com/docs/en/mcp
+#   (re-checked 2026-11-03 with `claude mcp add --help`, v2.1.317: `claude mcp add my-server
+#   -e API_KEY=xxx -- npx my-mcp-server`; --env is variadic, so the name goes first)
 # - Context7, MCP clients (remote https://mcp.context7.com/mcp; an API key gives higher rate
 #   limits and private repos)
 #   https://context7.com/docs/resources/all-clients
@@ -18,6 +20,9 @@ order: 5
 minutes: 7
 xp: 50
 module: Give it more to work with
+verified: 2026-11-03
+versions:
+  claude-code: "2.1.317"
 ---
 
 Out of the box, Claude Code can read your files, run commands and fetch a
@@ -55,8 +60,10 @@ the repo. `--scope user` makes it yours in every project.
 Scopes: `local` (the default: you, this project), `project` (written to
 `.mcp.json` at the repo root and committed, so the team shares it) and
 `user` (you, every project). Local servers run as a process:
-`claude mcp add --env KEY=value <name> -- <command> [args...]`, with
-everything after `--` passed to the server. Remote servers use OAuth or a
+`claude mcp add <name> --env KEY=value -- <command> [args...]`, with
+everything after `--` passed to the server untouched. Put the name before
+`--env`: the flag takes several `KEY=value` pairs and would swallow a name
+that follows it. Remote servers use OAuth or a
 `--header`; `/mcp` runs the login. Context7 works without a key, and a free
 key raises its rate limit.
 :::

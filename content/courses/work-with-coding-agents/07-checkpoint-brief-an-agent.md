@@ -34,7 +34,7 @@ A brief that works has the same parts every time:
 
 What it leaves out matters too. The house rules (pnpm, never edit generated
 files) are already in `CLAUDE.md`, so the brief doesn't repeat them, and
-anything that must never happen is a hook, not a sentence.
+anything that must never happen is a hook or a deny rule, not a sentence.
 
 ---
 

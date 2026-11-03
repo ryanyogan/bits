@@ -11,6 +11,11 @@
 # - Claude Code docs, Best practices (subagents for parallel work, long output and a reviewer
 #   that hasn't seen the code; "never" rules belong in deny rules or hooks, not prompts)
 #   https://code.claude.com/docs/en/best-practices
+# - Claude Code docs, Best practices, "What you can stop doing" (re-checked 2026-11-03: subagents
+#   are for parallel work, noisy output and independent review, not saving context; they cost
+#   extra tokens and don't improve the same answer)
+# - Claude Code docs, Configure permissions (deny rules: "deny": ["Bash(git push *)"])
+#   https://code.claude.com/docs/en/permissions
 # - AI Hero (Matt Pocock), hooks that enforce the right CLI (ideas credited, words our own)
 #   https://www.aihero.dev/how-to-use-claude-code-hooks-to-enforce-the-right-cli
 # Toy: none. The isOpen bug is our own example.
@@ -19,6 +24,9 @@ order: 6
 minutes: 8
 xp: 60
 module: Bigger jobs
+verified: 2026-11-03
+versions:
+  claude-code: "2.1.317"
 ---
 
 Two more tools for bigger jobs. A **subagent** is a helper Claude can hand
@@ -31,9 +39,12 @@ window**, its own instructions and, if you like, fewer tools. Claude hands
 it a job ("search the codebase for every place we format dates") and gets
 back a short answer instead of pages of search results. Use one to:
 
-- dig through lots of files or logs without filling your main session;
 - run independent jobs side by side;
+- keep noisy output, like a big search or a long log, out of your way;
 - review code it didn't write, with fresh eyes.
+
+Each one costs extra tokens, and handing a job to a subagent doesn't make
+the answer smarter by itself. The fresh eyes are what help a review.
 
 A subagent is a markdown file in `.claude/agents/` (or `~/.claude/agents/`
 for every project). Claude uses it when a task matches its description, or
@@ -43,9 +54,11 @@ when you ask for it by name.
 :::engineer
 **Subagents** run in their own context window with their own system prompt,
 tool allowlist and optionally model, and return only a summary to the main
-thread. That buys context isolation (a wide search or a full test run never
-enters the main context), parallelism, least privilege (a reviewer with
-`Read, Grep, Glob` can't edit) and an unanchored reviewer. Definitions live
+thread. That buys parallelism, noisy output kept out of the main thread,
+least privilege (a reviewer with `Read, Grep, Glob` can't edit) and an
+unanchored reviewer. It doesn't buy a better answer to the same task, and
+with 1M-token windows and automatic compaction, saving context is rarely
+the reason any more; each subagent spends its own tokens. Definitions live
 in `.claude/agents/*.md` or `~/.claude/agents/*.md`; Claude delegates when a
 task matches the `description`, or when you name or @-mention the subagent.
 :::
@@ -104,6 +117,10 @@ what's configured. The docs' formatter example:
 }
 ```
 
+For a plain "never run this command", a **deny rule** in the same settings
+file does the job with no script: `"permissions": { "deny": ["Bash(npm
+*)"] }`. Use a hook when you need logic or a custom message.
+
 A hook runs real commands on your machine with your permissions, so treat
 one you didn't write like any other script: read it first.
 
@@ -113,7 +130,7 @@ Your team must never run `npm` in a pnpm repo. Claude did it twice last week. Wh
 - [ ] Add “never use npm” to CLAUDE.md in capitals
   Worth adding, but it's still advice. Claude can slip, as it already has.
 - [x] A PreToolUse hook that blocks any command starting with npm, with a message to use pnpm
-  Right. It runs every time, and exit 2 tells Claude why and what to do instead.
+  Right. It runs every time, and exit 2 tells Claude why and what to do instead. A deny rule for Bash(npm *) is the no-script version.
 - [ ] A subagent that checks commands
   Not quite. A subagent is another Claude: it can miss things too, and it only runs when called.
 :::
