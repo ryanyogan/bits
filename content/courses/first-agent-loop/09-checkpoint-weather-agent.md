@@ -297,15 +297,22 @@ Last step. Play the model's final turn by hand. Paste a forecast as if a tool
 had just returned it, ask your question, and tell Claude to use only that
 data. This is the observe step, seen from the model's side.
 
-:::prompt{id="final-turn" xp=50}
+:::prompt{id="final-turn" xp=50 coach}
 Give Claude a tool result and ask for the agent's final answer
-
+- goal "Play the agent's last turn: hand Claude a forecast as if a tool had just returned it, and get a short answer grounded only in that data"
 - placeholder "Tool result from get_forecast: [...]. Using only this data, should I bike to work tomorrow at 8? Answer in … sentences. If something's missing, say so."
 - draft "Should I bike to work tomorrow?"
-- check "Includes the forecast data"     /rain|wind|\bhigh\b|°|forecast|\[/i
-- check "Asks a real question"           /\?/
-- check "Sets a length limit"            /\bwords?\b|\bsentences?\b|\bunder\b|\bshort\b|\bbrief\b|\bmax/i
-- check "Keeps it to the data"           /\bonly\b|don.t guess|not sure|missing|say so|unknown|don.t know/i
+- check "Includes the forecast data" /rain|wind|\bhigh\b|°|forecast|\[/i
+- check "Asks a real question" /\?/
+- expect "Quotes numbers from the data" match /\d/
+- expect "Answers in a few sentences" sentences<=5
+- rubric "Uses only numbers from the tool result (rounding them is fine)" must evidence
+- rubric "Gives a clear recommendation for the question asked" must
+- rubric "Says what the data can't tell, such as conditions exactly at 8" should
+- hint "This is the observe step. What has the tool just returned? Is it in your prompt?"
+- hint "Without a rule, Claude may fill gaps from what it knows. Tell it what it may use."
+- hint "Paste the forecast, ask your question, set a sentence limit, and ask Claude to say if anything it needs is missing."
+- reference "Tool result from get_forecast:\n[{\"date\": \"Wed\", \"high_f\": 75.7, \"low_f\": 50.1, \"rain_pct\": 2, \"wind_mph\": 11}]\n\nUsing only this data, should I bike to work tomorrow at 8 a.m.? Answer in two or three sentences. If the data doesn't cover something you'd need, say so."
 - run temperature=[1.0]
 - example T=1.0 "Yes, bike. Tomorrow looks dry (2% chance of rain) with wind up to 11 mph. The low is 50°F, so wear a layer. The data doesn't say exactly what it'll be like at 8."
 - example T=1.0 "Biking looks fine: the chance of rain is only 2% and the wind tops out around 11 mph. I can't see hourly temperatures, so plan for the 50°F low in the morning."

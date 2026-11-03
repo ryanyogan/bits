@@ -99,15 +99,21 @@ the API's compaction takes your own instructions for it. Your turn: write
 one. Paste a short chat and ask Claude to boil it down to notes a fresh
 session could pick up from.
 
-:::prompt{id="compact-notes" xp=30}
+:::prompt{id="compact-notes" xp=30 coach}
 Ask Claude to compress a conversation into notes for next time
-
+- goal "Get Claude to turn a chat into short notes that a fresh assistant could pick up tomorrow, keeping what matters and dropping the rest"
 - placeholder "Summarise this chat as notes for an assistant that starts fresh tomorrow. Keep … Drop … Under … words. Chat: user: … assistant: …"
 - draft "Summarise this chat. user: What's the weather in Chicago tomorrow? assistant: 75°F and dry. user: I bike to work, leaving at 8."
-- check "Asks for notes or a summary"   /summar|notes|compress|condense|boil/i
-- check "Says what to keep"             /\bkeep\b|preferences?|decisions?|facts?|open|unanswered|remember/i
-- check "Sets a length limit"           /\bwords?\b|\bsentences?\b|\bunder\b|\bshort\b|\bbrief\b|\bbullets?\b|\bmax/i
-- check "Includes the chat"             /user:|assistant:|\bme:|\byou:|\bchat\b|conversation/i
+- check "Includes the chat" /user:|assistant:|\bme:|\byou:|\bchat\b|conversation/i
+- check "Asks for notes or a summary" /summar|notes|compress|condense|boil/i
+- expect "Short enough to send every turn" words<=80
+- rubric "Keeps the user's facts and preferences, such as where they live and how they commute" must evidence
+- rubric "Drops small talk and repeated detail" should
+- rubric "Marks facts that may go stale, such as a forecast" should
+- hint "Notes cost tokens on every turn they're sent. Does your prompt say how long they can be?"
+- hint "Tell Claude who reads the notes and what that reader needs to keep."
+- hint "Ask for notes under a word limit, say to keep facts and preferences, and to flag anything that may be out of date."
+- reference "Turn this chat into notes for an assistant that starts fresh tomorrow. Keep the user's facts, preferences and open questions. Drop greetings and anything repeated. Flag anything that may be out of date. Under 50 words.\n\nuser: What's the weather in Chicago tomorrow?\nassistant: 75°F and dry.\nuser: I bike to work, leaving at 8."
 - run temperature=[1.0]
 - example T=1.0 "User lives in Chicago and bikes to work, leaving at 8 a.m. Last forecast checked: tomorrow 75°F and dry. Re-check before answering anything about later days."
 - example T=1.0 "Notes: location Chicago. Commutes by bike, leaves 8:00. Cares about rain and wind at that hour. Tomorrow looked dry, 75°F (may be stale)."

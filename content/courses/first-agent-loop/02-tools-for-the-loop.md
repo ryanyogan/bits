@@ -139,16 +139,23 @@ Your turn. Give Claude two tool descriptions that are meant to chain, a
 question, and ask whether it could get from one to the other. Anything it
 has to guess is a step your agent would guess at too.
 
-:::prompt{id="review-a-chain" xp=30}
+:::prompt{id="review-a-chain" xp=30 coach}
 Ask Claude whether two tools chain, and what it would have to guess
-
+- goal "Get Claude to say whether one tool's output can feed the other, and to name what the descriptions leave it guessing"
 - placeholder "Tools: geocode — … returns … get_forecast — takes … Question: … Could you answer it with these? What would you have to guess?"
 - draft "Tools: geocode, get_forecast. Could you use these?"
-- check "Describes the first tool"      /geocode/i
-- check "Describes the second tool"     /forecast/i
-- check "Says what a tool returns"      /\breturns?\b|\bgives\b|latitude|coordinates|\bhigh\b|\brain\b/i
-- check "Includes a question"           /\?/
-- check "Asks what's unclear"           /unclear|ambiguous|missing|guess|confus|need to know/i
+- check "Describes both tools" /geocode/i
+- check "Describes both tools" /forecast/i
+- check "Says what a tool takes or returns" /\breturns?\b|\bgives\b|\btakes\b|latitude|coordinates|\blat\b/i
+- check "Includes a question" /\?/
+- expect "Names something it would guess" match /guess|unclear|assum|not sure|doesn.t say|don.t say|unknown|ambigu|missing/i
+- rubric "Says whether geocode's output can be passed to get_forecast" must
+- rubric "Names a specific gap in the descriptions, such as units, field names or what happens when nothing is found" must evidence
+- rubric "Sticks to the descriptions it was given instead of inventing details" should
+- hint "Claude can only judge the tools you describe. Does your prompt say what each tool takes and returns?"
+- hint "The interesting part is the guessing. Have you asked Claude what the descriptions don't tell it?"
+- hint "Describe each tool in a line, ask your weather question, then ask: could you chain these, and what would you have to guess?"
+- reference "Here are two tools:\n- geocode(city): returns a location for the city.\n- get_forecast(latitude, longitude, days): returns the daily high, low and chance of rain.\n\nQuestion: Should I bike in Chicago tomorrow?\n\nCould you answer this with these two tools? Walk through the calls, then list everything you would have to guess because the descriptions don't say it."
 - run temperature=[1.0]
 - example T=1.0 "Yes: geocode(\"Chicago\") first, then get_forecast with its coordinates. Two guesses: whether geocode's output uses the same names get_forecast takes (lat vs latitude), and which Chicago it picks if there are several."
 - example T=1.0 "Mostly. I'd call geocode, then get_forecast for 2 days. I'd have to guess the units, since neither description says, and what geocode returns when it finds nothing."

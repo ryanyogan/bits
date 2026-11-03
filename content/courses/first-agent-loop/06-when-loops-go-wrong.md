@@ -89,32 +89,28 @@ Notice the guard doesn't crash the agent. It answers the call with an error
 the model can act on. In the loop, check `repeatGuard(call)` first and only
 run the tool if it returns nothing.
 
-:::quiz{id="stuck-loop" xp=15}
-Your agent calls search_docs 40 times with slightly different queries, and every result is "0 results". What's the most likely root cause?
-
-- [x] The tool result gives the model nothing to change course with
-  Right. "0 results" over and over leaves only one move: try again. Say what was searched and suggest what to try, or let the model tell the user.
-- [ ] The model is too small for the task
-  Not usually. A bigger model gets stuck on the same uninformative result, just more expensively.
-- [ ] Temperature is too high
-  Not quite. Current Claude models don't take a temperature at all, and randomness isn't what keeps it looping.
-:::
-
 ---
 
 Your turn. Hand Claude a stuck agent's log and ask it to debug the loop:
 why does the agent keep going, and what should the tool have returned
 instead? Paste a few turns, and set a length limit.
 
-:::prompt{id="debug-a-stuck-loop" xp=25}
+:::prompt{id="debug-a-stuck-loop" xp=40 coach}
 Ask Claude why an agent is stuck, and what result would get it moving
-
+- goal "Get Claude to explain why the agent keeps retrying, and to write the tool result that would get it moving, in a short answer"
 - placeholder "My agent's log: turn 1 → geocode(\"Springfield\") ← Error. turn 2 → geocode(\"Springfield\") ← Error. … Why does it keep retrying, and what should the tool return instead? Answer in under … words."
 - draft "Why is my agent stuck?"
-- check "Pastes the repeated call"       /geocode|forecast|search|lookup|tool/i
-- check "Shows it repeating"             /\bturn\b|again|repeat|retr|times|loop/i
-- check "Asks what to return instead"    /instead|should (it|the tool) return|better (error|result)|what to return|fix/i
-- check "Sets a length limit"            /\bwords?\b|\bsentences?\b|\bunder\b|\bshort\b|\bbrief\b|\bmax/i
+- check "Pastes the repeated call" /geocode|forecast|search|lookup|tool/i
+- check "Shows it repeating" /\bturn\b|again|repeat|retr|times|loop/i
+- check "Asks what to return instead" /instead|should (it|the tool) return|better (error|result)|what to return|fix/i
+- expect "Keeps it short" words<=200
+- rubric "Blames the uninformative tool result, not the model, the temperature or the loop code" must
+- rubric "Writes a better tool result that names the problem and the next move" must evidence
+- rubric "Suggests a limit or guard, so a stuck run can't go on for ever" should
+- hint "Look at what the agent gets back each turn. Does your prompt show Claude that?"
+- hint "A stuck agent usually has nothing to change course with. Ask Claude what the tool should have said instead."
+- hint "Paste two or three identical turns with their results, then ask: why does it repeat, and what exact result would let it change course? Set a word limit."
+- reference "My agent's log:\nturn 1: geocode(\"Springfield\") → \"Error\"\nturn 2: geocode(\"Springfield\") → \"Error\"\nturn 3: geocode(\"Springfield\") → \"Error\"\n\nWhy does the agent keep making the same call? Write the tool result geocode should return instead, so the agent can change course. Answer in under 100 words."
 - run temperature=[1.0]
 - example T=1.0 "\"Error\" gives the agent nothing to change, so retrying is its only move. Return something like: \"Found 30+ places called Springfield. Ask the user which state they mean, or pass e.g. Springfield, Illinois.\""
 - example T=1.0 "The tool fails the same way every time and never says why, so the agent keeps guessing. Say the name is ambiguous and list two or three matches. Also cap the loop's turns."
