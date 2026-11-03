@@ -85,7 +85,26 @@ importers:
         specifier: ^4.155.0
         version: 4.155.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.2)
 
+  packages/data-table-d1:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.19.2
+      miniflare:
+        specifier: 5.20261019.2-beta
+        version: 5.20261019.2-beta(@types/node@24.19.2)
+      remix:
+        specifier: ^3.1.0
+        version: 3.1.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(playwright@1.64.1)
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   packages/db:
+    dependencies:
+      data-table-d1:
+        specifier: workspace:*
+        version: link:../data-table-d1
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^5.20261026.1
