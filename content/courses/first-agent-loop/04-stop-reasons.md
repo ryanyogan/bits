@@ -12,8 +12,8 @@
 # - Code typechecked against @anthropic-ai/sdk 1.3.0 (2026-10-27).
 title: "Stop reasons"
 order: 4
-minutes: 7
-xp: 40
+minutes: 8
+xp: 60
 module: Building the loop
 ---
 
@@ -109,6 +109,46 @@ Your loop retries every response that isn't end_turn. What goes wrong when Claud
   Not quite. A refusal is a normal HTTP 200 response. Only your code can notice it.
 - [ ] The API bans the key after three refusals
   Not quite. There's no such rule. The problem is the loop you wrote.
+:::
+
+Your turn. Here's a response a loop just got back, trimmed and made up for
+this lesson:
+
+```json
+{
+  "stop_reason": "max_tokens",
+  "content": [
+    { "type": "text", "text": "I'll look up the forecast for Lyon." },
+    { "type": "tool_use", "id": "toolu_01", "name": "get_forecast", "input": { "city": "Ly" } }
+  ]
+}
+```
+
+Paste it into the box and ask Claude what your loop should do with it, and
+why. Keep the answer short.
+
+:::prompt{id="triage-a-stop" xp=20 coach}
+Paste a cut-off response and ask Claude what the loop should do next
+- goal "Get Claude to read the stop reason first and say what your loop should do with this response, in a short answer"
+- placeholder "My agent's loop got this response: { \"stop_reason\": … } Should the loop run the tool call? What should it do next, and why? Answer in under … words."
+- draft "My agent got a weird response. What do I do?"
+- check "Pastes the response" /max_tokens/
+- check "Pastes the response" /tool_use/
+- check "Pastes the response" /get_forecast/
+- check "Asks what the loop should do" /what should|what (do|does|to do)|next|handle|run (it|the tool|that)/i
+- expect "Keeps it short" words<=150
+- rubric "Says not to run the cut-off tool call, because its input may be incomplete" must evidence
+- rubric "Says to retry the request with a higher max_tokens, or with a shorter history" must evidence
+- rubric "Names the stop reason as what decides the next step" should
+- hint "Claude can only reason about what you show it. Is the response itself in your prompt?"
+- hint "Look at the stop reason and the last block together. What does that pair say about the tool's input?"
+- hint "Paste the JSON, then ask: should the loop run this tool call, and if not, what should it do instead? Ask for under 100 words."
+- reference "My agent's loop just got this response from the Messages API:\n\n{\n  \"stop_reason\": \"max_tokens\",\n  \"content\": [\n    { \"type\": \"text\", \"text\": \"I'll look up the forecast for Lyon.\" },\n    { \"type\": \"tool_use\", \"id\": \"toolu_01\", \"name\": \"get_forecast\", \"input\": { \"city\": \"Ly\" } }\n  ]\n}\n\nShould the loop run that tool call? Say what it should do next, and why, in under 100 words."
+- run temperature=[1.0]
+- example T=1.0 "Don't run it. stop_reason is max_tokens, so the reply was cut off, and the tool_use input (\"Ly\") is incomplete. Retry the same request with a higher max_tokens, then handle whatever comes back."
+- example T=1.0 "The stop reason says Claude ran out of room mid-reply, so the get_forecast call is half-written: \"Ly\" isn't a city. Skip the call, raise max_tokens (or trim the history) and send the request again."
+- example T=1.0 "Check stop_reason first: max_tokens means truncated. A tool_use at the end of a truncated reply may have a cut-off input, so never execute it. Re-send with more max_tokens."
+- success "Stop reason first, content second." next="Next: many tools at once →"
 :::
 
 The habit to keep: **read `stop_reason` before you read the content**. The

@@ -58,6 +58,9 @@ Pack the window: job, tagged document, quote first, honest gaps, short answer, q
 - check "Gives Claude its job"             /you are|you're|your job|you answer|answer (customer|questions)|assistant/i
 - check "Wraps the sheet in tags"          /<document/i
 - check "Names the source"                 /<source>/i
+- check "Keeps the café sheet"             /oat milk/i
+- check "Keeps the café sheet"             /terrace/i
+- check "Keeps the café sheet"             /\bsat/i
 - check "Asks for a quote first"           /quot/i
 - check "Allows “it doesn't say”"          /not (in|on|covered|mentioned|listed)|doesn.t (say|cover|mention)|don.t know|not sure|can.t find|isn.t (there|covered|listed)/i
 - check "Sets a length limit"              /\bwords?\b|\bsentences?\b|\bunder\b|\bshort\b|\bbrief\b/i

@@ -16,8 +16,8 @@
 # Wrangler output in the terminal block is an example, trimmed.
 title: "From script to endpoint"
 order: 1
-minutes: 7
-xp: 40
+minutes: 8
+xp: 60
 module: From script to endpoint
 ---
 
@@ -123,6 +123,47 @@ Why does the handler check `question` before calling Claude?
   Right. Reject bad input with a cheap 400 before the expensive part runs.
 - [ ] Workers reject JSON bodies over 2,000 characters
   Not quite. Workers accept much bigger bodies. 2,000 is a limit we chose.
+:::
+
+Your turn. A teammate wrote this handler and wants to ship it. Hand it to
+Claude for a review before it goes on a public URL:
+
+```ts
+export default {
+  async fetch(request) {
+    const { question } = await request.json();
+    const client = new Anthropic({ apiKey: "sk-ant-api03-REPLACE-ME" });
+    const res = await client.messages.create({
+      model: "claude-haiku-5-5",
+      max_tokens: 1024,
+      messages: [{ role: "user", content: question }],
+    });
+    return Response.json(res);
+  },
+};
+```
+
+:::prompt{id="review-before-ship" xp=20 coach}
+Ask Claude to review a Worker handler before it goes public
+- goal "Get Claude to review the handler for a public URL and name its two worst problems, with a fix for each, in a short answer"
+- placeholder "Review this Cloudflare Worker before it goes on a public URL: … What are the riskiest problems, and how do I fix each? Under … words."
+- draft "Is this code OK?"
+- check "Pastes the handler" /request\.json/
+- check "Pastes the handler" /apiKey/
+- check "Pastes the handler" /messages\.create/
+- check "Says it will be public" /public|anyone|internet|deploy|ship|production/i
+- expect "Keeps it short" words<=200
+- rubric "Flags the API key written in the code and says to use a Worker secret instead" must evidence
+- rubric "Flags that any input reaches Claude unchecked, so anyone can spend your tokens, and suggests validating it first" must evidence
+- rubric "Gives a fix for each problem it names" should
+- hint "Claude reviews what it can see. Is the handler itself in your prompt?"
+- hint "Say where this code will run and who can call it. A review for a public URL looks for different things."
+- hint "Paste the handler, say it's going on a public URL, and ask for the two riskiest problems with a fix for each, in under 120 words."
+- reference "Review this Cloudflare Worker before we put it on a public URL. Anyone on the internet will be able to call it.\n\nexport default {\n  async fetch(request) {\n    const { question } = await request.json();\n    const client = new Anthropic({ apiKey: \"sk-ant-api03-REPLACE-ME\" });\n    const res = await client.messages.create({ model: \"claude-haiku-5-5\", max_tokens: 1024, messages: [{ role: \"user\", content: question }] });\n    return Response.json(res);\n  },\n};\n\nName the two riskiest problems and give a fix for each. Under 120 words."
+- run temperature=[1.0]
+- example T=1.0 "1. The API key is in the code. Anyone who sees the repo can spend on your account. Put it in a Worker secret (wrangler secret put) and read env.ANTHROPIC_API_KEY. 2. Nothing checks the input, so any caller can send huge or junk questions that you pay for. Check the method, that question is a string, and its length, and return a 400 first."
+- example T=1.0 "Worst first: the hard-coded key. Move it to a secret. Second: no validation. A public URL gets bots, so reject anything that isn't a POST with a short string question before calling Claude. Also return only the answer text, not the whole response."
+- success "Key in a secret, input checked before the expensive part." next="Next: stream the reply →"
 :::
 
 :::rabbithole

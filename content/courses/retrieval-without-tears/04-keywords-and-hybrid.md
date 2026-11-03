@@ -14,8 +14,8 @@
 # The compare toy is illustrative.
 title: "Keywords, and why hybrid wins"
 order: 4
-minutes: 7
-xp: 40
+minutes: 8
+xp: 60
 module: Finding the right bits
 ---
 
@@ -101,6 +101,35 @@ Why does hybrid search merge by rank instead of adding the two scores?
   Right. A BM25 score of 14 and a cosine of 0.8 can't be added fairly. Ranks put both lists on the same footing.
 - [ ] BM25 doesn't produce scores
   Not quite. It does, but they have no fixed range.
+:::
+
+Hybrid search works best when each half gets a query it can use. Many
+retrieval systems have the model write those queries. Your turn: a customer
+writes “My display keeps flashing E-417 every time I start a ride, what do I
+do??”. Ask Claude for one query for keyword search and one for embedding
+search, as JSON.
+
+:::prompt{id="two-queries" xp=20 coach}
+Get Claude to write a keyword query and a meaning query for one question
+- goal "Get Claude to turn the customer's message into two search queries, as JSON: one that keeps the exact error code for keyword search, one in plain words for embedding search"
+- placeholder "Customer message: “…” Write two search queries as JSON: keywords (for BM25: …) and meaning (for embeddings: …). JSON only."
+- draft "Search for: My display keeps flashing E-417 every time I start a ride, what do I do??"
+- check "Keeps the customer's message" /E-417/
+- check "Keeps the customer's message" /display/i
+- check "Asks for a keyword query" /keyword|bm25/i
+- check "Asks for a meaning query" /meaning|semantic|embedding/i
+- expect "Has both queries" json keys=keywords,meaning
+- expect "The keyword query keeps E-417" match /E-417/
+- rubric "The keywords query keeps the exact code E-417 and drops filler words" must evidence
+- rubric "The meaning query says what the problem is in plain words, so it works without the code" must evidence
+- hint "Which part of the message would an embedding search blur, and which part would keyword search miss?"
+- hint "Name the two searches and what each is good at, and ask for the JSON keys you want."
+- hint "Ask for {\"keywords\": …, \"meaning\": …}: keywords keeps exact codes and product words, meaning describes the problem in plain words. JSON only."
+- reference "A customer wrote: “My display keeps flashing E-417 every time I start a ride, what do I do??”\n\nWrite two search queries for our help docs. keywords: for keyword (BM25) search, keep exact codes and product words and drop filler. meaning: for embedding search, describe the problem in plain words. Reply with only a JSON object with the keys keywords and meaning."
+- run temperature=[1.0]
+- example T=1.0 "{ \"keywords\": \"E-417 display error start ride\", \"meaning\": \"e-bike display shows an error code when starting a ride\" }"
+- example T=1.0 "{ \"keywords\": \"E-417 error code display\", \"meaning\": \"error message flashing on the bike's screen when I start riding, how to fix it\" }"
+- success "Exact words for keywords, plain meaning for embeddings: each half gets what it's good at." next="Next: contextual retrieval →"
 :::
 
 :::rabbithole

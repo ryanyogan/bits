@@ -65,7 +65,10 @@ Write the reminder prompt, with a reason for your constraints
 - goal "Get a text reminder that fits a phone's lock screen and keeps the time, the dentist and the insurance card"
 - placeholder "Turn this into a text reminder … It's sent as … so … because …"
 - draft "Turn this into a text reminder: Dentist, Tue 3pm, Dr Ali, Bright Smile Clinic, bring your insurance card. Keep it short."
-- check "Includes the appointment"  /dentist|dr ali|appointment/i
+- check "Includes the appointment"  /dr\.? ali/i
+- check "Includes the appointment"  /\btue/i
+- check "Includes the appointment"  /3 ?pm|15:00/i
+- check "Includes the appointment"  /insurance/i
 - check "Says what it's for"        /\bsms\b|text message|\btexts?\b|lock screen|notification|\bphones?\b/i
 - check "Gives a reason"            /because|so that|\bsince\b|\bas (it|they|people|patients|most)\b|which means|otherwise|so (it|they|people|patients)\b/i
 - expect "Keeps the time"            match /3 ?pm|15:00|3:00/i

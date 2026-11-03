@@ -36,7 +36,8 @@ Here's the difference that makes:
 
 Checkpoint. Write the bot's prompt: who it is, its tone, a length limit,
 what to do with off-topic questions, the menu, and a customer question to
-answer. Run it, read the coach's notes under the reply, and adjust until
+answer. The menu is: Lunar latte $4, Crater cold brew $4, Zero-g mint tea
+(caffeine-free) $3, Moon pie $3. Run it, read the coach's notes under the reply, and adjust until
 every line under “What good looks like” is met. Then run it a few more times. A well-tuned prompt gives
 you **different words but the same behaviour** on every run.
 
@@ -50,7 +51,9 @@ Tune the Moon Café help bot with a prompt
 - check "Sets a tone"                  /friendly|warm|cheerful|playful|polite|tone|upbeat/i
 - check "Sets a length limit"          /\bwords?\b|\bsentences?\b|\bunder\b|\bshort\b|\bbrief\b/i
 - check "Handles off-topic questions"  /\bonly\b|off.topic|unrelated|anything else|can.t help|cannot help|decline/i
-- check "Includes the menu"            /menu/i
+- check "Includes the menu"            /latte/i
+- check "Includes the menu"            /mint tea/i
+- check "Includes the menu"            /\$\d/
 - check "Includes a customer question" /customer|\?/i
 - expect "Short: under 60 words" words<=60
 - rubric "Answers the customer's question using only items from the menu" must evidence

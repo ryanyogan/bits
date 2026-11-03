@@ -103,6 +103,8 @@ Get Claude to draft retrieval test questions
 - draft "Passage: E-bike batteries have a 2-year warranty from delivery, covering capacity below 70%. Claims must be filed within 30 days of noticing the fault."
 - check "Asks for questions" /questions/i
 - check "Sets how many" /\b(3|4|5|6|three|four|five|six)\b/i
+- check "Includes the passage" /70%|70 ?percent/i
+- check "Includes the passage" /30 days/i
 - expect "Writes questions" match /\?/
 - rubric "Questions sound like a customer, not reworded lines from the passage" must
 - rubric "The passage answers every question" must

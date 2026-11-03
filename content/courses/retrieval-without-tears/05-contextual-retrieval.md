@@ -100,6 +100,8 @@ Write the prompt that situates a chunk in its document
 - draft "<document> Orbit Bikes warranty guide (2026). Frames: lifetime warranty for the first owner. E-bike batteries: 2-year warranty from delivery, covering capacity below 70%. Claims must be filed within 30 days of noticing the fault, with the order number and a photo of the battery label. </document> <chunk> Claims must be filed within 30 days of noticing the fault, with the order number and a photo of the battery label. </chunk>"
 - check "Includes the document and chunk" /<document>/i
 - check "Includes the document and chunk" /<chunk>/i
+- check "Includes the document and chunk" /lifetime/i
+- check "Includes the document and chunk" /battery label/i
 - check "Asks for context" /context|situate|where (this|the) chunk|place/i
 - expect "One or two sentences" sentences<=2
 - expect "Names the battery warranty" match /batter/i

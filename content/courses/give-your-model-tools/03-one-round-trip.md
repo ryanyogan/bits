@@ -144,15 +144,41 @@ How does Claude know which call your result answers?
   Not quite. A tool_result has no name field. The id does the matching.
 :::
 
-:::quiz{id="skip-the-reply" xp=20}
-You send request two with the tool_result but forget to push Claude's reply (`first.content`) first. What happens?
+Your turn. Here's what request one gave you, and what your code got back:
 
-- [ ] Claude answers anyway
-  Not quite. The result refers to a call that isn't in the history.
-- [x] The API rejects the request
-  Right. A tool_result has to answer a tool_use from the turn just before it, and there isn't one.
-- [ ] Claude calls the tool again
-  Not quite. The request fails before Claude sees it.
+```json
+{ "type": "tool_use", "id": "toolu_01", "name": "get_weather", "input": { "city": "Chicago" } }
+```
+
+```json
+{ "temp_c": 5, "sky": "overcast" }
+```
+
+The user had asked “Should I bring a coat in Chicago today?”. Ask Claude
+to write the `messages` array for request two, as JSON.
+
+:::prompt{id="request-two" xp=20 coach}
+Get Claude to write the messages for the second request
+- goal "Get Claude to write request two's messages as JSON: the question, Claude's call sent back unchanged, then your result answering it by id"
+- placeholder "Request one returned this tool_use: {…}. My get_weather code returned {…}. The user asked: … Write the messages array for request two, as JSON only."
+- draft "How do I send the weather back to Claude?"
+- check "Pastes the call" /toolu_01/
+- check "Pastes the call" /get_weather/
+- check "Pastes the result" /overcast/i
+- check "Asks for the messages" /messages/i
+- expect "Parses as JSON" json
+- expect "Has a tool_result" match /tool_result/
+- expect "Answers the call by its id" match /tool_use_id/
+- rubric "Sends Claude's tool_use back as an assistant message before the result" must evidence
+- rubric "The tool_result quotes the tool_use's id, toolu_01" must evidence
+- rubric "Starts with the user's original question" should
+- hint "Claude needs the three pieces: the question, its own call, your result. Are all three in your prompt?"
+- hint "Ask for the whole conversation as it will be sent, in order, not only the result."
+- hint "Paste the tool_use block and your result, then ask: write the messages array for request two, in order, as JSON only."
+- reference "The user asked: \"Should I bring a coat in Chicago today?\"\nRequest one came back with this block:\n{ \"type\": \"tool_use\", \"id\": \"toolu_01\", \"name\": \"get_weather\", \"input\": { \"city\": \"Chicago\" } }\nMy get_weather code returned: { \"temp_c\": 5, \"sky\": \"overcast\" }\n\nWrite the messages array for request two to the Messages API, in order, as JSON only."
+- run temperature=[1.0]
+- example T=1.0 "[\n  { \"role\": \"user\", \"content\": \"Should I bring a coat in Chicago today?\" },\n  { \"role\": \"assistant\", \"content\": [{ \"type\": \"tool_use\", \"id\": \"toolu_01\", \"name\": \"get_weather\", \"input\": { \"city\": \"Chicago\" } }] },\n  { \"role\": \"user\", \"content\": [{ \"type\": \"tool_result\", \"tool_use_id\": \"toolu_01\", \"content\": \"{\\\"temp_c\\\": 5, \\\"sky\\\": \\\"overcast\\\"}\" }] }\n]"
+- success "Question, call, result: the API remembers nothing, so you send all three." next="Next: descriptions Claude follows →"
 :::
 
 That's one call and one answer. Real assistants often need several calls in a

@@ -628,3 +628,225 @@ exercises.push(
   },
 )
 // ── end lane W2-fix ──
+
+
+// ── lane C3: new coached exercises in first-agent-loop, give-your-model-tools,
+// retrieval-without-tears and ship-an-agent-to-the-edge. Sources are copied
+// verbatim from the lessons. ──
+
+// first-agent-loop/04-stop-reasons.md
+const c3TriageAStop = String.raw`:::prompt{id="triage-a-stop" xp=20 coach}
+Paste a cut-off response and ask Claude what the loop should do next
+- goal "Get Claude to read the stop reason first and say what your loop should do with this response, in a short answer"
+- placeholder "My agent's loop got this response: { \"stop_reason\": … } Should the loop run the tool call? What should it do next, and why? Answer in under … words."
+- draft "My agent got a weird response. What do I do?"
+- check "Pastes the response" /max_tokens/
+- check "Pastes the response" /tool_use/
+- check "Pastes the response" /get_forecast/
+- check "Asks what the loop should do" /what should|what (do|does|to do)|next|handle|run (it|the tool|that)/i
+- expect "Keeps it short" words<=150
+- rubric "Says not to run the cut-off tool call, because its input may be incomplete" must evidence
+- rubric "Says to retry the request with a higher max_tokens, or with a shorter history" must evidence
+- rubric "Names the stop reason as what decides the next step" should
+- hint "Claude can only reason about what you show it. Is the response itself in your prompt?"
+- hint "Look at the stop reason and the last block together. What does that pair say about the tool's input?"
+- hint "Paste the JSON, then ask: should the loop run this tool call, and if not, what should it do instead? Ask for under 100 words."
+- reference "My agent's loop just got this response from the Messages API:\n\n{\n  \"stop_reason\": \"max_tokens\",\n  \"content\": [\n    { \"type\": \"text\", \"text\": \"I'll look up the forecast for Lyon.\" },\n    { \"type\": \"tool_use\", \"id\": \"toolu_01\", \"name\": \"get_forecast\", \"input\": { \"city\": \"Ly\" } }\n  ]\n}\n\nShould the loop run that tool call? Say what it should do next, and why, in under 100 words."
+- run temperature=[1.0]
+- example T=1.0 "Don't run it. stop_reason is max_tokens, so the reply was cut off, and the tool_use input (\"Ly\") is incomplete. Retry the same request with a higher max_tokens, then handle whatever comes back."
+- example T=1.0 "The stop reason says Claude ran out of room mid-reply, so the get_forecast call is half-written: \"Ly\" isn't a city. Skip the call, raise max_tokens (or trim the history) and send the request again."
+- example T=1.0 "Check stop_reason first: max_tokens means truncated. A tool_use at the end of a truncated reply may have a cut-off input, so never execute it. Re-send with more max_tokens."
+- success "Stop reason first, content second." next="Next: many tools at once →"
+:::`
+
+// give-your-model-tools/03-one-round-trip.md
+const c3RequestTwo = String.raw`:::prompt{id="request-two" xp=20 coach}
+Get Claude to write the messages for the second request
+- goal "Get Claude to write request two's messages as JSON: the question, Claude's call sent back unchanged, then your result answering it by id"
+- placeholder "Request one returned this tool_use: {…}. My get_weather code returned {…}. The user asked: … Write the messages array for request two, as JSON only."
+- draft "How do I send the weather back to Claude?"
+- check "Pastes the call" /toolu_01/
+- check "Pastes the call" /get_weather/
+- check "Pastes the result" /overcast/i
+- check "Asks for the messages" /messages/i
+- expect "Parses as JSON" json
+- expect "Has a tool_result" match /tool_result/
+- expect "Answers the call by its id" match /tool_use_id/
+- rubric "Sends Claude's tool_use back as an assistant message before the result" must evidence
+- rubric "The tool_result quotes the tool_use's id, toolu_01" must evidence
+- rubric "Starts with the user's original question" should
+- hint "Claude needs the three pieces: the question, its own call, your result. Are all three in your prompt?"
+- hint "Ask for the whole conversation as it will be sent, in order, not only the result."
+- hint "Paste the tool_use block and your result, then ask: write the messages array for request two, in order, as JSON only."
+- reference "The user asked: \"Should I bring a coat in Chicago today?\"\nRequest one came back with this block:\n{ \"type\": \"tool_use\", \"id\": \"toolu_01\", \"name\": \"get_weather\", \"input\": { \"city\": \"Chicago\" } }\nMy get_weather code returned: { \"temp_c\": 5, \"sky\": \"overcast\" }\n\nWrite the messages array for request two to the Messages API, in order, as JSON only."
+- run temperature=[1.0]
+- example T=1.0 "[\n  { \"role\": \"user\", \"content\": \"Should I bring a coat in Chicago today?\" },\n  { \"role\": \"assistant\", \"content\": [{ \"type\": \"tool_use\", \"id\": \"toolu_01\", \"name\": \"get_weather\", \"input\": { \"city\": \"Chicago\" } }] },\n  { \"role\": \"user\", \"content\": [{ \"type\": \"tool_result\", \"tool_use_id\": \"toolu_01\", \"content\": \"{\\\"temp_c\\\": 5, \\\"sky\\\": \\\"overcast\\\"}\" }] }\n]"
+- success "Question, call, result: the API remembers nothing, so you send all three." next="Next: descriptions Claude follows →"
+:::`
+
+// retrieval-without-tears/04-keywords-and-hybrid.md
+const c3TwoQueries = String.raw`:::prompt{id="two-queries" xp=20 coach}
+Get Claude to write a keyword query and a meaning query for one question
+- goal "Get Claude to turn the customer's message into two search queries, as JSON: one that keeps the exact error code for keyword search, one in plain words for embedding search"
+- placeholder "Customer message: “…” Write two search queries as JSON: keywords (for BM25: …) and meaning (for embeddings: …). JSON only."
+- draft "Search for: My display keeps flashing E-417 every time I start a ride, what do I do??"
+- check "Keeps the customer's message" /E-417/
+- check "Keeps the customer's message" /display/i
+- check "Asks for a keyword query" /keyword|bm25/i
+- check "Asks for a meaning query" /meaning|semantic|embedding/i
+- expect "Has both queries" json keys=keywords,meaning
+- expect "The keyword query keeps E-417" match /E-417/
+- rubric "The keywords query keeps the exact code E-417 and drops filler words" must evidence
+- rubric "The meaning query says what the problem is in plain words, so it works without the code" must evidence
+- hint "Which part of the message would an embedding search blur, and which part would keyword search miss?"
+- hint "Name the two searches and what each is good at, and ask for the JSON keys you want."
+- hint "Ask for {\"keywords\": …, \"meaning\": …}: keywords keeps exact codes and product words, meaning describes the problem in plain words. JSON only."
+- reference "A customer wrote: “My display keeps flashing E-417 every time I start a ride, what do I do??”\n\nWrite two search queries for our help docs. keywords: for keyword (BM25) search, keep exact codes and product words and drop filler. meaning: for embedding search, describe the problem in plain words. Reply with only a JSON object with the keys keywords and meaning."
+- run temperature=[1.0]
+- example T=1.0 "{ \"keywords\": \"E-417 display error start ride\", \"meaning\": \"e-bike display shows an error code when starting a ride\" }"
+- example T=1.0 "{ \"keywords\": \"E-417 error code display\", \"meaning\": \"error message flashing on the bike's screen when I start riding, how to fix it\" }"
+- success "Exact words for keywords, plain meaning for embeddings: each half gets what it's good at." next="Next: contextual retrieval →"
+:::`
+
+// ship-an-agent-to-the-edge/06-logs-you-can-query.md
+const c3LogLine = String.raw`:::prompt{id="log-line" xp=20 coach}
+Get Claude to turn a log sentence into a JSON object you can filter
+- goal "Get Claude to rewrite the log sentence as one JSON object with numbers as numbers, keeping the run's shape and leaving out what the user wrote"
+- placeholder "Turn this log line into one JSON object for Workers Logs with the fields event, user, turn, stop_reason, input_tokens, output_tokens and ms. Numbers as numbers. Leave out … JSON only. Line: …"
+- draft "Make this log better: turn 2 for user 8f3a done (end_turn), 1834 in / 212 out, 2310 ms, prompt: \"is it raining at 14 Elm Street right now?\""
+- check "Pastes the log line" /8f3a/
+- check "Pastes the log line" /1834/
+- check "Pastes the log line" /end_turn/
+- check "Asks for JSON" /json|object/i
+- check "Says to leave out the user's words" /no prompt|leave out|drop|omit|without|don.t include|do not include|exclude|remove/i
+- expect "Has the fields" json keys=stop_reason,input_tokens,output_tokens types=input_tokens:number,output_tokens:number
+- expect "Keeps the user id" match /8f3a/
+- expect "Keeps the input tokens" match /input_tokens..\s?1834/
+- expect "Keeps the output tokens" match /output_tokens..\s?212/
+- expect "Keeps the duration" match /2310/
+- rubric "Leaves out the user's prompt text and the street address" must
+- hint "Which part of this line is the user's own words? Does your prompt tell Claude what to do with it?"
+- hint "Name the fields you want, and say the numbers must be numbers, not strings."
+- hint "Ask for one JSON object with event, user, turn, stop_reason, input_tokens, output_tokens and ms, numbers as numbers, and say to drop the prompt. JSON only."
+- reference "Turn this log line into one JSON object for Workers Logs with the fields event (\"turn\"), user, turn, stop_reason, input_tokens, output_tokens and ms. Numbers must be numbers. Leave out the user's prompt entirely. Reply with the JSON object only.\n\nturn 2 for user 8f3a done (end_turn), 1834 in / 212 out, 2310 ms, prompt: \"is it raining at 14 Elm Street right now?\""
+- run temperature=[1.0]
+- example T=1.0 "{\"event\":\"turn\",\"user\":\"8f3a\",\"turn\":2,\"stop_reason\":\"end_turn\",\"input_tokens\":1834,\"output_tokens\":212,\"ms\":2310}"
+- success "Fields you can filter, and nothing a user wrote." next="Next: safety at the edge →"
+:::`
+
+const c3TriageAStopPrompt = "My agent's loop just got this response from the Messages API:\n\n{\n  \"stop_reason\": \"max_tokens\",\n  \"content\": [\n    { \"type\": \"text\", \"text\": \"I'll look up the forecast for Lyon.\" },\n    { \"type\": \"tool_use\", \"id\": \"toolu_01\", \"name\": \"get_forecast\", \"input\": { \"city\": \"Ly\" } }\n  ]\n}\n\nShould the loop run that tool call? Say what it should do next, and why, in under 100 words."
+const c3RequestTwoPrompt = "The user asked: \"Should I bring a coat in Chicago today?\"\nRequest one came back with this block:\n{ \"type\": \"tool_use\", \"id\": \"toolu_01\", \"name\": \"get_weather\", \"input\": { \"city\": \"Chicago\" } }\nMy get_weather code returned: { \"temp_c\": 5, \"sky\": \"overcast\" }\n\nWrite the messages array for request two to the Messages API, in order, as JSON only."
+const c3TwoQueriesPrompt = "A customer wrote: “My display keeps flashing E-417 every time I start a ride, what do I do??”\n\nWrite two search queries for our help docs. keywords: for keyword (BM25) search, keep exact codes and product words and drop filler. meaning: for embedding search, describe the problem in plain words. Reply with only a JSON object with the keys keywords and meaning."
+const c3LogLinePrompt = "Turn this log line into one JSON object for Workers Logs with the fields event (\"turn\"), user, turn, stop_reason, input_tokens, output_tokens and ms. Numbers must be numbers. Leave out the user's prompt entirely. Reply with the JSON object only.\n\nturn 2 for user 8f3a done (end_turn), 1834 in / 212 out, 2310 ms, prompt: \"is it raining at 14 Elm Street right now?\""
+
+exercises.push(
+  {
+    kind: "C3 cut-off tool call (two evidence)",
+    source: c3TriageAStop,
+    cases: [
+      {
+        name: "do not run, retry with more room",
+        prompt: c3TriageAStopPrompt,
+        reply: "Don't run it. stop_reason is max_tokens, so the reply was cut off and the get_forecast input (\"Ly\") is incomplete. Retry the same request with a higher max_tokens, then handle whatever comes back.",
+        pass: true,
+      },
+      {
+        name: "shorter history as the fix",
+        prompt: c3TriageAStopPrompt,
+        reply: "Skip the tool call: the stop reason says Claude ran out of room, so \"Ly\" is a half-written city. Trim the conversation history so there's room, and send the request again.",
+        pass: true,
+      },
+      {
+        name: "runs the truncated call",
+        prompt: c3TriageAStopPrompt,
+        reply: "Run get_forecast with city \"Ly\" and send the result back. Claude will correct the city in its next turn if the tool returns an error.",
+        pass: false,
+      },
+      {
+        name: "spots the cut, no next step",
+        prompt: c3TriageAStopPrompt,
+        reply: "The response was truncated because it hit max_tokens, so the tool input looks incomplete.",
+        pass: false,
+      },
+    ],
+  },
+  {
+    kind: "C3 tool round trip as JSON (evidence)",
+    source: c3RequestTwo,
+    cases: [
+      {
+        name: "question, call, result by id",
+        prompt: c3RequestTwoPrompt,
+        reply: "[\n  { \"role\": \"user\", \"content\": \"Should I bring a coat in Chicago today?\" },\n  { \"role\": \"assistant\", \"content\": [{ \"type\": \"tool_use\", \"id\": \"toolu_01\", \"name\": \"get_weather\", \"input\": { \"city\": \"Chicago\" } }] },\n  { \"role\": \"user\", \"content\": [{ \"type\": \"tool_result\", \"tool_use_id\": \"toolu_01\", \"content\": \"{\\\"temp_c\\\": 5, \\\"sky\\\": \\\"overcast\\\"}\" }] }\n]",
+        pass: true,
+      },
+      {
+        name: "drops the assistant turn",
+        prompt: c3RequestTwoPrompt,
+        reply: "[\n  { \"role\": \"user\", \"content\": \"Should I bring a coat in Chicago today?\" },\n  { \"role\": \"user\", \"content\": [{ \"type\": \"tool_result\", \"tool_use_id\": \"toolu_01\", \"content\": \"{\\\"temp_c\\\": 5, \\\"sky\\\": \\\"overcast\\\"}\" }] }\n]",
+        pass: false,
+      },
+      {
+        name: "wrong id on the result",
+        prompt: c3RequestTwoPrompt,
+        reply: "[\n  { \"role\": \"user\", \"content\": \"Should I bring a coat in Chicago today?\" },\n  { \"role\": \"assistant\", \"content\": [{ \"type\": \"tool_use\", \"id\": \"toolu_01\", \"name\": \"get_weather\", \"input\": { \"city\": \"Chicago\" } }] },\n  { \"role\": \"user\", \"content\": [{ \"type\": \"tool_result\", \"tool_use_id\": \"toolu_02\", \"content\": \"{\\\"temp_c\\\": 5, \\\"sky\\\": \\\"overcast\\\"}\" }] }\n]",
+        pass: false,
+      },
+    ],
+  },
+  {
+    kind: "C3 hybrid queries (two evidence)",
+    source: c3TwoQueries,
+    cases: [
+      {
+        name: "code kept, meaning paraphrased",
+        prompt: c3TwoQueriesPrompt,
+        reply: "{ \"keywords\": \"E-417 display error start ride\", \"meaning\": \"e-bike display shows an error code when starting a ride\" }",
+        pass: true,
+      },
+      {
+        name: "meaning query is a plain restatement",
+        prompt: c3TwoQueriesPrompt,
+        reply: "{ \"keywords\": \"E-417 error code display\", \"meaning\": \"error message flashing on the bike screen when I start riding, how to fix it\" }",
+        pass: true,
+      },
+      {
+        name: "meaning query just repeats the code",
+        prompt: c3TwoQueriesPrompt,
+        reply: "{ \"keywords\": \"E-417 display\", \"meaning\": \"E-417\" }",
+        pass: false,
+      },
+      {
+        name: "keywords query is the whole message",
+        prompt: c3TwoQueriesPrompt,
+        reply: "{ \"keywords\": \"E-417 my display keeps flashing every time I start a ride what do I do\", \"meaning\": \"the e-bike screen shows an error when a ride starts\" }",
+        pass: false,
+      },
+    ],
+  },
+  {
+    kind: "C3 structured log line (privacy)",
+    source: c3LogLine,
+    cases: [
+      {
+        name: "all fields, no prompt",
+        prompt: c3LogLinePrompt,
+        reply: "{\"event\":\"turn\",\"user\":\"8f3a\",\"turn\":2,\"stop_reason\":\"end_turn\",\"input_tokens\":1834,\"output_tokens\":212,\"ms\":2310}",
+        pass: true,
+      },
+      {
+        name: "keeps the user words",
+        prompt: c3LogLinePrompt,
+        reply: "{\"event\":\"turn\",\"user\":\"8f3a\",\"turn\":2,\"stop_reason\":\"end_turn\",\"input_tokens\":1834,\"output_tokens\":212,\"ms\":2310,\"prompt\":\"is it raining at 14 Elm Street right now?\"}",
+        pass: false,
+      },
+      {
+        name: "wrong numbers",
+        prompt: c3LogLinePrompt,
+        reply: "{\"event\":\"turn\",\"user\":\"8f3a\",\"turn\":2,\"stop_reason\":\"end_turn\",\"input_tokens\":212,\"output_tokens\":1834,\"ms\":2310}",
+        pass: false,
+      },
+    ],
+  },
+)
+// ── end lane C3 ──

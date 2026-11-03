@@ -23,8 +23,8 @@ Welcome to bits. No sign-up, no setup and no maths. Let's start by talking to
 one.
 
 The box below sends your words to **Claude**, an AI model made by Anthropic.
-Ask it what it is. The draft is nearly there: add “in one sentence”, then hit
-Run.
+Ask it two things: what it is, and one thing it can't do. Keep it to two
+sentences, so the answer stays short. Then hit Run.
 :::
 
 :::engineer
@@ -33,26 +33,29 @@ what a language model is, how it writes, what it sees, where it breaks. Each
 lesson is one idea with a live run.
 
 The box below is a thin wrapper over one Messages API request to Claude. No
-system prompt of yours, no history, no tools. Add “in one sentence” to the
-draft and run it.
+system prompt of yours, no history, no tools. Ask what it is and one thing
+it can't do from here, cap it at two sentences, and run it.
 :::
 
 :::prompt{id="say-hi" xp=30 coach}
-Ask Claude what it is, in one sentence
+Ask Claude what it is, and one thing it can't do
 
-- goal "Get Claude to tell you what it is, in a sentence or two"
-- placeholder "Hi Claude! …"
+- goal "Get Claude to say what it is and name one real thing it can't do, in two sentences at most"
+- placeholder "Hi Claude! In two sentences: …"
 - draft "Hi Claude! What are you, exactly?"
-- check "Asks what it is"        /what|who|explain|describe|tell me/i
-- check "Asks for one sentence"  /one sentence|1 sentence|single sentence|one line|\bbrief|short/i
-- expect "Short: a sentence or two" sentences<=2
-- rubric "Says what it is" must evidence
-- hint "You asked for one sentence. Does the reply fit in one? If not, how could you say it more firmly?"
-- reference "Hi Claude! In one sentence, what are you?"
+- check "Asks what it is"           /what|who|explain|describe|tell me/i
+- check "Asks what it can't do"     /can.t|cannot|unable|not able|limit|weakness/i
+- check "Sets a length"             /two sentences|2 sentences|one sentence|1 sentence|single sentence|\bbrief|\bshort/i
+- expect "Two sentences at most"    sentences<=2
+- rubric "Says what it is: an AI model made by Anthropic" must evidence
+- rubric "Names one real limit, such as no web access from here or no memory of earlier runs" must evidence
+- hint "Your prompt is a list of what you want back. Count the things you asked for. Is the limit one of them?"
+- hint "Name both parts, and say how long: “In two sentences: what are you, and what's one thing you can't do?”"
+- reference "Hi Claude! In two short sentences: what are you, and what's one thing you can't do from here?"
 - run temperature=[1.0]
-- example T=1.0 "I'm Claude, an AI model made by Anthropic: I read your text and write a reply, one small piece at a time."
-- example T=1.0 "I'm Claude, an AI assistant built by Anthropic that turns your words into a written answer by predicting what comes next."
-- example T=1.0 "I'm Claude, a large language model from Anthropic, trained on lots of text to understand questions and write helpful replies."
+- example T=1.0 "I'm Claude, an AI model made by Anthropic that reads your text and writes a reply. One thing I can't do from here is browse the web, so I can't check today's news."
+- example T=1.0 "I'm Claude, a large language model built by Anthropic. I can't remember this conversation next time: each run starts from only what's in the box."
+- example T=1.0 "I'm Claude, an AI assistant from Anthropic that writes replies one small piece at a time. I can't look anything up live, so recent events may be missing or wrong."
 - success "You just talked to a large language model. The rest of this course shows what happened in between." next="Next: a very good next-word guesser →"
 :::
 :::new
@@ -116,7 +119,7 @@ Here's a peek at what happened while it answered: the word it picked at each
 step, and a few it didn't. The numbers are illustrative; the next lesson
 explains them.
 
-:::nexttoken{prompt="Hi Claude! In one sentence, what are you?" illustrative}
+:::nexttoken{prompt="Hi Claude! In two short sentences: what are you, and what's one thing you can't do from here?" illustrative}
 "I'm" 0.88 | "Hi":0.07 "Hello":0.03
 " Claude" 0.95 | " an":0.03 " a":0.01
 "," 0.83 | " —":0.09 ":":0.05

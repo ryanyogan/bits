@@ -104,7 +104,9 @@ Ask Claude to compress a conversation into notes for next time
 - goal "Get Claude to turn a chat into short notes that a fresh assistant could pick up tomorrow, keeping what matters and dropping the rest"
 - placeholder "Summarise this chat as notes for an assistant that starts fresh tomorrow. Keep … Drop … Under … words. Chat: user: … assistant: …"
 - draft "Summarise this chat. user: What's the weather in Chicago tomorrow? assistant: 75°F and dry. user: I bike to work, leaving at 8."
-- check "Includes the chat" /user:|assistant:|\bme:|\byou:|\bchat\b|conversation/i
+- check "Includes the chat" /chicago/i
+- check "Includes the chat" /\bbike|biking|cycl/i
+- check "Includes the chat" /75/
 - check "Asks for notes or a summary" /summar|notes|compress|condense|boil/i
 - expect "Short enough to send every turn" words<=80
 - rubric "Keeps the user's facts and preferences, such as where they live and how they commute" must evidence
