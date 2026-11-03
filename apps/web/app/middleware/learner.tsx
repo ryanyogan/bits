@@ -1,5 +1,5 @@
 import { Renderer, type RenderFunction } from 'remix/middleware/render'
-import type { Middleware } from 'remix/router'
+import type { Middleware, RequestContext } from 'remix/router'
 import { Session } from 'remix/session'
 
 import { currentUser } from '../auth/identity.ts'
@@ -11,7 +11,7 @@ import { LearnerScope } from '../ui/learner-scope.tsx'
  * session already loaded (no D1). Signed in, the header always offers
  * Continue, so it isn't needed.
  */
-export function hasSessionProgress(context: Parameters<Middleware>[0]): boolean {
+export function hasSessionProgress(context: RequestContext<any, any>): boolean {
   if (currentUser(context)) return false
   let value = (context.get(Session) as Session | undefined)?.get(PROGRESS_KEY)
   return value != null && typeof value === 'object' && Object.keys(value).length > 0

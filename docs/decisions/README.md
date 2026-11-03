@@ -72,3 +72,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 065 | [Release shell: the bar, the footer, an honest landing, one sign-in](065-shell-landing-sign-in.md) |
 | 066 | [Course presentation: the syllabus first, one action per state](066-course-presentation.md) |
 | 068 | [Signed-in surfaces: private by default, honest authoring, notices where you are](068-signed-in-surfaces.md) |
+| 070 | [One primary action, one verb: Start free or Continue](070-one-primary-action.md) |

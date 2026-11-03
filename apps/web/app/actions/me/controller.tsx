@@ -8,7 +8,8 @@ import { loadCompleted } from '../../progress/progress.ts'
 import { routes } from '../../routes.ts'
 import { getOwnProfile } from '../profile/data.ts'
 import { ProfilePage } from '../profile/profile-page.tsx'
-import { nextLesson, NextLessonBand } from './next-lesson.tsx'
+import { nextStep } from '../home/continue.ts'
+import { NextLessonBand } from './next-lesson.tsx'
 
 // "My learning": the next lesson first, then the private profile dashboard
 // (decision 068). `?tab=journal` shows the whole prompt journal
@@ -28,7 +29,7 @@ export default createController(routes.me, {
       let completed = rows
         ? new Map(rows.completed.map((row) => [`${row.course_id}/${row.lesson_slug}`, row.completed_at]))
         : await loadCompleted(context)
-      let next = tab === 'overview' ? nextLesson(catalog, completed) : undefined
+      let next = tab === 'overview' ? nextStep(catalog, completed) : undefined
       return context.render(
         <ProfilePage
           profile={profile}

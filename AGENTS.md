@@ -150,7 +150,10 @@ content/fixtures/         deliberately broken folders for tests
    Put page components next to it (`badges-page.tsx`), wrap them in `Layout`
    from `app/ui/layout.tsx`, and use `context.db` for data. `Layout` draws
    the one header (decision 059); a page never builds its own, it only
-   changes what the bar holds (`links`, `account`, `startHref`, `sub`).
+   changes what the bar holds (`links`, `account`, `startHref`, `start`,
+   `sub`). The bar picks its one primary key itself (decision 070):
+   Continue with progress, else Start free; a lesson page passes
+   `start={false}`.
 3. Map it in `app/router.ts`: `router.map(routes.badges, badgesController)`.
 4. Add a case to `app/actions/controller.test.ts` (or a test next to the
    controller). Run `pnpm test`, `pnpm typecheck` and `pnpm remix:doctor`.
