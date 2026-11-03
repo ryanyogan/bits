@@ -195,16 +195,24 @@ like `[1]`, to **say plainly** what the passages don't cover, and to keep it
 **short**. Run it a few times. The answer should change its words, never its
 facts.
 
-:::prompt{id="ask-my-docs" xp=60}
+:::prompt{id="ask-my-docs" xp=60 coach}
 Write the instructions for a grounded, cited docs assistant
-
+- goal "Write the instructions for Orbit Bikes' docs assistant so its answer to the customer is grounded in the passages, cited, short, and honest about what the docs don't say"
 - placeholder "You are Orbit Bikes' docs assistant. Answer only from the passages… Cite… If they don't cover it… Keep it under… words."
 - draft "[1] warranty.md: E-bike batteries have a 2-year warranty from delivery, covering capacity below 70%. [2] warranty.md: Claims must be filed within 30 days of noticing the fault, with the order number and a photo of the battery label. [3] returns.md: You can return any bike within 30 days of delivery for a full refund, if it has under 50 km on the odometer. Customer question: My battery is 20 months old and now gets half the range. What do I need to send you, and can I get a loaner bike while it's fixed?"
-- check "Gives it a role"                    /you are|you're|act as|\brole\b|assistant/i
-- check "Limits Claude to the passages"      /\bonly\b|based on|according to|nothing else|solely|strictly/i
-- check "Asks for citations"                 /\bcite|citation|\bsources?\b|reference/i
-- check "Says what to do when it's missing"  /don.t (know|cover|say|mention)|not (in|covered|mentioned)|isn.t (in|covered)|say so|plainly|admit|can.t find|cannot find/i
-- check "Keeps it short"                     /\bwords?\b|\bsentences?\b|\bshort\b|\bbrief\b|\bconcise\b/i
+- check "Gives it a role" /you are|you're|act as|\brole\b|assistant/i
+- check "Asks for citations" /\bcite|citation|\bsources?\b|reference/i
+- check "Keeps the passages" /\[2\]/
+- expect "Cites the passages by number" cites 1-3
+- expect "Keeps it short" words<=120
+- rubric "Says what to send: the order number and a photo of the battery label" must evidence
+- rubric "Says the docs don't mention loaner bikes, without promising one" must evidence
+- rubric "Doesn't use the returns policy as if it applied to a warranty claim" should
+- rubric "Each claim cites the passage it comes from" should
+- hint "Start with who the assistant is and where its answers may come from. Is that in your instructions?"
+- hint "One part of the customer's question isn't in the docs. What should the assistant do then? Say so in the prompt."
+- hint "Give it a role, limit it to the passages, ask for [n] citations, say what to do when the docs are silent, and set a word limit."
+- reference "You are Orbit Bikes' docs assistant. Answer the customer using only the passages below, and put the passage number in brackets, like [1], after each claim. If the passages don't cover part of the question, say so plainly and don't promise anything. Keep it under 80 words.\n\n[1] warranty.md: E-bike batteries have a 2-year warranty from delivery, covering capacity below 70%.\n[2] warranty.md: Claims must be filed within 30 days of noticing the fault, with the order number and a photo of the battery label.\n[3] returns.md: You can return any bike within 30 days of delivery for a full refund, if it has under 50 km on the odometer.\n\nCustomer question: My battery is 20 months old and now gets half the range. What do I need to send you, and can I get a loaner bike while it's fixed?"
 - run temperature=[1.0]
 - example T=1.0 "Your battery is still under the 2-year warranty, and losing half its range suggests capacity below 70% [1]. Send your order number and a photo of the battery label within 30 days of noticing the fault [2]. The docs don't mention loaner bikes, so I can't promise one."
 - example T=1.0 "You're covered: batteries have a 2-year warranty for capacity below 70% [1]. To claim, send your order number and a photo of the battery label, within 30 days of spotting the problem [2]. I couldn't find anything about loaner bikes in our docs."

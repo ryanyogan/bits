@@ -82,16 +82,10 @@ export async function contextualize(doc: string, chunk: string) {
 Keep the original chunk too. When you hand results to Claude later, you can
 show the context and the chunk separately so it knows which is which.
 
-:::quiz{id="why-context-helps" xp=10}
-Anthropic also tried adding one **generic summary of the whole document** to every chunk. Why would that help less than a context written for each chunk?
-
-- [ ] Summaries are too short to embed
-  Not quite. Length isn't the problem.
-- [x] Every chunk gets the same summary, so it can't tell them apart
-  Right. A per-chunk context says where **this** chunk sits and what it covers, which is what search needs. Anthropic saw very limited gains from generic summaries.
-- [ ] Claude can't summarise long documents
-  Not quite. It can. The issue is that one summary doesn't describe each chunk.
-:::
+Why not one summary of the whole document, added to every chunk? Anthropic
+tried that and saw very little gain. Every chunk gets the same summary, so it
+can't tell them apart. A context written for **this** chunk says where it
+sits and what it covers, which is what search needs.
 
 Your turn. The document and the lonely chunk are in the box. Write the
 instruction that makes Claude produce the context: say what it's for
@@ -99,17 +93,23 @@ instruction that makes Claude produce the context: say what it's for
 preamble. Run it a few times and check that the batteries and warranty make
 it in.
 
-:::prompt{id="contextualize-chunk" xp=40}
+:::prompt{id="contextualize-chunk" xp=50 coach}
 Write the prompt that situates a chunk in its document
-
+- goal "Get Claude to write a one- or two-sentence context that places the lonely chunk in its document, so search can find it, and nothing else"
 - placeholder "…document and chunk… Write a short context that places this chunk in the document, to help search find it. Reply with only…"
 - draft "<document> Orbit Bikes warranty guide (2026). Frames: lifetime warranty for the first owner. E-bike batteries: 2-year warranty from delivery, covering capacity below 70%. Claims must be filed within 30 days of noticing the fault, with the order number and a photo of the battery label. </document> <chunk> Claims must be filed within 30 days of noticing the fault, with the order number and a photo of the battery label. </chunk>"
 - check "Includes the document and chunk" /<document>/i
 - check "Includes the document and chunk" /<chunk>/i
-- check "Asks for context"                /context|situate|where (this|the) chunk|place/i
-- check "Says it's for search"            /search|retriev|find/i
-- check "Keeps it short"                  /\bwords?\b|\bsentences?\b|\bshort\b|\bbrief\b|\bsuccinct\b|\bconcise\b|\bunder\b/i
-- check "Asks for only the context"       /\bonly\b|nothing else|no preamble|just the/i
+- check "Asks for context" /context|situate|where (this|the) chunk|place/i
+- expect "One or two sentences" sentences<=2
+- expect "Names the battery warranty" match /batter/i
+- rubric "Names the document and the section the chunk comes from" must evidence
+- rubric "Says what this chunk covers, not the whole document" must
+- rubric "Gives only the context, with no preamble and no copy of the chunk" should
+- hint "Search finds a chunk by the words in it. Which words is the lonely chunk missing?"
+- hint "A summary of the whole guide would be the same for every chunk. Ask for context about this chunk, and say what it's for."
+- hint "Say the context is for search, ask for one or two sentences that place this chunk in the document, and ask for only that."
+- reference "<document> Orbit Bikes warranty guide (2026). Frames: lifetime warranty for the first owner. E-bike batteries: 2-year warranty from delivery, covering capacity below 70%. Claims must be filed within 30 days of noticing the fault, with the order number and a photo of the battery label. </document>\n<chunk> Claims must be filed within 30 days of noticing the fault, with the order number and a photo of the battery label. </chunk>\n\nWrite one or two sentences that place this chunk within the document, so a search for it finds it. Name the document and the section. Reply with only the context."
 - run temperature=[1.0]
 - example T=1.0 "From Orbit Bikes' 2026 warranty guide: how to file a claim under the 2-year e-bike battery warranty."
 - example T=1.0 "This chunk is from the e-bike battery warranty section of Orbit Bikes' 2026 warranty guide and explains the claim deadline and what to include."

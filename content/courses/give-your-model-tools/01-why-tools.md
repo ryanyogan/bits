@@ -79,13 +79,19 @@ Your turn. The sandbox on this page runs Claude with **no tools at all**.
 Ask it for something only a tool could know, like the weather somewhere
 right now, and tell it to say so if it can't check.
 
-:::prompt{id="cant-check" xp=20}
+:::prompt{id="cant-check" xp=20 coach}
 Ask Claude for live information, and let it say it can't check
-
+- goal "Ask Claude for something only live data could answer, and get an honest reply that it can't check, with no made-up numbers"
 - placeholder "What's the weather in … right now? If you can't check, say so."
 - draft "What's the weather in Lisbon right now?"
-- check "Asks for something live"     /right now|today|current|currently|latest|this (morning|afternoon|evening|week)/i
-- check "Lets it say it can't check"  /can.t|cannot|unable|not able|don.t know|say so|admit|if you (can|are)/i
+- check "Asks for something live" /right now|today|current|currently|latest|this (morning|afternoon|evening|week)/i
+- expect "Says it can't check" match /can.t|cannot|unable|not able|don.t have|no access|no live|real-time|real time/i
+- rubric "Says plainly that it can't see live data" must evidence
+- rubric "Doesn't present a current reading as fact, such as today's temperature" must
+- rubric "Points to where the live answer can be found" should
+- hint "Claude's knowledge stops at its training. Is your question about something that changes by the minute?"
+- hint "Give Claude permission to say it doesn't know. Without it, a model may offer its best guess."
+- reference "What's the weather in Lisbon right now? If you can't check live data, say so plainly and don't guess."
 - run temperature=[1.0]
 - example T=1.0 "I can't check live weather, so I don't know what Lisbon is like right now. A weather app or website will have the current conditions."
 - example T=1.0 "I don't have access to real-time data, so I can't tell you Lisbon's weather right now. Late October there is usually mild, around 15–20°C, but check a forecast to be sure."

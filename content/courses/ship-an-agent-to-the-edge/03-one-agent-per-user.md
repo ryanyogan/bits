@@ -20,7 +20,7 @@
 title: "One agent per user"
 order: 3
 minutes: 8
-xp: 40
+xp: 70
 module: Memory and the gateway
 ---
 
@@ -163,6 +163,37 @@ The Agent class also has `setState()`, which syncs a small object to every conne
   Right. Cloudflare's docs say to keep state light and put growing data like messages in SQL.
 - [ ] SQL is the only storage that Claude can read
   Not quite. Claude reads whatever you send in the request. Both are just storage.
+:::
+
+---
+
+Your turn, from the model's side. Claude only knows what this request
+carries, so play `ask()` by hand. Earlier in this chat the user said their
+name is Ana and that they live in Lyon. Now they ask the question in the
+draft. Put the stored turns in front of it, the way `ask()` replays the
+`messages` table, and see whether Claude can use them.
+
+:::prompt{id="replay-history" xp=30 coach}
+Replay the stored history so Claude can use what the user said before
+- goal "Send the earlier turns along with the new question, so Claude answers Ana by name, about Lyon, without pretending it remembers anything you didn't send"
+- placeholder "Earlier in this chat: user: … assistant: … New message from the user: Will it rain where I live tomorrow? Use only what's in this conversation."
+- draft "Will it rain where I live tomorrow?"
+- check "Includes the earlier turns" /\bana\b/i
+- check "Includes the earlier turns" /lyon/i
+- check "Keeps the new question" /\?/
+- expect "Uses the city from the history" match /lyon/i
+- expect "Answers in a few sentences" sentences<=4
+- rubric "Uses the name and city from the earlier turns" must evidence
+- rubric "Says it has no forecast to check, instead of inventing one" must
+- rubric "Claims no memory beyond the turns it was sent" should
+- hint "Claude starts every request knowing nothing about this user. Where would it learn their city?"
+- hint "Your agent stores each turn. Which of those stored turns should travel with the new question?"
+- hint "Put the earlier user and assistant turns first, label them, then the new message, and ask Claude to use only this conversation."
+- reference "Earlier in this conversation:\nuser: Hi, I'm Ana. I live in Lyon.\nassistant: Nice to meet you, Ana. How can I help?\n\nNew message from the user: Will it rain where I live tomorrow?\n\nAnswer using only what's in this conversation. If you'd need data you don't have, say so."
+- run temperature=[1.0]
+- example T=1.0 "I can't check tomorrow's forecast for Lyon, Ana: I don't have live weather data here. A weather service or the get_forecast tool would tell you."
+- example T=1.0 "You told me you live in Lyon, Ana, but I have no forecast to look at, so I can't say whether it'll rain there tomorrow."
+- success "That's all memory is on a stateless API: the turns you send back." next="Next: AI Gateway in front of the model →"
 :::
 
 :::rabbithole

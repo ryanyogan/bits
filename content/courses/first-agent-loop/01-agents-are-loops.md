@@ -76,14 +76,23 @@ Your turn to be the planner. The sandbox runs Claude without tools, so it
 can't act yet, but it can plan. Give it a question and a short list of tools
 in plain words, and ask for the calls it would make, in order.
 
-:::prompt{id="plan-the-calls" xp=30}
+:::prompt{id="plan-the-calls" xp=30 coach}
 Ask Claude to plan the tool calls for a weather question
-
+- goal "Get Claude to list, in order, the tool calls it would make to answer a weather question, before any tool has run"
 - placeholder "Tools: geocode(city) → lat/lon; get_forecast(lat, lon, days). Question: … List the calls you'd make, in order."
 - draft "Should I bike to work in Chicago tomorrow?"
-- check "Lists some tools"           /geocode|forecast|tool/i
-- check "Asks for steps in order"    /\bsteps?\b|\border\b|\bplan\b|\bfirst\b|\bsequence\b|\blist\b/i
-- check "Includes a real question"   /\?/
+- check "Tells Claude about both tools" /geocode/i
+- check "Tells Claude about both tools" /forecast/i
+- check "Includes a real question" /\?/
+- expect "Plans a geocode call" match /geocod/i
+- expect "Plans a forecast call" match /forecast/i
+- rubric "Gets the coordinates before it asks for the forecast" must evidence
+- rubric "Lists the calls as ordered steps, not an answer to the question" must
+- rubric "Says what it can't know until the tools return" should
+- hint "Claude can only plan with tools it knows about. Does your prompt say what each tool takes and what it gives back?"
+- hint "get_forecast needs coordinates. Which tool gives them, and does your prompt ask Claude for the order of the calls?"
+- hint "Ask for the calls as a numbered list, first to last, and tell Claude not to answer the weather question yet."
+- reference "You have two tools:\n- geocode(city) returns the latitude and longitude of a city.\n- get_forecast(lat, lon, days) returns the daily forecast for that spot, with day 1 as today.\n\nQuestion: Should I bike to work in Chicago tomorrow?\n\nDon't answer the question yet. List the tool calls you would make, in order, and say what each call needs from the one before it."
 - run temperature=[1.0]
 - example T=1.0 "1. geocode(\"Chicago\") to get its latitude and longitude. 2. get_forecast(lat, lon, days=2), since day 1 is today and I need tomorrow. 3. Check tomorrow's rain chance and wind. If rain is likely or it's very windy, suggest the train; otherwise, bike."
 - example T=1.0 "First I'd call geocode with \"Chicago\". With those coordinates I'd call get_forecast for 2 days and read tomorrow's entry. Then I'd answer based on the rain and wind. I can't know the forecast until those calls return."

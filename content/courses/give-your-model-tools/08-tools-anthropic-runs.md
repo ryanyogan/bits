@@ -77,17 +77,6 @@ When a server tool fails, the request doesn't. You get a normal reply with a
 result block that holds an `error_code`, like `max_uses_exceeded`, and Claude
 usually explains what happened in its answer.
 
-:::quiz{id="who-runs-it" xp=20}
-You add `{ type: "web_search_20260209", name: "web_search" }` to your tools. Who runs the search?
-
-- [ ] Your code, after Claude returns a tool_use block
-  Not quite. That's a client tool. Server tools never hand you a call to run.
-- [x] Anthropic, inside the same request
-  Right. The searches and the results happen server-side, and you get the finished answer.
-- [ ] Claude, from memory
-  Not quite. That's what happens with no tools at all. Search fetches live pages.
-:::
-
 :::quiz{id="server-or-client" xp=20}
 Which job needs a client tool you write yourself?
 

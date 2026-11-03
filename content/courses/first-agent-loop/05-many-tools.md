@@ -102,17 +102,6 @@ the stakes. Overlapping tools make the model hesitate at every step, not
 once, and every definition is re-sent on every turn, so a long tool list
 costs you once per turn, for the whole run.
 
-:::quiz{id="tool-count" xp=10}
-Your agent has get_weather, get_forecast and weather_lookup, which all do roughly the same thing. It often picks the wrong one. What's the best fix?
-
-- [ ] Add a fourth tool that explains which of the three to use
-  Not quite. That's more overlap, not less.
-- [x] Merge them into one well-described tool
-  Right. Fewer, clearer choices beat a long menu of near-twins.
-- [ ] Turn off parallel tool use
-  Not quite. That limits Claude to one call per turn, but it won't help it choose between look-alikes.
-:::
-
 :::rabbithole
 - read "Parallel tool use" by="Anthropic" url="https://platform.claude.com/docs/en/agents-and-tools/tool-use/parallel-tool-use"
 - read "Writing effective tools for agents" by="Anthropic" url="https://www.anthropic.com/engineering/writing-tools-for-agents"

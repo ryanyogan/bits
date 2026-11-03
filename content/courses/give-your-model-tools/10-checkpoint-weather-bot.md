@@ -154,28 +154,6 @@ temperature. That matters. Open-Meteo matches names loosely: ask it for
 `"Périsse, Haiti"`, Claude can spot the mismatch and say so, instead of
 cheerfully reporting Caribbean weather for Paris.
 
-:::quiz{id="no-city" xp=20}
-Someone asks about the weather in “Xyzzyville”. Open-Meteo finds nothing. What does the bot do?
-
-- [ ] It crashes on the missing result
-  Not quite. getWeather throws, but the catch turns it into a tool_result.
-- [x] It sends the error back with is_error, and Claude tells the user it couldn't find the city
-  Right. The error message even suggests what to try, so Claude can pass that on.
-- [ ] Claude makes up a temperature
-  Not quite. Claude gets the error, and the system prompt tells it never to guess.
-:::
-
-:::quiz{id="tomorrow" xp=20}
-Someone asks “Will it rain in Leeds tomorrow?”. What should a good run look like?
-
-- [ ] Claude calls get_weather for Leeds and reports today's weather as tomorrow's
-  Not quite. That's the mistake the description is there to prevent.
-- [x] Claude doesn't call the tool, and says it can only see current conditions
-  Right. The description says it has no forecasts, so the honest answer is to say so.
-- [ ] The API rejects the request
-  Not quite. Nothing here is an API error. It's Claude's decision, guided by your description.
-:::
-
 ---
 
 Last step. The description is the part that decides everything, so test
@@ -185,18 +163,26 @@ for the three messages in the draft. The sandbox has no tools, so Claude is
 telling you its decision rather than making the call. It's the same
 judgement, from the same description.
 
-:::prompt{id="test-the-description" xp=60}
+:::prompt{id="test-the-description" xp=60 coach}
 Write the bot's tool description, then test it on three messages
-
+- goal "Write a get_weather description, then have Claude decide tool or no tool for three messages. Only the first needs the tool"
 - placeholder "Tool get_weather: … Use it when … It can't … For each message below, reply tool or no tool: …"
 - draft "Messages: 1) Weather in Lima right now? 2) What's the capital of Peru? 3) Will it rain in Cusco tomorrow? For each, reply tool or no tool."
-- check "Names the tool"               /get_weather/i
-- check "Says what it does"            /temperature|conditions|sky|the weather for/i
-- check "Says when to use it"          /\bwhen\b|whenever|use (it|this) (for|if)/i
-- check "Says what it can't do"        /no forecast|not (for )?forecast|can.t|cannot|doesn.t|does not|only current/i
-- check "Keeps the three messages"     /lima/i
-- check "Keeps the three messages"     /peru/i
-- check "Keeps the three messages"     /cusco/i
+- check "Names the tool" /get_weather/i
+- check "Says what it does" /temperature|conditions|sky|the weather for/i
+- check "Says what it can't do" /no forecast|not (for )?forecast|can.t|cannot|doesn.t|does not|only current/i
+- check "Keeps the three messages" /lima/i
+- check "Keeps the three messages" /peru/i
+- check "Keeps the three messages" /cusco/i
+- expect "Decides tool or no tool" match /no tool/i
+- rubric "Message 1, weather in Lima right now: uses the tool" must evidence
+- rubric "Message 2, the capital of Peru: no tool, Claude already knows it" must evidence
+- rubric "Message 3, rain in Cusco tomorrow: no tool, because get_weather can't forecast" must evidence
+- rubric "Says what it would tell the user when the tool can't help" should
+- hint "Claude decides from your description alone. Does it say what get_weather can't do?"
+- hint "Look at message 3. If the description doesn't mention forecasts, why wouldn't Claude reach for the tool?"
+- hint "Three lines: what get_weather returns, when to use it, and that it has no forecasts. Then the three messages, and ask for tool or no tool with a reason."
+- reference "Tool get_weather: returns the current temperature and sky conditions for one city. Use it when the user asks about the weather right now. It can't forecast: it has no data about later hours or days.\n\nFor each message, reply tool or no tool, with a short reason:\n1) Weather in Lima right now?\n2) What's the capital of Peru?\n3) Will it rain in Cusco tomorrow?"
 - run temperature=[1.0]
 - example T=1.0 "1) tool: get_weather {\"city\": \"Lima, Peru\"} 2) no tool, I know that one: Lima. 3) no tool: it only has current conditions, not forecasts."
 - example T=1.0 "1) tool 2) no tool 3) no tool, since get_weather can't forecast tomorrow."

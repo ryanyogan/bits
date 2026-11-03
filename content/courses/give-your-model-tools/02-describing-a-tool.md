@@ -83,35 +83,33 @@ call them (286 tokens on Claude Haiku 5.5, as of October 2026). A handful of
 tools is cheap. Hundreds of them crowd the context, which is one reason to
 keep your list short.
 
-:::quiz{id="enum-or-string" xp=20}
-Your tool takes a `size` that must be `small`, `medium` or `large`. What's the best way to say so?
-
-- [ ] Make it a string and hope for the best
-  Not quite. Claude might send “M” or “Medium”, and your code has to cope.
-- [ ] Explain it only in the tool's description
-  Not quite. That helps, but the schema can state it exactly.
-- [x] A string with an enum of the three values
-  Right. An enum lists the only allowed values, so Claude knows exactly what to send.
-:::
-
 Your turn. Ask Claude to **write the input schema** for a tool that looks up
-a flight's status: a required flight number, and an optional date. Ask for
-JSON only, so the answer stays short.
+a flight's status: a required flight number, an optional date, and a
+`leg` that can only be departure, arrival or both. Ask for JSON only, so the
+answer stays short.
 
-:::prompt{id="write-a-schema" xp=20}
+:::prompt{id="write-a-schema" xp=30 coach}
 Ask Claude for a JSON Schema for a flight-status tool's input
-
+- goal "Get a JSON Schema for a flight-status tool: a required flight number, an optional date, and a leg that can only be departure, arrival or both"
 - placeholder "Write a JSON Schema for … Reply with JSON only."
 - draft "Write a schema for a flight tool."
-- check "Asks for a JSON Schema"       /json schema|input_schema|input schema/i
-- check "Names the inputs"             /flight/i
-- check "Names the inputs"             /date/i
-- check "Says what's required"         /required|optional/i
-- check "Asks for JSON only"           /json only|only (the )?json|just (the )?json|no prose|nothing else/i
+- check "Asks for a JSON Schema" /json schema|input_schema|input schema/i
+- check "Names the inputs" /flight/i
+- check "Names the inputs" /date/i
+- expect "Is valid JSON" json keys=type,properties
+- expect "Limits the fixed choice with an enum" match /"enum"/
+- expect "Says what's required" match /"required"/
+- rubric "Only the flight number is required" must
+- rubric "The leg is an enum of exactly departure, arrival and both" must evidence
+- rubric "Each property has a type and a description with an example or format" should
+- hint "Claude can only build the inputs you name. Does your prompt list all three, and say which ones are required?"
+- hint "A value from a fixed set shouldn't be a free string. How does a schema list the only allowed values?"
+- hint "Name each input, say which is required, list the allowed values for leg, and ask for the JSON only."
+- reference "Write the JSON Schema for a flight-status tool's input. It takes:\n- flight_number (required): airline code and number, like BA117\n- date (optional): departure date as YYYY-MM-DD, defaulting to today\n- leg (optional): one of departure, arrival or both\n\nGive every property a type and a description, and use an enum for leg. Reply with the JSON only."
 - run temperature=[1.0]
-- example T=1.0 "{\"type\": \"object\", \"properties\": {\"flight_number\": {\"type\": \"string\", \"description\": \"Airline code and number, e.g. BA117\"}, \"date\": {\"type\": \"string\", \"format\": \"date\", \"description\": \"Departure date, YYYY-MM-DD. Defaults to today.\"}}, \"required\": [\"flight_number\"]}"
-- example T=1.0 "{\"type\": \"object\", \"properties\": {\"flight_number\": {\"type\": \"string\"}, \"date\": {\"type\": \"string\", \"description\": \"YYYY-MM-DD\"}}, \"required\": [\"flight_number\"]}"
-- success "That's a tool's input, described. Next: what happens when Claude uses it." next="Next: one round trip →"
+- example T=1.0 "{\"type\": \"object\", \"properties\": {\"flight_number\": {\"type\": \"string\", \"description\": \"Airline code and number, e.g. BA117\"}, \"date\": {\"type\": \"string\", \"format\": \"date\", \"description\": \"Departure date, YYYY-MM-DD. Defaults to today.\"}, \"leg\": {\"type\": \"string\", \"enum\": [\"departure\", \"arrival\", \"both\"], \"description\": \"Which times to return. Defaults to both.\"}}, \"required\": [\"flight_number\"]}"
+- example T=1.0 "{\"type\": \"object\", \"properties\": {\"flight_number\": {\"type\": \"string\"}, \"date\": {\"type\": \"string\", \"description\": \"YYYY-MM-DD\"}, \"leg\": {\"type\": \"string\", \"enum\": [\"departure\", \"arrival\", \"both\"]}}, \"required\": [\"flight_number\"]}"
+- success "That's a tool's input, described exactly. Next: what happens when Claude uses it." next="Next: one round trip →"
 :::
 
 :::rabbithole

@@ -57,33 +57,29 @@ better than `list_contacts`, which makes Claude read the whole address book.
 And **prefix names by service**, like `github_list_prs` and
 `slack_send_message`, so Claude never mixes up two tools called `search`.
 
-:::quiz{id="better-param" xp=20}
-Which input name will Claude misuse least?
-
-- [ ] user
-  Not quite. Is that a name, an email or an id? Claude has to guess.
-- [ ] id
-  Not quite. An id of what? An order, a customer, a product?
-- [x] customer_email
-  Right. It says exactly what goes in it.
-:::
-
 Your turn. The sandbox has no real tools, so you'll do the next best thing:
 write a **description** for a `get_weather` tool (what it does, when to use
 it, when not to), then give Claude a user message and ask it to reply with
 **only the input it would send**, as JSON, or “no tool”. Try a question that
 should use the tool and one that shouldn't.
 
-:::prompt{id="describe-and-pick" xp=30}
+:::prompt{id="describe-and-pick" xp=40 coach}
 Write a tool description, then ask what call Claude would make
-
+- goal "Write a get_weather description good enough that Claude makes the right call for a user message: the exact input it would send, or no tool"
 - placeholder "Tool get_weather: … Use it when … Don't use it for … User: “…” Reply with only the JSON input you'd send, or no tool."
 - draft "Tool: get_weather. User: Should I bring an umbrella in Leeds tomorrow?"
-- check "Says what the tool does"     /weather|forecast|temperature/i
-- check "Says when to use it"         /\bwhen\b|use (it|this) (for|if)|whenever/i
-- check "Says when not to"            /\bnot\b|don.t|never|only for/i
-- check "Includes a user message"     /user|customer|question|message/i
-- check "Asks for the JSON input"     /json/i
+- check "Says what the tool does" /weather|forecast|temperature/i
+- check "Says when to use it" /\bwhen\b|use (it|this) (for|if)|whenever/i
+- check "Says when not to" /\bnot\b|don.t|never|only for/i
+- check "Asks for the JSON input" /json/i
+- expect "Replies with a call or no tool" match /\{|no tool/i
+- rubric "Claude's decision follows from what your description allows" must
+- rubric "Any input it sends uses names and formats the description spells out" should
+- rubric "The description names its inputs so they can't be misread, like city rather than q" should on=prompt
+- hint "Claude decides from your words alone. Does your description say what the tool can't do as well as what it can?"
+- hint "Check the user's message against the description. If they ask about tomorrow, does the tool cover tomorrow?"
+- hint "Write three short lines (what it does, when to use it, what it can't do) and name its input, then add the user message."
+- reference "Tool get_weather: returns the current temperature and conditions for one city. Input: city (the city name, with country if it's ambiguous, e.g. Leeds, UK). Use it when the user asks about the weather now. Don't use it for forecasts: it has no data about tomorrow.\n\nUser: “Should I bring an umbrella in Leeds tomorrow?”\n\nReply with only the JSON input you would send to get_weather, or the words no tool and one short reason."
 - run temperature=[1.0]
 - example T=1.0 "{\"city\": \"Leeds, UK\"}"
 - example T=1.0 "no tool. The tool only gives current conditions, and you asked about tomorrow."

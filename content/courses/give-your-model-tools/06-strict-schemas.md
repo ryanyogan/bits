@@ -112,34 +112,25 @@ one request. And the guarantee has edges: if a reply is cut off by
 `max_tokens`, or Claude declines, the JSON can still be incomplete. Check
 `stop_reason` before you parse.
 
-:::quiz{id="tool-or-format" xp=20}
-You want Claude to read support emails and return { category, urgency } for your dashboard. Nothing needs to run. Which fits?
-
-- [ ] A strict tool called classify_email
-  Not quite. It works, but you'd be inventing a tool that never runs just to get JSON.
-- [x] Structured outputs with output_config.format
-  Right. You want the answer itself in a fixed shape, which is exactly what it's for.
-- [ ] Ask nicely for JSON in the prompt
-  Not quite. That works most of the time. A dashboard needs every time.
-:::
-
 Your turn. Without any of this, you're relying on the prompt. Ask Claude to
 turn **“two adults, Friday, Lisbon”** into JSON with `passengers` as a
 **number**, plus `day` and `city`. Run it a few times and check the type of
 `passengers` each time.
 
-:::prompt{id="json-by-asking" xp=20}
+:::prompt{id="json-by-asking" xp=30 coach}
 Ask for JSON with a number in it, and check the type
-
+- goal "Get Claude to turn a booking into JSON with passengers as a real number, and nothing but the JSON"
 - placeholder "Turn “two adults, Friday, Lisbon” into JSON with passengers (a number), day and city. JSON only."
 - draft "Make JSON from: two adults, Friday, Lisbon"
-- check "Includes the booking"       /lisbon/i
-- check "Names the fields"           /passengers/i
-- check "Says passengers is a number" /number|integer|numeric|\bint\b|digit/i
-- check "Asks for JSON only"         /json only|only (the )?json|just (the )?json|nothing else|no (other )?text/i
+- check "Includes the booking" /lisbon/i
+- expect "Has the three fields, with passengers as a number" json keys=passengers,day,city types=passengers:number
+- rubric "Replies with the JSON alone, no prose or code fence around it" must
+- rubric "Keeps the booking's values, with no invented fields" should
+- hint "Claude can't guess your field names. Does the prompt name them?"
+- hint "“two” can come back as text or as 2. What would make it a number every time you ask?"
+- hint "Name the three fields, say passengers is a number, and ask for the JSON only, with nothing before or after it."
+- reference "Turn this booking into JSON: “two adults, Friday, Lisbon”.\nUse exactly these fields: passengers (a number), day (a string) and city (a string).\nReply with the JSON object only, with no other text and no code fence."
 - run temperature=[1.0]
-- example T=1.0 "{\"passengers\": 2, \"day\": \"Friday\", \"city\": \"Lisbon\"}"
-- example T=1.0 "{\"passengers\": 2, \"day\": \"Friday\", \"city\": \"Lisbon\"}"
 - example T=1.0 "{\"passengers\": 2, \"day\": \"Friday\", \"city\": \"Lisbon\"}"
 - success "A clear prompt gets this right nearly every time. strict and structured outputs make it every time." next="Next: many calls, some fail →"
 :::

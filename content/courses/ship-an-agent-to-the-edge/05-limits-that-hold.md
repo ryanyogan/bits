@@ -16,7 +16,7 @@
 title: "Limits that hold"
 order: 5
 minutes: 8
-xp: 40
+xp: 70
 module: Running it safely
 ---
 
@@ -128,6 +128,36 @@ The loop hits `MAX_TURNS` with the model still asking for tools. What's the best
   Right. A clear message beats a timeout, and your logs will show which questions hit the cap.
 - [ ] Return an empty 200 response
   Not quite. The user can't tell a silent failure from a slow answer.
+:::
+
+---
+
+Your turn. The loop above stops at `MAX_TURNS` and has to say so. Ask Claude
+to write that message for the user: tell it what the agent was doing, that
+it stopped after 6 turns, and what it found before it stopped. Keep it short
+and plain. This is copy your user will actually read.
+
+:::prompt{id="out-of-steps" xp=30 coach}
+Get Claude to write the message the agent sends when it runs out of steps
+- goal "Get a short, plain message for the user that says the agent stopped before finishing, what it found, and what they can do next"
+- placeholder "My weather agent stopped after 6 turns (MAX_TURNS) while still calling tools. It was answering: … It had found: … Write the message the user sees, in … sentences."
+- draft "Write an error message for when the agent stops."
+- check "Says the loop hit its limit" /\b6\b|\bsix\b|max_turns|max turns|turns|steps/i
+- check "Says who reads it" /user|customer|reader/i
+- expect "Short enough to read at a glance" sentences<=3
+- expect "Says it stopped" match /stop|ran out|couldn.t finish|didn.t finish|did not finish|limit|steps|turns/i
+- rubric "Says plainly that the agent didn't finish" must evidence
+- rubric "Doesn't present a partial result as the final answer" must
+- rubric "Gives the user a next step, such as asking a narrower question" should
+- rubric "Uses plain words, with no internal names like MAX_TURNS or tool_use" should
+- hint "Claude can't write a good message about a run it knows nothing about. What was the agent doing when it stopped?"
+- hint "Who reads this message, and what do they need to know: that it finished, or that it didn't?"
+- hint "Say the agent stopped after 6 turns, what it was answering and what it had found, then ask for two or three plain sentences for the user, with a next step."
+- reference "My weather agent stopped after 6 turns, its limit, while it was still calling tools. The user asked: \"Which of Paris, Rome or Madrid will be warmest on Saturday?\" It had found Paris (18°C) and Rome (24°C) but not Madrid yet.\n\nWrite the message the user sees. Say plainly that it didn't finish, share what it found, and suggest what they can do next. Two or three sentences, no technical terms."
+- run temperature=[1.0]
+- example T=1.0 "Sorry, I ran out of steps before I could check Madrid. So far: Paris looks like 18°C on Saturday and Rome 24°C. Ask me about Madrid on its own and I'll finish the comparison."
+- example T=1.0 "I couldn't finish this one: I stopped after checking Paris (18°C) and Rome (24°C), before Madrid. Try asking about Madrid by itself."
+- success "Honest about stopping, useful about what it found. That message is part of the limit." next="Next: logs you can query →"
 :::
 
 :::rabbithole

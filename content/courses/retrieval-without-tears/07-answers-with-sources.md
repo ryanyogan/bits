@@ -111,14 +111,21 @@ model. The passages and a question are in the box. Tell Claude to answer
 cover something. The question asks two things, and the passages only answer
 one.
 
-:::prompt{id="cite-the-passages" xp=40}
+:::prompt{id="cite-the-passages" xp=40 coach}
 Answer from numbered passages, cite them, and admit the gap
-
+- goal "Get an answer built only from the numbered passages, with a citation on each claim, that says plainly which part of the question they don't cover"
 - placeholder "…passages… Answer using only the passages. Cite each claim like [1]. If they don't cover something, say so."
 - draft "[1] E-bike batteries have a 2-year warranty from delivery, covering capacity below 70%. [2] Claims must be filed within 30 days of noticing the fault. [3] Frames have a lifetime warranty for the first owner. Question: My battery is 18 months old and fading. Can I claim, and do you ship replacements to Canada?"
-- check "Limits Claude to the passages"   /\bonly\b|based on|according to|nothing else|solely|strictly/i
-- check "Asks for citations"              /\bcite|citation|\bsources?\b|reference/i
-- check "Says what to do when it's missing" /don.t (know|cover|say|mention)|not (in|covered|mentioned)|isn.t (in|covered)|say so|admit|can.t find|cannot find/i
+- check "Includes the passages" /\[1\]/
+- check "Asks for citations" /\bcite|citation|\bsources?\b|reference/i
+- expect "Cites the passages by number" cites 1-3
+- rubric "Says the passages don't cover shipping to Canada" must evidence
+- rubric "Each claim cites the passage it comes from" must
+- rubric "Answers whether the battery can be claimed" should
+- hint "Claude can only cite what it can point to. Are the passages numbered in your prompt, and have you asked for those numbers?"
+- hint "Half of the question isn't in the passages. What should Claude do with that half?"
+- hint "Limit Claude to the passages, ask for a [n] after each claim, and say what to do when the passages don't answer something."
+- reference "[1] E-bike batteries have a 2-year warranty from delivery, covering capacity below 70%.\n[2] Claims must be filed within 30 days of noticing the fault.\n[3] Frames have a lifetime warranty for the first owner.\n\nQuestion: My battery is 18 months old and fading. Can I claim, and do you ship replacements to Canada?\n\nAnswer using only the passages above. Put the passage number in brackets, like [1], after each claim. If the passages don't cover part of the question, say so plainly."
 - run temperature=[1.0]
 - example T=1.0 "Yes, you can likely claim: batteries have a 2-year warranty from delivery and cover capacity below 70% [1], so file within 30 days of noticing the fault [2]. The passages don't say whether you ship replacements to Canada."
 - example T=1.0 "Your 18-month-old battery is within the 2-year warranty if its capacity is below 70% [1]. Claim within 30 days of noticing it [2]. Shipping to Canada isn't covered in these passages, so I can't answer that part."

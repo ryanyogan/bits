@@ -96,14 +96,21 @@ No test questions yet? Claude can draft them. Your turn: ask for **five
 questions** a customer might ask that this passage answers, **phrased the way
 customers talk**, not copied from the passage.
 
-:::prompt{id="draft-test-questions" xp=20}
+:::prompt{id="draft-test-questions" xp=20 coach}
 Get Claude to draft retrieval test questions
-
+- goal "Get Claude to write a handful of questions a real customer might ask that this passage answers, in their words rather than the passage's"
 - placeholder "Here is a passage: … Write 5 questions a customer might ask that it answers. Use … words, not the passage's."
 - draft "Passage: E-bike batteries have a 2-year warranty from delivery, covering capacity below 70%. Claims must be filed within 30 days of noticing the fault."
-- check "Asks for questions"            /questions/i
-- check "Sets how many"                 /\b(3|4|5|6|three|four|five|six)\b/i
-- check "Asks for customers' own words" /own words|customer|everyday|casual|natural|plain|paraphras|not cop|don.t cop|different words|avoid/i
+- check "Asks for questions" /questions/i
+- check "Sets how many" /\b(3|4|5|6|three|four|five|six)\b/i
+- expect "Writes questions" match /\?/
+- rubric "Questions sound like a customer, not reworded lines from the passage" must
+- rubric "The passage answers every question" must
+- rubric "Questions cover different facts: how long, what's covered, and the deadline" should
+- hint "A test that reuses the passage's own words is too easy for search. Who asks these questions, and how do they talk?"
+- hint "Ask for questions the passage answers, and say how many. A question it can't answer tests something else."
+- hint "Give the passage, ask for five questions a customer might ask that it answers, and say to use everyday words, not the passage's."
+- reference "Here is a passage from our warranty guide:\n\"E-bike batteries have a 2-year warranty from delivery, covering capacity below 70%. Claims must be filed within 30 days of noticing the fault.\"\n\nWrite 5 questions a customer might ask that this passage answers. Use the words a customer would use, not the passage's wording, and cover different facts in it. One question per line."
 - run temperature=[1.0]
 - example T=1.0 "1. My e-bike battery doesn't hold a charge like it used to. Is that covered?\n2. How long is the battery guaranteed for?\n3. I bought my bike last year and the range has dropped a lot. Can I get a new battery?\n4. Is there a deadline to report a battery problem?\n5. What counts as a faulty battery?"
 - success "Real-sounding questions make an honest test." next="Next: the checkpoint →"
