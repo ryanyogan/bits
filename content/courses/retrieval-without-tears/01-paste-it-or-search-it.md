@@ -80,31 +80,26 @@ tool when they need something. Claude Code finds files with `grep` and
 time. This course builds the classic pipeline, because it powers most "ask
 my docs" features and every idea in it carries over to search tools.
 
-:::quiz{id="when-retrieval" xp=10}
-Which of these most needs a retrieval pipeline?
-
-- [ ] A bot that answers from a 10-page refund policy
-  Not quite. Ten pages fit in the prompt with room to spare.
-- [x] Search across 3 years of an engineering team's tickets and docs
-  Right. That's far too much to paste, and it changes every day.
-- [ ] A one-off summary of a 200-page report
-  Not quite. Paste it once. 200 pages fit in a 1M-token window, and there's nothing to search.
-:::
-
 Your turn: the "just paste it" approach. The policy is already in the box.
 Add a question, and tell Claude to answer **only from the policy**, and to
 say so if the policy doesn't cover it. Try a question it can't answer, like
 one about shipping.
 
-:::prompt{id="just-paste-it" xp=20}
+:::prompt{id="just-paste-it" xp=20 coach}
 Answer a question from a pasted policy, and nothing else
-
+- goal "Paste the returns policy, ask a customer's question, and get an answer that comes only from the policy, or says the policy doesn't cover it"
 - placeholder "…policy text… Using only the policy above, answer: …? If the policy doesn't say, …"
 - draft "Orbit Bikes returns policy: You can return any bike within 30 days of delivery for a full refund, if it has under 50 km on the odometer. E-bike batteries have a separate 2-year warranty. Refunds go back to the original payment method within 5 business days."
-- check "Includes the policy"               /returns policy/i
-- check "Asks a question"                   /\?/
-- check "Limits Claude to the policy"       /\bonly\b|based on|according to|from the policy|using the policy/i
-- check "Says what to do if it isn't there" /don.t know|not in|isn.t in|doesn.t say|doesn.t cover|not covered|say so|tell me/i
+- check "Includes the policy" /returns policy/i
+- check "Asks a question" /\?/
+- expect "Keeps the answer short" words<=120
+- rubric "Every claim in the answer comes from the policy text" must
+- rubric "Says plainly when the policy doesn't cover the question, instead of guessing" must
+- rubric "Answers the question that was asked" should
+- hint "Claude will happily fill gaps from general knowledge. Does your prompt tell it where its answer may come from?"
+- hint "Some questions aren't in the policy at all. What should Claude do then? Say so in the prompt."
+- hint "Policy first, then one line limiting Claude to it, then the question, then what to say if the policy doesn't answer it."
+- reference "Orbit Bikes returns policy: You can return any bike within 30 days of delivery for a full refund, if it has under 50 km on the odometer. E-bike batteries have a separate 2-year warranty. Refunds go back to the original payment method within 5 business days.\n\nUsing only the policy above, answer: I got my bike 40 days ago and have ridden 20 km. Can I return it?\nIf the policy doesn't say, tell me it doesn't instead of guessing."
 - run temperature=[1.0]
 - example T=1.0 "No. The policy only allows returns within 30 days of delivery, so 40 days is outside the window."
 - example T=1.0 "The policy doesn't say anything about shipping times, so I can't answer that from it."

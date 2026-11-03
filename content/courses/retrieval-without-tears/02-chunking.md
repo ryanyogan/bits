@@ -100,17 +100,6 @@ A chunk reads: “Claims must be filed within 30 days of noticing the fault.” 
   Not quite. Both embeddings and keyword search handle “30 days” fine.
 :::
 
-:::quiz{id="chunk-size" xp=20}
-Your chunks are whole 20-page chapters. What's the most likely symptom?
-
-- [ ] Search finds nothing at all
-  Not quite. Big chunks still match. They just match vaguely.
-- [x] The right chapter comes back, but Claude gets far more text than it needs
-  Right. A big chunk dilutes the match and floods the prompt. Smaller chunks give sharper hits and leaner prompts.
-- [ ] Claude refuses to read chunks that long
-  Not quite. 20 pages fits in the context window. The cost is precision, not a hard limit.
-:::
-
 :::rabbithole
 - read "Introducing Contextual Retrieval" by="Anthropic" url="https://www.anthropic.com/engineering/contextual-retrieval"
 - read "Retrieval augmented generation (cookbook)" by="Anthropic" deep url="https://platform.claude.com/cookbook/capabilities-retrieval-augmented-generation-guide"
