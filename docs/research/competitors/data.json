@@ -1,0 +1,415 @@
+{
+  "asOf": "2026-11-03",
+  "scale": {
+    "topics": "0 = not covered, 1 = mentioned, 2 = taught with an example, 3 = taught in depth with practice",
+    "handsOn": "0 = watch/read only, 1 = runnable snippets, 2 = guided exercises or notebooks, 3 = learner builds and deploys a real project"
+  },
+  "competitors": [
+    {
+      "name": "bits",
+      "url": "https://bits.yogan.dev",
+      "price": "free",
+      "priceNote": "No paid tier. Live Claude runs are capped per day; no API key needed.",
+      "format": "Interactive text lessons (5-8 min), in-browser live Claude sandbox, coached prompt exercises graded by Claude, quick checks, toys, two reading depths, XP/badges, certificates",
+      "hoursApprox": 7.5,
+      "topics": { "llmBasics": 3, "prompting": 3, "context": 3, "tools": 2, "agents": 2, "rag": 2, "deployEdge": 2, "mcp": 1, "frontendWithAgents": 0 },
+      "handsOn": 2,
+      "builds": "Prompts graded live in the browser; code courses show a weather agent and a Workers deploy, but the learner's own project is not built or checked by the app",
+      "strengths": [
+        "Only free product where a learner's prompt is run on Claude and graded by Claude with no key, notebook or setup",
+        "Strictly one idea per 5-8 minute lesson; phone-friendly",
+        "Two reading depths in one lesson (New to this / Engineer)",
+        "Claude-first and current (Haiku 5.5 / Sonnet 5.5 era), TypeScript and Cloudflare edge focus"
+      ],
+      "gaps": [
+        "Eight courses (about 70 lessons) against catalogues of dozens",
+        "MCP covered only as 'use a server' inside the tools course",
+        "No evals course, no coding-agent workflow course, no frontend course",
+        "No deployed learner project that the app verifies",
+        "Little video, no community, no instructor brand"
+      ],
+      "updated": "2026-11"
+    },
+    {
+      "name": "Claude Academy / Anthropic courses (Skilljar)",
+      "url": "https://academy.claude.com/",
+      "price": "free",
+      "priceNote": "Free with a Skilljar account; completion certificates. Mirrors anthropic.skilljar.com.",
+      "format": "Self-paced video + text courses with quizzes; recurring live webinars",
+      "hoursApprox": 20,
+      "topics": { "llmBasics": 2, "prompting": 3, "context": 2, "tools": 3, "agents": 2, "rag": 2, "deployEdge": 0, "mcp": 3, "frontendWithAgents": 1 },
+      "handsOn": 2,
+      "builds": "Python exercises against the Claude API; MCP servers and clients in Python; no deployment target",
+      "strengths": [
+        "The primary source: Building with the Claude API is 67 lessons / 8 quizzes / about 9 h",
+        "MCP intro (10 lessons, Python) plus MCP Advanced (sampling, notifications, transports)",
+        "New courses on agent skills, subagents, Claude Code 101 / in Action, Claude Platform 101 (13 lessons, 1.5 h)",
+        "Free certificates; strong brand"
+      ],
+      "gaps": [
+        "Python-first; no TypeScript or edge deployment track",
+        "Long courses (hours), not bite-sized",
+        "Learner work is not run or graded live in the page",
+        "Product-centric: teaches Claude features more than portable engineering judgement"
+      ],
+      "updated": "2026 (courses refreshed through 2026; no per-course dates shown)"
+    },
+    {
+      "name": "anthropics/courses (GitHub notebooks)",
+      "url": "https://github.com/anthropics/courses",
+      "price": "free",
+      "priceNote": "Open source; needs your own API key",
+      "format": "Jupyter notebooks",
+      "hoursApprox": 10,
+      "topics": { "llmBasics": 1, "prompting": 3, "context": 1, "tools": 2, "agents": 0, "rag": 0, "deployEdge": 0, "mcp": 0, "frontendWithAgents": 0 },
+      "handsOn": 2,
+      "builds": "Notebook exercises (API fundamentals, prompt tutorial, real-world prompting, prompt evals, tool use)",
+      "strengths": [
+        "Best-known free prompt-engineering tutorial (23k stars)",
+        "Includes a prompt evaluations course"
+      ],
+      "gaps": [
+        "Stale: built on Claude 3 Haiku; most folders last touched 2024, newest commit Nov 2025",
+        "Needs a key and a local Python setup",
+        "Superseded by Claude Academy for most topics"
+      ],
+      "updated": "2025-11"
+    },
+    {
+      "name": "DeepLearning.AI short courses",
+      "url": "https://www.deeplearning.ai/courses",
+      "price": "freemium",
+      "priceNote": "Course videos free; Pro adds labs and certificates (third-party listing: $25/mo annual, $30/mo monthly)",
+      "format": "Short video courses (1-2.5 h) with hosted notebooks",
+      "hoursApprox": 2,
+      "topics": { "llmBasics": 2, "prompting": 2, "context": 1, "tools": 2, "agents": 3, "rag": 3, "deployEdge": 1, "mcp": 2, "frontendWithAgents": 1 },
+      "handsOn": 1,
+      "builds": "Notebook demos; the MCP course builds and deploys a remote Python MCP server",
+      "strengths": [
+        "Huge catalogue (about 120 courses), Andrew Ng brand",
+        "Anthropic co-produced MCP course (1h58m, 11 videos, updated Aug 2026) and Agent Skills course (2h19m, Jul 2026)",
+        "Courses on evals, spec-driven development with coding agents, Claude Code"
+      ],
+      "gaps": [
+        "Many courses are vendor showcases (frameworks, startups)",
+        "Watch-heavy; hands-on labs moved behind Pro",
+        "Python only; no edge deployment",
+        "Uneven freshness across the catalogue"
+      ],
+      "updated": "2026-08"
+    },
+    {
+      "name": "Hugging Face Agents Course",
+      "url": "https://huggingface.co/learn/agents-course",
+      "price": "free",
+      "priceNote": "Free certificates (fundamentals: Unit 1 quiz at 80%)",
+      "format": "Text units + notebooks + Spaces, community Discord",
+      "hoursApprox": 20,
+      "topics": { "llmBasics": 1, "prompting": 1, "context": 1, "tools": 2, "agents": 3, "rag": 2, "deployEdge": 1, "mcp": 1, "frontendWithAgents": 0 },
+      "handsOn": 2,
+      "builds": "Agents with smolagents, LlamaIndex and LangGraph; a final challenge agent on a Space",
+      "strengths": ["Free, certified, very large community", "Framework comparison"],
+      "gaps": [
+        "In low-maintenance mode; navigation stops at Unit 4, leaderboard broken (per a 2026 review)",
+        "Python and open-model centric; frameworks over fundamentals"
+      ],
+      "updated": "2025 (low maintenance in 2026)"
+    },
+    {
+      "name": "Hugging Face MCP Course",
+      "url": "https://huggingface.co/learn/mcp-course",
+      "price": "free",
+      "priceNote": "Two free certificates",
+      "format": "Text units + code, built with Anthropic, Gradio, Continue",
+      "hoursApprox": 12,
+      "topics": { "llmBasics": 0, "prompting": 0, "context": 1, "tools": 2, "agents": 1, "rag": 0, "deployEdge": 1, "mcp": 3, "frontendWithAgents": 0 },
+      "handsOn": 2,
+      "builds": "An end-to-end MCP app, then a deployed one on the Hugging Face ecosystem",
+      "strengths": ["Python or TypeScript", "Deployed use case unit", "Free certificate"],
+      "gaps": ["Gradio/HF Spaces deployment, not a general web stack", "Unlisted; pace 3-4 h/week"],
+      "updated": "2025-2026"
+    },
+    {
+      "name": "Hugging Face Context Course",
+      "url": "https://huggingface.co/learn/context-course",
+      "price": "free",
+      "priceNote": "Free",
+      "format": "Text units, works with Claude Code, Codex or OpenCode",
+      "hoursApprox": 8,
+      "topics": { "llmBasics": 0, "prompting": 1, "context": 2, "tools": 1, "agents": 2, "rag": 0, "deployEdge": 0, "mcp": 2, "frontendWithAgents": 2 },
+      "handsOn": 2,
+      "builds": "Skills, MCP wiring, plugins, subagents, hooks, and a minimal agent loop (nano harness)",
+      "strengths": ["Agent-neutral context engineering for coding agents", "Covers the whole skills-MCP-plugins-hooks stack"],
+      "gaps": ["Young (about 116 stars)", "No product shipped at the end"],
+      "updated": "2025-2026"
+    },
+    {
+      "name": "AI Hero (Matt Pocock)",
+      "url": "https://www.aihero.dev",
+      "price": "freemium",
+      "priceNote": "Large free library; cohorts such as AI Coding for Real Engineers at $995 (2 weeks)",
+      "format": "Articles, short videos, glossary, skills catalogue; paid workshops and live cohorts",
+      "hoursApprox": 15,
+      "topics": { "llmBasics": 1, "prompting": 2, "context": 3, "tools": 2, "agents": 2, "rag": 1, "deployEdge": 0, "mcp": 2, "frontendWithAgents": 3 },
+      "handsOn": 1,
+      "builds": "Paid workshop builds a full-stack course platform with coding agents (React Router, SQLite, Drizzle)",
+      "strengths": [
+        "Best teacher of coding-agent workflow (AGENTS.md, skills, hooks, TDD, Ralph loops)",
+        "TypeScript-native, strong personal brand",
+        "AI Coding Dictionary: crisp short definitions"
+      ],
+      "gaps": [
+        "Older free API posts (2024-25) use dated AI SDK APIs and models",
+        "Hands-on depth is behind the paywall",
+        "No deployment or edge content"
+      ],
+      "updated": "2026-10"
+    },
+    {
+      "name": "Cloudflare Agents docs, tutorials and Labs",
+      "url": "https://developers.cloudflare.com/agents/",
+      "price": "free",
+      "priceNote": "Free docs; building needs a Cloudflare account (free tier) and a model key or Workers AI",
+      "format": "Reference docs, step-by-step guides, a 40-min Labs workshop (labs.cloudflare.dev/agents), a Durable Objects learning path, YouTube",
+      "hoursApprox": 6,
+      "topics": { "llmBasics": 0, "prompting": 0, "context": 0, "tools": 2, "agents": 3, "rag": 2, "deployEdge": 3, "mcp": 3, "frontendWithAgents": 1 },
+      "handsOn": 3,
+      "builds": "npm create cloudflare to wrangler deploy: durable agents, remote MCP servers with OAuth, a RAG app on Workers AI + Vectorize + D1",
+      "strengths": [
+        "Primary source for Agents SDK, Durable Objects, Vectorize, remote MCP (guide updated Oct 27, 2026)",
+        "Every guide ends in a real deploy",
+        "Cloudflare Skills plugin and docs MCP server for coding agents"
+      ],
+      "gaps": [
+        "Reference, not a course: no sequence from zero, no checks, no grading",
+        "Fast churn: the quick start was rewritten around a Pi harness and Workers AI (Oct 29, 2026); McpAgent is deprecated in favour of createMcpHandler",
+        "Examples default to Workers AI or OpenAI keys, not Claude",
+        "Labs workshop is shallow (run the starter, then clone the repo)"
+      ],
+      "updated": "2026-10"
+    },
+    {
+      "name": "Microsoft AI Agents for Beginners",
+      "url": "https://github.com/microsoft/ai-agents-for-beginners",
+      "price": "free",
+      "priceNote": "Open source; uses GitHub Models / Azure",
+      "format": "18 lessons as README + notebooks; videos for lessons 1-13; translated widely",
+      "hoursApprox": 18,
+      "topics": { "llmBasics": 1, "prompting": 1, "context": 2, "tools": 2, "agents": 3, "rag": 2, "deployEdge": 1, "mcp": 2, "frontendWithAgents": 0 },
+      "handsOn": 2,
+      "builds": "Notebook agents on Microsoft Agent Framework; deploy lesson targets Microsoft Foundry",
+      "strengths": ["Broad pattern coverage (planning, multi-agent, metacognition, memory, security)", "78.7k stars, very active"],
+      "gaps": ["Azure and Microsoft-framework centric", "Notebook-only; no web product built"],
+      "updated": "2026-11"
+    },
+    {
+      "name": "Microsoft Generative AI for Beginners",
+      "url": "https://microsoft.github.io/generative-ai-for-beginners/",
+      "price": "free",
+      "priceNote": "Open source",
+      "format": "21 lessons (v3), README + notebooks + some videos",
+      "hoursApprox": 21,
+      "topics": { "llmBasics": 2, "prompting": 2, "context": 1, "tools": 1, "agents": 1, "rag": 2, "deployEdge": 0, "mcp": 0, "frontendWithAgents": 0 },
+      "handsOn": 2,
+      "builds": "Small apps per lesson (chat, search, image) on Azure OpenAI and other providers",
+      "strengths": ["Gentle start, many languages", "Huge reach"],
+      "gaps": ["Broad and dated in places", "Azure-first"],
+      "updated": "2026"
+    },
+    {
+      "name": "Microsoft MCP for Beginners",
+      "url": "https://github.com/microsoft/mcp-for-beginners",
+      "price": "free",
+      "priceNote": "Open source",
+      "format": "Modules with code in C#, Java, JavaScript, Python, Rust, TypeScript",
+      "hoursApprox": 15,
+      "topics": { "llmBasics": 0, "prompting": 0, "context": 1, "tools": 2, "agents": 1, "rag": 0, "deployEdge": 1, "mcp": 3, "frontendWithAgents": 0 },
+      "handsOn": 2,
+      "builds": "MCP servers and clients; advanced modules on OAuth2, Entra ID, scaling, transports",
+      "strengths": ["Six languages", "Security and auth depth"],
+      "gaps": ["Azure/Entra flavoured", "Long, repo-based"],
+      "updated": "2026"
+    },
+    {
+      "name": "Kaggle x Google 5-Day AI Agents Intensive",
+      "url": "https://www.kaggle.com/learn-guide/5-day-agents",
+      "price": "free",
+      "priceNote": "Free; live editions with capstone prizes; self-paced guide after",
+      "format": "Whitepapers + podcast + Kaggle notebook codelabs + daily livestreams",
+      "hoursApprox": 15,
+      "topics": { "llmBasics": 1, "prompting": 1, "context": 2, "tools": 2, "agents": 3, "rag": 1, "deployEdge": 2, "mcp": 2, "frontendWithAgents": 0 },
+      "handsOn": 2,
+      "builds": "ADK agents on Gemini: tools, MCP, sessions and memory, observability and evals, A2A; optional deploy to Vertex AI Agent Engine",
+      "strengths": ["Massive reach (1.5M learners first edition; 353k in the June 2026 vibe-coding edition)", "Covers evals and observability", "Event energy and certificates"],
+      "gaps": ["Gemini/ADK/Google Cloud lock-in", "Time-boxed bursts; whitepapers are long"],
+      "updated": "2026-06"
+    },
+    {
+      "name": "LangChain Academy",
+      "url": "https://academy.langchain.com/",
+      "price": "free",
+      "priceNote": "All course content free",
+      "format": "Video + notebooks",
+      "hoursApprox": 10,
+      "topics": { "llmBasics": 0, "prompting": 1, "context": 2, "tools": 2, "agents": 3, "rag": 1, "deployEdge": 1, "mcp": 1, "frontendWithAgents": 0 },
+      "handsOn": 2,
+      "builds": "LangGraph agents, Deep Agents, LangSmith evals and deployment",
+      "strengths": ["Deep on long-running agents and observability"],
+      "gaps": ["Framework and LangSmith lock-in", "Python-first"],
+      "updated": "2026"
+    },
+    {
+      "name": "Scrimba AI Engineer Path",
+      "url": "https://scrimba.com/ai-engineer-path-c02v",
+      "price": "paid",
+      "priceNote": "Scrimba Pro, about $24.50/mo billed annually (Scrimba's own 2026 comparison)",
+      "format": "Interactive screencasts ('scrims') where you edit the instructor's code in the browser",
+      "hoursApprox": 13.4,
+      "topics": { "llmBasics": 2, "prompting": 2, "context": 2, "tools": 2, "agents": 2, "rag": 2, "deployEdge": 2, "mcp": 2, "frontendWithAgents": 1 },
+      "handsOn": 2,
+      "builds": "JavaScript AI apps across modules: intro, deployment, open-source models, embeddings, agents, context engineering, Vercel AI SDK, MCP, multimodality",
+      "strengths": ["Closest format rival: interactive in the browser", "JavaScript audience, same as ours"],
+      "gaps": ["Paid", "OpenAI-first (OpenAI API, Assistants API)", "Exercises are not graded by a model"],
+      "updated": "2026"
+    },
+    {
+      "name": "Frontend Masters (now Master.dev)",
+      "url": "https://master.dev/topics/artificial-intelligence/",
+      "price": "paid",
+      "priceNote": "Subscription (price not on the page; from memory about $39/mo or $390/yr, unverified)",
+      "format": "Long workshop videos with repos (2-9 h each)",
+      "hoursApprox": 45,
+      "topics": { "llmBasics": 2, "prompting": 2, "context": 2, "tools": 2, "agents": 3, "rag": 2, "deployEdge": 1, "mcp": 2, "frontendWithAgents": 2 },
+      "handsOn": 2,
+      "builds": "Agents from scratch, a durable background incident-response agent (Inngest + OpenAI + Neon, Oct 2026), MCP intro (Sep 2025), Claude Code and harness engineering",
+      "strengths": ["Senior instructors, fresh 2026 releases", "Real codebases"],
+      "gaps": ["Paid and long", "No Cloudflare; durable agents taught on Inngest"],
+      "updated": "2026-10"
+    },
+    {
+      "name": "egghead.io",
+      "url": "https://egghead.io/q/claude-code",
+      "price": "freemium",
+      "priceNote": "Some free courses (e.g. Claude Code skills); membership for the rest (price not checked)",
+      "format": "Short screencast lessons, newsletter, paid live workshops",
+      "hoursApprox": 3,
+      "topics": { "llmBasics": 0, "prompting": 1, "context": 1, "tools": 1, "agents": 1, "rag": 0, "deployEdge": 0, "mcp": 1, "frontendWithAgents": 2 },
+      "handsOn": 1,
+      "builds": "Claude Code skills and workflows",
+      "strengths": ["Short lessons, close to our length", "Quick to cover new Claude Code features"],
+      "gaps": ["Thin on API engineering", "Scattered, no path"],
+      "updated": "2026"
+    },
+    {
+      "name": "Maven cohorts (e.g. AI Evals for Engineers & PMs; Agentic AI Bootcamp)",
+      "url": "https://maven.com/parlance-labs/evals",
+      "price": "paid",
+      "priceNote": "AI Evals $4,400 live cohort; Agentic AI Engineering Bootcamp $999",
+      "format": "Live cohorts, office hours, projects",
+      "hoursApprox": 30,
+      "topics": { "llmBasics": 1, "prompting": 2, "context": 2, "tools": 2, "agents": 3, "rag": 2, "deployEdge": 1, "mcp": 1, "frontendWithAgents": 0 },
+      "handsOn": 3,
+      "builds": "Eval pipelines and production agents on the learner's own work",
+      "strengths": ["Evals depth nobody free matches (Hamel Husain, Shreya Shankar)", "Live feedback"],
+      "gaps": ["Expensive", "Fixed schedules; not on the go"],
+      "updated": "2026-10"
+    },
+    {
+      "name": "freeCodeCamp",
+      "url": "https://www.freecodecamp.org/news/",
+      "price": "free",
+      "priceNote": "Free (YouTube + handbooks)",
+      "format": "Multi-hour YouTube courses and long written handbooks",
+      "hoursApprox": 10,
+      "topics": { "llmBasics": 2, "prompting": 1, "context": 1, "tools": 2, "agents": 2, "rag": 2, "deployEdge": 2, "mcp": 2, "frontendWithAgents": 0 },
+      "handsOn": 2,
+      "builds": "e.g. a production RAG chatbot on Workers + Vectorize + Workers AI (handbook), LangGraph agents, MCP security",
+      "strengths": ["Free and huge reach", "Already has a Cloudflare Workers RAG handbook"],
+      "gaps": ["Quality and freshness vary by guest author", "Long-form, not bite-sized"],
+      "updated": "2026"
+    },
+    {
+      "name": "OpenAI Academy",
+      "url": "https://academy.openai.com/pages/courses",
+      "price": "free",
+      "priceNote": "Free (from memory; pricing not stated on the courses page)",
+      "format": "Courses + livestreams (Codex bootcamps)",
+      "hoursApprox": 10,
+      "topics": { "llmBasics": 1, "prompting": 2, "context": 1, "tools": 2, "agents": 2, "rag": 2, "deployEdge": 0, "mcp": 1, "frontendWithAgents": 2 },
+      "handsOn": 1,
+      "builds": "Build with AI path: scope, evaluate, agentic systems, RAG, performance, Codex",
+      "strengths": ["New developer path (Nov 2026) includes evals", "Codex workflow coverage"],
+      "gaps": ["OpenAI-only", "Enterprise framing"],
+      "updated": "2026-11"
+    },
+    {
+      "name": "Brilliant (How LLMs Work)",
+      "url": "https://brilliant.org/",
+      "price": "paid",
+      "priceNote": "Brilliant Premium subscription (price not checked)",
+      "format": "Interactive puzzle-style lessons on a phone",
+      "hoursApprox": 2,
+      "topics": { "llmBasics": 3, "prompting": 1, "context": 0, "tools": 0, "agents": 0, "rag": 0, "deployEdge": 0, "mcp": 0, "frontendWithAgents": 0 },
+      "handsOn": 1,
+      "builds": "Nothing; interactive intuition only (seven lessons, per a third-party listing)",
+      "strengths": ["Best-in-class mobile interactivity and polish"],
+      "gaps": ["No engineering; stops at intuition", "Paid"],
+      "updated": "unknown"
+    },
+    {
+      "name": "Free YouTube benchmarks (Karpathy, 3Blue1Brown, Theo)",
+      "url": "https://karpathy.ai/",
+      "price": "free",
+      "priceNote": "Free",
+      "format": "Long-form video",
+      "hoursApprox": 20,
+      "topics": { "llmBasics": 3, "prompting": 1, "context": 1, "tools": 1, "agents": 1, "rag": 0, "deployEdge": 0, "mcp": 0, "frontendWithAgents": 1 },
+      "handsOn": 1,
+      "builds": "Karpathy's Zero to Hero builds models from scratch (training, not app engineering); 3B1B is visual intuition; Theo is news and opinion",
+      "strengths": ["The clearest explanations of how LLMs work", "Trusted names our lessons already cite"],
+      "gaps": ["Not structured as a path to building apps", "No exercises for app engineering"],
+      "updated": "ongoing (details from memory, not re-checked)"
+    }
+  ],
+  "bitsWins": [
+    "Live, graded practice with zero setup: the learner's prompt runs on Claude and a Claude judge marks it, free and with no API key. Anthropic, DLAI, HF, Microsoft and Kaggle all need a key, a notebook or an account setup; Scrimba is interactive but paid and ungraded.",
+    "Lesson size: 5-8 minutes, one idea. Every major free rival runs 1-20 hours per course.",
+    "Two reading depths in one lesson; no competitor adapts the text to the reader.",
+    "Claude-first and current; the official free alternatives in Python lag on TypeScript and the edge.",
+    "TypeScript + Cloudflare edge as the deployment story; only Cloudflare's own docs and one freeCodeCamp handbook cover it, neither as a course."
+  ],
+  "mustImprove": [
+    "Breadth and brand: Anthropic now gives away 20+ hours of official Claude courses with certificates. We cannot out-official them, so every lesson must be shorter, more hands-on and better graded.",
+    "MCP: we only teach using a server. Six free courses teach building one; we need a remote, TypeScript, Workers-hosted MCP course on the current SDK (createMcpHandler, Streamable HTTP, OAuth).",
+    "Evals: Kaggle, OpenAI Academy, DLAI, Maven ($4,400) and Anthropic all teach evaluation. We have no evals course.",
+    "Proof of build: Cloudflare guides, the HF MCP course and Kaggle end in a deployed thing. Our code courses end in reading about a deploy; nothing checks the learner's own Worker.",
+    "Freshness discipline: Cloudflare rewrote its Agents quick start on Oct 29, 2026 and deprecated McpAgent. Code lessons need pinned versions, a verified-on date and a CI job that re-runs the tutorial.",
+    "Coding-agent workflow (skills, subagents, hooks, AGENTS.md) is now taught free by Anthropic, DLAI, HF Context Course and AI Hero. Our frontend-with-agents course must ship a graded real UI, not repeat skills theory.",
+    "Video and community: rivals have video, Discord and live events. We have little video and no community."
+  ],
+  "complements": [
+    "Claude Academy: Building with the Claude API, Introduction to MCP, MCP Advanced Topics, Introduction to agent skills, Introduction to subagents (link as the long-form follow-up)",
+    "Anthropic engineering posts: Building effective agents, Writing effective tools for agents, Effective context engineering, Contextual retrieval",
+    "DeepLearning.AI: MCP: Build Rich-Context AI Apps with Anthropic (Python counterpart to our TS course); Agent Skills with Anthropic",
+    "Hugging Face Context Course (agent-neutral skills/plugins/hooks) and MCP Course",
+    "Cloudflare docs: Build a Remote MCP server, Agents SDK reference, Durable Objects learning path, the RAG tutorial",
+    "Karpathy (Intro to LLMs, Deep Dive into LLMs), 3Blue1Brown transformer chapters for what-is-an-llm",
+    "AI Hero AI Coding Dictionary and AGENTS.md guide for the coding-agent material",
+    "Maven AI Evals (Hamel Husain, Shreya Shankar) and Kaggle's Agent Quality whitepaper as the deep end of evals",
+    "Microsoft MCP for Beginners for MCP in other languages"
+  ],
+  "recommendations": [
+    { "title": "Make the Cloudflare build one repo with checkpoints and a grader", "why": "No free course takes a learner from npm create to a deployed Claude agent and then checks it. Give each lesson a git tag and a small check (a CLI or an endpoint bits calls on the learner's workers.dev URL) that marks the step done. This is the one thing Cloudflare's docs, Scrimba and Frontend Masters don't do.", "effort": "L" },
+    { "title": "Pin versions and run the tutorial in CI weekly", "why": "Cloudflare rewrote the Agents quick start on Oct 29, 2026 and deprecated McpAgent. Every code lesson should state package versions and a verified-on date, and a scheduled job should scaffold the tutorial against the latest agents and wrangler releases and fail loudly when it breaks.", "effort": "M" },
+    { "title": "Audit ship-an-agent-to-the-edge against the current Agents SDK before building on it", "why": "It uses Agent, getAgentByName and this.sql. The Agent class still exists, but the docs now explain it through a Lifecycle and .use() capabilities. Check the details and the intro framing so the new tutorials don't start from a stale base.", "effort": "S" },
+    { "title": "MCP course: remote-first, TypeScript, on Workers", "why": "The field is crowded but local and Python-heavy (Anthropic, DLAI, HF). Teach createMcpHandler, Streamable HTTP, OAuth, testing with MCP Inspector and Claude, and MCP security (tool poisoning, confused deputy, scoped tokens). Grade it by connecting to the learner's deployed server and calling a tool.", "effort": "L" },
+    { "title": "Claude by default, through AI Gateway, with one Workers AI swap lesson", "why": "Cloudflare's examples default to Workers AI or OpenAI. A Claude-first Cloudflare path is our niche. One lesson showing the provider swap keeps it honest and cheap for learners.", "effort": "S" },
+    { "title": "Add a short evals course on the coach and judge we already run", "why": "Every serious rival teaches evals and Maven charges $4,400 for it. We already have a rubric judge in production: let learners write test cases and a rubric, then see their judge agree or disagree with ours.", "effort": "M" },
+    { "title": "Frontend-with-agents: ship a real UI, graded on the deployed page", "why": "Skills and subagents theory is free from Anthropic, DLAI and HF. Our angle: build and deploy a front end with Claude Code plus a skill, then grade the live page (axe, a screenshot rubric, a test). Link Anthropic's skills and subagents courses for the theory.", "effort": "L" },
+    { "title": "Lead with 'try a graded prompt in 30 seconds, no key'", "why": "It's the one thing no free rival offers. Put a live exercise on the landing page and on course pages for signed-out visitors, so the difference shows before anyone reads a syllabus.", "effort": "S" },
+    { "title": "Mark phone lessons and desk lessons", "why": "On-the-go is our audience, but building on Cloudflare needs a laptop. Label each lesson so a learner can do concepts and checks on a phone and the build steps at a desk, and resume the build from where the phone left off.", "effort": "S" },
+    { "title": "Certificates that link to proof of work", "why": "HF and Kaggle certificates drive huge sign-ups. Ours can be stronger: a certificate that links to the learner's deployed agent or MCP server, checked by bits.", "effort": "M" },
+    { "title": "A coding-agent workflow mini-course", "why": "AI Hero, HF and Anthropic show strong demand (AGENTS.md, hooks, plan, test, review). Five lessons with graded exercises fill our biggest topic gap and lead into the frontend course.", "effort": "M" },
+    { "title": "Curate 'Down the rabbit hole' from this list", "why": "Link the long-form official courses (Claude Academy, DLAI MCP, Cloudflare docs, Karpathy) instead of rewriting them. It makes bits the fast front door and costs little.", "effort": "S" }
+  ]
+}
