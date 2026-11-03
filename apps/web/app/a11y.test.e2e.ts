@@ -438,6 +438,23 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await expectClean(page, 'certificate')
   })
 
+  it('course page: started and finished (decision 066)', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    await signInBrowser(page, uniqueEmail('course-states'))
+    // The save is a plain form POST (decision 016); the page's own cookies ride along.
+    let complete = (lesson: string) =>
+      page.request.post(routes.courses.lesson.complete.href({ course: plainCourse.slug, lesson }), { form: {}, maxRedirects: 0 })
+    await complete(plainCourse.lessons[0]!)
+    await page.goto(routes.courses.course.index.href({ course: plainCourse.slug }))
+    await page.getByText('Your progress').first().waitFor()
+    await settled(page)
+    await expectClean(page, 'course (started)')
+    for (let lesson of plainCourse.lessons.slice(1)) await complete(lesson)
+    await page.goto(routes.courses.course.index.href({ course: plainCourse.slug }))
+    await page.getByText('Course finished').first().waitFor()
+    await expectClean(page, 'course (finished)')
+  })
+
   it('settings: fresh, email form error, pending email change, reauth needed', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     let user = await signInBrowser(page, uniqueEmail('settings'))

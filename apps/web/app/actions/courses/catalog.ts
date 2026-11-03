@@ -66,5 +66,13 @@ export function catalogHref(query: Partial<CatalogQuery>): string {
 }
 
 export function resultLabel(n: number): string {
-  return `${n} ${n === 1 ? 'course' : 'courses'} · all free`
+  return n === 0 ? 'No matches' : `${n} ${n === 1 ? 'course' : 'courses'}`
+}
+
+/** The catalog's one-line summary: "8 courses · about 7 hours in all". */
+export function catalogSummary(list: readonly { mins: number }[]): string {
+  let mins = list.reduce((sum, course) => sum + course.mins, 0)
+  let hours = Math.round(mins / 60)
+  let length = mins < 90 ? `${mins} minutes` : `about ${hours} hours`
+  return `${list.length} ${list.length === 1 ? 'course' : 'courses'} · ${length} in all`
 }

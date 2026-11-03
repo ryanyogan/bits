@@ -8,7 +8,7 @@ import { clearContentMemo, loadCatalog } from '../../content/store.ts'
 import type { CourseManifest } from '../../content/types.ts'
 import { routes } from '../../routes.ts'
 import { answerAsk, completeLesson, fetchAs, runAt, signIn, testDb } from '../../test/auth.ts'
-import { catalogHref, filterCourses as filter, parseCatalogQuery, resultLabel } from './catalog.ts'
+import { catalogHref, catalogSummary, filterCourses as filter, parseCatalogQuery, resultLabel } from './catalog.ts'
 
 let cookie: string | null = null
 // The published catalog: content/courses/, built and published by the test platform.
@@ -119,11 +119,14 @@ describe('catalog and course pages', () => {
   it('builds clean filter hrefs and result labels', () => {
     assert.equal(catalogHref({}), routes.courses.index.href())
     assert.match(catalogHref({ track: 'tools', q: 'rag' }), /track=tools&q=rag$/)
-    assert.equal(resultLabel(1), '1 course · all free')
-    assert.equal(resultLabel(8), '8 courses · all free')
+    assert.equal(resultLabel(0), 'No matches')
+    assert.equal(resultLabel(1), '1 course')
+    assert.equal(resultLabel(8), '8 courses')
+    assert.equal(catalogSummary([{ mins: 40 }]), '1 course · 40 minutes in all')
+    assert.equal(catalogSummary([{ mins: 200 }, { mins: 220 }]), '2 courses · about 7 hours in all')
   })
 
-  it('renders the catalog with every course, the write card and the continue banner', async () => {
+  it('renders the catalog with every course and the continue banner, without the write card for a learner', async () => {
     let { status, html } = await page(routes.courses.index.href())
     assert.equal(status, 200)
     assert.match(html, /<title>Courses · Bits<\/title>/)
@@ -135,7 +138,8 @@ describe('catalog and course pages', () => {
     assert.ok(html.includes(resultLabel(courses.length)), resultLabel(courses.length))
     assert.match(html, /aria-live="polite"/)
     for (let course of courses) assert.ok(html.includes(`href="/courses/${course.slug}"`), course.slug)
-    assert.match(html, /Write a course/)
+    assert.match(html, new RegExp(`${courses.length} courses · `))
+    assert.doesNotMatch(html, /Drop a folder, get a course/)
     assert.match(html, /Up next:/)
     assert.match(html, /href="\/courses\/tokens-and-temperature\/temperature"/)
   })
@@ -149,15 +153,17 @@ describe('catalog and course pages', () => {
 
   it('filters by track with the pill marked current', async () => {
     let { html } = await page(`${routes.courses.index.href()}?track=agents`)
-    assert.match(html, /2 courses · all free/)
+    assert.match(html, />2 courses</)
     assert.ok(html.includes('href="/courses/first-agent-loop"'))
+    // A filtered list is a search: no continue banner between it and the toolbar.
+    assert.doesNotMatch(html, /Up next:/)
     assert.ok(!html.includes('href="/courses/what-is-an-llm"'))
     assert.match(html, /href="\/courses\?track=agents" aria-current="true"/)
   })
 
   it('searches with q and keeps it in the form and the pill links', async () => {
     let { html } = await page(`${routes.courses.index.href()}?q=rag`)
-    assert.match(html, /1 course · all free/)
+    assert.match(html, />1 course</)
     assert.match(html, /name="q"[^>]*value="rag"/)
     assert.match(html, /href="\/courses\?track=tools&amp;q=rag"/)
   })
@@ -165,10 +171,20 @@ describe('catalog and course pages', () => {
   it('shows the empty state for a query with no matches', async () => {
     let { status, html } = await page(`${routes.courses.index.href()}?q=zzz`)
     assert.equal(status, 200)
-    assert.match(html, /0 courses · all free/)
-    assert.match(html, /0 results for “zzz”/)
-    assert.match(html, /Clear filters/)
-    assert.match(html, /Write a course/)
+    assert.match(html, /No matches/)
+    assert.match(html, /No courses match “zzz”/)
+    assert.match(html, /Clear the search/)
+    // Real courses to try instead of a dead end (or the authoring card).
+    assert.match(html, /aria-label="Suggested courses"/)
+    assert.equal(count(html.match(/aria-label="Suggested courses"[\s\S]*?<\/ul>/)![0], /<li[\s>]/), 3)
+    assert.doesNotMatch(html, /Drop a folder, get a course/)
+  })
+
+  it('gives authors the write-a-course cell', async () => {
+    let { cookie: author } = await signIn('catalog-author@example.com', { role: 'author' })
+    let html = await (await fetchAs(author, routes.courses.index.href())).text()
+    assert.match(html, /Drop a folder, get a course/)
+    assert.match(html, /href="\/author"/)
   })
 
   it('hides the continue banner and progress when signed out', async () => {

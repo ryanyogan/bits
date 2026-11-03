@@ -32,21 +32,26 @@ export interface CatalogBackgroundProps {
  * hide the layer. Decorative only: `aria-hidden`, no pointer events.
  */
 export const CatalogBackground = clientEntry(import.meta.url, function CatalogBackground(handle: Handle<CatalogBackgroundProps>) {
-  let courses = handle.props.courses
-  return () => (
-    <div aria-hidden="true" data-rmx-key={handle.props.replayKey} mix={layerStyle}>
-      <div mix={gridStyle} />
-      {/* The art stays inside the ruled column: the graph paper runs full
-       * bleed, the graph is clipped at the rails. */}
-      <div mix={columnStyle}>
-        <canvas
-          data-catalog-graph=""
-          data-rmx-preserve-attrs="data-ready"
-          mix={[canvasStyle, ref((canvas, signal) => void start(canvas as HTMLCanvasElement, courses, signal))]}
-        />
+  // Props are read in render, never captured at setup: a track change keeps
+  // this island in place (new props, a new keyed layer), and the canvas ref
+  // of the new layer must draw the new page's courses, not the first one's.
+  return () => {
+    let courses = handle.props.courses
+    return (
+      <div aria-hidden="true" data-rmx-key={handle.props.replayKey} mix={layerStyle}>
+        <div mix={gridStyle} />
+        {/* The art stays inside the ruled column: the graph paper runs full
+         * bleed, the graph is clipped at the rails. */}
+        <div mix={columnStyle}>
+          <canvas
+            data-catalog-graph=""
+            data-rmx-preserve-attrs="data-ready"
+            mix={[canvasStyle, ref((canvas, signal) => void start(canvas as HTMLCanvasElement, courses, signal))]}
+          />
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 })
 
 /** The sequence is over by here (seconds); then the loop stops. */
@@ -303,6 +308,9 @@ const canvasStyle = css({
   opacity: 0,
   transition: 'opacity var(--duration-pop) var(--ease-out)',
   '&[data-ready]': { opacity: 'var(--scene-strength)' },
+  // A phone column has no room beside the copy: the graph runs behind the
+  // lead, so it sits fainter there and the words stay easy to read.
+  '@media (max-width: 759.98px)': { '&[data-ready]': { opacity: 'calc(var(--scene-strength) * 0.4)' } },
   '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
   [FORCED_COLORS]: { display: 'none' },
 })
