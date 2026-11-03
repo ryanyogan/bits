@@ -496,8 +496,10 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
 - Step-up (decision 030): anything that adds a way into the account
   (changing the email, adding a passkey, linking GitHub/Google while
   signed in) needs `recentlyAuthenticated(context)`, checked on the
-  server at every step that writes. Otherwise send the user to
-  `/settings?saved=reauth&for=…`. A completed email change signs out the
+  server at every step that writes. Otherwise answer
+  `settingsRedirect(session, 'reauth')` (`actions/settings/notice.ts`:
+  a 303 to `/settings#email`, the outcome in the session flash; decision
+  068). Settings writes never put their outcome in the URL. A completed email change signs out the
   other sessions. A revert ends every session and drops passkeys and
   identities added since the day before the change.
 - CSRF is `remix/middleware/cop` in `router.ts`. Plain same-origin form
