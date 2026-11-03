@@ -2,7 +2,7 @@ import type { Handle } from 'remix/component'
 import { css, unsafeHTML } from 'remix/component'
 import { Crosshair } from '@bits/ui/crosshair'
 import { Keycap } from '@bits/ui/keycap'
-import { LessonBar, LessonRow } from '@bits/ui/lesson-bar'
+import { LESSON_NARROW, LessonBar, LessonRow } from '@bits/ui/lesson-bar'
 import type { SegmentState } from '@bits/ui/progress-bar'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
 import { PageFrame } from '@bits/ui/page-frame'
@@ -17,7 +17,7 @@ import { depthTabs, lessonAward, openAsks, type LessonView } from './lesson-view
 import { LessonComplete } from './public/lesson-complete.tsx'
 import { PASSED_ROOT } from './public/lesson-state.ts'
 import { LessonXp } from './public/lesson-xp.tsx'
-import { OutlineDisclosure, OutlineNav } from './ui/outline.tsx'
+import { lessonMinutes, OutlineDisclosure, OutlineNav } from './ui/outline.tsx'
 import { ReadMode } from './ui/read-mode.tsx'
 
 /**
@@ -43,6 +43,8 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
     let gated = exercisesOf(content).length > 0 || openAsks(view).length > 0
     let progressLabel = `Lesson ${view.index + 1} of ${view.total}, ${done} complete`
     let depths = depthTabs(view)
+    // The lesson's own length, as LMS lesson views show it (decision 067).
+    let mins = lessonMinutes(view, lesson)
 
     return (
       <Layout
@@ -63,7 +65,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
             position="shell"
             backHref={view.href.back}
             backLabel={view.draft ? 'Back to the build' : 'Back to course'}
-            context={`${course.title} · Lesson ${view.index + 1} of ${view.total}`}
+            context={`${course.title} · Lesson ${view.index + 1} of ${view.total}${mins > 0 ? ` · ${mins} min` : ''}`}
             title={content.title}
             titleAs="h1"
             segments={segments}
@@ -116,6 +118,21 @@ function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean; issues?
     let { prev, next } = view
     // Prompts join the save with form=; asks are read from the journal (decision 052).
     let asks = openAsks(view)
+    // The one save-and-continue action (decision 067). Its label says what
+    // it does in this state: saved lessons just move on; the last lesson
+    // finishes the course only when nothing else is open.
+    let open = view.lessons.filter((l) => l.state !== 'done' && l.slug !== view.lesson.slug).length
+    let saved = view.lesson.state === 'done'
+    let label = next
+      ? saved
+        ? `Next: ${next.title} →`
+        : `Complete and continue →`
+      : saved
+        ? 'Back to the course →'
+        : open === 0
+          ? 'Finish the course →'
+          : 'Complete lesson →'
+    let left = !next && open > 0 ? (open === 1 ? '1 lesson still open in this course' : `${open} lessons still open in this course`) : undefined
     return (
       <nav aria-label="Lesson navigation" mix={footerBand}>
         <Crosshair placement="top-start" mix={phoneHidden} />
@@ -136,7 +153,8 @@ function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean; issues?
             issues={issues}
             passed={view.lesson.state === 'done'}
             href={next ? view.href.lesson(next.slug) : view.href.back}
-            label={next ? `Next: ${next.title} →` : 'Finish the course →'}
+            label={label}
+            upNext={next && !saved ? `Up next: ${next.title}` : left}
             loginHref={view.viewer ? undefined : view.href.login}
           />
         </div>
@@ -194,20 +212,30 @@ const draftLink = css({
 // line up with the lesson bar's and the AppBar's, and the outline is the
 // column's first cell. Phones keep the 12px inset like every other page.
 // Outline | lesson, sharing the outline's hairline (decision 022).
+// Tablet portrait gets the phone layout (decision 067): a 220px sidebar
+// left the lesson ~260px of text at 768.
 const bodyStyle = css({
   display: 'grid',
-  gridTemplateColumns: 'clamp(220px, 24%, 288px) minmax(0, 1fr)',
+  gridTemplateColumns: 'clamp(240px, 22%, 300px) minmax(0, 1fr)',
   alignItems: 'start',
-  [MOBILE]: { display: 'block' },
+  [LESSON_NARROW]: { display: 'block' },
 })
 // The skip link's target takes focus (tabIndex -1) without drawing a ring round the page (decision 031).
 const skipTargetStyle = css({ '&:focus': { outline: 'none' } })
-const mainStyle = css({ minWidth: 0, display: 'flex', flexDirection: 'column' })
+// The hairline beside the outline is the lesson's left edge, so it runs the
+// column's full height whatever the outline's (decision 067).
+const mainStyle = css({
+  minWidth: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  borderLeft: 'var(--border-w) solid var(--line-cell)',
+  [LESSON_NARROW]: { borderLeft: 0 },
+})
 // Phones: the page's one row of chrome under the header (decisions 051, 055):
 // the depth tabs, then the outline disclosure as the row's end cell. The
 // progress rides the sticky bar's bottom edge.
 const phoneRow = css({
-  [MOBILE]: {
+  [LESSON_NARROW]: {
     minHeight: 'var(--control-lg)',
     paddingLeft: 'var(--section-pad-x)',
     borderBottom: 'var(--border-w) solid var(--line-cell)',

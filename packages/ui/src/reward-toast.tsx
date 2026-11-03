@@ -26,6 +26,8 @@ export interface RewardToastProps {
   title?: string
   badge?: RewardBadge
   next?: RewardNext
+  /** A quiet line under the message, e.g. where the progress is saved. */
+  note?: string
   /** `lesson` (inline after runs, 20px title, action) or `system` (compact sample). */
   variant?: 'lesson' | 'system'
   /** Play the pop-in animation (off under reduced motion). */
@@ -41,7 +43,7 @@ export interface RewardToastProps {
  */
 export function RewardToast(handle: Handle<RewardToastProps>) {
   return () => {
-    let { xp, message, title, badge, next, variant = 'lesson', animate, mix } = handle.props
+    let { xp, message, title, badge, next, note, variant = 'lesson', animate, mix } = handle.props
     let system = variant === 'system'
     return (
       <div mix={[toastStyle, system ? systemStyle : lessonStyle, animate ? popStyle : undefined, mix]}>
@@ -55,6 +57,7 @@ export function RewardToast(handle: Handle<RewardToastProps>) {
         <div mix={textStyle}>
           <span mix={[titleStyle, system ? systemTitle : lessonTitle]}>{title ?? `+${xp} neurons`}</span>
           <span mix={system ? systemBody : lessonBody}>{message}</span>
+          {note ? <span mix={noteStyle}>{note}</span> : null}
         </div>
         {next ? (
           <Keycap variant="primary" size="md" href={next.href} mix={nextStyle}>
@@ -106,6 +109,7 @@ const lessonTitle = css({ fontSize: 'var(--fs-20)' })
 const systemTitle = css({ fontSize: 'var(--fs-18)' })
 const lessonBody = css({ fontSize: 'var(--fs-15)' })
 const systemBody = css({ fontSize: 'var(--fs-14)' })
+const noteStyle = css({ marginTop: 'var(--space-1)', fontSize: 'var(--fs-13)', color: 'var(--muted)' })
 
 /** Detail of the `bits:reward` window event that `RewardRegion` listens for. */
 export interface RewardEventDetail {
@@ -119,6 +123,11 @@ export interface RewardEventDetail {
    * doesn't stand for the lesson's prompt checks passing.
    */
   source?: 'ask'
+  /**
+   * A revisit re-opening a gate an earlier visit passed (decision 067): the
+   * lesson's islands count it, but no toast shows and no neurons are added.
+   */
+  silent?: boolean
 }
 
 export const REWARD_EVENT = 'bits:reward'
@@ -187,7 +196,10 @@ export const RewardRegion = clientEntry(
           if (!handle.signal.aborted && pending === detail) show(detail, true)
         }, HANDOVER_MS)
       }
-      window.addEventListener(REWARD_EVENT, (event) => show((event as CustomEvent<RewardEventDetail>).detail), {
+      window.addEventListener(REWARD_EVENT, (event) => {
+        let detail = (event as CustomEvent<RewardEventDetail>).detail
+        if (!detail?.silent) show(detail)
+      }, {
         signal: handle.signal,
       })
     })

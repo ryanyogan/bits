@@ -34,7 +34,7 @@ describe('client navigation', () => {
       window.dispatchEvent(new CustomEvent('bits:reward', { detail: { xp: 0, message: 'test' } }))
       return !document.body.textContent?.includes('Pass every check to finish')
     })
-    await page.getByRole('button', { name: /Next: Top-p and friends/ }).waitFor()
+    await page.getByRole('button', { name: /Complete and continue/ }).waitFor()
 
     // A marker on window survives only client navigation, not a document load.
     await page.evaluate(() => ((window as { navMarker?: number }).navMarker = 1))
@@ -240,7 +240,7 @@ describe('client navigation', () => {
     })
     // Untouched before the save: the checks passed, nothing is saved yet.
     await page.getByText('Checks passed').waitFor()
-    await page.getByRole('button', { name: /Next: Top-p and friends/ }).click()
+    await page.getByRole('button', { name: /Complete and continue/ }).click()
 
     // Optimistic: complete at once, while the POST is held.
     await page.getByText(/^✓ Lesson complete$/).waitFor()
@@ -266,21 +266,24 @@ describe('client navigation', () => {
     page.on('request', (request) => {
       if (request.method() === 'POST') posts.push(new URL(request.url()).pathname)
     })
-    let field = ask.getByRole('textbox')
-    await field.fill('b')
-    await field.press('Enter')
+    // Options are a real radio group (decision 067): select, then Check.
+    let check = ask.getByRole('button', { name: /^Check/ })
+    await ask.locator('input[type="radio"][value="b"]').check()
+    await check.click()
     let answers = ask.getByRole('list', { name: 'Your answers' })
     await answers.locator('[data-correct="false"]').waitFor()
-    // No navigation: the verdict joins the log, focus stays in the field, the gate stays shut.
+    // No navigation: the verdict joins the log, the pick stays to change, the gate stays shut.
     assert.equal(new URL(page.url()).pathname, firstLesson)
-    assert.equal(await page.evaluate(() => document.activeElement?.tagName), 'TEXTAREA')
-    assert.equal(await field.inputValue(), 'b', 'a wrong answer stays to edit')
+    assert.ok(await ask.locator('input[type="radio"][value="b"]').isChecked(), 'a wrong answer stays to change')
     assert.ok(await save.getByText('Answer the quick check to finish').isVisible())
 
-    await field.fill('a')
-    await field.press('Enter')
+    await ask.locator('input[type="radio"][value="a"]').check()
+    await check.click()
     await answers.locator('[data-correct="true"]').waitFor()
-    await save.getByRole('button', { name: /^Next:/ }).waitFor()
+    // A right answer folds the options away; "Answer again" brings them back.
+    await ask.getByRole('button', { name: 'Answer again' }).waitFor()
+    assert.equal(await ask.locator('input[type="radio"]').first().isVisible(), false)
+    await save.getByRole('button', { name: /^Complete and continue/ }).waitFor()
     assert.deepEqual(posts, ['/api/ask', '/api/ask'])
   })
 

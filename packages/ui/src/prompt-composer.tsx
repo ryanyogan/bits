@@ -69,8 +69,17 @@ export interface PromptComposerProps {
   temperatures?: TemperatureOption[]
   /** Canned outputs per temperature value, cycled per run (example output, no model). */
   examples?: Record<string, string[]>
-  /** Reward shown once every check passes. */
-  reward?: { xp: number; message: string; next?: RewardNext }
+  /**
+   * Reward shown once every check passes. It celebrates; it never navigates
+   * (one save-and-continue action per lesson, at its end: decision 067).
+   * `note` says where the progress is saved.
+   */
+  reward?: { xp: number; message: string; note?: string; next?: RewardNext }
+  /**
+   * The lesson is already saved as complete: the exercise opens passed (its
+   * run checks count as met) and says so, instead of looking untried.
+   */
+  passed?: boolean
   /** Max runs kept on screen. */
   keepRuns?: number
   /** Style-guide only: render the focused composer look. */
@@ -99,6 +108,45 @@ interface Run {
   tokens: number
 }
 
+/** The last counted run, kept in this browser so a revisit shows it (decision 067). */
+interface SavedRun {
+  prompt: string
+  output: string
+  temperature: TemperatureOption
+  state: Run['state']
+  at: number
+}
+
+const ranKey = (id: string) => `bits:ran:${id}`
+const lastRunKey = (id: string) => `bits:last-run:${id}`
+
+function readJson<T>(key: string): T | undefined {
+  try {
+    let raw = window.localStorage.getItem(key)
+    return raw ? (JSON.parse(raw) as T) : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function writeJson(key: string, value: unknown) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // Storage unavailable: a revisit just starts fresh.
+  }
+}
+
+/**
+ * A long or multi-line prompt shows only its first line in the run log (the
+ * rest is one tap away), so the reply stays in view. Undefined: show it all.
+ */
+export function promptPreview(prompt: string): string | undefined {
+  let first = prompt.split('\n')[0]!
+  if (first.length > 120) return `${first.slice(0, 117).trimEnd()}…`
+  return first.length < prompt.length ? `${first}…` : undefined
+}
+
 export function draftTokens(text: string): number {
   return Math.max(1, Math.round(text.length / 4))
 }
@@ -117,8 +165,21 @@ const DEFAULT_TEMPS: TemperatureOption[] = [
 
 /**
  * The prompt exercise (components §10.9): textarea, live CheckChips, the
- * "run at" temperature radiogroup, a token estimate and the Run key. Enter
- * runs, Shift+Enter adds a newline. Runs append a LearnerBubble + ModelOutput
+ * "run at" temperature radiogroup (only when there is a choice), a token
+ * estimate and the Run key. Enter adds a line and ⌘/Ctrl+Enter runs: prompts
+ * are written, not chatted, and a stray Enter must not spend a rationed run
+ * (decision 067). The textarea grows with the prompt.
+ *
+ * The textarea is uncontrolled (decision 067): typing never waits on a
+ * render, and renders are coalesced to one per task. A controlled value
+ * re-rendered on every keystroke could trip the runtime's cascade guard (50
+ * updates before its timer resets, which background tabs and busy phones
+ * delay); the dropped render then left a stale value that the runtime wrote
+ * back over every later keystroke. The temperatures run at and the last
+ * counted run are kept in this browser too, so a revisit shows a passed
+ * exercise passed (the server re-checks its own journal on save).
+ *
+ * Runs append a LearnerBubble + ModelOutput
  * (last four kept): streamed from `run` (/api/run; a rerun aborts the one in
  * flight), or the canned `examples` without it. Runs land in a fixed-height
  * window above the composer that scrolls inside and follows the newest
@@ -145,14 +206,55 @@ export const PromptComposer = clientEntry(
     let rewardedRun: number | undefined
     let runCount = 0
     let textarea: HTMLTextAreaElement | undefined
+    let mirror: HTMLInputElement | undefined
     let composer: HTMLFormElement | undefined
     let follower = createFollower()
+    let mac = false
 
     let persist = (): DraftPersist => handle.props.persist ?? { id: handle.props.id, key: 'prompt' }
+    let storeId = () => persist().id
+
+    // One render per task, however many input events arrive (see above).
+    let renderQueued = false
+    function queueRender() {
+      if (renderQueued) return
+      renderQueued = true
+      setTimeout(() => {
+        renderQueued = false
+        if (!handle.signal.aborted) handle.update()
+      }, 0)
+    }
 
     handle.queueTask(() => {
       draft = readDraft(persist()) ?? handle.props.defaultDraft ?? ''
+      if (textarea && textarea.value !== draft) textarea.value = draft
+      if (mirror) mirror.value = draft
+      mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)
+      for (let t of readJson<unknown[]>(ranKey(storeId())) ?? []) if (typeof t === 'number') ranAt.add(t)
+      let last = readJson<SavedRun>(lastRunKey(storeId()))
+      if (last && typeof last.prompt === 'string' && typeof last.output === 'string' && last.temperature) {
+        let at = new Date(last.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+        runs = [
+          {
+            id: ++runCount,
+            prompt: last.prompt,
+            temperature: last.temperature,
+            output: last.output,
+            state: last.state === 'error' || last.state === 'example' ? last.state : 'done',
+            note: `Your last run · ${at}`,
+            tokens: draftTokens(last.output),
+          },
+        ]
+      }
       hydrated = true
+      // A passed exercise opens the lesson's gate again on a revisit, with no
+      // second toast or neurons (the server decides those on save). After the
+      // other islands' setup, so the "complete" key is listening.
+      let reward = handle.props.reward
+      if (!handle.props.passed && reward && allPassed()) {
+        rewardedRun = runs[0]?.id
+        setTimeout(() => announceReward({ xp: reward.xp, message: reward.message, silent: true }), 0)
+      }
       handle.update()
     })
 
@@ -160,8 +262,16 @@ export const PromptComposer = clientEntry(
       writeDraft(persist(), draft)
     }
 
+    /** Run checks a saved lesson already met count as met. */
+    function metRuns(): Set<number> {
+      if (!handle.props.passed) return ranAt
+      let all = new Set(ranAt)
+      for (let check of handle.props.checks) for (let t of check.ranAt ?? []) all.add(t)
+      return all
+    }
+
     function allPassed() {
-      return handle.props.checks.every((check) => checkPasses(check, draft, ranAt))
+      return handle.props.checks.every((check) => checkPasses(check, draft, metRuns()))
     }
 
     // The run in flight; running again aborts it (and the server stops the model).
@@ -233,11 +343,19 @@ export const PromptComposer = clientEntry(
         return
       }
       ranAt.add(entry.temperature.value)
+      writeJson(ranKey(storeId()), [...ranAt])
+      writeJson(lastRunKey(storeId()), {
+        prompt: entry.prompt,
+        output: entry.output,
+        temperature: entry.temperature,
+        state: entry.state,
+        at: Date.now(),
+      } satisfies SavedRun)
       window.dispatchEvent(new CustomEvent('bits:run', { detail: { prompt, temperature: entry.temperature.value } }))
       let reward = handle.props.reward
       if (reward && rewardedRun === undefined && allPassed()) {
         rewardedRun = id
-        announceReward(reward)
+        announceReward({ xp: reward.xp, message: reward.message })
       }
       await handle.update()
       textarea?.focus()
@@ -246,6 +364,8 @@ export const PromptComposer = clientEntry(
     return () => {
       let { id, task, placeholder = 'Write a tagline for…', checks, temperatures = DEFAULT_TEMPS, reward, forceFocus } = handle.props
       let empty = draft.trim() === ''
+      let met = metRuns()
+      let runKeys = mac ? '⌘↵' : 'Ctrl+↵'
       let fieldId = `${id}-prompt`
       let tokens = draftTokens(draft)
       // A server run can be rerun mid-stream (the old one is aborted); a canned one can't.
@@ -264,11 +384,24 @@ export const PromptComposer = clientEntry(
             data-empty={runs.length ? undefined : ''}
             mix={[runWindowStyle, scrollWindowStyle, follower.mixin]}
           >
-            {runs.length ? null : <p mix={emptyStyle}>Run your prompt and the replies land here.</p>}
+            {runs.length ? null : (
+              <p mix={emptyStyle}>
+                {handle.props.passed ? '✓ You passed this exercise. Run it again any time.' : 'Run your prompt and the replies land here.'}
+              </p>
+            )}
             <ol aria-live="polite" mix={runsStyle}>
               {runs.map((entry) => (
                 <li key={entry.id} mix={runStyle}>
-                  <LearnerBubble>{entry.prompt}</LearnerBubble>
+                  <LearnerBubble>
+                    {promptPreview(entry.prompt) ? (
+                      <details mix={promptDetails}>
+                        <summary>{promptPreview(entry.prompt)}</summary>
+                        {entry.prompt}
+                      </details>
+                    ) : (
+                      entry.prompt
+                    )}
+                  </LearnerBubble>
                   <ModelOutput
                     temperature={entry.temperature.label}
                     tokens={entry.tokens}
@@ -278,7 +411,7 @@ export const PromptComposer = clientEntry(
                     {entry.output}
                   </ModelOutput>
                   {entry.id === rewardedRun && reward ? (
-                    <RewardToast xp={reward.xp} message={reward.message} next={reward.next} animate />
+                    <RewardToast xp={reward.xp} message={reward.message} note={reward.note} next={reward.next} animate />
                   ) : null}
                 </li>
               ))}
@@ -302,22 +435,25 @@ export const PromptComposer = clientEntry(
               <textarea
                 id={fieldId}
                 name="prompt"
-                rows={3}
+                rows={4}
                 placeholder={placeholder}
-                value={draft}
+                defaultValue={draft}
                 readOnly={locked}
-                aria-describedby={`${id}-checks`}
+                aria-describedby={`${id}-checks ${id}-hint`}
+                aria-keyshortcuts="Control+Enter Meta+Enter"
                 mix={[
                   fieldInputStyle,
                   fieldMultiStyle,
+                  growStyle,
                   ref((node) => (textarea = node)),
                   on('input', (event) => {
                     draft = event.currentTarget.value
+                    if (mirror) mirror.value = draft
                     saveDraft()
-                    handle.update()
+                    queueRender()
                   }),
                   on('keydown', (event) => {
-                    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+                    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.isComposing) {
                       event.preventDefault()
                       event.currentTarget.form?.requestSubmit()
                     }
@@ -327,12 +463,13 @@ export const PromptComposer = clientEntry(
             </div>
             <ul id={`${id}-checks`} aria-label="Checks" mix={checkListStyle}>
               {checks.map((check) => (
-                <CheckChip key={check.label} passed={hydrated && checkPasses(check, draft, ranAt)}>
+                <CheckChip key={check.label} passed={hydrated && checkPasses(check, draft, met)}>
                   {check.label}
                 </CheckChip>
               ))}
             </ul>
             <div mix={footerStyle}>
+              {temperatures.length > 1 ? (
               <fieldset mix={tempsStyle}>
                 <legend mix={runAtStyle}>run at</legend>
                 <div mix={tempOptions}>
@@ -355,6 +492,7 @@ export const PromptComposer = clientEntry(
                   ))}
                 </div>
               </fieldset>
+              ) : null}
               <span mix={tokensStyle}>
                 {hydrated ? `~${tokens} tokens` : '~0 tokens'}
               </span>
@@ -364,11 +502,24 @@ export const PromptComposer = clientEntry(
                 disabled={!hydrated || locked}
                 mix={[runKeyStyle, empty && hydrated ? emptyKeyStyle : undefined]}
               >
-                {locked ? 'Running…' : running ? 'Run again ↵' : 'Run ↵'}
+                {locked ? 'Running…' : running ? 'Run again' : 'Run'}
               </Keycap>
             </div>
-            <p mix={hintStyle}>{hydrated ? 'Enter runs · Shift+Enter adds a line' : 'Turn on JavaScript to run prompts.'}</p>
-            {submitFieldInputs(handle.props.submit, draft)}
+            <p id={`${id}-hint`} mix={hintStyle}>
+              {hydrated
+                ? `${runKeys} runs · Enter adds a line${temperatures.length === 1 ? ` · runs at T=${temperatures[0]!.label}` : ''}`
+                : 'Turn on JavaScript to run prompts.'}
+            </p>
+            {handle.props.submit ? (
+              // Uncontrolled like the textarea: the input handler keeps it current.
+              <input
+                type="hidden"
+                form={handle.props.submit.form}
+                name={handle.props.submit.prompt}
+                defaultValue={draft}
+                mix={ref((node) => (mirror = node))}
+              />
+            ) : null}
           </form>
         </div>
       )
@@ -476,3 +627,18 @@ const tokensStyle = css({
 const runKeyStyle = css({ marginTop: 'var(--space-2_5)', minWidth: '9.5em', '@media (max-width: 360px)': { width: '100%' } })
 const emptyKeyStyle = css({ cursor: 'default' })
 const hintStyle = css({ margin: 0, fontSize: 'var(--fs-13)', color: 'var(--muted)' })
+// The prompt grows with what's written (four lines at least, then it
+// scrolls past fourteen), so a checkpoint prompt is written in view.
+const growStyle = css({
+  fieldSizing: 'content',
+  minHeight: 'calc(4lh + 2 * var(--space-3))',
+  maxHeight: 'calc(14lh + 2 * var(--space-3))',
+  overflowY: 'auto',
+})
+// A long prompt in the run log: its first line, the rest one tap away.
+const promptDetails = css({
+  '& > summary': { cursor: 'pointer', listStyle: 'none', overflowWrap: 'anywhere' },
+  '& > summary::-webkit-details-marker': { display: 'none' },
+  '& > summary::after': { content: '"  show all"', color: 'var(--muted)' },
+  '&[open] > summary': { display: 'none' },
+})

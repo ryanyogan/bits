@@ -20,7 +20,7 @@ export interface LessonBarProps {
    * The lesson's reading depths ("New to this" / "Engineer", decisions 053
    * and 055) as URL tabs: the bar's one control, a cell after the progress.
    * Pass them only when the lesson has depth blocks. In the shell they show
-   * from 760px; under it the page's `LessonRow` carries them.
+   * from 1024px; under it the page's `LessonRow` carries them.
    */
   depths?: SegmentedTabItem[]
   /** The viewer's neurons, shown as an XpPill at the row's end (hidden at ≤480px). */
@@ -35,7 +35,7 @@ export interface LessonBarProps {
   /**
    * `shell`: the lesson sub-bar inside the AppBar's sticky header (pass it as
    * `AppBar`'s `sub`; decision 022). One row, `--lessonbar-h` tall, aligned
-   * to the AppBar's column, no glass of its own. Under 760px it keeps back +
+   * to the AppBar's column, no glass of its own. Under 1024px it keeps back +
    * the title (two lines, never cut mid-word) and draws the segmented
    * progress as a strip along its bottom edge; render `LessonRow` at the
    * top of the page for the depth tabs and the outline (decision 051). `sticky`: a standalone glass
@@ -136,11 +136,11 @@ export interface LessonRowProps {
 }
 
 /**
- * The page's one row of chrome under 760px (decisions 022, 051 and 055),
+ * The page's one row of chrome under 1024px (decisions 022, 051, 055, 067),
  * where the sticky header keeps back + title and draws the progress along
  * its edge: the shell sub-bar's depth tabs, with the outline disclosure as
  * its `aside` at the row's end. Put it at the top of the lesson. It scrolls
- * with the page and hides at 760px and up. Static.
+ * with the page and hides at 1024px and up. Static.
  */
 export function LessonRow(handle: Handle<LessonRowProps>) {
   return () => {
@@ -155,8 +155,15 @@ export function LessonRow(handle: Handle<LessonRowProps>) {
 }
 
 const NARROW = '@media (max-width: 480px)'
-/** The shell's breakpoint: the AppBar menu and the outline disclosure switch here too. */
+/** Phone type sizes in the shell (the AppBar menu switches here too). */
 const SHELL_NARROW = '@media (max-width: 759.98px)'
+/**
+ * The lesson's layout breakpoint (decision 067): under 1024px (phones and
+ * tablet portrait) the page has no sidebar, so the bar keeps back + title,
+ * draws the progress along its edge, and `LessonRow` carries the depth tabs
+ * and the outline disclosure. The lesson page's outline switches here too.
+ */
+export const LESSON_NARROW = '@media (max-width: 1023.98px)'
 
 const barStyle = css({
   display: 'flex',
@@ -223,7 +230,7 @@ const depthCell = css({
   paddingInline: 'var(--space-4)',
   borderLeft: 'var(--border-w) solid var(--line-cell)',
   '&:last-child': { paddingRight: 'var(--space-3)' },
-  [SHELL_NARROW]: { display: 'none' },
+  [LESSON_NARROW]: { display: 'none' },
 })
 // The neurons cell: last in the row, pushed to the end when the tabs hide (<760px).
 const xpCell = css({
@@ -231,11 +238,11 @@ const xpCell = css({
   display: 'flex',
   alignItems: 'center',
   paddingInline: 'var(--space-3)',
-  [SHELL_NARROW]: { marginLeft: 'auto' },
+  [LESSON_NARROW]: { marginLeft: 'auto' },
   borderLeft: 'var(--border-w) solid var(--line-cell)',
 })
 const xpSlot = css({ display: 'flex', alignItems: 'center' })
-const wideOnly = css({ [SHELL_NARROW]: { display: 'none' } })
+const wideOnly = css({ [LESSON_NARROW]: { display: 'none' } })
 // ≤480px (Lesson spec, 360px): row 1 back + title (truncated), row 2 depth tabs + progress.
 const titleBlock = css({
   display: 'flex',
@@ -285,7 +292,7 @@ const progressStyle = css({
 })
 const lessonRow = css({
   display: 'none',
-  [SHELL_NARROW]: {
+  [LESSON_NARROW]: {
     position: 'relative',
     display: 'flex',
     alignItems: 'center',
@@ -299,7 +306,7 @@ const lessonRowAside = css({ marginLeft: 'auto', minWidth: 0, alignSelf: 'stretc
 // inside the rails. Hidden from 760px, where the row has its own progress cell.
 const phoneProgress = css({
   display: 'none',
-  [SHELL_NARROW]: {
+  [LESSON_NARROW]: {
     display: 'block',
     position: 'absolute',
     insetInline: 0,

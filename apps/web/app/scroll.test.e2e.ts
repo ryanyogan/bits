@@ -106,8 +106,8 @@ describe('scroll restoration', () => {
     await page.waitForLoadState('networkidle')
     let ask = page.locator('form[id^="ask-"]').first()
 
-    // Pick first (focusing the field may scroll it into view), then measure.
-    await ask.getByRole('button', { name: /Unbelievably/ }).click()
+    // Pick first (the radio group, decision 067), then measure.
+    await ask.getByRole('radio', { name: /Unbelievably/ }).check()
     await ask.evaluate((form) => form.scrollIntoView({ block: 'center' }))
     let before = await ask.evaluate((form) => form.getBoundingClientRect().top)
     let y = await scrollY(page)

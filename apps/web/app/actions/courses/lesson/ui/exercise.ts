@@ -5,7 +5,6 @@ import type { CodeFile } from '@bits/ui/code-editor'
 import type { AskEndpoint } from '@bits/ui/lib/ask-client'
 import type { DraftPersist } from '@bits/ui/lib/drafts'
 import type { PromptCheck, RunEndpoint, SubmitFields, TemperatureOption } from '@bits/ui/prompt-composer'
-import type { RewardNext } from '@bits/ui/reward-toast'
 import type { TerminalPart } from '@bits/ui/terminal'
 
 import { draftKey } from '../../../../progress/draft-keys.ts'
@@ -35,7 +34,9 @@ export interface ExerciseProps {
   checks: PromptCheck[]
   temperatures: TemperatureOption[]
   examples: Record<string, string[]>
-  reward: { xp: number; message: string; next?: RewardNext }
+  reward: { xp: number; message: string; note?: string }
+  /** The lesson is saved as complete: the exercise opens passed. */
+  passed: boolean
   submit?: SubmitFields
   run?: RunEndpoint
   persist: DraftPersist
@@ -70,9 +71,14 @@ export function exerciseProps(view: LessonView, block: PromptBlock): ExercisePro
   let checks = promptChecks(block)
   let examples: Record<string, string[]> = {}
   for (let example of block.examples) (examples[String(hundredths(example.temperature))] ??= []).push(example.text)
-  let next: RewardNext = view.next
-    ? { href: view.href.lesson(view.next.slug), label: block.success.nextLabel ?? `Next: ${view.next.title} →` }
-    : { href: view.href.back, label: 'Back to the course →' }
+  // The reward celebrates; it never navigates. The lesson has one
+  // save-and-continue action, its footer key (decision 067): a link here
+  // skipped the save, and sat above blocks not yet read.
+  let note = view.lesson.state === 'done'
+    ? undefined
+    : view.completeForm
+      ? 'Saved when you complete the lesson, at the end of the page.'
+      : undefined
   // Keyed by course + lesson (+ exercise), so every mode shares the draft.
   let id = `${view.key}/${block.id}`
   return {
@@ -84,7 +90,8 @@ export function exerciseProps(view: LessonView, block: PromptBlock): ExercisePro
     checks,
     temperatures: block.temperatures.map((t) => ({ value: hundredths(t), label: temperatureLabel(t) })),
     examples,
-    reward: { xp: block.xp, message: block.success.message, next },
+    reward: { xp: block.xp, message: block.success.message, note },
+    passed: view.lesson.state === 'done',
     submit: view.completeForm
       ? { form: view.completeForm.id, prompt: fieldNames.prompt(block.id) }
       : undefined,
