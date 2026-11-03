@@ -76,3 +76,5 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 070 | [One primary action, one verb: Start free or Continue](070-one-primary-action.md) |
 | 071 | [Build-along courses: Klippy, one Cloudflare personal agent built from zero](071-build-along-courses.md) |
 | 073 | [Course and lesson metadata: freshness, desk, coming soon, order, start from tag](073-course-metadata.md) |
+| 074 | ["Try it now" on the landing: lesson 1's coached exercise, with its own live caps](074-landing-try-it.md) |
+| 075 | [data-table-d1: bits' D1 driver as its own MIT package](075-data-table-d1-package.md) |

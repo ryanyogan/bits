@@ -136,7 +136,8 @@ apps/web/                 @bits/web: the Remix app and Worker
   worker.ts               Workers entry; server.ts / hmr.ts are the Node entries
   wrangler.jsonc          Worker "bits", D1 DB=bits-db, R2 CONTENT=bits-content, static assets, observability
 packages/ui/              @bits/ui: tokens, fonts, base CSS, design-system components
-packages/db/              @bits/db: migrations/, tables.ts, D1 driver, queries/
+packages/db/              @bits/db: migrations/, tables.ts, D1 database (on data-table-d1), queries/
+packages/data-table-d1/   data-table-d1: the D1 driver for remix/data-table, published to npm (decision 075)
 content/courses/<slug>/   course sources: course.md + NN-lesson.md (+ assets/*.vtt)
 content/fixtures/         deliberately broken folders for tests
 ```

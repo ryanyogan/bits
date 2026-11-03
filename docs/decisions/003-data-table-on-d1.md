@@ -1,5 +1,7 @@
 # 003. remix/data-table on D1
 
+> Update (2026-11-03, decision 075): the driver and `sql-compiler.ts` now live in `packages/data-table-d1`, published as `data-table-d1`; `packages/db` subclasses it.
+
 Status: Accepted (2026-10-26)
 
 ## Context
