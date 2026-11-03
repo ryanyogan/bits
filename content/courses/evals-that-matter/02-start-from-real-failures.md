@@ -89,7 +89,7 @@ Turn the owner's three failure notes into test cases, as JSON
 - check "Asks for an input and an expectation per case" /expect|should|must|pass/i
 - expect "Parses as JSON with a list of cases" json keys=cases types=cases:array
 - expect "A case expects the price £15"     match /£15|15 pounds|15 GBP/i
-- expect "A case expects the shop to be closed on Sundays" match /closed/i
+- expect "A case expects the shop to be closed on Sundays" match /closed|not open|isn.t open|doesn.t open/i
 - rubric "There is one test case for each of the three failures: Sunday hours, the Spanish reply and the puncture price" must
 - rubric "Each expectation is specific enough to check, like a fact, a language or a price, not 'is helpful'" must
 - hint "Read each expectation and ask: could two people grade this the same way without arguing?"
