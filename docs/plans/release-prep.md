@@ -1,6 +1,18 @@
 # Release prep plan (2026-11-02)
 
-## CURRENT STATE — read this first (saved 2026-11-02, before a context clear)
+## CURRENT STATE — read this first (updated 2026-11-03)
+
+2026-11-03: W2-fix and C3 merged (`40ec9a1`, `95fd34f`). Full suite green (437 web tests), doctor clean,
+content 0 errors. Eval on master, 3 runs: 4, 4 and 2 disagreements, all false fails (at least 97% agreement), 0/20
+injections every run. Deployed Worker 9fee82b6, and all 8 courses published (new versions). Smoke test 200s.
+
+Next (content follow-up from W2-fix, warnings only):
+- Add `grounded` to the lines the build warns about.
+- Decide on give-your-model-tools/07 "follows from your error's suggestion".
+- Reword the 3 absence lines: context-is-everything/07, prompting-that-works/01, retrieval-without-tears/09.
+- Then drop the fallback heuristic and make the warning an error.
+
+### Earlier state (2026-11-02)
 
 Production: https://bits.yogan.dev, Worker 359b9052, master `2716b4f` (all pushed). Prod D1 is migrated through
 0014 (`coach_verdicts`). Deploys are manual (`pnpm deploy`); after a deploy also run
