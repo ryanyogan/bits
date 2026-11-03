@@ -1,4 +1,4 @@
-import type { Handle } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 import { ActivityGrid } from '@bits/ui/activity-grid'
 import { CellGrid } from '@bits/ui/cell-grid'
@@ -34,6 +34,8 @@ export interface ProfilePageProps {
   viewer: Viewer | null
   currentPath: string
   title: string
+  /** /me only: the band above the identity (the next lesson; decision 068). */
+  lead?: RemixNode
 }
 
 /**
@@ -52,7 +54,7 @@ export interface ProfilePageProps {
  */
 export function ProfilePage(handle: Handle<ProfilePageProps>) {
   return () => {
-    let { profile, variant, tab = 'overview', shareUrl, viewer, currentPath, title } = handle.props
+    let { profile, variant, tab = 'overview', shareUrl, viewer, currentPath, title, lead } = handle.props
     let own = variant === 'own'
     let earned = profile.badges.filter((b) => b.earned).length
     let activeDays = profile.activity.filter((level) => level > 0).length
@@ -70,7 +72,8 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
         bleed
       >
         <PageFrame>
-          <RuledSection aria-label="Profile" rule={false} pad="none">
+          {lead}
+          <RuledSection aria-label="Profile" rule={lead ? undefined : false} pad="none">
             <div mix={splitStyle}>
               <div mix={identityCell}>
                 <GeneratedAvatar seed={profile.handle} name={firstName} />
@@ -108,7 +111,14 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
                       Edit profile
                     </Keycap>
                   ) : null}
-                  <ShareButton url={shareUrl} title={`${profile.name} on bits`} />
+                  {/* A private profile's link is a 404, so there's nothing to share (decision 068). */}
+                  {profile.isPublic ? (
+                    <ShareButton url={shareUrl} title={`${profile.name} on bits`} />
+                  ) : own ? (
+                    <Keycap variant="ghost-mono" href={`${settingsHref}#profile`} mix={actionKey}>
+                      Make public to share
+                    </Keycap>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -176,14 +186,16 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
                         id="journal-heading"
                         title="Prompt journal"
                         aside={
-                          <a
-                            href={journalHref}
-                            data-rmx-prefetch={prefetchFor(journalHref)}
-                            mix={panelLinkStyle}
-                            aria-label={`All ${profile.journal.length} journal entries`}
-                          >
-                            All {profile.journal.length} →
-                          </a>
+                          profile.journal.length ? (
+                            <a
+                              href={journalHref}
+                              data-rmx-prefetch={prefetchFor(journalHref)}
+                              mix={panelLinkStyle}
+                              aria-label={`All ${profile.journal.length} journal entries`}
+                            >
+                              All {profile.journal.length} →
+                            </a>
+                          ) : undefined
                         }
                         flush
                       >
@@ -213,7 +225,7 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
                       ]}
                     />
                     <div mix={accountLinks}>
-                      <a href={`${settingsHref}#export`} data-rmx-prefetch={prefetchFor(`${settingsHref}#export`)} mix={accountLink}>
+                      <a href={`${settingsHref}#data`} data-rmx-prefetch={prefetchFor(`${settingsHref}#data`)} mix={accountLink}>
                         Download my data
                       </a>
                       <a href={settingsHref} data-rmx-prefetch={prefetchFor(settingsHref)} mix={[accountLink, quietLink]}>

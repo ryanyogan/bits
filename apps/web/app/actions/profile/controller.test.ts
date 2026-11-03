@@ -40,8 +40,16 @@ describe('/me and /u/:handle', () => {
     let response = await getSignedIn(routes.me.index.href())
     assert.equal(response.status, 200)
     let html = await response.text()
-    assert.match(html, /<title>Your profile · Bits<\/title>/)
+    assert.match(html, /<title>My learning · Bits<\/title>/)
     assert.equal(html.match(/<h1[\s>]/g)?.length, 1)
+    // The next lesson comes first, linking to the lesson itself (decision 068).
+    assert.match(html, /aria-label="Continue where you left off"/)
+    assert.match(html, /Continue · lesson \d+ of \d+/)
+    assert.ok(html.indexOf('Continue where you left off') < html.indexOf('Jamie Park'), 'the band is above the identity')
+    assert.match(html, /href="\/courses\/tokens-and-temperature\/[a-z0-9-]+"/)
+    // Public: Share. "Download my data" lands on its section.
+    assert.match(html, /Share ↗/)
+    assert.match(html, /href="\/settings#data"/)
     assert.match(html, /Jamie Park/)
     assert.match(html, /id="journal-heading"[^>]*>Prompt journal</)
     assert.match(html, /jamie@example\.com/)
@@ -63,6 +71,18 @@ describe('/me and /u/:handle', () => {
     // Only the three most recent journal entries before "All →".
     assert.equal(html.match(/<li[^>]*><p[^>]*><span aria-hidden="true"[^>]*>›/g)?.length, 3)
     assert.match(html, /href="\/me\?tab=journal"/)
+  })
+
+  it('a new account: Start here at lesson 1, nothing to share, no "All 0" (decision 068)', async () => {
+    let { cookie } = await signIn('me-new@example.com')
+    let html = await (await fetchAs(cookie, routes.me.index.href())).text()
+    assert.match(html, /aria-label="Start here"/)
+    assert.match(html, /Start here · lesson 1 of \d+/)
+    assert.match(html, /href="\/courses\/what-is-an-llm\/say-hi-to-claude"/)
+    // Private by default: its /u/ link is a 404, so no Share.
+    assert.doesNotMatch(html, /Share ↗/)
+    assert.match(html, /Make public to share/)
+    assert.doesNotMatch(html, /All 0 →/)
   })
 
   it('?tab=journal lists the whole prompt journal', async () => {
