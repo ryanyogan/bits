@@ -3,6 +3,10 @@
 //   pnpm content validate <dir…>                  build only, print problems
 //   pnpm content upload <dir…> [--publish]        build, save as the next version
 //   pnpm content upload --all [--publish]         every folder in content/courses/
+//   pnpm content validate --all --max-age 120     also fail code lessons verified
+//                                                 more than 120 days ago, or never
+//                                                 (decision 073; the weekly
+//                                                 freshness workflow runs this)
 //
 // Options: --as <email> records that user as the uploader and course author;
 // --force saves a new version even when the build matches the newest one
@@ -25,7 +29,7 @@ import { parseArgs } from 'node:util'
 import { createD1Database, type ReportItem } from '@bits/db'
 import { getPlatformProxy } from 'wrangler'
 
-import { buildCourse } from '../app/content/compile/index.ts'
+import { buildCourse, todayIso } from '../app/content/compile/index.ts'
 import { listCourseFolders, readCourseFolder } from './lib/content-folder.ts'
 import { previewResources, readConfigShape } from './lib/preview-resources.ts'
 import { readUploadState, uploadCourseFolder } from './lib/upload.ts'
@@ -44,12 +48,14 @@ const { values, positionals } = parseArgs({
     preview: { type: 'boolean', default: false },
     force: { type: 'boolean', default: false },
     as: { type: 'string' },
+    'max-age': { type: 'string' },
     help: { type: 'boolean', short: 'h', default: false },
   },
 })
 
 const [command, ...folders] = positionals
-const usage = 'usage: pnpm content <validate|upload> <dir…> [--all] [--publish] [--as email] [--force] [--remote | --preview]'
+const usage =
+  'usage: pnpm content <validate|upload> <dir…> [--all] [--publish] [--as email] [--force] [--remote | --preview] [--max-age days (validate)]'
 
 if (values.help || (command !== 'validate' && command !== 'upload')) {
   console.log(usage)
@@ -62,13 +68,31 @@ if (!dirs.length) {
   process.exit(1)
 }
 
+// Freshness (decision 073): a code lesson with no `verified:` date, or one
+// older than the limit, is a warning; `--max-age <days>` makes it an error.
+let maxAge = values['max-age']
+if (maxAge !== undefined && (command !== 'validate' || !/^\d+$/.test(maxAge))) {
+  console.error(`--max-age takes a whole number of days, and only with validate\n${usage}`)
+  process.exit(1)
+}
+const freshness = {
+  today: todayIso(),
+  ...(maxAge === undefined ? {} : { maxAgeDays: Number(maxAge), strict: true }),
+}
+
 let failed = 0
 
 if (command === 'validate') {
+  let orders = new Map<number, string[]>()
   for (let dir of dirs) {
-    let build = buildCourse(await readCourseFolder(dir), { folder: path.basename(dir) })
+    let build = buildCourse(await readCourseFolder(dir), { folder: path.basename(dir), freshness })
     print(dir, build.slug, build.report)
     if (build.errors) failed++
+    if (build.sort) orders.set(build.sort, [...(orders.get(build.sort) ?? []), build.slug])
+  }
+  // Catalog order across the folders given (decision 073): a tie falls back to the slug.
+  for (let [order, slugs] of orders) {
+    if (slugs.length > 1) console.log(`warning: order: ${order} is shared by ${slugs.join(', ')} (the catalog falls back to the slug)`)
   }
 } else {
   if (values.remote && values.preview) {

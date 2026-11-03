@@ -1,0 +1,54 @@
+# Freshness (decision 073): once a week, and on demand, fail when a lesson
+# with code has no `verified:` date or one older than 120 days. Cloudflare's
+# Agents and Workers packages churn; this tells us before learners hit a
+# stale step. The same check warns (never fails) in every build.
+name: Freshness
+
+on:
+  schedule:
+    # Mondays, 06:17 UTC (off the hour, when scheduled runs pile up).
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      max-age:
+        description: Fail lessons verified more than this many days ago
+        default: '120'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  stale-lessons:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Build-only: no bindings, no secrets. Problems print as annotations.
+      - run: pnpm content validate --all --max-age "$MAX_AGE"
+        env:
+          MAX_AGE: ${{ inputs.max-age || '120' }}
+
+  # The Klippy reference repo's own weekly run against the latest packages
+  # (docs/plans/build-along.md §5: `latest.yml` bumps agents, ai, wrangler and
+  # remix, then replays every tag's checks). Turn this on once
+  # github.com/ryanyogan/klippy is public and has the workflow.
+  #
+  # klippy-latest:
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     actions: write
+  #   steps:
+  #     - name: Run klippy's latest.yml and wait for it
+  #       env:
+  #         GH_TOKEN: ${{ secrets.KLIPPY_DISPATCH_TOKEN }}
+  #       run: |
+  #         gh workflow run latest.yml --repo ryanyogan/klippy --ref main
+  #         sleep 15
+  #         run_id=$(gh run list --repo ryanyogan/klippy --workflow latest.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+  #         gh run watch "$run_id" --repo ryanyogan/klippy --exit-status

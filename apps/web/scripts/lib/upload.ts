@@ -10,7 +10,7 @@ import * as path from 'node:path'
 
 import { listNewestVersions, type CourseVersion, type D1DataTableDatabase, type NewestVersion } from '@bits/db'
 
-import { buildCourse, type CourseBuild } from '../../app/content/compile/index.ts'
+import { buildCourse, todayIso, type CourseBuild } from '../../app/content/compile/index.ts'
 import { buildHash, publishVersion, readBuildHash, saveBuild } from '../../app/content/store.ts'
 import { loadVideoLinks, type VideoLinks } from '../../app/video/link.ts'
 import { readCourseFolder } from './content-folder.ts'
@@ -65,7 +65,12 @@ export async function uploadCourseFolder(
   options: UploadOptions,
 ): Promise<UploadResult> {
   let state = options.state ?? (await readUploadState(db))
-  let build = buildCourse(await readCourseFolder(dir), { folder: path.basename(dir), videos: state.videos })
+  let build = buildCourse(await readCourseFolder(dir), {
+    folder: path.basename(dir),
+    videos: state.videos,
+    // Freshness warnings (decision 073) go in the saved report; they never change the build's hash.
+    freshness: { today: todayIso() },
+  })
 
   let newest = state.newest.get(build.slug)
   if (!options.force && newest?.status === 'ready' && !build.errors) {

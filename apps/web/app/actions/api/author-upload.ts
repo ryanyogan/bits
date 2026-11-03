@@ -62,7 +62,7 @@ export async function authorUpload(context: RequestContext<any, any>): Promise<R
   let db = getDatabase(context)
   // The compiler (markdown, YAML) loads on the first upload, not with every
   // isolate (decision 026).
-  let { buildCourse } = await import('../../content/compile/index.ts')
+  let { buildCourse, todayIso } = await import('../../content/compile/index.ts')
   // Lessons link to videos already uploaded and ready (decision 029).
   let videos = await loadVideoLinks(db)
   let builds = roots.map((root) => {
@@ -72,7 +72,7 @@ export async function authorUpload(context: RequestContext<any, any>): Promise<R
       .filter((file) => file.path.startsWith(prefix))
       .filter((file) => !roots.some((other) => other.length > root.length && file.path.startsWith(`${other}/`)))
       .map((file) => ({ ...file, path: file.path.slice(prefix.length) }))
-    return buildCourse(files, { folder: root.split('/').pop() || 'course', videos })
+    return buildCourse(files, { folder: root.split('/').pop() || 'course', videos, freshness: { today: todayIso() } })
   })
 
   // Check every course before saving any: an author may only rebuild their
