@@ -5,6 +5,7 @@ import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
 import type { PromptBlock, ReplyCheck } from '../actions/courses/lesson/content.ts'
+import { firstUnmet, missHint, notGradedMessage, passNote, strongerHint } from './coach-text.ts'
 import { exerciseHistory, exerciseXp, gradeRun, journalledExercises, passesWithoutJudge } from './grade.ts'
 import {
   applyJudge,
@@ -265,13 +266,102 @@ describe('coach grading', () => {
     assert.equal(exerciseXp(25, true), 12)
     assert.equal(exerciseXp(25, false), 25)
 
-    let byVerdict = journalledExercises([block], [run({ id: 'r9', prompt: 'judged prompt', created_at: 3 })], verdicts)
+    let online = { offline: false }
+    let byVerdict = journalledExercises([block], [run({ id: 'r9', prompt: 'judged prompt', created_at: 3 })], verdicts, online)
     assert.deepEqual(byVerdict['on-call'], { passed: true, revealed: true, prompt: 'judged prompt' })
     // A coached block's live run with every deterministic layer holding still
     // needs the judge: no verdict, no pass.
-    assert.equal(journalledExercises([block], [run({})], [])['on-call']?.passed, false)
-    // A canned run passes on the prompt checks alone (the pattern layer).
-    let canned = journalledExercises([block], [run({ source: 'fallback', model: null })], [])
-    assert.deepEqual(canned['on-call'], { passed: true, revealed: false, prompt: 'Rota: Tue Priya. Who is on call Tuesday?' })
+    assert.equal(journalledExercises([block], [run({})], [], online)['on-call']?.passed, false)
+    // With no model connected, a canned run passes on the prompt checks alone (the pattern layer).
+    let canned = [run({ source: 'fallback', model: null })]
+    assert.deepEqual(journalledExercises([block], canned, [], { offline: true })['on-call'], {
+      passed: true,
+      revealed: false,
+      prompt: 'Rota: Tue Priya. Who is on call Tuesday?',
+    })
+    // With a model connected, a canned run alone never passes (it may be a
+    // run limit's); an outage's pass is the coach's journalled pattern verdict.
+    assert.equal(journalledExercises([block], canned, [], online)['on-call']?.passed, false)
+    assert.equal(journalledExercises([block], [run({ source: 'example', model: null })], [], online)['on-call']?.passed, false)
+    let outage = journalledExercises([block], canned, [verdict({ id: 'o', attempt_id: 'r1', layer: 'pattern', passed: true, created_at: 5 })], online)
+    assert.equal(outage['on-call']?.passed, true)
+  })
+
+  // ---- What the coach says (QA 2026-11-02) ---------------------------------
+
+  const thinking: PromptBlock = {
+    ...block,
+    id: 'think',
+    checks: [
+      { label: 'Includes the meetings', patterns: [{ source: '10:15' }] },
+      { label: 'Asks it to reason first', patterns: [{ source: 'think|reason', flags: 'i' }] },
+    ],
+    run: undefined,
+    expects: [{ label: 'Puts the answer in tags', kind: 'tag', name: 'answer' }],
+    rubric: [
+      { label: 'Only A and B overlap', level: 'must', on: 'reply', evidence: true },
+      { label: 'Says touching isn’t overlap', level: 'should', on: 'reply', evidence: false },
+    ],
+    hints: ['Where does the answer go?', 'B ends at 11:00 and C starts at 11:00. Does touching count?'],
+    hintsFor: [{ for: 'Only A and B overlap', text: 'Which pairs share a minute?' }],
+  }
+
+  it('hints at the first unmet criterion, never by attempt number', () => {
+    // A failing prompt check with no tied hint: named from its label, on every attempt.
+    let missedCheck = gradeRun(thinking, { prompt: 'A 9:40, B 10:15', output: '', live: false }, new Set()).criteria
+    assert.equal(firstUnmet(missedCheck)?.label, 'Asks it to reason first')
+    for (let attempt of [1, 2, 5]) {
+      assert.equal(missHint(thinking, missedCheck, attempt), 'Your prompt doesn’t do this yet: “Asks it to reason first”.')
+    }
+    // A reply check with a note: the note.
+    let noTags = gradeRun(thinking, { prompt: 'Think: A 9:40, B 10:15', output: 'A and B.', live: true }, new Set()).criteria
+    assert.match(missHint(thinking, noTags, 2), /answer/)
+    // A rubric miss: the judge's hint first, then the tied hint, then the ladder.
+    let rubricMiss = [
+      { label: 'Includes the meetings', kind: 'check' as const, met: true },
+      { label: 'Only A and B overlap', kind: 'rubric' as const, level: 'must' as const, met: false },
+    ]
+    assert.equal(missHint(thinking, rubricMiss, 1, 'Which pairs overlap?'), 'Which pairs overlap?')
+    assert.equal(missHint(thinking, rubricMiss, 1), 'Which pairs share a minute?')
+    let untied = [{ label: 'Says touching isn’t overlap', kind: 'rubric' as const, level: 'must' as const, met: false }]
+    assert.equal(missHint(thinking, untied, 2), 'B ends at 11:00 and C starts at 11:00. Does touching count?')
+  })
+
+  it('says nothing about met criteria on a pass: only a missing nice-to-have', () => {
+    let all = [
+      { label: 'Uses Ana’s name', kind: 'rubric' as const, level: 'must' as const, met: true },
+      { label: 'Claims no memory', kind: 'rubric' as const, level: 'should' as const, met: false },
+    ]
+    assert.equal(passNote(all), 'One nice-to-have to try next time: “Claims no memory”.')
+    assert.equal(passNote([all[0]!]), '')
+  })
+
+  it('offers a stronger hint only when one is left that wasn’t shown', () => {
+    let rubricMiss = [{ label: 'Says touching isn’t overlap', kind: 'rubric' as const, level: 'must' as const, met: false }]
+    let shown = new Set(['B ends at 11:00 and C starts at 11:00. Does touching count?'])
+    // The ladder from this attempt on, minus what was shown: nothing left.
+    assert.equal(strongerHint(thinking, rubricMiss, 3, 3, shown), undefined)
+    assert.equal(strongerHint(thinking, rubricMiss, 3, 3, new Set()), 'B ends at 11:00 and C starts at 11:00. Does touching count?')
+    // A deterministic miss never borrows a general hint about something else.
+    let checkMiss = [{ label: 'Asks it to reason first', kind: 'check' as const, met: false }]
+    assert.equal(strongerHint(thinking, checkMiss, 4, 3, new Set()), undefined)
+    // A tied hint is offered for its own criterion.
+    let tiedMiss = [{ label: 'Only A and B overlap', kind: 'rubric' as const, level: 'must' as const, met: false }]
+    assert.equal(strongerHint(thinking, tiedMiss, 4, 3, new Set()), 'Which pairs share a minute?')
+  })
+
+  it('names the limit and when it frees up', () => {
+    let now = 1_000_000
+    let at = (kind: 'hour' | 'day' | 'ip' | 'budget', cap: number, signedIn: boolean, inMs: number) =>
+      notGradedMessage({ kind: 'limit', limit: kind, cap, signedIn, resetsAt: now + inMs }, now)
+    assert.equal(
+      at('hour', 10, false, 23 * 60_000),
+      'You’ve used this hour’s 10 live runs for signed-out learners, so this reply is a saved example and isn’t graded. A live run frees up within 23 min, or sign in for more.',
+    )
+    assert.match(at('hour', 60, true, 5 * 60_000), /this hour’s 60 live runs, .* within 5 min\.$/)
+    assert.match(at('ip', 30, false, 60 * 60_000), /This network has used its 30 signed-out live runs this hour/)
+    assert.match(at('day', 300, true, 5 * 3_600_000), /today’s 300 runs, .* within 5 h\.$/)
+    assert.match(at('budget', 1000, true, 90 * 60_000), /reset at 00:00 UTC, in 2 h\.$/)
+    assert.match(notGradedMessage({ kind: 'example', live: ['1.0'] }, now), /only T=1\.0 runs live/)
   })
 })

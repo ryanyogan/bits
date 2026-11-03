@@ -877,6 +877,28 @@ describe('content build', () => {
     hasError(coached(['- check "x" /x/', '- rubric "R" must on=prompt evidence', '- hint "h"']), 'can’t go with on=prompt')
   })
 
+  it('ties a hint to a criterion with for=, by its exact label', () => {
+    let ok = coached([
+      '- check "Asks it to reason first" /think|reason/i',
+      '- rubric "Gets the overlap right" must',
+      '- hint "General first."',
+      '- hint for="Asks it to reason first" "Where does your prompt ask Claude to work it through?"',
+      '- hint for="Gets the overlap right" "Do touching meetings count?"',
+    ])
+    assert.deepEqual(errors(ok), [])
+    let block = ok.lessons?.get('one')?.blocks.find((b) => b.type === 'prompt')
+    assert.ok(block?.type === 'prompt')
+    assert.deepEqual(block.hints, ['General first.'])
+    assert.deepEqual(block.hintsFor, [
+      { for: 'Asks it to reason first', text: 'Where does your prompt ask Claude to work it through?' },
+      { for: 'Gets the overlap right', text: 'Do touching meetings count?' },
+    ])
+    // A tied hint alone satisfies coach's hint rule.
+    assert.deepEqual(errors(coached(['- check "x" /x/', '- rubric "R" must', '- hint for="R" "Try."'])), [])
+    hasError(coached(['- check "x" /x/', '- rubric "R" must', '- hint for="Nope" "Try."']), 'hint for="Nope" names no check')
+    hasError(coached(['- check "x" /x/', '- rubric "R" must', '- hint for=R "Try."']), 'hint lines look like')
+  })
+
   it('checks documents: quotes needs one, ids are unique, text is capped', () => {
     hasError(coached(['- expect "Quotes" quotes policy'], ''), 'quotes policy names no document')
     hasError(coached(['- check "x" /x/', '- document a "one"', '- document a "two"'], ''), 'document "a" is defined twice')

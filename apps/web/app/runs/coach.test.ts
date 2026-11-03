@@ -11,6 +11,7 @@ import { plainCourse } from '../test/plain-course.ts'
 import { routes } from '../routes.ts'
 import { coachLimits } from './coach.ts'
 import { JUDGE_MODEL, LIVE_MODEL } from './model.ts'
+import { runLimits } from './run.ts'
 
 const COURSE = plainCourse.slug
 const LESSON = 'lesson-3'
@@ -80,7 +81,7 @@ const metBoth = {
  * calls answer `judge(call)`. Records both kinds of call.
  */
 async function withGateway(
-  options: { reply?: string; judge?: (call: GatewayCall) => Response },
+  options: { reply?: string; judge?: (call: GatewayCall) => Response; run?: () => Response },
   fn: (calls: { runs: GatewayCall[]; judge: GatewayCall[] }) => Promise<void>,
 ) {
   let env = platform.env as unknown as Record<string, string | undefined>
@@ -96,7 +97,7 @@ async function withGateway(
     let call = { body: (await request.json()) as Record<string, unknown> }
     if (call.body.stream) {
       calls.runs.push(call)
-      return sseReply(options.reply ?? REPLY)
+      return options.run ? options.run() : sseReply(options.reply ?? REPLY)
     }
     calls.judge.push(call)
     return (options.judge ?? (() => judgeReply(metBoth)))(call)
@@ -125,11 +126,13 @@ interface Verdict {
   xp: number
   saved: boolean
   halved?: boolean
+  resetsAt?: number
+  success?: string
 }
 
-/** One run at T=1.0, then its verdict, as the composer does. */
-async function attempt(cookie: string | null, prompt: string, ip = testIp()) {
-  let run = await runPrompt(cookie, { course: COURSE, lesson: LESSON, exercise: EXERCISE, prompt, temperature: 100, ip })
+/** One run (at T=1.0 unless told), then its verdict, as the composer does. */
+async function attempt(cookie: string | null, prompt: string, ip = testIp(), temperature = 100) {
+  let run = await runPrompt(cookie, { course: COURSE, lesson: LESSON, exercise: EXERCISE, prompt, temperature, ip })
   assert.equal(run.status, 200)
   await run.text()
   cookie = sessionCookieFrom(run) ?? cookie
@@ -176,8 +179,8 @@ describe('/api/coach', () => {
     let first = await verdictOf(miss.response)
     assert.equal(first.layer, 'pattern')
     assert.equal(first.passed, false)
-    assert.match(first.note ?? '', /Checked by pattern, not by the coach/)
-    // The first authored hint, the general one.
+    assert.match(first.note ?? '', /No model is connected here, so this reply is a saved example/)
+    // The hint is about the first check that failed (its `- hint for=`).
     assert.equal(first.hint, "Claude can't see your rota unless it's in the message. Where is it now?")
     // Reply checks never grade a saved example.
     assert.ok(first.criteria.filter((c) => c.kind === 'expect').every((c) => c.met === null))
@@ -189,6 +192,8 @@ describe('/api/coach', () => {
     let pass = await attempt(miss.cookie, GOOD)
     let second = await verdictOf(pass.response)
     assert.deepEqual([second.layer, second.passed, second.xp, second.saved], ['pattern', true, 20, false])
+    // A pass says nothing more than what its criteria say; the success text is the reward's.
+    assert.equal(second.hint, '')
     // Passed: the strong prompt is shown as a model answer.
     assert.match(second.reference ?? '', /Using only this rota/)
     // Asking again reads the journalled verdict back and awards nothing new.
@@ -234,7 +239,9 @@ describe('/api/coach', () => {
       assert.equal(first.source, 'live')
       let verdict = await verdictOf(first.response)
       assert.deepEqual([verdict.layer, verdict.passed, verdict.xp, verdict.saved], ['coach', true, 20, true])
-      assert.equal(verdict.hint, 'Grounded in the rota.')
+      // The judge's own words are dropped on a pass: they could question a met line.
+      assert.equal(verdict.hint, '')
+      assert.equal(verdict.success, 'Claude answered from the rota you gave it.')
       assert.ok(verdict.criteria.every((c) => c.met === true))
       assert.equal(calls.judge.length, 1)
       let body = calls.judge[0]!.body
@@ -318,7 +325,7 @@ describe('/api/coach', () => {
       async (calls) => {
         let verdict = await verdictOf((await attempt(cookie, GOOD)).response)
         assert.deepEqual([verdict.layer, verdict.passed], ['soft', true])
-        assert.match(verdict.note ?? '', /didn’t judge this reply/)
+        assert.match(verdict.note ?? '', /The coach couldn’t be reached/)
         assert.equal(calls.judge.length, 1)
       },
     )
@@ -344,6 +351,7 @@ describe('/api/coach', () => {
         assert.equal((await verdictOf((await attempt(cookie, GOOD)).response)).layer, 'coach')
         let over = await verdictOf((await attempt(cookie, GOOD)).response)
         assert.deepEqual([over.layer, over.passed], ['soft', true])
+        assert.match(over.note ?? '', /The coach’s hourly limit for this exercise is used up/)
         assert.equal(calls.judge.length, 1)
       })
     } finally {
@@ -382,6 +390,10 @@ describe('/api/coach', () => {
         env.RUN_DAILY_LIVE_CAP = String(await used())
         let canned = await attempt(other.cookie, GOOD)
         assert.equal(canned.source, 'fallback')
+        // Over the shared budget: not graded, and it says when it resets.
+        let budget = await verdictOf(canned.response)
+        assert.deepEqual([budget.layer, budget.passed, budget.xp], ['limit', false, 0])
+        assert.match(budget.hint, /Today’s live runs for everyone are used up, .* reset at 00:00 UTC/)
       })
     } finally {
       env.RUN_DAILY_LIVE_CAP = savedCap
@@ -397,7 +409,9 @@ describe('/api/coach', () => {
         env.APP_ENV = 'preview'
         let run = await attempt(cookie, GOOD)
         assert.equal(run.source, 'fallback')
-        assert.equal((await verdictOf(run.response)).layer, 'pattern')
+        let verdict = await verdictOf(run.response)
+        assert.equal(verdict.layer, 'pattern')
+        assert.match(verdict.note ?? '', /No model is connected here/)
         assert.equal(calls.runs.length + calls.judge.length, 0)
       })
     } finally {
@@ -410,24 +424,158 @@ describe('/api/coach', () => {
     let early = await coach(cookie, { reveal: '1' })
     assert.equal(early.status, 403)
     let last: Verdict | undefined
-    for (let n = 1; n <= 5; n++) {
-      last = await verdictOf((await attempt(cookie, BAD)).response)
-      assert.equal(last.misses, n)
-      assert.equal(last.canReveal, n >= 5)
-      if (n < 3) assert.equal(last.stronger, undefined)
-      else assert.equal(last.stronger, 'Paste the rota first, then ask your question on the last line.')
+    let missed = {
+      criteria: [
+        { id: 0, met: false, evidence: '', source: '' },
+        { id: 1, met: false, evidence: '', source: '' },
+      ],
+      hint: 'Which day did you ask about?',
     }
-    assert.equal(last?.reference, undefined)
-    let reveal = await coach(cookie, { reveal: '1' })
-    assert.equal(reveal.status, 200)
-    assert.match(((await reveal.json()) as { reference: string }).reference, /Using only this rota/)
+    let answer = () => judgeReply(missed)
+    await withGateway({ judge: () => answer() }, async () => {
+      for (let n = 1; n <= 5; n++) {
+        last = await verdictOf((await attempt(cookie, GOOD)).response)
+        assert.equal(last.misses, n)
+        assert.equal(last.canReveal, n >= 5)
+        // A rubric miss: the judge's hint about the first unmet line.
+        assert.equal(last.hint, 'Which day did you ask about?')
+        if (n < 3) assert.equal(last.stronger, undefined)
+        else assert.equal(last.stronger, 'Paste the rota first, then ask your question on the last line.')
+      }
+      assert.equal(last?.reference, undefined)
+      let reveal = await coach(cookie, { reveal: '1' })
+      assert.equal(reveal.status, 200)
+      assert.match(((await reveal.json()) as { reference: string }).reference, /Using only this rota/)
 
-    let pass = await verdictOf((await attempt(cookie, GOOD)).response)
-    assert.deepEqual([pass.passed, pass.xp, pass.halved], [true, 10, true])
+      answer = () => judgeReply(metBoth)
+      let pass = await verdictOf((await attempt(cookie, GOOD)).response)
+      assert.deepEqual([pass.passed, pass.xp, pass.halved], [true, 10, true])
+    })
     assert.equal(await xpOf(user.id), 10)
     // The save keeps it halved and adds the lesson's rest.
     assert.equal((await completeLesson(cookie, COURSE, LESSON)).status, 303)
     assert.equal(await xpOf(user.id), 40)
+  })
+
+  it('a deterministic miss hints at what failed on every attempt, and never offers a hint it already showed', async () => {
+    let { cookie } = await signIn('coach-repeat@example.com')
+    for (let n = 1; n <= 4; n++) {
+      let verdict = await verdictOf((await attempt(cookie, BAD)).response)
+      assert.equal(verdict.hint, "Claude can't see your rota unless it's in the message. Where is it now?")
+      // The general ladder isn't tied to the failing check, and the tied hint was shown: no "Stronger hint".
+      assert.equal(verdict.stronger, undefined)
+    }
+  })
+
+  // ---- Replies that weren't live: each source × reason (QA 2026-11-02) ----
+
+  /** Rows the coach journalled for this user or visitor's exercise. */
+  async function rowsFor(cookie: string | null, userId?: string) {
+    if (userId) return verdictRows('user_id = ? and exercise_id = ?', userId, EXERCISE)
+    let visitor = await testDb.d1
+      .prepare(`select visitor from exercise_attempts where visitor is not null order by created_at desc, rowid desc limit 1`)
+      .first<{ visitor: string }>()
+    void cookie
+    return verdictRows('visitor = ? and exercise_id = ?', visitor!.visitor, EXERCISE)
+  }
+
+  async function withLimits(over: Partial<typeof runLimits>, fn: () => Promise<void>) {
+    let saved = { ...runLimits }
+    Object.assign(runLimits, over)
+    try {
+      await fn()
+    } finally {
+      Object.assign(runLimits, saved)
+    }
+  }
+
+  it('over the signed-out hourly run limit: a saved example, not graded, no pass, and it says when it frees up', async () => {
+    await withLimits({ anonymousPerHour: 1 }, async () => {
+      await withGateway({}, async (calls) => {
+        let first = await attempt(null, BAD)
+        assert.equal(first.source, 'live')
+        await verdictOf(first.response)
+        let over = await attempt(first.cookie, GOOD)
+        assert.equal(over.source, 'fallback')
+        let verdict = await verdictOf(over.response)
+        assert.deepEqual([verdict.layer, verdict.passed, verdict.xp], ['limit', false, 0])
+        assert.ok(verdict.criteria.every((c) => c.met === null), 'nothing is graded')
+        assert.match(verdict.hint, /You’ve used this hour’s 1 live run for signed-out learners, so this reply is a saved example and isn’t graded\. A live run frees up within \d+ min, or sign in for more\./)
+        assert.ok(verdict.resetsAt && verdict.resetsAt > Date.now())
+        // Not a miss either: the count stays at the one live miss.
+        assert.equal(verdict.misses, 1)
+        assert.equal(calls.judge.length, 0)
+        // Nothing journalled for the limited run, so the save can't read a pass from it.
+        let rows = await rowsFor(over.cookie)
+        assert.deepEqual(rows.map((row) => [row.layer, row.passed]), [['reply', 0]])
+      })
+    })
+  })
+
+  it('over the signed-in hourly and daily limits: not graded, and the save earns nothing for the exercise', async () => {
+    let { cookie, user } = await signIn('coach-limit-hour@example.com')
+    await withLimits({ userPerHour: 1 }, async () => {
+      await withGateway({}, async () => {
+        await verdictOf((await attempt(cookie, BAD)).response)
+        let over = await attempt(cookie, GOOD)
+        assert.equal(over.source, 'fallback')
+        let verdict = await verdictOf(over.response)
+        assert.deepEqual([verdict.layer, verdict.passed], ['limit', false])
+        assert.match(verdict.hint, /You’ve used this hour’s 1 live run, .* frees up within \d+ min\.$/)
+        // gate=false, so the lesson saves; the exercise's 20 aren't in it.
+        assert.equal((await completeLesson(cookie, COURSE, LESSON)).status, 303)
+        assert.equal(await xpOf(user.id), 30)
+      })
+    })
+    let daily = await signIn('coach-limit-day@example.com')
+    await withLimits({ userPerDay: 1 }, async () => {
+      await withGateway({}, async () => {
+        await verdictOf((await attempt(daily.cookie, BAD)).response)
+        let verdict = await verdictOf((await attempt(daily.cookie, GOOD)).response)
+        assert.deepEqual([verdict.layer, verdict.passed], ['limit', false])
+        assert.match(verdict.hint, /You’ve used today’s 1 run, .* frees up within \d+ h\.$/)
+      })
+    })
+  })
+
+  it('over the per-network limit: not graded, and it names the network', async () => {
+    let ip = testIp()
+    await withLimits({ anonymousPerIpHour: 1 }, async () => {
+      await withGateway({}, async () => {
+        await verdictOf((await attempt(null, BAD, ip)).response)
+        // Another visitor on the same network.
+        let other = await attempt(null, GOOD, ip)
+        assert.equal(other.source, 'fallback')
+        let verdict = await verdictOf(other.response)
+        assert.deepEqual([verdict.layer, verdict.passed], ['limit', false])
+        assert.match(verdict.hint, /This network has used its 1 signed-out live run this hour/)
+      })
+    })
+  })
+
+  it('Claude unreachable on a run: an outage, graded by pattern so no one is stuck, labelled, full xp', async () => {
+    let { cookie, user } = await signIn('coach-outage@example.com')
+    await withGateway({ run: () => new Response('{"type":"error","error":{"type":"overloaded_error","message":"busy"}}', { status: 529 }) }, async (calls) => {
+      let run = await attempt(cookie, GOOD)
+      assert.equal(run.source, 'fallback')
+      let verdict = await verdictOf(run.response)
+      assert.deepEqual([verdict.layer, verdict.passed, verdict.xp], ['pattern', true, 20])
+      assert.match(verdict.note ?? '', /Claude couldn’t be reached, so this reply is a saved example/)
+      assert.equal(calls.judge.length, 0)
+    })
+    assert.equal(await xpOf(user.id), 20)
+  })
+
+  it('a temperature that never runs live: a saved example, not graded, and it says which one does', async () => {
+    let { cookie } = await signIn('coach-example@example.com')
+    await withGateway({}, async (calls) => {
+      let run = await attempt(cookie, GOOD, testIp(), 0)
+      assert.equal(run.source, 'example')
+      let verdict = await verdictOf(run.response)
+      assert.deepEqual([verdict.layer, verdict.passed, verdict.misses], ['example', false, 0])
+      assert.match(verdict.hint, /only T=1\.0 runs live/)
+      assert.equal(calls.runs.length + calls.judge.length, 0)
+    })
   })
 
   it('refuses another owner’s run, an unknown exercise and a missing attempt', async () => {

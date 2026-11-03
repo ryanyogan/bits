@@ -115,11 +115,17 @@ export interface JournalledExercise {
  * Which of a lesson's exercises the journal says passed (the save, decision
  * 064): a passing verdict from /api/coach, or a journalled run whose
  * deterministic layers pass on their own (no judge needed). Never form fields.
+ *
+ * A saved-example run counts on its own only when `offline` (no model is
+ * connected at all). With a model connected, a canned reply came from a run
+ * limit or an outage, and only /api/coach can tell which: an outage's pass is
+ * the coach's journalled `pattern` verdict; a limit's is never written.
  */
 export function journalledExercises(
   blocks: PromptBlock[],
   runs: JournalRun[],
   verdicts: CoachVerdict[],
+  options: { offline: boolean },
 ): Record<string, JournalledExercise> {
   let out: Record<string, JournalledExercise> = {}
   for (let block of blocks) {
@@ -131,6 +137,7 @@ export function journalledExercises(
     // Oldest first, so the earliest pass decides whether a reveal came before it.
     let byRun = [...own]
       .sort((a, b) => a.created_at - b.created_at)
+      .filter((run) => options.offline || isLiveRun(run))
       .find((run) => passesWithoutJudge(gradeRun(block, { prompt: run.prompt, output: run.output, live: isLiveRun(run) }, ranAt)) === true)
     let times = [history.passedAt, byRun?.created_at].filter((t): t is number => t !== undefined)
     let passedAt = times.length ? Math.min(...times) : undefined

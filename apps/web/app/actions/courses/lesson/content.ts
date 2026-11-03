@@ -108,6 +108,11 @@ export interface PromptBlock {
   rubric?: RubricLine[]
   /** `- hint "…"`, general first: the escalation ladder and the offline hints. */
   hints?: string[]
+  /**
+   * `- hint for="label" "…"`: a hint for one criterion (a check, run, expect
+   * or rubric label), shown when that criterion is the first one not met.
+   */
+  hintsFor?: { for: string; text: string }[]
   /** `- reference "…"`: a strong prompt. */
   reference?: string
   /** `- document id "…"`: text a `quotes id` expect checks against. */

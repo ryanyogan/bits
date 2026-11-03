@@ -14,6 +14,7 @@
 //
 // The prompt and reply always come from the journal (D1), never the request.
 import {
+  countRuns,
   findOwnRun,
   findVerdictForAttempt,
   finishJudgeCall,
@@ -42,6 +43,7 @@ import { log } from '../log.ts'
 import { getDatabase } from '../middleware/database.ts'
 import { blockShares } from '../progress/check.ts'
 import { localDay } from '../progress/days.ts'
+import { missHint, notGradedMessage, passNote, PATTERN_NOTES, strongerHint, type NotLive } from './coach-text.ts'
 import { exerciseHistory, exerciseXp, gradeRun, isGraded, isLiveRun, type DeterministicGrade } from './grade.ts'
 import {
   applyJudge,
@@ -54,8 +56,8 @@ import {
   SCREENED_HINT,
   verdictSchema,
 } from './judge.ts'
-import { judgeModel, ModelError, type ModelEnv } from './model.ts'
-import { dailyLiveCap, runOwner } from './run.ts'
+import { judgeModel, liveTemperatures, modelConfigured, ModelError, runsLive, type ModelEnv } from './model.ts'
+import { dailyLiveCap, runLimits, runOwner } from './run.ts'
 
 type AnyContext = RequestContext<any, any>
 
@@ -75,9 +77,12 @@ const DAY = 24 * HOUR
 /** The hint when the judge answered but its verdict can't be used. */
 const UNGRADED_HINT = 'The coach couldn’t grade this attempt. Write the prompt in plain words and run it again.'
 
-const NOTES = {
-  pattern: 'Coach offline: this reply is a saved example. Checked by pattern, not by the coach.',
-  soft: 'The coach didn’t judge this reply (its limit, or it couldn’t be reached), so it was checked on the reply checks only.',
+/** Why a live reply passed without the judge (a `soft` verdict): kept as the row's hint. */
+const SOFT_NOTES = {
+  cap: 'The coach’s hourly limit for this exercise is used up, so the reply checks decided this one, not the coach.',
+  outage: 'The coach couldn’t be reached, so the reply checks decided this one, not the coach.',
+  /** Rows written before the reason was recorded. */
+  legacy: 'The coach didn’t judge this reply, so the reply checks decided it.',
 }
 
 export interface CoachRequest {
@@ -102,19 +107,38 @@ async function findCoachedExercise(context: AnyContext, input: CoachRequest): Pr
   return { block, share: blockShares(content).shares.get(block.id) ?? 0 }
 }
 
-/** The authored hint for the n-th miss (1-based), general first. */
-function authoredHint(block: PromptBlock, misses: number): string | undefined {
-  let hints = block.hints ?? []
-  return hints.length ? hints[Math.min(Math.max(misses, 1) - 1, hints.length - 1)] : undefined
-}
-
-/** The hint after a deterministic miss: the first failing check's note, else an authored hint. */
-function deterministicHint(block: PromptBlock, criteria: VerdictCriterion[], misses: number): string {
-  let missed = criteria.find((criterion) => criterion.met === false)
-  if (missed?.note) return missed.note
-  let authored = authoredHint(block, misses)
-  if (authored) return authored
-  return missed ? `Not yet: “${missed.label}”.` : 'Not yet. Try again.'
+/**
+ * Why a journalled run's reply wasn't live, rebuilt from the journal. A
+ * canned row doesn't record its reason, but the limits are counts of earlier
+ * rows: a run whose owner, IP or the day was over a cap when it was written
+ * was canned by that limit (run.ts). The counts are taken at the run's own
+ * time, and later rows only add to them, so a mistake can only call an
+ * outage a limit (no pass), never a limit an outage.
+ */
+async function whyNotLive(context: AnyContext, owner: RunOwner, ipHash: string | null, run: JournalRun): Promise<NotLive> {
+  if (!modelConfigured(platform.env as ModelEnv)) return { kind: 'unconfigured' }
+  let at = run.created_at
+  let todaySince = at - (at % DAY)
+  let counts = await countRuns(getDatabase(context), owner, ipHash, { hourSince: at - HOUR, daySince: at - DAY, todaySince })
+  let signedIn = Boolean(owner.userId)
+  let limit = (kind: 'hour' | 'day' | 'ip' | 'budget', cap: number, resetsAt: number): NotLive => ({
+    kind: 'limit',
+    limit: kind,
+    cap,
+    signedIn,
+    resetsAt,
+  })
+  // The counts include this run, so "over" is more than the cap.
+  if (signedIn) {
+    if (counts.hour > runLimits.userPerHour) return limit('hour', runLimits.userPerHour, at + HOUR)
+    if (counts.day > runLimits.userPerDay) return limit('day', runLimits.userPerDay, at + DAY)
+  } else {
+    if (counts.hour > runLimits.anonymousPerHour) return limit('hour', runLimits.anonymousPerHour, at + HOUR)
+    if (ipHash && counts.ipHour > runLimits.anonymousPerIpHour) return limit('ip', runLimits.anonymousPerIpHour, at + HOUR)
+  }
+  if (!runsLive(run.temperature)) return { kind: 'example', live: liveTemperatures.map((t) => (t / 100).toFixed(1)) }
+  if (counts.liveToday >= dailyLiveCap()) return limit('budget', dailyLiveCap(), todaySince + DAY)
+  return { kind: 'outage' }
 }
 
 /** Grades a journalled run and journals the verdict (or reads back the one it already has). */
@@ -141,9 +165,15 @@ export async function coachAttempt(context: AnyContext, input: CoachRequest & { 
   if (existing) return { ok: true, verdict: await present(context, found, owner, existing, false) }
 
   let reply = run.output
+  let ipHash = owner.userId ? null : await sha256Hex(`ip:${context.headers.get('CF-Connecting-IP') ?? 'local'}`)
+  let notLive = isLiveRun(run) ? undefined : await whyNotLive(context, owner, ipHash, run)
+  // Over a limit, or at a temperature that never runs live: a saved example
+  // that is neither graded nor journalled, so it can't pass and isn't a miss.
+  if (notLive?.kind === 'limit' || notLive?.kind === 'example') {
+    return { ok: true, verdict: await presentNotGraded(context, found, owner, run, notLive) }
+  }
   let grade = gradeRun(block, { prompt: run.prompt, output: reply, live: isLiveRun(run) }, new Set(temperatures))
   let now = Date.now()
-  let ipHash = owner.userId ? null : await sha256Hex(`ip:${context.headers.get('CF-Connecting-IP') ?? 'local'}`)
   let base = {
     id: crypto.randomUUID(),
     attemptId: run.id,
@@ -162,7 +192,7 @@ export async function coachAttempt(context: AnyContext, input: CoachRequest & { 
       layer: grade.layer,
       passed: grade.holds,
       criteria: grade.criteria,
-      hint: grade.holds ? block.success.message : deterministicHint(block, grade.criteria, misses + 1),
+      hint: grade.holds ? passNote(grade.criteria) : missHint(block, grade.criteria, misses + 1),
     }
   } else if (screensAsInjection(run.prompt) || screensAsInjection(reply)) {
     row = { layer: 'coach', passed: false, criteria: screenedCriteria(grade.criteria), hint: SCREENED_HINT }
@@ -217,12 +247,13 @@ async function judge(
   let db = getDatabase(context)
   let owner = base.owner
   let now = base.now
-  let soft = {
+  // A soft pass keeps why the judge didn't run as its hint (present() shows it as the note).
+  let soft = (why: 'cap' | 'outage') => ({
     layer: 'soft' as const,
     passed: true,
     criteria: grade.criteria,
-    hint: block.success.message,
-  }
+    hint: SOFT_NOTES[why],
+  })
   let reserved = await reserveJudgeCall(
     db,
     { ...base, layer: 'pending', passed: false, criteria: [], hint: '' },
@@ -237,13 +268,14 @@ async function judge(
   if (!reserved) {
     if (await findVerdictForAttempt(db, run.id)) return 'raced'
     // Over a cap: the rubric isn't judged; the deterministic layers held.
-    let written = await insertVerdict(db, { ...base, ...soft })
-    return written ? soft : 'raced'
+    let capped = soft('cap')
+    let written = await insertVerdict(db, { ...base, ...capped })
+    return written ? capped : 'raced'
   }
 
   let model: string | null = null
   let usage = { input: 0, output: 0 }
-  let outcome: { layer: 'coach' | 'soft'; passed: boolean; criteria: VerdictCriterion[]; hint: string } = soft
+  let outcome: { layer: 'coach' | 'soft'; passed: boolean; criteria: VerdictCriterion[]; hint: string } = soft('outage')
   try {
     let result = await judgeModel({
       system: judgeSystem(block),
@@ -256,9 +288,11 @@ async function judge(
     let parsed = result.stopReason === 'refusal' ? undefined : parseJudgeVerdict(result.text, block.rubric?.length ?? 0)
     if (parsed) {
       let applied = applyJudge(block, grade.criteria, parsed, run.output, run.prompt)
+      // On a pass the judge's text is dropped: it could question a line that
+      // is met. On a miss it's kept only for a rubric line (missHint).
       let hint = applied.passed
-        ? safeJudgeHint(parsed.hint, block.reference) ?? block.success.message
-        : safeJudgeHint(parsed.hint, block.reference) ?? authoredHint(block, misses + 1) ?? 'Not yet. Look at the ✗ lines.'
+        ? passNote(applied.criteria)
+        : missHint(block, applied.criteria, misses + 1, safeJudgeHint(parsed.hint, block.reference))
       outcome = { layer: 'coach', passed: applied.passed, criteria: applied.criteria, hint }
     } else {
       // A refusal or an unreadable verdict can be provoked by the attempt
@@ -316,25 +350,65 @@ async function present(context: AnyContext, found: Found, owner: RunOwner, row: 
     }
   }
 
-  let hints = block.hints ?? []
   let verdict: CoachVerdict = {
     attempt: row.attempt_id ?? '',
     layer: row.layer === 'pending' || row.layer === 'reveal' ? 'reply' : row.layer,
     passed: row.passed,
     criteria: row.criteria,
-    hint: row.hint,
+    // A pass's line comes from its criteria (older rows kept the judge's text).
+    hint: row.passed ? passNote(row.criteria) : row.hint,
     misses: history.misses,
     canReveal: !passedEver && Boolean(block.reference) && history.misses >= coachLimits.revealAfter,
     xp,
     saved: Boolean(user),
   }
-  if (row.layer === 'pattern' || row.layer === 'soft') verdict.note = NOTES[row.layer]
-  if (!row.passed && history.misses >= coachLimits.strongerAfter && hints.length) {
-    verdict.stronger = hints[Math.min(history.misses - coachLimits.strongerAfter + 1, hints.length - 1)]
+  if (row.layer === 'pattern') {
+    verdict.note = modelConfigured(platform.env as ModelEnv) ? PATTERN_NOTES.outage : PATTERN_NOTES.unconfigured
+  }
+  if (row.layer === 'soft') verdict.note = row.hint === SOFT_NOTES.cap || row.hint === SOFT_NOTES.outage ? row.hint : SOFT_NOTES.legacy
+  if (!row.passed && history.misses >= coachLimits.strongerAfter) {
+    // Never a hint this exercise already showed in a coach turn.
+    let shown = new Set(verdicts.filter((v) => v.exercise_id === block.id && isGraded(v)).map((v) => v.hint))
+    shown.add(row.hint)
+    let stronger = strongerHint(block, row.criteria, history.misses, coachLimits.strongerAfter, shown)
+    if (stronger) verdict.stronger = stronger
   }
   if (passedEver && block.reference) verdict.reference = block.reference
   if (row.passed) verdict.success = block.success.message
   if (halved) verdict.halved = true
+  return verdict
+}
+
+/**
+ * A saved example that wasn't graded (over a run limit, or a temperature
+ * that never runs live): every criterion "not checked", no pass, no miss,
+ * and the reason, with when it frees up, as the hint. Nothing is journalled.
+ */
+async function presentNotGraded(
+  context: AnyContext,
+  found: Found,
+  owner: RunOwner,
+  run: JournalRun,
+  why: Extract<NotLive, { kind: 'limit' | 'example' }>,
+): Promise<CoachVerdict> {
+  let { block } = found
+  let verdicts = await listLessonVerdicts(getDatabase(context), owner, { courseId: run.course_id, lessonSlug: run.lesson_slug })
+  let history = exerciseHistory(verdicts, block.id)
+  let passedEver = history.passedAt !== undefined
+  let { criteria } = gradeRun(block, { prompt: run.prompt, output: run.output, live: false }, new Set())
+  let verdict: CoachVerdict = {
+    attempt: run.id,
+    layer: why.kind,
+    passed: false,
+    criteria: criteria.map(({ note: _note, ...criterion }) => ({ ...criterion, met: null })),
+    hint: notGradedMessage(why, Date.now()),
+    misses: history.misses,
+    canReveal: !passedEver && Boolean(block.reference) && history.misses >= coachLimits.revealAfter,
+    xp: 0,
+    saved: Boolean(currentUser(context)),
+  }
+  if (why.kind === 'limit') verdict.resetsAt = why.resetsAt
+  if (passedEver && block.reference) verdict.reference = block.reference
   return verdict
 }
 
