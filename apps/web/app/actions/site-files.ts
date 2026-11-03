@@ -52,7 +52,8 @@ interface SitemapEntry {
 export async function sitemapResponse(context: RequestContext<any, any>): Promise<Response> {
   let catalog = await getCatalog(context)
   let entries: SitemapEntry[] = [{ path: routes.home.href() }, { path: routes.courses.index.href() }]
-  for (let { slug } of catalog.courses) {
+  // Coming-soon courses (decision 073) stay out until they open.
+  for (let { slug } of catalog.openCourses) {
     let course = catalog.getCourse(slug)!
     let lastmod = course.updated
     entries.push({ path: routes.courses.course.index.href({ course: slug }), lastmod })

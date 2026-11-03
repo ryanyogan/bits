@@ -14,6 +14,8 @@ export type TagVariant =
   | 'run-hint'
   | 'free'
   | 'pro'
+  | 'soon'
+  | 'desk'
 
 export interface TagProps {
   /**
@@ -21,8 +23,10 @@ export interface TagProps {
    * `cover` (track name on a cover; pass `color`), `done` ("✓ DONE"),
    * `your-turn` (composer header), `your-turn-sm` (Authoring preview),
    * `run-hint` (static composer "Run ↵"), `free` / `pro` (a course's access,
-   * decision 048: free in the brand's colour, pro a small dark key). Write
-   * them in sentence case: `Free`, `Pro`.
+   * decision 048: free in the brand's colour, pro a small dark key), `soon`
+   * ("Coming soon", a dashed ion outline) and `desk` (a lesson that needs a
+   * computer; use `DeskTag`), decision 073. Write them in sentence case:
+   * `Free`, `Pro`.
    */
   variant: TagVariant
   /** Text colour for `cover` tags, e.g. `var(--ion)`. */
@@ -130,6 +134,22 @@ const variantStyles: Record<TagVariant, ReturnType<typeof css>> = {
     background: 'var(--raised)',
     boxShadow: 'var(--shadow-keycap-dark)',
     color: 'var(--text)',
+    fontSize: 'var(--fs-11)',
+    [FORCED_COLORS]: { border: '1px solid CanvasText' },
+  }),
+  // Not open yet (decision 073): a dashed outline, a promise rather than a key.
+  soon: css({
+    padding: 'var(--space-0_75) var(--space-2)',
+    border: 'var(--border-w) dashed var(--ion-a35)',
+    color: 'var(--ion)',
+    fontSize: 'var(--fs-11)',
+    [FORCED_COLORS]: { border: '1px dashed CanvasText', color: 'CanvasText' },
+  }),
+  // A build step for a computer (decision 073): quiet, the format tag's recipe.
+  desk: css({
+    padding: 'var(--space-0_5) var(--space-1_5)',
+    border: 'var(--border-w) solid var(--line-panel)',
+    color: 'var(--text-quiet)',
     fontSize: 'var(--fs-11)',
     [FORCED_COLORS]: { border: '1px solid CanvasText' },
   }),

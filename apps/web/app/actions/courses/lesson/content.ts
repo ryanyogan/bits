@@ -394,6 +394,34 @@ export interface LessonContent {
    * never shown: a canned reply to a typed answer faked a result (052).
    */
   replies?: { hint: string; fallback?: string }
+  /** When the lesson's code was last run, and with which packages (decision 073). */
+  freshness?: LessonFreshness
+  /** Build steps that need a computer (decision 073). */
+  device?: 'desk'
+  /** Where a build-along lesson starts in the course repo (decision 073). */
+  start?: LessonStart
+}
+
+/** Frontmatter `verified:` and `versions:` (decision 073). */
+export interface LessonFreshness {
+  /** YYYY-MM-DD. */
+  verified?: string
+  /** `[package, exact version]`, in frontmatter order. */
+  versions: [string, string][]
+}
+
+/**
+ * A build-along lesson's starting point (decision 073): frontmatter `tag:`
+ * in the course's `repo:`. The build writes the link and the git commands.
+ */
+export interface LessonStart {
+  tag: string
+  /** `<repo>/tree/<tag>` on GitHub. */
+  href: string
+  /** The clone-and-checkout commands, highlighted at build time. */
+  lines: CodeSegment[][]
+  /** Language name for the sample's strip ("Shell"). */
+  language: string
 }
 
 /**

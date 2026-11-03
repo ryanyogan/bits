@@ -2,7 +2,7 @@
 title: "Context is everything"
 track: prompting
 level: intermediate
-order: 4
+order: 40
 summary: "What fits in the window, what falls out, and how to pack it so the model notices."
 outcomes:
   - "Say what counts toward Claude's context window, and how big it is."

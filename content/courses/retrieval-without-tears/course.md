@@ -2,7 +2,7 @@
 title: "Retrieval without tears"
 track: tools
 level: intermediate
-order: 6
+order: 90
 summary: "Search your own docs, hand the best bits to the model, and cite where they came from."
 outcomes:
   - "Decide when to paste everything into the prompt and when to search instead."

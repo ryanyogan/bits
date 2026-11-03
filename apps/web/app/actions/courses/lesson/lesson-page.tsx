@@ -73,6 +73,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
             segments={segments}
             progressLabel={progressLabel}
             depths={depths}
+            desk={lesson.device === 'desk'}
             xp={
               viewer ? (
                 <span data-rmx-key={view.key} mix={contentsStyle}>
@@ -96,7 +97,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
           <div mix={bodyStyle}>
             <OutlineNav view={view} />
             <main id="main" tabIndex={-1} data-rmx-key={view.key} mix={[skipTargetStyle, mainStyle]}>
-              <LessonRow depths={depths} aside={<OutlineDisclosure view={view} />} mix={phoneRow} />
+              <LessonRow depths={depths} desk={lesson.device === 'desk'} aside={<OutlineDisclosure view={view} />} mix={phoneRow} />
               <div mix={readBody}>
                 <ReadMode view={view} />
               </div>

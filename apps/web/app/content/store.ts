@@ -25,7 +25,7 @@ import type { LessonContent } from '../actions/courses/lesson/content.ts'
 import { errorFields, log } from '../log.ts'
 import type { SharedCache } from '../platform/types.ts'
 import type { CourseBuild } from './compile/index.ts'
-import { Catalog } from './catalog.ts'
+import { Catalog, type CatalogOptions } from './catalog.ts'
 import type { ContentMeter } from './meter.ts'
 import type { CourseManifest } from './types.ts'
 
@@ -88,7 +88,11 @@ export function clearContentMemo() {
 
 // ---- Reading ----------------------------------------------------------------
 
-function catalogOf(bucket: R2Bucket, entries: { version: VersionRef; manifest: CourseManifest }[]): Catalog {
+function catalogOf(
+  bucket: R2Bucket,
+  entries: { version: VersionRef; manifest: CourseManifest }[],
+  options?: CatalogOptions,
+): Catalog {
   let versions = new Map(entries.map((entry) => [entry.manifest.slug, entry.version]))
   return new Catalog(
     entries.map((entry) => entry.manifest),
@@ -96,6 +100,8 @@ function catalogOf(bucket: R2Bucket, entries: { version: VersionRef; manifest: C
       let version = versions.get(course.slug)
       return version ? readVersionJson<LessonContent>(bucket, version, lessonKey(version.slug, version.n, lesson), meter) : undefined
     },
+    undefined,
+    options,
   )
 }
 
@@ -349,7 +355,8 @@ export async function loadVersionCatalog(
   if (!row || row.status !== 'ready') return undefined
   let version = { id: row.id, slug, n }
   let manifest = await readVersionJson<CourseManifest>(bucket, version, manifestKey(slug, n))
-  return manifest ? catalogOf(bucket, [{ version, manifest }]) : undefined
+  // The draft preview opens a coming-soon course's lessons (decision 073).
+  return manifest ? catalogOf(bucket, [{ version, manifest }], { openSoon: true }) : undefined
 }
 
 /** The manifest of one built version, if it built cleanly. */

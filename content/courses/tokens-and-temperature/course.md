@@ -2,7 +2,7 @@
 title: Tokens & temperature
 track: foundations
 level: beginner
-order: 2
+order: 20
 summary: "Why the same prompt gives different answers, what tokens cost, and how to steer Claude without a temperature dial."
 outcomes:
   - Predict roughly how many tokens a prompt will cost.

@@ -27,8 +27,10 @@ export interface CourseCardProps {
   /**
    * `free` (default) or `pro` (decision 048). A pro course shows a `Pro` tag
    * unless `owned`; free cards are not tagged (free is the catalog's default).
+   * `soon` (decision 073) shows "Coming soon" and no progress; the card still
+   * opens the course page, which lists the outline without lesson links.
    */
-  access?: 'free' | 'pro'
+  access?: 'free' | 'pro' | 'soon'
   /** The signed-in viewer has this pro course: no tag, the card is just theirs. */
   owned?: boolean
   /** 0 = not started (no bar), 100 = done (DoneTag). */
@@ -57,8 +59,9 @@ export function CourseCard(handle: Handle<CourseCardProps>) {
     let { href, title, desc, track, level, lessons, mins, sigil, tone, pattern, formats, access = 'free', owned = false, pct = 0, headingLevel = 3, variant = 'card', prefetch, forceState, mix } =
       handle.props
     let cell = variant === 'cell'
-    let done = pct >= 100
-    let started = pct > 0 && !done
+    let soon = access === 'soon'
+    let done = !soon && pct >= 100
+    let started = !soon && pct > 0 && !done
     let coverTags = (
       <>
         <Tag variant="cover" color="var(--tone)" mix={coverTagPos}>
@@ -103,10 +106,19 @@ export function CourseCard(handle: Handle<CourseCardProps>) {
               </Tag>
             ) : null}
             <span>{level}</span>
-            <span aria-hidden="true">·</span>
-            <span>{`${lessons} lessons`}</span>
-            <span aria-hidden="true">·</span>
-            <span>{`${mins} min`}</span>
+            {lessons > 0 ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{`${lessons} lessons`}</span>
+                <span aria-hidden="true">·</span>
+                <span>{`${mins} min`}</span>
+              </>
+            ) : null}
+            {soon ? (
+              <Tag variant="soon" mix={proTagPos}>
+                Coming soon
+              </Tag>
+            ) : null}
             {access === 'pro' && !owned ? (
               <Tag variant="pro" mix={proTagPos}>
                 Pro

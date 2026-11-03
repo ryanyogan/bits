@@ -957,4 +957,140 @@ describe('content build', () => {
     hasError(coached(['- check "x" /x/', `- document a "${'x'.repeat(4001)}"`], ''), 'a document is at most 4000 characters')
     hasError(coached(['- check "x" /x/', '- document "no id"'], ''), 'document lines look like')
   })
+
+  // ---- Course metadata (decision 073) ----------------------------------------
+
+  /** A course from course.md frontmatter lines and lesson files, built with `options`. */
+  function buildWith(courseLines: string, files: Record<string, string>, options: Partial<Parameters<typeof buildCourse>[1]> = {}) {
+    let courseMd = course.replace('level: beginner', `level: beginner${courseLines ? `\n${courseLines}` : ''}`)
+    let sources: SourceFile[] = Object.entries({ 'course.md': courseMd, ...files }).map(([p, text]) => ({ path: p, text, size: text.length }))
+    return buildCourse(sources, { folder: 'test', ...options })
+  }
+  const items = (result: ReturnType<typeof build>, level: 'error' | 'warning') =>
+    result.report.filter((item) => item.level === level).map(formatItem)
+  const front = (extra: string) => `title: One\norder: 1\nminutes: 5\nxp: 10\n${extra}`
+  const sample = 'Run it:\n\n```sh\npnpm dev\n```'
+
+  it('reads verified: and versions: into the lesson, and the newest date into the manifest', () => {
+    let result = buildWith('', {
+      '01-one.md': lesson(sample, front('verified: 2026-10-01\nversions:\n  agents: "0.33.1"\n  "@cloudflare/ai-chat": "1.0.0-beta.3"')),
+      '02-two.md': lesson('No code.', 'title: Two\norder: 2\nminutes: 5\nxp: 10\nverified: 2026-11-02'),
+    }, { freshness: { today: '2026-11-03' } })
+    assert.deepEqual(errors(result), [])
+    assert.deepEqual(items(result, 'warning'), [])
+    assert.deepEqual(result.lessons?.get('one')?.freshness, {
+      verified: '2026-10-01',
+      versions: [['agents', '0.33.1'], ['@cloudflare/ai-chat', '1.0.0-beta.3']],
+    })
+    assert.equal(result.manifest?.modules[0]?.lessons[0]?.verified, '2026-10-01')
+    assert.equal(result.manifest?.verified, '2026-11-02')
+  })
+
+  it('warns when a code lesson has no verified: date or an old one; --max-age makes it an error', () => {
+    let files = {
+      '01-one.md': lesson(sample),
+      '02-two.md': lesson(':::terminal{cmd="pnpm test"}\nok\n:::', 'title: Two\norder: 2\nminutes: 5\nxp: 10\nverified: 2026-06-01'),
+      '03-three.md': lesson('Prose only, no date needed.', 'title: Three\norder: 3\nminutes: 5\nxp: 10'),
+    }
+    let today = '2026-11-03'
+    let warned = buildWith('', files, { freshness: { today } })
+    assert.deepEqual(errors(warned), [])
+    assert.deepEqual(items(warned, 'warning'), [
+      '01-one.md:1 → this lesson has code but no verified: date: add verified: YYYY-MM-DD and versions: once you have run it',
+      '02-two.md:6 → verified: 2026-06-01 is 155 days old (over 120): run the code again with current versions, then update verified: and versions:',
+    ])
+    assert.ok(warned.manifest, 'freshness warnings never block publishing')
+    // A larger limit lets the June date pass; strict turns what's left into errors.
+    let strict = buildWith('', files, { freshness: { today, maxAgeDays: 200, strict: true } })
+    assert.deepEqual(errors(strict), [
+      '01-one.md:1 → this lesson has code but no verified: date: add verified: YYYY-MM-DD and versions: once you have run it',
+    ])
+    assert.equal(strict.manifest, undefined)
+    // Without today the build only checks that a date is there; without the option, not at all.
+    assert.equal(items(buildWith('', files, { freshness: {} }), 'warning').length, 1)
+    assert.deepEqual(items(buildWith('', files), 'warning'), [])
+  })
+
+  it('rejects bad dates, future dates, ranges and odd package names', () => {
+    let result = buildWith('', {
+      '01-one.md': lesson('Hi', front('verified: 2026-02-30')),
+      '02-two.md': lesson('Hi', 'title: Two\norder: 2\nminutes: 5\nxp: 10\nversions:\n  agents: "^0.33.1"'),
+      '03-three.md': lesson('Hi', 'title: Three\norder: 3\nminutes: 5\nxp: 10\nversions:\n  agents: 4.2'),
+      '04-four.md': lesson('Hi', 'title: Four\norder: 4\nminutes: 5\nxp: 10\nversions:\n  "Bad Name": "1.0.0"'),
+      '05-five.md': lesson('Hi', 'title: Five\norder: 5\nminutes: 5\nxp: 10\nverified: 2026-12-01'),
+    }, { freshness: { today: '2026-11-03' } })
+    assert.deepEqual(errors(result), [
+      '01-one.md:6 → verified: Expected a date like 2026-11-03 (YYYY-MM-DD)',
+      '02-two.md:7 → versions.agents: Expected an exact version in quotes, like "4.45.2" (no ranges)',
+      '03-three.md:7 → versions.agents: Expected an exact version in quotes, like "4.45.2" (no ranges)',
+      '04-four.md:7 → versions.Bad Name: Expected an npm package name, like agents or "@cloudflare/ai-chat"',
+      '05-five.md:6 → verified: 2026-12-01 is after today (2026-11-03)',
+    ])
+  })
+
+  it('marks desk lessons in the outline and the lesson; any is the default', () => {
+    let result = buildWith('', {
+      '01-one.md': lesson('Hi', front('device: desk')),
+      '02-two.md': lesson('Hi', 'title: Two\norder: 2\nminutes: 5\nxp: 10\ndevice: any'),
+      '03-three.md': lesson('Hi', 'title: Three\norder: 3\nminutes: 5\nxp: 10\ndevice: phone'),
+    })
+    assert.deepEqual(errors(result), ['03-three.md:6 → device: Expected one of: any, desk'])
+    let ok = buildWith('', {
+      '01-one.md': lesson('Hi', front('device: desk')),
+      '02-two.md': lesson('Hi', 'title: Two\norder: 2\nminutes: 5\nxp: 10\ndevice: any'),
+    })
+    let [desk, any] = ok.manifest!.modules[0]!.lessons
+    assert.equal(desk?.device, 'desk')
+    assert.equal(any?.device, undefined)
+    assert.equal(ok.lessons?.get('one')?.device, 'desk')
+  })
+
+  it('lets a coming-soon course have no lessons, and keeps soon off the other access values', () => {
+    let empty = buildWith('access: soon', {})
+    assert.deepEqual(errors(empty), [])
+    assert.equal(empty.manifest?.access, 'soon')
+    assert.equal(empty.manifest?.lessons, 0)
+    assert.deepEqual(empty.manifest?.modules, [])
+    assert.ok(empty.report.some((item) => item.level === 'ok' && /coming soon/.test(item.text)))
+    // Every other course still needs a lesson.
+    assert.deepEqual(errors(buildWith('access: free', {})), ['the course has no lessons: add 01-first-lesson.md next to course.md'])
+    // A soon course with lessons keeps its outline.
+    let planned = buildWith('access: soon', { '01-one.md': lesson('Hi') })
+    assert.equal(planned.manifest?.modules[0]?.lessons[0]?.slug, 'one')
+  })
+
+  it('reads order: as a whole number into the build and the manifest', () => {
+    let one = { '01-one.md': lesson('Hi') }
+    let ordered = buildWith('order: 50', one)
+    assert.equal(ordered.sort, 50)
+    assert.equal(ordered.manifest?.order, 50)
+    assert.deepEqual(errors(buildWith('order: 2.5', one)), ['course.md:5 → order: Expected a whole number'])
+  })
+
+  it('builds the start-from-tag line from repo: and tag:, and checks both', () => {
+    let repo = 'repo: https://github.com/ryanyogan/klippy/'
+    let result = buildWith(repo, { '01-one.md': lesson('Hi', front('tag: a-03')) })
+    assert.deepEqual(errors(result), [])
+    assert.equal(result.manifest?.repo, 'https://github.com/ryanyogan/klippy')
+    let start = result.lessons?.get('one')?.start
+    assert.equal(start?.tag, 'a-03')
+    assert.equal(start?.href, 'https://github.com/ryanyogan/klippy/tree/a-03')
+    assert.equal(start?.language, 'Shell')
+    let text = start?.lines.map((line) => line.map(([, part]) => part).join('')).join('\n')
+    assert.equal(text, 'git clone https://github.com/ryanyogan/klippy\ncd klippy\ngit checkout a-03')
+
+    // A tag needs the course's repo.
+    assert.deepEqual(errors(buildWith('', { '01-one.md': lesson('Hi', front('tag: a-03')) })), [
+      "01-one.md:6 → tag: a-03 needs repo: in course.md (the GitHub repository it's a tag of)",
+    ])
+    // https GitHub repositories only, and plain tag names.
+    for (let bad of ['http://github.com/a/b', 'https://gitlab.com/a/b', 'https://github.com/a', 'https://github.com/a/b/tree/main', 'https://github.com.evil.dev/a/b', 'https://user@github.com/a/b', 'https://github.com/a/b.git']) {
+      let broken = buildWith(`repo: ${bad}`, { '01-one.md': lesson('Hi') })
+      assert.match(errors(broken).join('\n'), /^course\.md:5 → repo: Expected an https GitHub repository URL/, bad)
+    }
+    for (let bad of ['../main', 'a b', '-x', 'a..b']) {
+      let broken = buildWith(repo, { '01-one.md': lesson('Hi', front(`tag: "${bad}"`)) })
+      assert.match(errors(broken).join('\n'), /^01-one\.md:6 → tag: Expected a git tag/, bad)
+    }
+  })
 })

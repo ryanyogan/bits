@@ -4,6 +4,7 @@
 // load lazily through `lessonContent`.
 import { upgradeLessonContent, type LessonContent } from '../actions/courses/lesson/content.ts'
 import {
+  isComingSoon,
   NO_PROGRESS,
   type Completed,
   type CourseDetail,
@@ -30,24 +31,45 @@ export interface FoundLesson {
   next?: LessonSummary
 }
 
+export interface CatalogOptions {
+  /**
+   * Open the lessons of coming-soon courses (decision 073): only the
+   * author's draft preview does. Everywhere else a soon course's lessons
+   * don't resolve, so no page, save, run or check can reach them.
+   */
+  openSoon?: boolean
+}
+
 export class Catalog {
   readonly courses: readonly CourseManifest[]
   #bySlug: Map<string, CourseManifest>
   #load: LessonLoader
   #meter: ContentMeter | undefined
+  #options: CatalogOptions
 
-  constructor(courses: readonly CourseManifest[], load: LessonLoader, meter?: ContentMeter) {
+  constructor(courses: readonly CourseManifest[], load: LessonLoader, meter?: ContentMeter, options: CatalogOptions = {}) {
     // Manifests built before decision 048 have no `access`: they are free.
     courses = courses.map((course) => (course.access ? course : { ...course, access: 'free' }))
     this.courses = courses
     this.#bySlug = new Map(courses.map((course) => [course.slug, course]))
     this.#load = load
     this.#meter = meter
+    this.#options = options
+  }
+
+  /** Whether `slug`'s lessons can open: false for a coming-soon course (decision 073), unless this catalog opens them. */
+  #lessonsOpen(course: CourseManifest): boolean {
+    return this.#options.openSoon === true || !isComingSoon(course)
+  }
+
+  /** Courses a learner can take: everything but coming-soon ones (badges, the next course, totals). */
+  get openCourses(): readonly CourseManifest[] {
+    return this.courses.filter((course) => !isComingSoon(course))
   }
 
   /** This catalog for one request: its lesson reads go to `meter` (the memoised catalog is shared; decision 026). */
   withMeter(meter: ContentMeter): Catalog {
-    return new Catalog(this.courses, this.#load, meter)
+    return new Catalog(this.courses, this.#load, meter, this.#options)
   }
 
   has(slug: string): boolean {
@@ -79,7 +101,7 @@ export class Catalog {
   /** Every course with the viewer's progress, in catalog order. */
   listCourses(completed: Completed = NO_PROGRESS): CourseSummary[] {
     return this.courses.map((info) => {
-      let { outcomes, modules, badge, lead, authors, introLabel, exercise, updated, videos, ...summary } = this.getCourse(
+      let { outcomes, modules, badge, lead, authors, introLabel, exercise, updated, videos, verified, repo, order, ...summary } = this.getCourse(
         info.slug,
         completed,
       )!
@@ -89,7 +111,7 @@ export class Catalog {
 
   getLesson(courseSlug: string, lessonSlug: string, completed: Completed = NO_PROGRESS): FoundLesson | undefined {
     let course = this.getCourse(courseSlug, completed)
-    if (!course) return undefined
+    if (!course || !this.#lessonsOpen(course)) return undefined
     let all = course.modules.flatMap((m) => m.lessons)
     let index = all.findIndex((l) => l.slug === lessonSlug)
     if (index < 0) return undefined
@@ -108,7 +130,7 @@ export class Catalog {
       if (seen.has(slug)) continue
       seen.add(slug)
       let course = this.getCourse(slug, completed)
-      if (!course) continue
+      if (!course || isComingSoon(course)) continue
       let lessons = course.modules.flatMap((m) => m.lessons)
       let current = lessons.find((l) => l.state === 'current')
       if (current) return { course, lesson: current, total: lessons.length }
@@ -119,7 +141,7 @@ export class Catalog {
   /** The compiled lesson body, or undefined when the course or lesson doesn't exist. */
   async lessonContent(courseSlug: string, lessonSlug: string): Promise<LessonContent | undefined> {
     let course = this.#bySlug.get(courseSlug)
-    if (!course || !course.modules.some((m) => m.lessons.some((l) => l.slug === lessonSlug))) return undefined
+    if (!course || !this.#lessonsOpen(course) || !course.modules.some((m) => m.lessons.some((l) => l.slug === lessonSlug))) return undefined
     // Builds before decision 052 stored `quiz` blocks; read them as asks.
     let content = await this.#load(course, lessonSlug, this.#meter)
     return content && upgradeLessonContent(content)

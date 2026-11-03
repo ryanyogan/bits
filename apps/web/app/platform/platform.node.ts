@@ -67,7 +67,10 @@ if (isTest) {
   // course with plain POSTs without depending on any real course's content.
   // Only tests publish it; dev, seed, CI and production never see it.
   let plainCourseDir = path.resolve(coursesDir, '../fixtures/plain-course')
-  for (let dir of [...(await listCourseFolders()), plainCourseDir]) {
+  // And the course-metadata fixtures (decision 073): a coming-soon course,
+  // and a build-along course with freshness dates, a desk lesson and a tag.
+  let metadataDirs = ['soon-course', 'build-along'].map((name) => path.resolve(coursesDir, '../fixtures', name))
+  for (let dir of [...(await listCourseFolders()), plainCourseDir, ...metadataDirs]) {
     let result = await uploadCourseFolder(db, proxy.env.CONTENT, dir, { source: 'test', publish: true })
     if (!result.published) throw new Error(`${dir} didn't build: ${JSON.stringify(result.build.report)}`)
   }

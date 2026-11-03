@@ -1,5 +1,7 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
+import { DeskTag } from '@bits/ui/desk-tag'
+import { EmptyState } from '@bits/ui/empty-state'
 import { LessonNode } from '@bits/ui/lesson-node'
 import { Panel } from '@bits/ui/panel'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
@@ -15,9 +17,13 @@ const stateText = { done: 'completed', current: 'in progress', next: 'not starte
  * then each module as a header row and lesson rows between hairlines, with
  * the trace running down through the square nodes. Static.
  */
-export function Syllabus(handle: Handle<{ modules: SyllabusModuleView[] }>) {
+export function Syllabus(handle: Handle<{ modules: SyllabusModuleView[]; soon?: boolean }>) {
   return () => (
-    <Panel id="syllabus-heading" title="Syllabus" flush>
+    <Panel id="syllabus-heading" title="Syllabus" aside={handle.props.soon ? 'Coming soon' : undefined} flush>
+      {handle.props.modules.length === 0 ? (
+        // A coming-soon course may be its course.md alone (decision 073).
+        <EmptyState variant="bare" title="Lessons are on the way" hint="This course is being written. Its lessons open here when they're ready." />
+      ) : null}
       {handle.props.modules.map((module) => (
         <div key={module.n} mix={moduleStyle}>
           <h3 mix={moduleHeader}>
@@ -39,6 +45,30 @@ export function Syllabus(handle: Handle<{ modules: SyllabusModuleView[] }>) {
 function SyllabusRow(handle: Handle<{ lesson: SyllabusLesson }>) {
   return () => {
     let { lesson } = handle.props
+    let body = (
+      <>
+        <span mix={slotStyle}>
+          <LessonNode state={lesson.state} size={30} />
+        </span>
+        <span mix={bodyStyle}>
+          <span data-state={lesson.state} mix={titleStyle}>
+            {`${lesson.n}. ${lesson.title}`}
+            {lesson.href ? <span class="sr-only">{` — ${stateText[lesson.state]}`}</span> : null}
+          </span>
+          {lesson.tags.length || lesson.device === 'desk' ? (
+            <span mix={kindsStyle}>
+              {lesson.tags.map((kind) => (
+                <span key={kind} style={{ color: kindLabels[kind].color }}>
+                  {kindLabels[kind].label}
+                </span>
+              ))}
+              {lesson.device === 'desk' ? <DeskTag /> : null}
+            </span>
+          ) : null}
+        </span>
+        <span mix={xpStyle}>{`${lesson.mins} min · +${lesson.xp} neurons`}</span>
+      </>
+    )
     return (
       <li mix={itemStyle}>
         {lesson.trace !== 'none' ? (
@@ -48,33 +78,22 @@ function SyllabusRow(handle: Handle<{ lesson: SyllabusLesson }>) {
             mix={traceStyle}
           />
         ) : null}
-        <a
-          href={lesson.href}
-          aria-current={lesson.state === 'current' ? 'step' : undefined}
-          data-rmx-prefetch={prefetchFor(lesson.href)}
-          data-state={lesson.state}
-          mix={rowStyle}
-        >
-          <span mix={slotStyle}>
-            <LessonNode state={lesson.state} size={30} />
-          </span>
-          <span mix={bodyStyle}>
-            <span data-state={lesson.state} mix={titleStyle}>
-              {`${lesson.n}. ${lesson.title}`}
-              <span class="sr-only">{` — ${stateText[lesson.state]}`}</span>
-            </span>
-            {lesson.tags.length ? (
-              <span mix={kindsStyle}>
-                {lesson.tags.map((kind) => (
-                  <span key={kind} style={{ color: kindLabels[kind].color }}>
-                    {kindLabels[kind].label}
-                  </span>
-                ))}
-              </span>
-            ) : null}
-          </span>
-          <span mix={xpStyle}>{`${lesson.mins} min · +${lesson.xp} neurons`}</span>
-        </a>
+        {lesson.href ? (
+          <a
+            href={lesson.href}
+            aria-current={lesson.state === 'current' ? 'step' : undefined}
+            data-rmx-prefetch={prefetchFor(lesson.href)}
+            data-state={lesson.state}
+            mix={rowStyle}
+          >
+            {body}
+          </a>
+        ) : (
+          // Coming soon (decision 073): the plan, not a link.
+          <div data-state={lesson.state} mix={[rowStyle, staticRow]}>
+            {body}
+          </div>
+        )}
         {lesson.resume ? (
           <div mix={calloutStyle}>
             <p mix={calloutText}>
@@ -156,6 +175,8 @@ const rowStyle = css({
   '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
   [MOBILE]: { flexWrap: 'wrap', rowGap: 'var(--space-1)' },
 })
+// A row that isn't a link: no hover step.
+const staticRow = css({ '&:hover': { background: 'transparent' } })
 // Above the trace, so the line stops at each node's edge.
 const slotStyle = css({ position: 'relative', zIndex: 2, flex: 'none', width: '40px', height: '40px', display: 'grid', placeItems: 'center' })
 const bodyStyle = css({ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' })

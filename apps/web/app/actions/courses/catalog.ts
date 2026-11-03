@@ -1,7 +1,7 @@
 // Catalog filtering (Catalog.md §2c–2e). Filters are URL state
 // (`?track=agents&q=rag`) so they can be shared and work without JS; this
 // module turns the URL into the filtered list and the hrefs for each pill.
-import type { CourseSummary, Track } from '../../content/types.ts'
+import { isComingSoon, type CourseSummary, type Track } from '../../content/types.ts'
 import { routes } from '../../routes.ts'
 
 export type TrackSlug = 'foundations' | 'prompting' | 'tools' | 'agents'
@@ -74,8 +74,9 @@ export function resultLabel(n: number): string {
  * count shows once, in the search strip (`resultLabel`), where it follows
  * the filters.
  */
-export function catalogSummary(list: readonly { mins: number }[]): string {
-  let mins = list.reduce((sum, course) => sum + course.mins, 0)
+export function catalogSummary(list: readonly { mins: number; access?: CourseSummary['access'] }[]): string {
+  // A coming-soon course (decision 073) isn't time anyone can spend yet.
+  let mins = list.filter((course) => !isComingSoon(course)).reduce((sum, course) => sum + course.mins, 0)
   let hours = Math.round(mins / 60)
   return mins < 90 ? `${mins} minutes in all` : `About ${hours} hours in all`
 }

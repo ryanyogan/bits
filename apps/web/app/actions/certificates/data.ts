@@ -5,7 +5,7 @@
 import { readUserWithCompleted, type D1DataTableDatabase, type User } from '@bits/db'
 
 import type { Catalog } from '../../content/catalog.ts'
-import type { CourseDetail } from '../../content/types.ts'
+import { isComingSoon, type CourseDetail } from '../../content/types.ts'
 import { badgeDefinitions } from '../../progress/badges.ts'
 
 export interface Certificate {
@@ -40,7 +40,8 @@ export async function getCertificate(
   if (!user.is_public && viewer?.id !== user.id) return undefined
   let completed = new Map(rows.map((row) => [`${row.course_id}/${row.lesson_slug}`, row.completed_at]))
   let course = catalog.getCourse(courseSlug, completed)
-  if (!course) return undefined
+  // A coming-soon course (decision 073) has no lessons to finish.
+  if (!course || isComingSoon(course)) return undefined
   let lessons = course.modules.flatMap((m) => m.lessons)
   let times = lessons.map((lesson) => completed.get(`${course.slug}/${lesson.slug}`))
   if (lessons.length === 0 || times.some((at) => at === undefined)) return undefined

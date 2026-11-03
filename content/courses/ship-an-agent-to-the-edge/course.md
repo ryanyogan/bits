@@ -2,7 +2,7 @@
 title: "Ship an agent to the edge"
 track: agents
 level: advanced
-order: 8
+order: 100
 summary: "Take your agent from a script to a deployed endpoint with memory, limits and logs."
 outcomes:
   - "Deploy a Claude-powered endpoint on Cloudflare Workers, with the API key kept server-side."

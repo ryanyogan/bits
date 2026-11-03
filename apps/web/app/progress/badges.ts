@@ -27,9 +27,13 @@ const generalBadges: BadgeDefinition[] = [
   { id: 'streak-30', name: 'Streak ×30', glyph: '30d', color: 'var(--volt-soft)', rule: (s) => s.bestStreak >= 30 },
 ]
 
-/** Every badge: the general ones, then one per published course (finish every lesson). */
+/**
+ * Every badge: the general ones, then one per published course (finish
+ * every lesson). A coming-soon course has none yet (decision 073): with no
+ * lessons open, "every lesson done" would hold for everyone.
+ */
 export function badgeDefinitions(catalog: Catalog): BadgeDefinition[] {
-  let courseBadges = catalog.courses.map((course, i): BadgeDefinition => {
+  let courseBadges = catalog.openCourses.map((course, i): BadgeDefinition => {
     let lessons = course.modules.flatMap((m) => m.lessons)
     return {
       id: `course:${course.slug}`,

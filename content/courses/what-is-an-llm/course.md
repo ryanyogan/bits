@@ -2,7 +2,7 @@
 title: "What is an LLM, really?"
 track: foundations
 level: beginner
-order: 1
+order: 10
 summary: "Start here. Talk to Claude, then see what's really going on between your prompt and the answer."
 outcomes:
   - "Talk to Claude in the sandbox and know what you're talking to."

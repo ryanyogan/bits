@@ -4,7 +4,7 @@
 import type { LessonState } from '@bits/ui/lesson-node'
 
 import type { Viewer } from '../../../auth/identity.ts'
-import type { CourseDetail, CourseSummary, LessonKind, LessonSummary } from '../../../content/types.ts'
+import { isComingSoon, type CourseDetail, type CourseSummary, type LessonKind, type LessonSummary } from '../../../content/types.ts'
 
 const DEFAULT_AUTHOR = 'The bits team'
 const DEFAULT_UPDATED = '2026-09-28'
@@ -27,7 +27,8 @@ export const kindLabels: Record<LessonKind, { label: string; color: string }> = 
 export type CourseState = 'new' | 'started' | 'finished'
 
 export interface SyllabusLesson extends LessonSummary {
-  href: string
+  /** Absent in a coming-soon course (decision 073): the row is the plan, not a link. */
+  href?: string
   /** The kinds the row names (`chat` dropped when every lesson is a chat). */
   tags: LessonKind[]
   /**
@@ -60,6 +61,8 @@ export interface CourseView {
   course: CourseDetail
   lead: string
   signedIn: boolean
+  /** Listed before it opens (decision 073): no CTA, and the outline has no links. */
+  soon: boolean
   state: CourseState
   pct: number
   done: number
@@ -67,8 +70,8 @@ export interface CourseView {
   /** Sum of the lesson minutes: the hero's total and "min left" use one formula. */
   totalMins: number
   minsLeft: number
-  /** Primary CTA, with the lesson it opens underneath ("Lesson 3 · Title · 6 min"). */
-  cta: CourseLink & { sub?: string }
+  /** Primary CTA, with the lesson it opens underneath ("Lesson 3 · Title · 6 min"). None while the course is coming soon. */
+  cta?: CourseLink & { sub?: string }
   /** Secondary CTA: the intro video before starting, the next course when finished. */
   secondary?: CourseLink & { icon?: 'play-inline' }
   /** Signed out: "sign in to keep your progress", returning here. */
@@ -76,7 +79,7 @@ export interface CourseView {
   modules: SyllabusModuleView[]
   learn: { n: number; label: string; color: string }[]
   neurons: number
-  source: { files: number; path: string; href: string; author: string; updated: string }
+  source: { files: number; path: string; href: string; author: string; updated: string; verified?: string }
 }
 
 export interface CourseViewOptions {
@@ -97,21 +100,24 @@ export interface CourseViewOptions {
 export function buildCourseView(course: CourseDetail, viewer: Viewer | null, options: CourseViewOptions): CourseView {
   let { lessonHref } = options
   let signedIn = viewer !== null
+  let soon = isComingSoon(course)
   let all = course.modules.flatMap((m) => m.lessons)
   let stateOf = (lesson: LessonSummary): LessonState => lesson.state
 
   let done = all.filter((l) => stateOf(l) === 'done').length
   let total = all.length
-  let first = all[0]!
+  let first = all[0]
   let open = all.find((l) => stateOf(l) === 'current') ?? all.find((l) => stateOf(l) !== 'done')
-  let state: CourseState = done === 0 ? 'new' : done === total ? 'finished' : 'started'
+  let state: CourseState = done === 0 || soon ? 'new' : done === total ? 'finished' : 'started'
   let totalMins = all.reduce((sum, l) => sum + l.mins, 0)
   let minsLeft = all.filter((l) => stateOf(l) !== 'done').reduce((sum, l) => sum + l.mins, 0)
   let lessonLine = (l: LessonSummary) => `Lesson ${l.n} · ${l.title} · ${l.mins} min`
 
   let cta: CourseView['cta']
   let secondary: CourseView['secondary']
-  if (state === 'finished') {
+  if (soon || !first) {
+    // Coming soon (decision 073): nothing to start yet.
+  } else if (state === 'finished') {
     cta = options.certificateHref
       ? { label: 'View your certificate →', href: options.certificateHref }
       : { label: 'Sign in to claim your certificate →', href: options.loginHref }
@@ -146,7 +152,7 @@ export function buildCourseView(course: CourseDetail, viewer: Viewer | null, opt
       return {
         ...lesson,
         state,
-        href: lessonHref(lesson.slug),
+        href: soon ? undefined : lessonHref(lesson.slug),
         tags: lesson.kinds.filter((kind) => !(everyChat && kind === 'chat')),
         trace,
         resume: state === 'current' && options.currentExercise ? { exercise: options.currentExercise } : undefined,
@@ -172,6 +178,7 @@ export function buildCourseView(course: CourseDetail, viewer: Viewer | null, opt
     course,
     lead: course.lead ?? course.desc,
     signedIn,
+    soon,
     state,
     pct: course.pct,
     done,
@@ -180,7 +187,7 @@ export function buildCourseView(course: CourseDetail, viewer: Viewer | null, opt
     minsLeft,
     cta,
     secondary,
-    loginHref: signedIn ? undefined : options.loginHref,
+    loginHref: signedIn || soon ? undefined : options.loginHref,
     modules,
     learn,
     neurons: all.reduce((sum, l) => sum + l.xp, 0),
@@ -190,6 +197,7 @@ export function buildCourseView(course: CourseDetail, viewer: Viewer | null, opt
       href: `${COURSE_SOURCE_TREE}/${course.slug}`,
       author: course.authors.join(', ') || DEFAULT_AUTHOR,
       updated: course.updated ?? DEFAULT_UPDATED,
+      verified: course.verified,
     },
   }
 }
@@ -210,7 +218,7 @@ function singular(label: string): string {
 export function pickNextCourse(slug: string, list: readonly CourseSummary[]): CourseSummary | undefined {
   let index = list.findIndex((course) => course.slug === slug)
   let after = [...list.slice(index + 1), ...list.slice(0, Math.max(index, 0))]
-  return after.find((course) => course.pct < 100)
+  return after.find((course) => course.pct < 100 && !isComingSoon(course))
 }
 
 /** "55 min", or "1 h 10 min" from the hour. */
@@ -219,6 +227,16 @@ export function formatMins(mins: number): string {
   let h = Math.floor(mins / 60)
   let m = mins % 60
   return m ? `${h} h ${m} min` : `${h} h`
+}
+
+/** "3 Nov 2026": the freshness date on lesson and course pages (decision 073). */
+export function formatDay(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
 }
 
 export function formatDate(iso: string): string {
