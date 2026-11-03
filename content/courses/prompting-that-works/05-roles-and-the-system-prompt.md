@@ -92,22 +92,28 @@ not where a role belongs in your own app.
 Your turn. Ask Claude to explain what an API is, with a **role**, an
 **audience** and a **tone**.
 
-:::prompt{id="give-a-role" xp=40}
+:::prompt{id="give-a-role" xp=40 coach}
 Give Claude a role, an audience and a tone, then ask your question
 
+- goal "Get an explanation of an API that's pitched exactly at the person you named, in the tone you chose"
 - placeholder "You are a … explaining to … Be … Explain …"
 - draft "Explain what an API is."
 - check "Gives a role"         /you are|you're|act as|your role|pretend/i
 - check "Names the audience"   /\bfor (a|an|my|our|someone|people|kids|beginners)\b|\bto (a|an|my|our|someone|people|kids|beginners)\b|year.old|beginner|audience|grandm|grandp|manager|non.technical/i
 - check "Sets a tone"          /patient|friendly|playful|blunt|\bplain\b|simple|jargon|encouraging|warm|casual|gentle|\bclear\b|\bfun\b|tone/i
 - check "Asks the question"    /\bapi\b/i
+- rubric "Explains what an API is, correctly" must
+- rubric "Pitched at the audience you named (their words, their examples)" must
+- rubric "Sounds like the role and tone you set" should
+- hint "Would the person you named understand every word of the reply? Which one would lose them?"
+- hint "Make the audience concrete: “a 10-year-old”, “my manager who doesn't code”."
+- reference "You are a patient teacher. Explain what an API is to my grandmother, who uses a smartphone but has never written code. Use one everyday comparison and no jargon, in under 80 words."
 - run temperature=[1.0]
 - example T=1.0 "Think of a restaurant. You don't go into the kitchen; you tell the waiter what you want and they bring it back. An API is the waiter between two apps: one app asks, the API carries the order, and the answer comes back."
 - example T=1.0 "Imagine a vending machine. You press a button and a snack drops out, without knowing what happens inside. An API is a set of buttons one app gives another, so they can ask for things."
 - example T=1.0 "An API is like a menu at a café. It lists what you can ask for and how to ask. Apps use these menus to order things from each other."
 - success "One sentence of role, and the same question gets a different teacher." next="Next: ask for the format →"
 :::
-
 :::rabbithole
 - read "Prompting best practices: Give Claude a role" by="Anthropic" url="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices"
 - read "Prompting Claude Haiku 5.5" by="Anthropic" url="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-haiku-5-5"

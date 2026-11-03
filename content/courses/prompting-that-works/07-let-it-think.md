@@ -104,21 +104,27 @@ Here's a small puzzle with a trap in it. Meeting A runs **9:40 to
 10:25**, B runs **10:15 to 11:00**, and C runs **11:00 to 11:30**. Which ones
 overlap? Ask Claude to reason first, and to give the answer in tags.
 
-:::prompt{id="let-it-think" xp=40}
+:::prompt{id="let-it-think" xp=40 coach}
 Ask Claude to reason it through, then answer in <answer> tags
 
+- goal "Get the right overlap, with the working first and the final answer alone in <answer> tags"
 - placeholder "Which meetings overlap? … Work through it step by step, then give the final answer in <answer> tags."
 - draft "Which of these meetings overlap? A 9:40–10:25, B 10:15–11:00, C 11:00–11:30."
 - check "Includes the meetings"         /10:15/
 - check "Asks it to reason first"       /step by step|reason|think|work (it )?(through|out)|show (your )?work|before (you )?answer|explain why/i
 - check "Asks for <answer> tags"        /answer>|answer tags/i
+- expect "Puts the answer in <answer> tags" tag answer
+- rubric "The final answer is that only A and B overlap (B and C just touch at 11:00)" must evidence
+- rubric "The working comes before the answer" should
+- hint "Where does the reply put its final answer? Could your code find it without reading the working?"
+- hint "B ends at 11:00 and C starts at 11:00. Does your prompt help Claude decide whether touching counts?"
+- reference "Which of these meetings overlap? A 9:40–10:25, B 10:15–11:00, C 11:00–11:30. Meetings that only touch (one ends as the next starts) don't overlap. Check each pair first, then give the final answer in <answer> tags."
 - run temperature=[1.0]
 - example T=1.0 "A ends at 10:25, after B starts at 10:15, so A and B share 10 minutes. B ends at 11:00, exactly when C starts, so they only touch. A ends before C starts. <answer>Only A and B overlap, from 10:15 to 10:25.</answer>"
 - example T=1.0 "A and B: B starts at 10:15, before A ends at 10:25, so yes. B and C: B ends at 11:00 and C starts at 11:00, so they meet but don't overlap. A and C: no. <answer>A and B overlap (10:15–10:25).</answer>"
 - example T=1.0 "Compare each pair. A (9:40–10:25) and B (10:15–11:00) overlap for 10 minutes. B and C touch at 11:00 with no overlap. A and C are an hour apart. <answer>A and B.</answer>"
 - success "Room to reason, a place for the answer. Your code can read the tags and skip the working." next="Next: chain your prompts →"
 :::
-
 Check the answer yourself: A and B overlap from 10:15 to 10:25, and B and C
 only **touch** at 11:00. Claude Haiku 5.5 often gets this one right even
 without the reasoning, so don't expect a dramatic difference on a puzzle this

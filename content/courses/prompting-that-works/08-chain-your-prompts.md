@@ -80,9 +80,10 @@ Write the **review** step. Put the draft in `<draft>` tags, give your
 **criteria**, and ask Claude to **list the problems** (not rewrite it) in
 `<review>` tags.
 
-:::prompt{id="review-step" xp=40}
+:::prompt{id="review-step" xp=40 coach}
 Write the review step: the draft in tags, your criteria, problems in <review> tags
 
+- goal "Get a list of the draft's real problems in <review> tags, judged against your criteria, with no rewrite"
 - placeholder "<draft>…</draft> Check it against: … List the problems in <review> tags. Don't rewrite it."
 - draft "We are thrilled to announce that, leveraging our cutting-edge theming infrastructure, we have shipped a paradigm-shifting dark mode experience that synergistically reduces ocular strain across every surface of the platform for all stakeholders."
 - check "Puts the draft in <draft> tags"  /<draft>/i
@@ -90,13 +91,19 @@ Write the review step: the draft in tags, your criteria, problems in <review> ta
 - check "Gives criteria"                  /criteria|check (it |that |for |against )|must|should|under \d|no jargon|plain|mention/i
 - check "Asks for problems, not a rewrite" /problems|issues|what.s wrong|mistakes|feedback/i
 - check "Asks for <review> tags"          /review>|review tags/i
+- expect "Puts the problems in <review> tags" tag review
+- rubric "Names real problems with the draft, such as its jargon or what a user can't act on" must evidence
+- rubric "Judges the draft against the criteria you gave" must
+- rubric "Lists problems instead of rewriting the draft" must
+- hint "Your criteria are the review's yardstick. Could someone check each one with a yes or no?"
+- hint "Give two or three plain criteria, like “no jargon” and “says how to turn it on”."
+- reference "<draft>We are thrilled to announce that, leveraging our cutting-edge theming infrastructure, we have shipped a paradigm-shifting dark mode experience that synergistically reduces ocular strain across every surface of the platform for all stakeholders.</draft>\n\nCheck the draft against these criteria: plain words with no jargon, under 30 words, says how a user turns it on. List each problem in <review> tags. Don't rewrite it."
 - run temperature=[1.0]
-- example T=1.0 "<review>1. Jargon: leveraging, paradigm-shifting, synergistically, stakeholders. 2. Never says when it ships (2 November). 3. Doesn't say how to turn it on.</review>"
+- example T=1.0 "<review>1. Jargon: leveraging, paradigm-shifting, synergistically, stakeholders. 2. Never says when it ships. 3. Doesn't say how to turn it on.</review>"
 - example T=1.0 "<review>Too much jargon (cutting-edge theming infrastructure, synergistically). Missing the launch date. Says nothing users can act on.</review>"
 - example T=1.0 "<review>Problems: no date; jargon in nearly every phrase; one long sentence that's hard to read.</review>"
 - success "That's the middle link of a chain. Feed this review back in, and the refine step knows exactly what to fix." next="Next: test your prompt →"
 :::
-
 Want to finish the chain by hand? Copy Claude's review, then write a third
 prompt with the draft and the review in tags, and ask for a rewrite.
 

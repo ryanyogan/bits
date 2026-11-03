@@ -58,39 +58,35 @@ wanted extra.
 or none can be skipped, write them as numbered steps instead of one long
 sentence.
 
-:::quiz{id="colleague-test" xp=10}
-Which prompt passes the colleague test best?
-
-- [ ] “Write a great email to the team.”
-  Not quite. “Great” is a feeling, not an instruction. A new colleague would ask: about what, and how long?
-- [ ] “Write an email. Make it really good and professional, don't be boring.”
-  Not quite. More adjectives, but still no facts. A colleague would still have to guess the topic.
-- [x] “Write a 3-sentence email telling the team the Friday demo moves to Monday 10am because the client is travelling.”
-  Right. It has the topic, the facts, the reason and the length. Nothing is left to guess.
-:::
-
 ---
 
 Your turn. The draft is the vague prompt. Rewrite it so a new colleague could
 nail it first time: say **who reads it**, give **real facts** (make them up,
 it's practice), say **where it will appear** and set a **length**.
 
-:::prompt{id="colleague-ready" xp=40}
+:::prompt{id="colleague-ready" xp=40 coach}
 Rewrite the vague request so a brilliant new colleague could do it first time
 
+- goal "Get a product description you could publish as it is: built on real facts, for a named reader, in the place and length you said"
 - placeholder "Write a … for … It will appear on … Facts: … Keep it under …"
 - draft "Write a description of our water bottle."
 - check "Says who reads it"         /\bfor (a|an|my|our|the|people|hikers|runners|parents|kids|busy|new)\b|audience|readers?\b|customers?|buyers?|shoppers?/i
 - check "Gives real facts"          /\d/
 - check "Says where it will appear" /\bpage\b|website|\bsite\b|listing|\bshop\b|\bstore\b|email|\bads?\b|instagram|social|label|packaging|catalog/i
 - check "Sets a length"             /\bwords?\b|sentences?|\bunder\b|\bshort\b|\blines?\b|paragraph|characters/i
+- rubric "A colleague could do this from the prompt alone, with no follow-up questions" must on=prompt
+- rubric "The description uses the facts you gave, and invents none" must evidence
+- rubric "It fits the reader and the length you set" should
+- hint "Imagine handing this prompt to someone on their first day. What would they ask you before they could start?"
+- hint "Look for a claim in the reply you didn't give it. Facts you leave out get guessed."
+- hint "Name the reader, where it appears, three real facts with numbers, and a word limit."
+- reference "Write a product description for our water bottle's shop page. It's for hikers who carry everything on their back. Facts: 750 ml, double-walled steel, keeps water cold for 24 hours, weighs 340 g, leakproof lid. Keep it under 40 words and use only these facts."
 - run temperature=[1.0]
 - example T=1.0 "Cold for 24 hours, light enough to forget it's there. The 750 ml Trailhead is double-walled steel with a lid that won't leak in your pack."
 - example T=1.0 "Built for long trails: 750 ml, double-walled steel, 24 hours cold, 340 g. The leakproof lid means it rides in your bag, not your hand."
 - example T=1.0 "Trailhead keeps water ice-cold for a full day out. 750 ml of steel, leakproof, and just 340 g."
 - success "Specific in, specific out. Every lesson after this builds on that." next="Next: say why →"
 :::
-
 Run it a couple of times. The wording changes from run to run, but the facts
 and the shape should hold, because you pinned them down.
 

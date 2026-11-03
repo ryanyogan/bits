@@ -104,9 +104,10 @@ Your turn. No API here, so do it with the prompt alone. Ask for the booking
 as **JSON**, **name the keys** you want (“with the keys name, party_size
 and time”), and say it should be **only** the JSON.
 
-:::prompt{id="ask-for-json" xp=40}
+:::prompt{id="ask-for-json" xp=40 coach}
 Get the booking back as JSON only, with the keys you choose
 
+- goal "Get back JSON your code could parse, with the name, party size and time from the booking, and nothing else"
 - placeholder "Reply with only JSON with the keys … Booking: …"
 - draft "Get the booking details from: Table for 4 at Luigi's, Friday 7:30pm, under the name Okafor."
 - check "Asks for JSON"                   /json/i
@@ -115,13 +116,20 @@ Get the booking back as JSON only, with the keys you choose
 - check "Names the keys"                  /time|\bday\b|date|when/i
 - check "Says only the JSON"              /\bonly\b|nothing else|no other text|no preamble|just the json|no explanation/i
 - check "Includes the booking"            /okafor/i
+- expect "Parses as JSON"                 json
+- expect "Keeps the name"                 match /okafor/i
+- expect "Keeps the party size"           match /\b4\b|four/i
+- rubric "Every value comes from the booking; nothing is invented" must
+- rubric "Uses the keys you named in the prompt" should
+- hint "Does anything come before or after the JSON? Your code would choke on it."
+- hint "List the exact keys, then say “Reply with only the JSON object.”"
+- reference "Get the booking details from the text below. Reply with only a JSON object with the keys name, party_size (a number), day and time. No other text.\n\nTable for 4 at Luigi's, Friday 7:30pm, under the name Okafor."
 - run temperature=[1.0]
 - example T=1.0 "{\"name\": \"Okafor\", \"party_size\": 4, \"day\": \"Friday\", \"time\": \"19:30\"}"
 - example T=1.0 "{\"name\": \"Okafor\", \"party_size\": 4, \"day\": \"Friday\", \"time\": \"7:30pm\"}"
 - example T=1.0 "{\"guest_name\": \"Okafor\", \"people\": 4, \"when\": \"Friday 7:30pm\"}"
 - success "You named the shape, and you got it. For code, add a schema and it's guaranteed." next="Next: let it think →"
 :::
-
 Run it three times. If the time comes back as “19:30” once and “7:30pm” the
 next, that's a hint your prompt should say which format you want. That
 sort of drift is what lesson 9's tests are for.

@@ -46,8 +46,10 @@ code first (an exact match, or checking that a phrase is there), then Claude
 grading with a clear rubric, and people only when you must. More cases graded
 automatically beats a few graded by hand.
 
-You've been using one all course: the checks under each exercise are a tiny
-code-graded eval. They're regex patterns run on your prompt, on the server.
+You've been using one all course. Each exercise's coach is a small eval of
+exactly this shape: code checks first (does the reply parse, is it one word,
+is the right phrase there), then Claude grading against a short rubric. Both
+run on the server, on what Claude actually replied.
 
 ---
 
@@ -92,26 +94,16 @@ a gap in the prompt that only a test could find.
 **Change one thing at a time**, then re-run every case. A fix for one case can
 quietly break another, and you'll only see it if you run them all.
 
-:::quiz{id="grade-it" xp=10}
-Your prompt must reply with exactly one label: billing, bug or other. How should you grade it?
-
-- [x] In code: check the reply is exactly the expected label
-  Right. It's fast, free and never inconsistent. Save Claude grading for things code can't judge, like tone.
-- [ ] Ask Claude to rate each reply from 1 to 10
-  Not quite. That's slower and fuzzier than a simple exact-match check, for a question code can answer.
-- [ ] Read every reply yourself
-  Not quite. Fine for a first look, but it doesn't scale and you won't do it every time you change the prompt.
-:::
-
 ---
 
 Your turn. Write the labelling prompt and fix the gap: list the **three
 labels**, ask for **only the label**, add **a rule for messages that fit two
 labels**, and test it on the tricky message from the eval.
 
-:::prompt{id="fix-the-gap" xp=50}
+:::prompt{id="fix-the-gap" xp=50 coach}
 Write the labeller, with a rule for mixed messages, and run the tricky case
 
+- goal "Get exactly one label for the tricky message, chosen by the rule you wrote for messages that fit two labels"
 - placeholder "Label this support message as billing, bug or other … Reply with only the label. If it fits more than one, …"
 - draft "Label this support message: My card was charged twice and now the app won't open."
 - check "Lists the labels"                 /billing/i
@@ -120,13 +112,17 @@ Write the labeller, with a rule for mixed messages, and run the tricky case
 - check "Asks for only the label"          /\bonly\b|just the label|one word|single word|nothing else/i
 - check "Has a rule for mixed messages"    /more than one|both|two labels|fits two|several|multiple|\btie|priorit|comes first|most urgent|money/i
 - check "Includes the tricky message"      /charged twice/i
+- expect "Exactly one label, nothing else" oneof "billing|bug|other"
+- rubric "The label is the one your mixed-message rule picks for this message" must
+- hint "This is the code-graded check from the lesson: exact match, one label. Does your reply pass it?"
+- hint "Your rule has to decide between billing and bug. Which comes first, and does your prompt say so?"
+- reference "Label this support message as billing, bug or other. Reply with only the label. If it fits more than one, choose billing, because money problems are the most urgent.\n\nMessage: My card was charged twice and now the app won't open."
 - run temperature=[1.0]
 - example T=1.0 "billing"
 - example T=1.0 "billing"
 - example T=1.0 "billing"
 - success "One gap found, one rule added. Now re-run the other cases to check you didn't break them." next="Next: checkpoint →"
 :::
-
 :::rabbithole
 - read "Define success criteria and build evaluations" by="Anthropic" url="https://platform.claude.com/docs/en/test-and-evaluate/develop-tests"
 - read "The three types of evals" by="Matt Pocock (AI Hero)" url="https://www.aihero.dev/three-types-of-evals"

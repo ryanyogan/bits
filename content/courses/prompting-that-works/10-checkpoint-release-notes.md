@@ -44,13 +44,14 @@ users would notice (lesson 9).
 
 ---
 
-Checkpoint. Write the release-notes prompt with every check ticked, then run
-it. Then try the edge case: swap the commits for only `chore:` and
+Checkpoint. Write the release-notes prompt and run it until the coach marks
+every line met. Then try the edge case: swap the commits for only `chore:` and
 `refactor:` lines and run it again. Does your rule hold?
 
-:::prompt{id="release-notes" xp=80}
+:::prompt{id="release-notes" xp=80 coach}
 Write a release-notes prompt that uses the whole toolkit
 
+- goal "Get release notes a user would actually read: only the user-facing changes, in plain words, short"
 - placeholder "You are … Our users are … so … <example>…</example> Write … in under … <commits>…</commits> If nothing is user-facing, …"
 - draft "Write release notes from these commits: fix: crash when avatar upload is over 5MB; chore: bump eslint to 9.2; feat: dark mode for settings page; refactor: split auth module"
 - check "Gives a role"                       /you are|you're|act as|your role/i
@@ -59,13 +60,22 @@ Write a release-notes prompt that uses the whole toolkit
 - check "Wraps the commits in tags"          /<\/[a-z]/i
 - check "Sets a length or shape"             /\bwords?\b|sentences?|bullet|\blist\b|\bunder\b|paragraph|\blines?\b|\bshort\b/i
 - check "Handles a week with nothing to say" /nothing|no user|none of|internal|skip|leave out|omit|ignore (chore|refactor|internal)/i
+- expect "Mentions dark mode"                match /dark mode/i
+- expect "Short"                             words<=80
+- rubric "Covers the two user-facing changes: dark mode and the upload crash fix" must evidence
+- rubric "Leaves out the eslint bump and the auth refactor" must
+- rubric "Written for users: plain words, no commit prefixes like feat: or fix:" must
+- rubric "Follows the shape your example shows" should
+- hint "Read the notes as a user. Is there a line they'd skip because it isn't about them?"
+- hint "Tell Claude which commit types matter to users, and what to do with the rest."
+- hint "Add a rule: “Only include feat and fix commits. Leave out chore and refactor.”"
+- reference "You write release notes for our app. Our users aren't developers, so use plain words and say what changed for them.\n<example>Fixed: photos now upload on slow connections.</example>\nWrite this week's notes as one short line per change, under 50 words in all. Only include changes users can notice (feat and fix); leave out chore and refactor commits. If nothing is user-facing, reply “No user-facing changes this week.”\n<commits>fix: crash when avatar upload is over 5MB\nchore: bump eslint to 9.2\nfeat: dark mode for settings page\nrefactor: split auth module</commits>"
 - run temperature=[1.0]
 - example T=1.0 "Settings now has a dark mode. Big profile photos no longer crash the upload: anything up to 5 MB now works."
 - example T=1.0 "New: dark mode for your settings page. Fixed: uploading a profile photo over 5 MB no longer crashes the app."
 - example T=1.0 "Two changes this week. Your settings page now comes in dark mode, and large profile photos upload without crashing."
 - success "That's the toolkit: clear, motivated, shown, tagged, shaped and tested." next="Finish the course →"
 :::
-
 Finish this checkpoint and the **Prompting that works** badge is yours. You
 can now write prompts that are clear and specific, steer Claude with
 examples, tags, roles and formats, know when to let it think or split the
