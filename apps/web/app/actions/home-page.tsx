@@ -20,10 +20,8 @@ import { Progress } from './home/progress.tsx'
 import { NeuralField } from './home/public/neural-field.tsx'
 import { ThePath } from './home/the-path.tsx'
 
-const brandName = `${APP_NAME.charAt(0).toUpperCase()}${APP_NAME.slice(1)}`
-
-/** "Bits — learn AI by typing to it" (Main.md). */
-export const homeTitle = `${brandName} — learn AI by typing to it`
+/** "bits — learn AI by typing to it" (Main.md; lowercase, decision 005). */
+export const homeTitle = `${APP_NAME} — learn AI by typing to it`
 
 // The landing's content for the one header (decisions 059, 065): in-page
 // section links, lit while their section is on screen, then My learning
@@ -56,10 +54,12 @@ const themeOptions: FooterThemeOption[] = [
  * `PageFrame`; every section and the footer are bands of that frame,
  * divided by full-bleed rules with `+` marks on the rails.
  */
-export function HomePage(handle: Handle<{ viewer: Viewer | null; next?: NextStep }>) {
+export function HomePage(handle: Handle<{ viewer: Viewer | null; next?: NextStep; progress?: boolean }>) {
   return () => {
     let { viewer, next } = handle.props
     let signedIn = viewer !== null
+    // Signed in, or signed out with lessons done in the session (decision 070).
+    let progress = signedIn || handle.props.progress === true
     return (
       <Layout
         documentTitle={homeTitle}
@@ -78,9 +78,9 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null; next?: NextStep
           <NeuralField />
           <PageFrame mix={contentStyle}>
             <main id="main" tabIndex={-1} mix={mainStyle}>
-              <Hero signedIn={signedIn} next={next} />
+              <Hero signedIn={signedIn} progress={progress} next={next} />
               {next ? (
-                // Signed in: where they left off, right under the fold (decision 065).
+                // With progress: where they left off, right under the fold (decisions 065, 070).
                 <RuledSection aria-label="Continue where you left off" pad="none">
                   <ContinueBanner
                     href={next.href}
@@ -100,7 +100,7 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null; next?: NextStep
               <ThePath />
               <Modes />
               <Progress signedIn={signedIn} />
-              <ClosingCta signedIn={signedIn} next={next} />
+              <ClosingCta signedIn={signedIn} progress={progress} next={next} />
             </main>
             <RuledSection as="div" pad="none" open>
               <Footer

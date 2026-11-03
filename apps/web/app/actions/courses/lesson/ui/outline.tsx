@@ -49,7 +49,10 @@ function OutlineItem(handle: Handle<{ view: LessonView; lesson: LessonView['less
   return () => {
     let { view, lesson } = handle.props
     let viewing = lesson.slug === view.lesson.slug
-    // The open lesson's node turns into a ✓ once its checks pass.
+    // The open lesson's checks can pass before it is saved: its node turns
+    // into an outlined ion ✓ ("passed, not saved yet"). The filled volt ✓
+    // is only for saved lessons (done), so the outline never claims a save
+    // that hasn't happened.
     let canPass = viewing && lesson.state !== 'done'
     let mins = lessonMinutes(view, lesson)
     return (
@@ -67,7 +70,9 @@ function OutlineItem(handle: Handle<{ view: LessonView; lesson: LessonView['less
                 <LessonNode size={20} state={lesson.state} n={lesson.n} />
               </span>
               <span mix={passedOnly}>
-                <LessonNode size={20} state="current" passed />
+                <span aria-hidden="true" mix={passedNodeStyle}>
+                  ✓
+                </span>
               </span>
             </>
           ) : (
@@ -80,7 +85,7 @@ function OutlineItem(handle: Handle<{ view: LessonView; lesson: LessonView['less
             </span>
             {canPass ? (
               <span mix={passedOnly}>
-                <span class="sr-only">, completed</span>
+                <span class="sr-only">, passed, not saved yet</span>
               </span>
             ) : null}
           </span>
@@ -237,6 +242,23 @@ const itemStyle = css({
   '@media (forced-colors: active)': { '&[aria-current="page"]': { outline: 'var(--focus-outline-w) solid Highlight', outlineOffset: '-2px' } },
 })
 const titleStyle = css({ minWidth: 0 })
+// Passed, not saved: the in-progress ion frame with a ✓ in ion, distinct
+// from a saved lesson's filled volt ✓ (LessonNode "done").
+const passedNodeStyle = css({
+  flex: 'none',
+  boxSizing: 'border-box',
+  display: 'grid',
+  placeItems: 'center',
+  width: '20px',
+  height: '20px',
+  border: 'var(--border-w-strong) solid var(--ion)',
+  background: 'var(--ink)',
+  color: 'var(--ion)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-10)',
+  lineHeight: 1,
+  '@media (forced-colors: active)': { borderColor: 'CanvasText', color: 'CanvasText' },
+})
 const pendingOnly = css({ display: 'contents', [PASSED]: { display: 'none' } })
 const passedOnly = css({ display: 'none', [PASSED]: { display: 'contents' } })
 

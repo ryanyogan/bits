@@ -12,7 +12,7 @@ export interface LogoProps {
   href: string
   /** `nav` 30/20px (landing), `auth` 28/19px, `app` 26/17px (app bars), `footer` wordmark only, 16px. */
   variant?: LogoVariant
-  /** Accessible name for the link; defaults to "<Brand> home". */
+  /** Accessible name for the link; defaults to "<brand> home", as the brand is written. */
   label?: string
   /** Prefetch the page on hover/focus (`intent`, the default), on `viewport`, or not (`false`). Decision 042. */
   prefetch?: PrefetchProp
@@ -29,7 +29,7 @@ export function Logo(handle: Handle<LogoProps>) {
   return () => {
     let { brand, href, variant = 'app', label, prefetch, mix } = handle.props
     let size = markSize[variant]
-    let name = label ?? `${brand.charAt(0).toUpperCase()}${brand.slice(1)} home`
+    let name = label ?? `${brand} home`
 
     return (
       <a href={href} data-rmx-prefetch={prefetchFor(href, prefetch)} aria-label={name} mix={[linkStyle, wordStyles[variant], mix]}>

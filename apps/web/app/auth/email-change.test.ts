@@ -228,7 +228,7 @@ describe('email change', () => {
     let { cookie, user } = await signIn('wants-it@example.com')
     let { code, message } = await askToChange(cookie, 'owner@example.com')
     assert.equal(code, undefined, 'no code goes to an address that has an account')
-    assert.match(message.subject, /already has a Bits account/)
+    assert.match(message.subject, /already has a bits account/)
     // Settings shows the same "check your inbox" as for a free address.
     assert.match(await (await fetchAs(cookie, routes.settings.index.href())).text(), /Check <span[^>]*>owner@example\.com/)
     assert.equal((await findUserById(testDb, user.id))!.email, 'wants-it@example.com')
@@ -239,7 +239,7 @@ describe('email change', () => {
     await signIn('free-now@example.com')
     let raced = await fetchAs(cookie, routes.settings.emailConfirm.href(), post({ code: freeCode! }))
     assert.equal(raced.status, 422)
-    assert.match(await raced.text(), /already has a Bits account/)
+    assert.match(await raced.text(), /already has a bits account/)
     assert.equal((await findUserById(testDb, user.id))!.email, 'wants-it@example.com')
   })
 

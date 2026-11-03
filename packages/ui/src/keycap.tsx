@@ -281,7 +281,7 @@ const variantStyles: Record<KeycapVariant, ReturnType<typeof css>> = {
 
 /**
  * The primary `md` keycap look for a non-interactive `<span>` inside a larger
- * link (ContinueBanner "Resume →"), where a nested button would be invalid.
+ * link (ContinueBanner "Continue →"), where a nested button would be invalid.
  */
 export const keycapFace = [baseStyle, sizeStyles.md, variantStyles.primary]
 

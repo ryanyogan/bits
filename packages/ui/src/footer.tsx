@@ -15,7 +15,7 @@ export interface FooterProps {
   brand: string
   homeHref: string
   links: { href: string; label: string }[]
-  /** e.g. "© 2026 Bits". */
+  /** e.g. "© 2026 bits". */
   copyright: string
   /**
    * The theme switch (decision 062): System / Dark / Light as three small

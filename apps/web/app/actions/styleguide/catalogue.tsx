@@ -427,7 +427,7 @@ export function Catalogue(handle: Handle) {
           <Specimen caption="Keycap — sizes, glow (the CTA key: flat since 047, no glow drawn), pending (aria-busy), link">
             <div mix={row}>
               <Keycap size="sm">sm Copy</Keycap>
-              <Keycap size="md">md Resume →</Keycap>
+              <Keycap size="md">md Continue →</Keycap>
               <Keycap size="lg">lg Start free</Keycap>
             </div>
             <div mix={row}>

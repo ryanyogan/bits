@@ -122,14 +122,14 @@ describe('catalog and course pages', () => {
     assert.equal(resultLabel(0), 'No matches')
     assert.equal(resultLabel(1), '1 course')
     assert.equal(resultLabel(8), '8 courses')
-    assert.equal(catalogSummary([{ mins: 40 }]), '1 course · 40 minutes in all')
-    assert.equal(catalogSummary([{ mins: 200 }, { mins: 220 }]), '2 courses · about 7 hours in all')
+    assert.equal(catalogSummary([{ mins: 40 }]), '40 minutes in all')
+    assert.equal(catalogSummary([{ mins: 200 }, { mins: 220 }]), 'About 7 hours in all')
   })
 
   it('renders the catalog with every course and the continue banner, without the write card for a learner', async () => {
     let { status, html } = await page(routes.courses.index.href())
     assert.equal(status, 200)
-    assert.match(html, /<title>Courses · Bits<\/title>/)
+    assert.match(html, /<title>Courses · bits<\/title>/)
     assert.equal(count(html, /<h1[\s>]/), 1)
     assert.match(html, /Pick your next/)
     assert.match(html, /role="search"/)
@@ -138,7 +138,9 @@ describe('catalog and course pages', () => {
     assert.ok(html.includes(resultLabel(courses.length)), resultLabel(courses.length))
     assert.match(html, /aria-live="polite"/)
     for (let course of courses) assert.ok(html.includes(`href="/courses/${course.slug}"`), course.slug)
-    assert.match(html, new RegExp(`${courses.length} courses · `))
+    // The course count shows once: in the search strip, not the lead too.
+    assert.equal(count(html, new RegExp(`>${courses.length} courses<`)), 1)
+    assert.doesNotMatch(html, new RegExp(`${courses.length} courses · `))
     assert.doesNotMatch(html, /Drop a folder, get a course/)
     assert.match(html, /Up next:/)
     assert.match(html, /href="\/courses\/tokens-and-temperature\/temperature"/)
@@ -215,7 +217,7 @@ describe('catalog and course pages', () => {
   it('renders the syllabus with lesson states and the resume callout', async () => {
     let { status, html } = await page(path)
     assert.equal(status, 200)
-    assert.match(html, /<title>Tokens &amp; temperature · Bits<\/title>/)
+    assert.match(html, /<title>Tokens &amp; temperature · bits<\/title>/)
     assert.equal(count(html, /<h1[\s>]/), 1)
     assert.match(html, /<nav aria-label="Breadcrumb"/)
     assert.match(html, /What you(?:'|&#39;)ll learn/)

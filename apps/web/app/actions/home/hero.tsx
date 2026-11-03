@@ -11,7 +11,9 @@ import { centreWash, dotBreak, monoNote, PHONE, REDUCED, voltText } from './styl
 
 export interface HeroProps {
   signedIn?: boolean
-  /** Signed in: the learner's next lesson (decision 065). */
+  /** Lessons done (signed in, or in a signed-out session): never offer lesson 1 as a start (decision 070). */
+  progress?: boolean
+  /** With progress: the learner's next lesson (decisions 065, 070). */
   next?: NextStep
 }
 
@@ -33,12 +35,12 @@ export interface HeroProps {
  */
 export function Hero(handle: Handle<HeroProps>) {
   return () => {
-    let { signedIn, next } = handle.props
+    let { signedIn, progress, next } = handle.props
     // Signed in with every started course finished, there is no next
     // lesson: the course list is the one key.
     let primary = next
       ? { href: next.href, label: next.kind === 'resume' ? `Continue lesson ${next.n}` : 'Start lesson 1' }
-      : signedIn
+      : signedIn || progress
         ? undefined
         : { href: lessonOneHref(), label: 'Start lesson 1' }
     return (
@@ -70,8 +72,8 @@ export function Hero(handle: Handle<HeroProps>) {
             <p id="hero-questions" mix={[monoNote, questionsLabel]}>
               Or jump to a question
             </p>
-            {/* On phones the chips are one row that scrolls sideways: focusable, named by its label. */}
-            <ul aria-labelledby="hero-questions" tabIndex={0} mix={chipsStyle}>
+            {/* The chips wrap at every width (no sideways scroller, nothing hidden). */}
+            <ul aria-labelledby="hero-questions" mix={chipsStyle}>
               {heroQuestions.map((q) => (
                 <li key={q.label}>
                   <SuggestionChip href={questionHref(q)} mix={chipStyle}>
@@ -198,26 +200,16 @@ const chipsStyle = css({
   flexWrap: 'wrap',
   justifyContent: 'center',
   maxWidth: 'var(--read-width)',
-  // Phones: one row that scrolls sideways and bleeds to the rails (decision 048).
-  [PHONE]: {
-    flexWrap: 'nowrap',
-    overflowX: 'auto',
-    justifyContent: 'flex-start',
-    width: 'calc(100% + 2 * var(--section-pad-x))',
-    maxWidth: 'none',
-    boxSizing: 'border-box',
-    marginInline: 'calc(-1 * var(--section-pad-x))',
-    paddingInline: 'var(--section-pad-x)',
-    scrollbarWidth: 'none',
-    '& > li': { flex: 'none' },
-    '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
-  },
+  // Phones: the three questions stack, each a full-width row, so none is
+  // cut off and there is no scroller to find (it had no cue; QA wave 1).
+  [PHONE]: { flexDirection: 'column', alignItems: 'stretch', width: '100%' },
 })
 
 // Chips sit on the field too: give them the flat ink ground so they read.
 const chipStyle = css({
   minHeight: 'var(--touch-target)',
   background: 'var(--cell-fill)',
+  [PHONE]: { display: 'flex', justifyContent: 'center', whiteSpace: 'normal', textAlign: 'center' },
 })
 
 const noteStyle = css({ marginTop: 'var(--space-1_5)' })

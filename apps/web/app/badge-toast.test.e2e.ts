@@ -25,7 +25,7 @@ describe('badge toast', () => {
     // Sign in through the emailed magic link.
     let { token } = await requestCode(`e2e-badge-${Date.now()}@example.com`)
     await page.goto(routes.auth.verify.index.href(undefined, { searchParams: { token } }))
-    await page.getByRole('button', { name: 'Continue to Bits →' }).click()
+    await page.getByRole('button', { name: 'Continue to bits →' }).click()
     await page.waitForURL((url) => !url.pathname.startsWith('/auth'))
 
     await page.goto(routes.courses.lesson.index.href({ course, lesson: plainCourse.lessons[0] }))

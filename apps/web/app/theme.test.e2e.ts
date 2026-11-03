@@ -41,7 +41,7 @@ async function settledTheme(page: Page, theme: string | null, background: string
 async function signInBrowser(page: Page, email: string) {
   let { token } = await requestCode(email)
   await page.goto(routes.auth.verify.index.href(undefined, { searchParams: { token } }))
-  await page.getByRole('button', { name: 'Continue to Bits →' }).click()
+  await page.getByRole('button', { name: 'Continue to bits →' }).click()
   await page.waitForURL((url) => !url.pathname.startsWith('/auth'))
 }
 

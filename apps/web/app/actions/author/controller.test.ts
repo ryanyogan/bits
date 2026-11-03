@@ -45,7 +45,7 @@ describe('/author and /author/:course', () => {
     let response = await request(routes.author.index.href())
     assert.equal(response.status, 200)
     let html = await response.text()
-    assert.match(html, /<title>Write a course · Bits<\/title>/)
+    assert.match(html, /<title>Write a course · bits<\/title>/)
     assert.equal(html.match(/<h1[\s>]/g)?.length, 1)
     // A returning author's page leads with their courses (decision 068).
     assert.match(html, /<h1[^>]*>Your courses<\/h1>/)
@@ -82,7 +82,7 @@ describe('/author and /author/:course', () => {
     let response = await request(routes.author.course.index.href({ course: 'tokens-and-temperature' }))
     assert.equal(response.status, 200)
     let html = await response.text()
-    assert.match(html, /<title>Tokens &amp; temperature · Authoring · Bits<\/title>|<title>Tokens & temperature · Authoring · Bits<\/title>/)
+    assert.match(html, /<title>Tokens &amp; temperature · Authoring · bits<\/title>|<title>Tokens & temperature · Authoring · bits<\/title>/)
     // Lesson 6's video is uploaded and ready (the test platform seeds it); lesson 1's isn't (decision 029).
     assert.match(html, /Warning: <\/span>01-what-is-a-token\.md → video not uploaded yet: assets\/01-what-is-a-token\.mp4/)
     assert.doesNotMatch(html, /video not uploaded yet: assets\/06-temperature/)

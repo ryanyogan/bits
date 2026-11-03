@@ -11,7 +11,7 @@ import { afterLoadAndIdle, bitGlsl, canDrawScene, onThemeChange, readTokenColors
  * rests still, so it needs no pause control (WCAG 2.2.2, as decision 041).
  *
  * Decorative and progressive: the server renders an empty canvas, and the
- * browser loads three.js only when the pane is visible at ≥760px, after the
+ * browser loads three.js only when the pane is visible at ≥1040px, after the
  * page's load event and an idle moment, and fades the first frame in.
  * Reduced motion draws the written sphere once. Caps DPR at 2 and disposes
  * everything when removed. Client navigation between the auth pages keeps
@@ -38,7 +38,7 @@ const canvasStyle = css({
   transition: 'opacity var(--duration-pop) var(--ease-out)',
   '&[data-ready]': { opacity: 'var(--scene-strength)' },
   '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-  '@media (max-width: 759px)': { display: 'none' },
+  '@media (max-width: 1039px)': { display: 'none' },
   '@media (forced-colors: active)': { display: 'none' },
 })
 
@@ -46,7 +46,7 @@ const canvasStyle = css({
 const END = 4.6
 
 async function start(canvas: HTMLCanvasElement, signal: AbortSignal) {
-  let wide = window.matchMedia('(min-width: 760px)')
+  let wide = window.matchMedia('(min-width: 1040px)')
   if (!wide.matches) {
     // Start later if the window grows past the breakpoint.
     wide.addEventListener('change', () => wide.matches && start(canvas, signal), { once: true, signal })
@@ -82,7 +82,7 @@ async function start(canvas: HTMLCanvasElement, signal: AbortSignal) {
   let camera = new T.PerspectiveCamera(45, 1, 0.1, 100)
   camera.position.set(0, 0, 12)
   let group = new T.Group()
-  group.position.y = 0.7
+  group.position.y = 0
   scene.add(group)
 
   // The sphere: a Fibonacci lattice of cells, each with a write moment
@@ -229,9 +229,10 @@ async function start(canvas: HTMLCanvasElement, signal: AbortSignal) {
       height = h
       renderer.setSize(w, h, false)
       camera.aspect = w / h
-      // Keep the ring (radius 4.7) inside a tall, narrow cell: back the
-      // camera off until the sphere fits the width (tan 22.5° ≈ 0.414).
-      camera.position.z = Math.max(12, 5.2 / camera.aspect / 0.414)
+      // Keep the ring (radius 4.7) inside the scene box, whatever its
+      // shape: back the camera off until it fits the width and the height
+      // (tan 22.5° ≈ 0.414).
+      camera.position.z = Math.max(12, 5.2 / camera.aspect / 0.414, 5.2 / 0.414)
       camera.updateProjectionMatrix()
     }
     // One ease-out turn for the sphere and the orbit, settling as the write ends.

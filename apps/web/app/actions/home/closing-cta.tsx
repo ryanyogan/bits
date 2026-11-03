@@ -11,11 +11,11 @@ import { centreWash, dotBreak, monoNote, PHONE } from './styles.ts'
  * Closing CTA (Main.md §7): one wide band, centred, the field glowing
  * through. Signed in, it resumes the learner's next lesson (decision 065).
  */
-export function ClosingCta(handle: Handle<{ signedIn?: boolean; next?: NextStep }>) {
+export function ClosingCta(handle: Handle<{ signedIn?: boolean; progress?: boolean; next?: NextStep }>) {
   return () => {
-    let { signedIn, next } = handle.props
+    let { signedIn, progress, next } = handle.props
     let resume = next?.kind === 'resume' ? next : undefined
-    let primaryHref = next?.href ?? (signedIn ? undefined : lessonOneHref())
+    let primaryHref = next?.href ?? (signedIn || progress ? undefined : lessonOneHref())
     return (
       <RuledSection aria-labelledby="cta-title" pad="none" open>
         <div mix={[ctaStyle, centreWash]}>
@@ -25,7 +25,7 @@ export function ClosingCta(handle: Handle<{ signedIn?: boolean; next?: NextStep 
           <div mix={buttons}>
             {primaryHref ? (
               <Keycap size="lg" href={primaryHref} mix={button}>
-                {resume ? `Resume “${resume.lessonTitle}”` : 'Start lesson 1'}
+                {resume ? `Continue “${resume.lessonTitle}”` : 'Start lesson 1'}
               </Keycap>
             ) : null}
             {/* Every course they started is done: the course list is the next step. */}

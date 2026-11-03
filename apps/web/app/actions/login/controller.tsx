@@ -12,6 +12,7 @@ import { LoginPage, type LoginNotice } from './login-page.tsx'
 import { rememberPendingEmail } from './pending-email.ts'
 import { flashPreviewCode } from './preview-code.ts'
 import { issueField, loginForm, readText, safeNextPath, type FormIssue } from './schema.ts'
+import { APP_NAME } from '../../config.ts'
 
 export default createController(routes.login, {
   actions: {
@@ -95,7 +96,7 @@ export default createController(routes.login, {
               }
               notice={
                 result.reason === 'unknown'
-                  ? { tone: 'warning', text: 'That passkey isn’t on any Bits account. It may have been removed. Use email instead.' }
+                  ? { tone: 'warning', text: `That passkey isn’t on any ${APP_NAME} account. It may have been removed. Use email instead.` }
                   : { tone: 'danger', text: 'That passkey didn’t work. Try again, or use email.' }
               }
             />,
@@ -156,7 +157,7 @@ function noticeFor(code: string | null): LoginNotice | undefined {
     case 'email-revert-taken':
       return {
         tone: 'danger',
-        text: 'That email now belongs to another Bits account, so it couldn’t be put back. Nothing changed.',
+        text: `That email now belongs to another ${APP_NAME} account, so it couldn’t be put back. Nothing changed.`,
       }
     case 'email-link-expired':
       return {

@@ -69,10 +69,13 @@ export function resultLabel(n: number): string {
   return n === 0 ? 'No matches' : `${n} ${n === 1 ? 'course' : 'courses'}`
 }
 
-/** The catalog's one-line summary: "8 courses · about 7 hours in all". */
+/**
+ * The catalog's length, for the lead: "About 7 hours in all". The course
+ * count shows once, in the search strip (`resultLabel`), where it follows
+ * the filters.
+ */
 export function catalogSummary(list: readonly { mins: number }[]): string {
   let mins = list.reduce((sum, course) => sum + course.mins, 0)
   let hours = Math.round(mins / 60)
-  let length = mins < 90 ? `${mins} minutes` : `about ${hours} hours`
-  return `${list.length} ${list.length === 1 ? 'course' : 'courses'} · ${length} in all`
+  return mins < 90 ? `${mins} minutes in all` : `About ${hours} hours in all`
 }

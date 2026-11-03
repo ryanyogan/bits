@@ -5,6 +5,7 @@ import { Icon } from '@bits/ui/icon'
 import { routes } from '../../../routes.ts'
 import { PendingSubmit } from '@bits/ui/pending-submit'
 import { AuthShell, formHeadingStyle, headingGroupStyle, riseStyle, subStyle } from '../../login/ui/auth-shell.tsx'
+import { APP_NAME } from '../../../config.ts'
 
 export interface ConfirmLinkPageProps {
   token: string
@@ -20,7 +21,7 @@ export function ConfirmLinkPage(handle: Handle<ConfirmLinkPageProps>) {
   return () => {
     let { token, email } = handle.props
     return (
-      <AuthShell title="Finish signing in" mode="signin">
+      <AuthShell title="Finish signing in">
         <div mix={[riseStyle, blockStyle]}>
           <div aria-hidden="true" mix={tileStyle}>
             <Icon name="key" />
@@ -33,7 +34,7 @@ export function ConfirmLinkPage(handle: Handle<ConfirmLinkPageProps>) {
           </div>
           <form method="post" action={routes.auth.verify.action.href()}>
             <input type="hidden" name="token" value={token} />
-            <PendingSubmit label="Continue to Bits →" pendingLabel="Signing in…" block />
+            <PendingSubmit label={`Continue to ${APP_NAME} →`} pendingLabel="Signing in…" block />
           </form>
         </div>
       </AuthShell>

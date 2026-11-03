@@ -97,7 +97,7 @@ async function settled(page: Page) {
 async function signInBrowser(page: Page, email: string) {
   let { token } = await requestCode(email)
   await page.goto(routes.auth.verify.index.href(undefined, { searchParams: { token } }))
-  await page.getByRole('button', { name: 'Continue to Bits →' }).click()
+  await page.getByRole('button', { name: 'Continue to bits →' }).click()
   await page.waitForURL((url) => !url.pathname.startsWith('/auth'))
   return (await testDb.findOne(users, { where: { email } }))!
 }
@@ -388,7 +388,7 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
 
     let { token } = await requestCode(uniqueEmail('badge'))
     await page.goto(routes.auth.verify.index.href(undefined, { searchParams: { token } }))
-    await page.getByRole('button', { name: 'Continue to Bits →' }).click()
+    await page.getByRole('button', { name: 'Continue to bits →' }).click()
     await page.waitForURL((url) => !url.pathname.startsWith('/auth'))
     await page.goto(routes.courses.lesson.index.href({ course: plainCourse.slug, lesson: plainCourse.lessons[0] }))
     await settled(page)

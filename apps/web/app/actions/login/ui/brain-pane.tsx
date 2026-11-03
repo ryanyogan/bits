@@ -14,16 +14,21 @@ import { BrainCanvas } from '../public/brain-canvas.tsx'
  * hairline (no glass, no blur), nearly opaque so its text reads over the
  * points.
  *
- * Responsive (resolutions §8): stacked above the form below 1040px; below
- * 760px it moves under the form as a 200px band with no canvas and no
- * session panel; at 520px and narrower it is hidden.
+ * The sphere has its own box above the headline (the room the copy leaves),
+ * so the two never overlap (QA wave 1).
+ *
+ * Only beside the form, from 1040px. Stacked on a tablet or phone it was a
+ * tall decorative band that pushed the form down or left an empty pane
+ * under it, so below 1040px the form has the page to itself.
  */
 export function BrainPane(_handle: Handle) {
   return () => {
     return (
       <aside aria-label="About accounts" mix={paneStyle}>
-        <BrainCanvas />
         <div aria-hidden="true" mix={gridPaperStyle} />
+        <div mix={sceneStyle}>
+          <BrainCanvas />
+        </div>
         <div mix={bottomStyle}>
           {/* Not a heading: the form's <h1> must come first (Auth spec, accessibility). */}
           <p mix={displayStyle}>
@@ -59,14 +64,7 @@ const paneStyle = css({
   flexDirection: 'column',
   justifyContent: 'flex-end',
   padding: 'var(--space-10) var(--section-pad-x)',
-  '@media (max-width: 1039px)': { minHeight: '480px', borderRight: 0, borderBottom: 'var(--border-w) solid var(--line-cell)' },
-  '@media (max-width: 759px)': {
-    minHeight: '200px',
-    padding: 'var(--space-6) var(--section-pad-x)',
-    borderBottom: 0,
-    borderTop: 'var(--border-w) solid var(--line-cell)',
-  },
-  '@media (max-width: 520px)': { display: 'none' },
+  '@media (max-width: 1039px)': { display: 'none' },
   '@media (forced-colors: active)': { borderColor: 'GrayText' },
 })
 
@@ -79,6 +77,15 @@ const gridPaperStyle = css({
   backgroundSize: 'var(--field-grid-step) var(--field-grid-step)',
   backgroundPosition: '-1px -1px',
   pointerEvents: 'none',
+})
+
+// The scene fills the pane edge to edge above the copy (it cancels the
+// pane's padding on three sides), and the canvas fills it.
+const sceneStyle = css({
+  position: 'relative',
+  flex: 1,
+  minHeight: '280px',
+  margin: 'calc(-1 * var(--space-10)) calc(-1 * var(--section-pad-x)) var(--space-6)',
 })
 
 const bottomStyle = css({
@@ -96,7 +103,6 @@ const displayStyle = css({
   fontSize: 'clamp(36px, 4.4vw, 60px)',
   lineHeight: 0.98,
   letterSpacing: 'var(--tracking-tight)',
-  '@media (max-width: 759px)': { fontSize: '36px' },
 })
 
 // Flat ink over the canvas (047): no glass, no blur, square.
@@ -109,7 +115,6 @@ const sessionStyle = css({
   fontSize: 'var(--fs-13)',
   lineHeight: 1.9,
   color: 'var(--muted)',
-  '@media (max-width: 759px)': { display: 'none' },
 })
 
 const voltStyle = css({ color: 'var(--volt)' })

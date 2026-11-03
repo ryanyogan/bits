@@ -36,6 +36,7 @@ import { rememberTheme } from '../../progress/theme.ts'
 import { settingsRedirect, takeSettingsNotice, type SettingsNotice, type SettingsSection } from './notice.ts'
 import { appearanceForm, deleteForm, emailCodeForm, emailForm, methodsForm, passkeyNameForm, profileForm } from './schema.ts'
 import { SettingsPage, type SettingsErrors } from './settings-page.tsx'
+import { APP_NAME } from '../../config.ts'
 
 // Signed-in only (requireUser sends everyone else to /login?next=). Each form
 // posts to its own action. A bad form re-renders 422 with its issues; a good
@@ -239,7 +240,7 @@ export default createController(routes.settings, {
           let text = {
             wrong: 'That code isn’t right. Check the newest email and try again.',
             expired: 'That code has expired or had too many tries. Ask for a new one.',
-            taken: 'That address already has a Bits account, so it can’t be yours too.',
+            taken: `That address already has a ${APP_NAME} account, so it can’t be yours too.`,
           }[result.reason]
           return invalid(context, user, 'email', { code: text }, ['code'])
         }
