@@ -622,6 +622,7 @@ export const PromptComposer = clientEntry(
                   {entry.id === rewardedRun && reward && (rewardXp > 0 || !entry.verdict) ? (
                     <RewardToast
                       xp={entry.verdict ? rewardXp : reward.xp}
+                      title={`+${entry.verdict ? rewardXp : reward.xp} neurons (lesson points)`}
                       message={entry.verdict?.success ?? reward.message}
                       note={entry.verdict?.halved ? 'Half the neurons: you saw the strong prompt first.' : reward.note}
                       next={reward.next}
