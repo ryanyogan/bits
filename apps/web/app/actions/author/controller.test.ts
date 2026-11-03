@@ -41,18 +41,21 @@ async function upload(dir: string, options: { cookie?: string; folder?: string; 
 describe('/author and /author/:course', () => {
   after(() => disposePlatform())
 
-  it('renders upload, repo sync, the course list and the block reference', async () => {
+  it('renders the course list first, then the upload and the block reference', async () => {
     let response = await request(routes.author.index.href())
     assert.equal(response.status, 200)
     let html = await response.text()
     assert.match(html, /<title>Write a course · Bits<\/title>/)
     assert.equal(html.match(/<h1[\s>]/g)?.length, 1)
-    assert.match(html, /Courses are just markdown\./)
+    // A returning author's page leads with their courses (decision 068).
+    assert.match(html, /<h1[^>]*>Your courses<\/h1>/)
+    assert.ok(html.indexOf('id="your-courses"') < html.indexOf('id="upload"'), 'courses come before the upload')
     assert.match(html, new RegExp(`action="${routes.api.authorUpload.href()}"`))
     assert.match(html, /enctype="multipart\/form-data"/)
     assert.match(html, /webkitdirectory/)
-    assert.match(html, new RegExp(`action="${routes.author.repo.href()}"`))
-    assert.match(html, /<h2 id="your-courses"[^>]*>Your courses<\/h2>/)
+    // No GitHub sync until it exists: no repo card, no "connected" claim (decision 068).
+    assert.doesNotMatch(html, /\/author\/repo|connected|Push to GitHub/)
+    assert.match(html, /<h2 id="your-courses"[^>]*>Courses you manage<\/h2>/)
     assert.match(html, /href="\/author\/tokens-and-temperature"/)
     assert.match(html, /v1 live/)
     assert.match(html, /role="region" aria-label="Block reference"/)
@@ -69,13 +72,13 @@ describe('/author and /author/:course', () => {
     }
   })
 
-  it('saving repo settings redirects back with a status', async () => {
-    let response = await post(routes.author.repo.href(), { repository: 'a/b', branch: 'main' })
-    assert.equal(response.status, 303)
-    assert.equal(response.headers.get('Location'), '/author?repo=saved')
+  it('has no repo-sync endpoint (decision 068)', async () => {
+    let response = await post('/author/repo', { repository: 'a/b', branch: 'main' })
+    assert.notEqual(response.status, 303)
+    await response.text()
   })
 
-  it('shows the live build’s validation report and Preview draft', async () => {
+  it('shows the live build’s validation report, View live and the way back (decision 068)', async () => {
     let response = await request(routes.author.course.index.href({ course: 'tokens-and-temperature' }))
     assert.equal(response.status, 200)
     let html = await response.text()
@@ -85,7 +88,14 @@ describe('/author and /author/:course', () => {
     assert.doesNotMatch(html, /video not uploaded yet: assets\/06-temperature/)
     assert.match(html, /ready · 4:30/)
     assert.match(html, /Passed: <\/span>8 lessons, order 1–8, no gaps/)
-    assert.match(html, /href="\/author\/tokens-and-temperature\/preview\/what-is-a-token"/)
+    // Fewer videos ready than linked: not shown as a pass.
+    assert.match(html, /Warning: <\/span>1 of 2 videos uploaded and ready/)
+    // Errors and warnings come before the passes.
+    assert.ok(html.indexOf('Warning: </span>') < html.indexOf('Passed: </span>'))
+    // v1 is live: no draft to preview, a link to the live course and back to /author.
+    assert.doesNotMatch(html, /Preview draft/)
+    assert.match(html, /href="\/courses\/tokens-and-temperature"[^>]*>View live →/)
+    assert.match(html, /href="\/author"[^>]*>Authors<\/a>/)
     assert.match(html, /live · v1/)
     assert.doesNotMatch(html, /popovertarget="publish-confirm"/)
   })
@@ -126,8 +136,10 @@ describe('/author and /author/:course', () => {
     assert.match(home, /href="\/author\/my-first-course"/)
     let published = await post(routes.author.course.publish.href({ course: 'my-first-course' }), { version: '1' }, author.cookie)
     assert.equal(published.status, 303)
-    assert.equal(published.headers.get('Location'), '/author/my-first-course?done=published')
+    // The outcome is a session flash, not a query string: once, then gone.
+    assert.equal(published.headers.get('Location'), '/author/my-first-course')
     assert.match(await (await fetchAs(author.cookie, published.headers.get('Location')!)).text(), /v1 is live\./)
+    assert.doesNotMatch(await (await fetchAs(author.cookie, published.headers.get('Location')!)).text(), /v1 is live\./)
     assert.match(await (await fetchAs(null, routes.courses.index.href())).text(), /My first course/)
     assert.equal((await fetchAs(null, lessonPath)).status, 200)
 
@@ -139,8 +151,19 @@ describe('/author and /author/:course', () => {
     })
     await post(routes.author.course.publish.href({ course: 'my-first-course' }), { version: '2' }, author.cookie)
     assert.match(await (await fetchAs(null, routes.courses.index.href())).text(), /My renamed course/)
+    // v1 sits behind a confirm in Versions, the one rollback key on the page.
+    let built = await (await fetchAs(author.cookie, routes.author.course.index.href({ course: 'my-first-course' }))).text()
+    assert.equal(built.match(/popovertarget="rollback-confirm-v1"/g)?.length, 2, 'open and cancel')
+    assert.doesNotMatch(built, /popovertarget="rollback-confirm-v2"/)
+    // A bad or missing version re-renders with the problem (422), not a silent redirect.
+    let missing = await post(routes.author.course.rollback.href({ course: 'my-first-course' }), {}, author.cookie)
+    assert.equal(missing.status, 422)
+    assert.match(await missing.text(), /Pick a version to roll back to\./)
+    let current = await post(routes.author.course.rollback.href({ course: 'my-first-course' }), { version: '2' }, author.cookie)
+    assert.equal(current.status, 422)
+    await current.text()
     let rolledBack = await post(routes.author.course.rollback.href({ course: 'my-first-course' }), { version: '1' }, author.cookie)
-    assert.equal(rolledBack.headers.get('Location'), '/author/my-first-course?done=rolledback')
+    assert.equal(rolledBack.headers.get('Location'), '/author/my-first-course')
     assert.match(await (await fetchAs(author.cookie, rolledBack.headers.get('Location')!)).text(), /Rolled back: v1 is live again\./)
     let catalog = await (await fetchAs(null, routes.courses.index.href())).text()
     assert.match(catalog, /My first course/)

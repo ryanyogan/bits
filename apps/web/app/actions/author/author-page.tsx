@@ -11,10 +11,9 @@ import type { Viewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
 import { Layout } from '../../ui/layout.tsx'
 import { PageHead } from '../../ui/page-head.tsx'
-import { counts, plural, repo, type AuthorCourse } from './data.ts'
+import { counts, plural, type AuthorCourse } from './data.ts'
 import { DropZone } from './public/drop-zone.tsx'
 import { BlockTable } from './ui/block-table.tsx'
-import { RepoSyncCard } from './ui/repo-sync-card.tsx'
 import { authorLeadCode, cellPad, stripLinkStyle } from './ui/shell.tsx'
 import { StatusTag, type BuildStatus } from './ui/status-tag.tsx'
 
@@ -22,22 +21,35 @@ export interface AuthorPageProps {
   courses: AuthorCourse[]
   viewer: Viewer | null
   currentPath: string
-  repoSaved?: boolean
 }
 
 /**
- * /author (Authoring spec): header, upload (DropZone + RepoSyncCard), the
- * author's courses (not drawn; composed per the spec) and the block reference.
+ * /author (Authoring spec): the author's own courses first, then the upload
+ * band (DropZone) and the block reference. A new author, with nothing yet,
+ * gets the "Courses are just markdown." pitch and the upload on top.
  */
 export function AuthorPage(handle: Handle<AuthorPageProps>) {
   return () => {
-    let { courses, viewer, currentPath, repoSaved } = handle.props
+    let { courses, viewer, currentPath } = handle.props
+    let returning = courses.length > 0
+    let upload = (
+      <RuledSection
+        label={returning ? 'Upload a new version' : 'Upload a course'}
+        labelAs="h2"
+        labelId="upload"
+        pad="none"
+      >
+        <div mix={cellPad}>
+          <DropZone action={routes.api.authorUpload.href()} />
+        </div>
+      </RuledSection>
+    )
     return (
       <Layout title="Write a course" viewer={viewer} currentPath={currentPath}>
         <PageFrame>
           <PageHead
             label="Authors"
-            title="Courses are just markdown."
+            title={returning ? 'Your courses' : 'Courses are just markdown.'}
             aside={
               viewer?.role === 'admin' ? (
                 <a
@@ -51,29 +63,23 @@ export function AuthorPage(handle: Handle<AuthorPageProps>) {
             }
             lead={
               <span mix={authorLeadCode}>
-                A folder of <code>.md</code> files plus a few <code data-tone="volt">:::blocks</code> for the
-                interactive bits. Push to GitHub or drop the folder here — it's validated, built and published.
+                A course is a folder of <code>.md</code> files plus a few <code data-tone="volt">:::blocks</code> for the
+                interactive bits. Upload the folder: it's validated and built, and nothing goes live until you publish
+                it from the course's page.
               </span>
             }
           />
 
-          <RuledSection aria-label="Upload or sync" pad="none">
-            <CellGrid cols={2} colsMid={2} pad={false}>
-              <div mix={cellPad}>
-                <DropZone action={routes.api.authorUpload.href()} />
-              </div>
-              <RepoSyncCard repo={repo} saved={repoSaved} />
-            </CellGrid>
-          </RuledSection>
+          {returning ? null : upload}
 
           <RuledSection
-            label="Your courses"
+            label={returning ? 'Courses you manage' : 'Your courses'}
             labelAs="h2"
             labelId="your-courses"
-            aside={courses.length ? plural(courses.length, 'course') : undefined}
+            aside={returning ? plural(courses.length, 'course') : undefined}
             pad="none"
           >
-            {courses.length ? (
+            {returning ? (
               <CellGrid as="ul" cols={1} colsMid={1} pad={false} top={false} aria-labelledby="your-courses">
                 {courses.map((item) => (
                   <li key={item.course.slug}>
@@ -83,10 +89,12 @@ export function AuthorPage(handle: Handle<AuthorPageProps>) {
               </CellGrid>
             ) : (
               <div mix={cellPad}>
-                <EmptyState title="No courses yet." hint="Drop a folder above or connect a repo." />
+                <EmptyState title="No courses yet." hint="Upload a course folder above to make your first build." />
               </div>
             )}
           </RuledSection>
+
+          {returning ? upload : null}
 
           <RuledSection label="The blocks" labelAs="h2" labelId="the-blocks" pad="none">
             <BlockTable />

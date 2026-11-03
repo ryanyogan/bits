@@ -55,7 +55,7 @@ export interface TreeNode {
 
 export interface AuthorCourse {
   course: CourseInfo
-  /** The course folder name in the repo or upload. */
+  /** The course folder name in the upload. */
   folder: string
   files: number
   /** When the latest build was uploaded ("4 min ago"). */
@@ -75,9 +75,6 @@ export interface AuthorCourse {
   /** users.id of the authors who own it. */
   ownerIds: string[]
 }
-
-/** The GitHub sync card is a stub until the webhook milestone. */
-export const repo = { name: 'jamie-park/courses', branch: 'main', connected: true }
 
 /** Authors manage the courses they own; admins manage every course (handoff, Roles). */
 export function canManageCourse(user: { id: string; role: string }, item: Pick<AuthorCourse, 'ownerIds'>): boolean {

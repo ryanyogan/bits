@@ -11,27 +11,46 @@ import { StatusTag } from '../../ui/status-tag.tsx'
 
 export interface ValidationReportProps {
   item: AuthorCourse
-  /** The draft preview, when a build is clean. */
+  /** The draft preview, when the newest clean build isn't live yet. */
   previewHref?: string
-  /** Notice after publish / rollback, or a refused publish. */
+  /** The live course page, once a version is published. */
+  liveHref?: string
+  /** Notice after publish / rollback, or a refused one. */
   notice?: { tone: 'ok' | 'error'; text: string }
 }
 
 const SR_PREFIX = { ok: 'Passed:', warning: 'Warning:', error: 'Error:' } as const
 const GLYPH = { ok: '✓', warning: '!', error: '✕' } as const
+const ORDER = { error: 0, warning: 1, ok: 2 } as const
+
+/**
+ * The level a check is shown at. The build reports "0 of 2 videos uploaded
+ * and ready" as a pass (it never blocks publishing), but with videos missing
+ * it isn't one: show it with the warnings it sums up. Counts and publishing
+ * still follow the stored level.
+ */
+export function shownLevel(check: ValidationItem): ValidationItem['level'] {
+  let videos = /^(\d+) of (\d+) videos? uploaded and ready$/.exec(check.text)
+  if (check.level === 'ok' && videos && Number(videos[1]) < Number(videos[2])) return 'warning'
+  return check.level
+}
 
 /**
  * Validation report for the latest build (Authoring spec §2c): header with
- * Preview draft + Publish, then ValidationItems (components §13.1). Errors
- * block publishing; warnings don't (handoff "Validation").
+ * Preview draft, View live and Publish, then the checks in one column,
+ * errors first, then warnings, with the passes folded into one line.
+ * Errors block publishing; warnings don't (handoff "Validation"). Rolling
+ * back lives in Versions, once, behind the same confirm as Publish.
  */
 export function ValidationReport(handle: Handle<ValidationReportProps>) {
   return () => {
-    let { item, previewHref, notice } = handle.props
+    let { item, previewHref, liveHref, notice } = handle.props
     let { errors } = counts(item.items)
     let { course } = item
     let isLive = item.live === item.build
-    let previous = item.versions.find((v) => v.n < item.build && v.state !== 'draft' && !v.failed)
+    let checks = item.items.map((check) => ({ ...check, level: shownLevel(check) }))
+    let problems = checks.filter((check) => check.level !== 'ok').sort((a, b) => ORDER[a.level] - ORDER[b.level])
+    let passes = checks.filter((check) => check.level === 'ok')
 
     return (
       <section aria-labelledby="report-title" mix={cardStyle}>
@@ -40,7 +59,7 @@ export function ValidationReport(handle: Handle<ValidationReportProps>) {
             {item.folder}/
           </h2>
           <span mix={metaStyle}>
-            {plural(item.files, 'file')} · last push {item.lastPush}
+            v{item.build} · {plural(item.files, 'file')} · last push {item.lastPush}
           </span>
           {isLive ? <LiveDot>{`live · v${item.build}`}</LiveDot> : null}
           <span mix={actionsStyle}>
@@ -49,16 +68,12 @@ export function ValidationReport(handle: Handle<ValidationReportProps>) {
                 Preview draft
               </Keycap>
             ) : null}
-            {isLive ? (
-              previous ? (
-                <form method="post" action={routes.author.course.rollback.href({ course: course.slug })} mix={inlineForm}>
-                  <input type="hidden" name="version" value={String(previous.n)} />
-                  <Keycap variant="ghost-mono" type="submit" mix={previewKey}>
-                    Roll back to v{previous.n}
-                  </Keycap>
-                </form>
-              ) : null
-            ) : errors ? (
+            {liveHref ? (
+              <Keycap variant="ghost-mono" href={liveHref} mix={previewKey}>
+                View live →
+              </Keycap>
+            ) : null}
+            {isLive ? null : errors ? (
               <span mix={blockedWrap}>
                 <button type="button" aria-disabled="true" aria-describedby="publish-blocked" mix={[...keycapFace, publishKey]}>
                   Publish v{item.build}
@@ -68,29 +83,15 @@ export function ValidationReport(handle: Handle<ValidationReportProps>) {
                 </span>
               </span>
             ) : (
-              <>
-                <button type="button" popovertarget="publish-confirm" mix={[...keycapFace, publishKey]}>
-                  Publish v{item.build}
-                </button>
-                <div id="publish-confirm" popover="auto" role="dialog" aria-labelledby="publish-confirm-title" mix={confirmStyle}>
-                  <p id="publish-confirm-title" mix={confirmTitle}>
-                    Publish v{item.build}?
-                  </p>
-                  <p mix={confirmText}>
-                    Learners get v{item.build} on their next page load.
-                    {item.live !== undefined ? ` You can roll back to v${item.live} any time.` : ''}
-                  </p>
-                  <form method="post" action={routes.author.course.publish.href({ course: course.slug })} mix={confirmActions}>
-                    <input type="hidden" name="version" value={String(item.build)} />
-                    <button type="button" popovertarget="publish-confirm" popovertargetaction="hide" mix={cancelKey}>
-                      Cancel
-                    </button>
-                    <button type="submit" mix={[...keycapFace, publishKey]}>
-                      Publish v{item.build}
-                    </button>
-                  </form>
-                </div>
-              </>
+              <ConfirmFlip
+                id="publish-confirm"
+                label={`Publish v${item.build}`}
+                title={`Publish v${item.build}?`}
+                text={`Learners get v${item.build} on their next page load.${item.live !== undefined ? ` You can roll back to v${item.live} any time.` : ''}`}
+                action={routes.author.course.publish.href({ course: course.slug })}
+                version={item.build}
+                primary
+              />
             )}
           </span>
         </div>
@@ -101,11 +102,28 @@ export function ValidationReport(handle: Handle<ValidationReportProps>) {
           </p>
         ) : null}
 
-        <ul aria-label={`Validation for v${item.build}`} mix={itemsGrid}>
-          {item.items.map((check, index) => (
-            <ValidationRow key={index} check={check} />
-          ))}
-        </ul>
+        {problems.length ? (
+          <ul aria-label={`Errors and warnings in v${item.build}`} mix={itemsList}>
+            {problems.map((check, index) => (
+              <ValidationRow key={index} check={check} />
+            ))}
+          </ul>
+        ) : null}
+        {passes.length ? (
+          <details mix={passesStyle} open={problems.length === 0 ? true : undefined}>
+            <summary mix={passesSummary}>
+              <span aria-hidden="true" mix={passGlyph}>
+                ✓
+              </span>{' '}
+              {plural(passes.length, 'check')} passed
+            </summary>
+            <ul aria-label={`Checks passed in v${item.build}`} mix={itemsList}>
+              {passes.map((check, index) => (
+                <ValidationRow key={index} check={check} />
+              ))}
+            </ul>
+          </details>
+        ) : null}
       </section>
     )
   }
@@ -118,10 +136,59 @@ function ValidationRow(handle: Handle<{ check: ValidationItem }>) {
       <li data-level={level} mix={itemStyle}>
         <span aria-hidden="true" mix={glyphStyle}>
           {GLYPH[level]}
-        </span>{' '}
-        <span class="sr-only">{SR_PREFIX[level]} </span>
-        {text}
+        </span>
+        <span>
+          <span class="sr-only">{SR_PREFIX[level]} </span>
+          {text}
+        </span>
       </li>
+    )
+  }
+}
+
+interface ConfirmFlipProps {
+  /** id of the popover; unique on the page. */
+  id: string
+  /** The key that opens the confirm, and the confirm's submit. */
+  label: string
+  title: string
+  text: string
+  action: string
+  version: number
+  /** Primary key (Publish); otherwise the small ghost-mono key of a version row. */
+  primary?: boolean
+}
+
+/**
+ * A pointer flip behind a confirm (publish or roll back): the key opens a
+ * native popover (no JS), whose form posts the version. Both change what
+ * every learner sees, so both ask first.
+ */
+function ConfirmFlip(handle: Handle<ConfirmFlipProps>) {
+  return () => {
+    let { id, label, title, text, action, version, primary } = handle.props
+    let keyStyle = primary ? [...keycapFace, publishKey] : [cancelKey, smallFlipKey]
+    return (
+      <>
+        <button type="button" popovertarget={id} mix={keyStyle}>
+          {label}
+        </button>
+        <div id={id} popover="auto" role="dialog" aria-labelledby={`${id}-title`} mix={confirmStyle}>
+          <p id={`${id}-title`} mix={confirmTitle}>
+            {title}
+          </p>
+          <p mix={confirmText}>{text}</p>
+          <form method="post" action={action} mix={confirmActions}>
+            <input type="hidden" name="version" value={String(version)} />
+            <button type="button" popovertarget={id} popovertargetaction="hide" mix={cancelKey}>
+              Cancel
+            </button>
+            <button type="submit" mix={[...keycapFace, publishKey]}>
+              {label}
+            </button>
+          </form>
+        </div>
+      </>
     )
   }
 }
@@ -147,14 +214,18 @@ function VersionRow(handle: Handle<{ item: AuthorCourse; version: CourseVersion 
     let { item, version } = handle.props
     let live = item.live === version.n
     let isBuild = version.n === item.build
+    let back = item.live !== undefined && version.n < item.live
+    let label = back ? `Roll back to v${version.n}` : `Make v${version.n} live`
     let action =
       live || isBuild || version.failed ? null : (
-        <form method="post" action={routes.author.course.rollback.href({ course: item.course.slug })} mix={inlineForm}>
-          <input type="hidden" name="version" value={String(version.n)} />
-          <Keycap variant="ghost-mono" size="sm" type="submit" mix={smallKey}>
-            {item.live !== undefined && version.n < item.live ? `Roll back to v${version.n}` : `Make v${version.n} live`}
-          </Keycap>
-        </form>
+        <ConfirmFlip
+          id={`rollback-confirm-v${version.n}`}
+          label={label}
+          title={`${label}?`}
+          text={`Learners get v${version.n} on their next page load.${item.live !== undefined ? ` v${item.live} stays in this list, so you can make it live again.` : ''}`}
+          action={routes.author.course.rollback.href({ course: item.course.slug })}
+          version={version.n}
+        />
       )
     return (
       <li mix={rowStyle}>
@@ -179,7 +250,11 @@ export function VideoList(handle: Handle<{ item: AuthorCourse }>) {
     let { item } = handle.props
     let ready = item.videos.filter((v) => v.status === 'ready').length
     return (
-      <Panel id="videos-title" title="Videos" aside={`${ready} of ${item.videos.length} ready`}>
+      <Panel
+        id="videos-title"
+        title="Videos"
+        aside={item.videos.length ? <span mix={ready < item.videos.length ? asideWarn : undefined}>{`${ready} of ${item.videos.length} ready`}</span> : undefined}
+      >
         <div mix={panelBody}>
         {item.videos.length ? (
           <ul mix={rowsStyle}>
@@ -268,7 +343,6 @@ const publishKey = css({
   fontSize: 'var(--fs-13)',
   '@media (max-width: 480px)': { width: '100%' },
 })
-const inlineForm = css({ margin: 0, display: 'flex' })
 const blockedWrap = css({ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 'var(--space-1_5)' })
 const blockedText = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--danger)', whiteSpace: 'nowrap' })
 
@@ -317,24 +391,26 @@ const noticeStyle = css({
 })
 const noticeError = css({ background: 'var(--danger-tint)', borderColor: 'var(--danger-line)', color: 'var(--danger)' })
 
-// Checks as cells sharing hairlines (decision 047): the list draws the top
-// and left edges, each cell its right and bottom, so no line doubles.
-const itemsGrid = css({
+// The checks as one column of rows sharing hairlines (decision 047): long
+// warnings get the full width, and errors and warnings come first.
+const itemsList = css({
   listStyle: 'none',
   margin: 0,
   padding: 0,
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))',
-  borderTop: 'var(--border-w) solid var(--line-cell)',
-  borderLeft: 'var(--border-w) solid var(--line-cell)',
+  display: 'flex',
+  flexDirection: 'column',
+  border: 'var(--border-w) solid var(--line-cell)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-13)',
-  '@media (forced-colors: active)': { borderColor: 'GrayText', '& > li': { borderColor: 'GrayText' } },
+  lineHeight: 1.55,
+  '& > li + li': { borderTop: 'var(--border-w) solid var(--line-cell)' },
+  '@media (forced-colors: active)': { borderColor: 'GrayText', '& > li + li': { borderColor: 'GrayText' } },
 })
 const itemStyle = css({
+  display: 'grid',
+  gridTemplateColumns: 'var(--space-4) minmax(0, 1fr)',
+  gap: 'var(--space-2_5)',
   padding: 'var(--space-3) var(--space-3_5)',
-  borderRight: 'var(--border-w) solid var(--line-cell)',
-  borderBottom: 'var(--border-w) solid var(--line-cell)',
   background: 'var(--well)',
   color: 'var(--text-body)',
   overflowWrap: 'anywhere',
@@ -349,7 +425,25 @@ const itemStyle = css({
     color: 'var(--danger)',
   },
 })
-const glyphStyle = css({ '[data-level="ok"] > &': { color: 'var(--volt)' } })
+const glyphStyle = css({ textAlign: 'center', '[data-level="ok"] > &': { color: 'var(--volt)' } })
+const passesStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' })
+const passesSummary = css({
+  alignSelf: 'flex-start',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 'var(--space-1_5)',
+  minHeight: 'var(--touch-target)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-13)',
+  color: 'var(--text-body)',
+  cursor: 'pointer',
+  '&:hover': { color: 'var(--text)' },
+  '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset)' },
+})
+const passGlyph = css({ color: 'var(--volt)' })
+const asideWarn = css({ color: 'var(--warn)' })
+// A version row's flip key: the ghost-mono look at the small size.
+const smallFlipKey = css({ fontSize: 'var(--fs-13)' })
 
 // A panel's body when it holds more than one block (decision 047: `Panel` pads it).
 const panelBody = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-3_5)', minWidth: 0 })
@@ -369,7 +463,6 @@ const rowBody = css({ flex: '1 1 180px', minWidth: 0, display: 'flex', flexDirec
 const rowMain = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap', fontSize: 'var(--fs-14)' })
 const rowWhen = css({ color: 'var(--text)' })
 const rowMeta = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
-const smallKey = css({ fontSize: 'var(--fs-13)' })
 const fileName = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--text)', overflowWrap: 'anywhere' })
 const videoStatus = css({ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 'var(--space-2_5)', flexWrap: 'wrap' })
 const emptyText = css({ margin: 0, fontSize: 'var(--fs-14)', lineHeight: 1.55, color: 'var(--muted)' })
