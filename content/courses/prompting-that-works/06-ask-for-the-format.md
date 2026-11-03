@@ -116,6 +116,8 @@ Get the booking back as JSON only, with the keys you choose
 - check "Names the keys"                  /time|\bday\b|date|when/i
 - check "Says only the JSON"              /\bonly\b|nothing else|no other text|no preamble|just the json|no explanation/i
 - check "Includes the booking"            /okafor/i
+- check "Includes the booking"            /luigi/i
+- check "Includes the booking"            /7:30|7\.30|19:30/
 - expect "Parses as JSON"                 json
 - expect "Keeps the name"                 match /okafor/i
 - expect "Keeps the party size"           match /\b4\b|four/i

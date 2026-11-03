@@ -68,7 +68,8 @@ Trim the bloated prompt to what the reply needs
 - goal "Get the same good reply from a prompt half the size: a free replacement for order #4417, kindly and briefly"
 - placeholder "Reply to this customer: … Offer … Tone: … Under … words."
 - draft "Hi! Hope you're well. Context: I've been at Acme for 3 years, our office moved floors last month and the coffee machine is broken again. Here are the 2019 returns rules (refunds within 14 days) and the 2021 rules that replaced them (we replace damaged items free, no return needed). Customer says: “My order #4417 arrived damaged. I want a replacement, not a refund.” Write a reply. Be nice. Be nice! Remember to be nice."
-- check "Keeps the customer's message"  /4417|damaged/i
+- check "Keeps the customer's message"  /4417/
+- check "Keeps the customer's message"  /damaged/i
 - check "Says what to offer"            /replac/i
 - check "Sets a tone"                   /friendly|warm|polite|kind|apolog|empath|tone|calm|sincere/i
 - check "Sets a length"                 /\bwords?\b|\bsentences?\b|\bunder\b|\bshort\b|\bbrief\b/i

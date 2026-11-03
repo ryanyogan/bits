@@ -90,7 +90,9 @@ Answer a question from a pasted policy, and nothing else
 - goal "Paste the returns policy, ask a customer's question, and get an answer that comes only from the policy, or says the policy doesn't cover it"
 - placeholder "…policy text… Using only the policy above, answer: …? If the policy doesn't say, …"
 - draft "Orbit Bikes returns policy: You can return any bike within 30 days of delivery for a full refund, if it has under 50 km on the odometer. E-bike batteries have a separate 2-year warranty. Refunds go back to the original payment method within 5 business days."
-- check "Includes the policy" /returns policy/i
+- check "Includes the policy" /30 days/i
+- check "Includes the policy" /50 km/i
+- check "Includes the policy" /business days|2-year/i
 - check "Asks a question" /\?/
 - expect "Keeps the answer short" words<=120
 - rubric "Every claim in the answer comes from the policy text" must

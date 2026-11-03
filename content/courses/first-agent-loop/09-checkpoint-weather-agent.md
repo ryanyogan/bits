@@ -302,7 +302,9 @@ Give Claude a tool result and ask for the agent's final answer
 - goal "Play the agent's last turn: hand Claude a forecast as if a tool had just returned it, and get a short answer grounded only in that data"
 - placeholder "Tool result from get_forecast: [...]. Using only this data, should I bike to work tomorrow at 8? Answer in … sentences. If something's missing, say so."
 - draft "Should I bike to work tomorrow?"
-- check "Includes the forecast data" /rain|wind|\bhigh\b|°|forecast|\[/i
+- check "Includes the forecast data" /\d\d/
+- check "Includes the forecast data" /rain|precip/i
+- check "Includes the forecast data" /wind|high|low|temp/i
 - check "Asks a real question" /\?/
 - expect "Quotes numbers from the data" match /\d/
 - expect "Answers in a few sentences" sentences<=5

@@ -96,6 +96,8 @@ Summarise the chat for a handoff: what to keep, what to drop, how long
 - check "Says what to drop"         /drop|omit|leave out|skip|ignore|exclude|without/i
 - check "Sets a length limit"       /\bwords?\b|\bsentences?\b|\bunder\b|bullets?|\bshort\b|\bbrief\b/i
 - check "Includes the conversation" /lisbon/i
+- check "Includes the conversation" /vegetarian/i
+- check "Includes the conversation" /4 days|four days/i
 - expect "Keeps “vegetarian”"        match /vegetarian/i
 - expect "Short enough to hand off"  words<=80
 - rubric "Keeps the lasting preferences: vegetarian, no early starts, and the trip is now 4 days" must evidence

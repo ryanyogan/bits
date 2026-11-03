@@ -201,8 +201,11 @@ Write the instructions for a grounded, cited docs assistant
 - placeholder "You are Orbit Bikes' docs assistant. Answer only from the passages… Cite… If they don't cover it… Keep it under… words."
 - draft "[1] warranty.md: E-bike batteries have a 2-year warranty from delivery, covering capacity below 70%. [2] warranty.md: Claims must be filed within 30 days of noticing the fault, with the order number and a photo of the battery label. [3] returns.md: You can return any bike within 30 days of delivery for a full refund, if it has under 50 km on the odometer. Customer question: My battery is 20 months old and now gets half the range. What do I need to send you, and can I get a loaner bike while it's fixed?"
 - check "Gives it a role" /you are|you're|act as|\brole\b|assistant/i
-- check "Asks for citations" /\bcite|citation|\bsources?\b|reference/i
+- check "Asks for citations" /\bcite|citation|\bsources?\b|reference|passage numbers?|in brackets/i
+- check "Keeps the passages" /\[1\]/
 - check "Keeps the passages" /\[2\]/
+- check "Keeps the passages" /\[3\]/
+- check "Keeps the passages" /battery label/i
 - expect "Cites the passages by number" cites 1-3
 - expect "Keeps it short" words<=120
 - rubric "Says what to send: the order number and a photo of the battery label" must evidence

@@ -109,6 +109,8 @@ Wrap the policy in tags, ask for a quote, put the question last
 - placeholder "<document><source>…</source><document_content>…</document_content></document> Quote … then answer: …?"
 - draft "What's the refund window? Here's our policy: Refunds are accepted within 30 days of delivery for unused items. Sale items are final. Gift cards can't be refunded."
 - check "Keeps the policy"           /30 days/i
+- check "Keeps the policy"           /sale items/i
+- check "Keeps the policy"           /gift cards?/i
 - check "Wraps it in a document tag" /<document/i
 - check "Names the source"           /<source>/i
 - check "Asks for a quote"           /quot/i

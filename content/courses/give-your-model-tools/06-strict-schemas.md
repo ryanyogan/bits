@@ -123,6 +123,8 @@ Ask for JSON with a number in it, and check the type
 - placeholder "Turn “two adults, Friday, Lisbon” into JSON with passengers (a number), day and city. JSON only."
 - draft "Make JSON from: two adults, Friday, Lisbon"
 - check "Includes the booking" /lisbon/i
+- check "Includes the booking" /friday/i
+- check "Includes the booking" /two adults|2 adults/i
 - expect "Has the three fields, with passengers as a number" json keys=passengers,day,city types=passengers:number
 - rubric "Replies with the JSON alone, no prose or code fence around it" must
 - rubric "Keeps the booking's values, with no invented fields" should

@@ -100,7 +100,9 @@ Ask Claude why an agent is stuck, and what result would get it moving
 - goal "Get Claude to explain why the agent keeps retrying, and to write the tool result that would get it moving, in a short answer"
 - placeholder "My agent's log: turn 1 → geocode(\"Springfield\") ← Error. turn 2 → geocode(\"Springfield\") ← Error. … Why does it keep retrying, and what should the tool return instead? Answer in under … words."
 - draft "Why is my agent stuck?"
-- check "Pastes the repeated call" /geocode|forecast|search|lookup|tool/i
+- check "Pastes the repeated call" /geocode/i
+- check "Pastes the repeated call" /springfield/i
+- check "Pastes the repeated call" /error/i
 - check "Shows it repeating" /\bturn\b|again|repeat|retr|times|loop/i
 - check "Asks what to return instead" /instead|should (it|the tool) return|better (error|result)|what to return|fix/i
 - expect "Keeps it short" words<=200

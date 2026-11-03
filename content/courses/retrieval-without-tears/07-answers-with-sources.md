@@ -117,7 +117,10 @@ Answer from numbered passages, cite them, and admit the gap
 - placeholder "…passages… Answer using only the passages. Cite each claim like [1]. If they don't cover something, say so."
 - draft "[1] E-bike batteries have a 2-year warranty from delivery, covering capacity below 70%. [2] Claims must be filed within 30 days of noticing the fault. [3] Frames have a lifetime warranty for the first owner. Question: My battery is 18 months old and fading. Can I claim, and do you ship replacements to Canada?"
 - check "Includes the passages" /\[1\]/
-- check "Asks for citations" /\bcite|citation|\bsources?\b|reference/i
+- check "Includes the passages" /\[2\]/
+- check "Includes the passages" /\[3\]/
+- check "Includes the passages" /70%|70 ?percent/i
+- check "Asks for citations" /\bcite|citation|\bsources?\b|reference|passage numbers?|in brackets/i
 - expect "Cites the passages by number" cites 1-3
 - rubric "Says the passages don't cover shipping to Canada" must evidence
 - rubric "Each claim cites the passage it comes from" must
