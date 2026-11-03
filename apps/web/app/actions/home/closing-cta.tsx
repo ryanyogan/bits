@@ -3,31 +3,49 @@ import { Keycap } from '@bits/ui/keycap'
 import { RuledSection } from '@bits/ui/ruled-section'
 
 import { routes } from '../../routes.ts'
+import type { NextStep } from './continue.ts'
 import { lessonOneHref } from './links.ts'
 import { centreWash, dotBreak, monoNote, PHONE } from './styles.ts'
 
-/** Closing CTA (Main.md §7): one wide band, centred, the field glowing through. */
-export function ClosingCta(_handle: Handle) {
-  return () => (
-    <RuledSection aria-labelledby="cta-title" pad="none" open>
-      <div mix={[ctaStyle, centreWash]}>
-        <h2 id="cta-title" mix={titleStyle}>
-          Your first prompt is waiting.
-        </h2>
-        <div mix={buttons}>
-          <Keycap size="lg" href={lessonOneHref()} mix={button}>
-            Start lesson 1
-          </Keycap>
-          <Keycap size="lg" variant="dark" href={routes.courses.index.href()} mix={button}>
-            Browse courses
-          </Keycap>
+/**
+ * Closing CTA (Main.md §7): one wide band, centred, the field glowing
+ * through. Signed in, it resumes the learner's next lesson (decision 065).
+ */
+export function ClosingCta(handle: Handle<{ signedIn?: boolean; next?: NextStep }>) {
+  return () => {
+    let { signedIn, next } = handle.props
+    let resume = next?.kind === 'resume' ? next : undefined
+    let primaryHref = next?.href ?? (signedIn ? undefined : lessonOneHref())
+    return (
+      <RuledSection aria-labelledby="cta-title" pad="none" open>
+        <div mix={[ctaStyle, centreWash]}>
+          <h2 id="cta-title" mix={titleStyle}>
+            {resume ? 'Your next prompt is waiting.' : 'Your first prompt is waiting.'}
+          </h2>
+          <div mix={buttons}>
+            {primaryHref ? (
+              <Keycap size="lg" href={primaryHref} mix={button}>
+                {resume ? `Resume “${resume.lessonTitle}”` : 'Start lesson 1'}
+              </Keycap>
+            ) : null}
+            {/* Every course they started is done: the course list is the next step. */}
+            <Keycap size="lg" variant={primaryHref ? 'dark' : 'primary'} href={routes.courses.index.href()} mix={button}>
+              Browse courses
+            </Keycap>
+          </div>
+          <p mix={monoNote}>
+            {signedIn ? (
+              'Signed in · your progress saves as you go'
+            ) : (
+              <>
+                Free to start<span mix={dotBreak}> · </span>progress saves when you sign in
+              </>
+            )}
+          </p>
         </div>
-        <p mix={monoNote}>
-          Free to start<span mix={dotBreak}> · </span>progress saves when you sign in
-        </p>
-      </div>
-    </RuledSection>
-  )
+      </RuledSection>
+    )
+  }
 }
 
 const ctaStyle = css({

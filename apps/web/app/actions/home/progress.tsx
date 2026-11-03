@@ -6,8 +6,8 @@ import { ProgressRing } from '@bits/ui/progress-ring'
 import { RuledSection } from '@bits/ui/ruled-section'
 import { StatTile } from '@bits/ui/stat-tile'
 
-import { profileHref } from './links.ts'
-import { h2Style, introStyle, leadStyle, PHONE } from './styles.ts'
+import { routes } from '../../routes.ts'
+import { h2Style, introStyle, leadStyle, monoNote, PHONE } from './styles.ts'
 
 // Sample data on a marketing page: never personalised (Main.md §6).
 const badges = [
@@ -21,9 +21,11 @@ const badges = [
 /**
  * "Progress" (Main.md §6): the copy and a ProgressShowcase (components §12.5)
  * in two cells. The copy sits on the veil, over the field's galaxy; the
- * showcase keeps the ink slab (decision 048).
+ * showcase keeps the ink slab (decision 048). The showcase's numbers are
+ * made up, so it says so (decision 065); signed in, the copy points at the
+ * learner's real progress instead of asking them to sign in.
  */
-export function Progress(_handle: Handle) {
+export function Progress(handle: Handle<{ signedIn?: boolean }>) {
   return () => (
     <RuledSection open aria-labelledby="you-title" label="Progress" pad="none">
       <CellGrid cols={2} pad={false} top={false}>
@@ -33,17 +35,26 @@ export function Progress(_handle: Handle) {
               Progress you can feel.
             </h2>
             <p mix={leadStyle}>
-              Sign in once and every prompt you write, every lesson you finish and every badge you
-              earn follows you to any device. No card to start.
+              {handle.props.signedIn
+                ? 'Every prompt you write, every lesson you finish and every badge you earn is saved to your account, on any device.'
+                : 'Sign in once and every prompt you write, every lesson you finish and every badge you earn follows you to any device. No card, no password.'}
             </p>
           </div>
           <div>
-            <Keycap variant="dark" href={profileHref()} mix={profileKey}>
-              See your profile
-            </Keycap>
+            {handle.props.signedIn ? (
+              <Keycap variant="dark" href={routes.me.index.href()} mix={profileKey}>
+                Open My learning
+              </Keycap>
+            ) : (
+              <Keycap variant="dark" href={routes.login.index.href()} mix={profileKey}>
+                Sign in to save progress
+              </Keycap>
+            )}
           </div>
         </div>
-        <div mix={[cellInkStyle, showcase]}>
+        <figure mix={[cellInkStyle, showcase]}>
+          {/* Sample numbers, not anyone's progress: say so (decision 065). */}
+          <figcaption mix={[monoNote, exampleStyle]}>Example · what your progress looks like</figcaption>
           <div mix={ringRow}>
             <ProgressRing
               pct={62}
@@ -71,7 +82,7 @@ export function Progress(_handle: Handle) {
               </li>
             ))}
           </ul>
-        </div>
+        </figure>
       </CellGrid>
     </RuledSection>
   )
@@ -86,12 +97,14 @@ const copyCell = css({
   [PHONE]: { padding: 'var(--space-12) var(--section-pad-x)' },
 })
 const showcase = css({
+  margin: 0,
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'center',
   gap: 'var(--space-6)',
   padding: 'var(--cell-pad-lg)',
 })
+const exampleStyle = css({ margin: 0, textAlign: 'start' })
 const ringRow = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-6)', flexWrap: 'wrap' })
 const ringStyle = css({ [PHONE]: { width: '112px', height: '112px' } })
 const ringText = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-1_5)', flex: 1, minWidth: '200px' })

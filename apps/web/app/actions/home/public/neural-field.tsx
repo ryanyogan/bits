@@ -5,18 +5,9 @@ import { fieldMotion, onFieldMotion, setFieldLive } from './field-motion.ts'
 import type { Field, FieldInput } from './field-scene.ts'
 import { createField } from './field-scene.ts'
 
-// The four formations (decision 057): bit-planes, byte tapes, a graph, a galaxy.
-const stages = [
-  ['01', 'Bits'],
-  ['02', 'Tokens'],
-  ['03', 'Agents'],
-  ['04', 'You'],
-] as const
-
 /**
  * The landing page's sticky 3D field layer (Main.md §NeuralField,
- * components §12.6–12.7; decision 057): canvas + graph paper + vignette +
- * StageHud.
+ * components §12.6–12.7; decision 057): canvas + graph paper + vignette.
  *
  * Server-rendered as the static graph paper, which is also the fallback. In
  * the browser it waits until the page has loaded and the main thread is
@@ -31,7 +22,6 @@ const stages = [
  * scroll and nothing moves on its own.
  */
 export const NeuralField = clientEntry(import.meta.url, function NeuralField(handle: Handle) {
-  let stage = 0
   let live = false
   let paused = false
   let layer: HTMLElement | undefined
@@ -84,10 +74,8 @@ export const NeuralField = clientEntry(import.meta.url, function NeuralField(han
         // Denser on wide screens, where the planes and tapes have room.
         count: window.innerWidth < 760 ? 1600 : window.innerWidth < 1180 ? 3600 : 4800,
         reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
-        onStage(next) {
-          stage = next
-          handle.update()
-        },
+        // The scene reports its formation; the page no longer labels it.
+        onStage() {},
       })
     } catch {
       return
@@ -197,14 +185,6 @@ export const NeuralField = clientEntry(import.meta.url, function NeuralField(han
       />
       <div mix={dotGridStyle} />
       <div mix={vignetteStyle} />
-      <div mix={hudStyle}>
-        {stages.map(([n, label], index) => (
-          <div key={n} data-on={index === stage ? 'true' : undefined} mix={hudItem}>
-            <span>{`${n} · ${label}`}</span>
-            <span data-on={index === stage ? 'true' : undefined} mix={hudBar} />
-          </div>
-        ))}
-      </div>
     </div>
   )
 })
@@ -255,44 +235,3 @@ const vignetteStyle = css({
   background:
     'radial-gradient(ellipse 90% 80% at 50% 45%, transparent 0%, color-mix(in srgb, var(--ink) 16%, transparent) 68%, color-mix(in srgb, var(--ink) 78%, transparent) 100%)',
 })
-
-const hudStyle = css({
-  position: 'absolute',
-  // Inside the page frame's right rail (decision 047), not across it.
-  right: 'calc(max(var(--frame-inset), (100% - var(--frame-max)) / 2) + var(--space-6))',
-  top: '50%',
-  transform: 'translateY(-50%)',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--space-4)',
-  alignItems: 'flex-end',
-  // Below this the hero copy and prompt bar reach the right gutter, and the
-  // HUD would sit on top of them.
-  '@media (max-width: 1180px)': { display: 'none' },
-})
-
-const hudItem = css({
-  background: 'var(--copy-wash)',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 'var(--space-3)',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-11)',
-  color: 'var(--dim)',
-  transition: 'color 400ms',
-  '&[data-on="true"]': { color: 'var(--volt)' },
-})
-
-const hudBar = css({
-  display: 'block',
-  height: '2px',
-  // Grows 12px → 36px with a transform, not width: animating width moved
-  // the label beside it, a (tiny) layout shift on every stage change.
-  width: 'var(--space-9)',
-  transform: 'scaleX(calc(1 / 3))',
-  transformOrigin: 'right',
-  background: 'var(--line-dashed-strong)',
-  transition: 'transform 500ms var(--ease), background-color 500ms',
-  '&[data-on="true"]': { transform: 'none', background: 'var(--volt)' },
-})
-

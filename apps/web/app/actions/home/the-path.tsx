@@ -52,8 +52,7 @@ export function ThePath(_handle: Handle) {
             From one prompt to a team of agents.
           </h2>
           <p mix={leadStyle}>
-            Four tracks, each one building on the last. The foundations are free; go deeper with the
-            pro courses when you're ready.
+            Four tracks, each one building on the last.
           </p>
         </div>
       </div>
