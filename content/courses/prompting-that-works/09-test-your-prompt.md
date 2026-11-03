@@ -121,7 +121,7 @@ Write the labeller, with a rule for mixed messages, and run the tricky case
 - example T=1.0 "billing"
 - example T=1.0 "billing"
 - example T=1.0 "billing"
-- success "One gap found, one rule added. Now re-run the other cases to check you didn't break them." next="Next: checkpoint →"
+- success "One gap found, one rule added. Now re-run the other cases to check you didn't break them." next="Next: plan first, then act →"
 :::
 :::rabbithole
 - read "Define success criteria and build evaluations" by="Anthropic" url="https://platform.claude.com/docs/en/test-and-evaluate/develop-tests"

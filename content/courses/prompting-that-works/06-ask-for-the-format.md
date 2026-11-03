@@ -121,7 +121,7 @@ Get the booking back as JSON only, with the keys you choose
 - expect "Parses as JSON"                 json
 - expect "Keeps the name"                 match /okafor/i
 - expect "Keeps the party size"           match /\b4\b|four/i
-- rubric "Every value comes from the booking; nothing is invented" must
+- rubric "Every value comes from the booking; nothing is invented" must grounded
 - rubric "Uses the keys you named in the prompt" should
 - hint "Does anything come before or after the JSON? Your code would choke on it."
 - hint "List the exact keys, then say “Reply with only the JSON object.”"
