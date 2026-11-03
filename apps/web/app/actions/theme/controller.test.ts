@@ -240,14 +240,15 @@ describe('the theme preference (decision 062)', () => {
     let saved = await fetchAs(cookie, routes.settings.appearance.href(), { method: 'POST', body: form({ theme: 'light' }) })
     assert.equal(saved.status, 303)
     assert.equal(await themeOf(user.id), 'light')
-    assert.equal(await checked(), 'light')
+    // The notice is a session flash (decision 068): the first page after the save shows it.
     let page = await (await fetchAs(cookie, saved.headers.get('Location')!)).text()
     assert.match(page, /Every page uses this theme now/)
+    assert.equal(await checked(), 'light')
 
     let bad = await fetchAs(cookie, routes.settings.appearance.href(), { method: 'POST', body: form({ theme: 'sepia' }) })
-    assert.equal(bad.status, 303)
+    assert.equal(bad.status, 422)
     assert.equal(await themeOf(user.id), 'light', 'unchanged')
-    assert.match(await (await fetchAs(cookie, bad.headers.get('Location')!)).text(), /Pick System, Dark or Light\./)
+    assert.match(await bad.text(), /Pick System, Dark or Light\./)
 
     let exported = await (await fetchAs(cookie, routes.settings.export.href())).json()
     assert.equal(JSON.stringify(exported).includes('"theme":"light"'), true)

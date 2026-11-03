@@ -527,5 +527,10 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await page.goto(routes.admin.invite.index.href(undefined, { searchParams: { token } }))
     await settled(page)
     await expectClean(page, '/admin/invite')
+
+    // A cut-off link (no token): its own state, not "expired" (decision 068).
+    await page.goto(routes.admin.invite.index.href())
+    await page.getByText('This link isn’t complete.').waitFor()
+    await expectClean(page, '/admin/invite incomplete')
   })
 })
