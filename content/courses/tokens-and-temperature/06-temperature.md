@@ -38,15 +38,21 @@ Your turn. Write a prompt that asks for a **tagline for a coffee shop on the
 moon** with a length limit. Look at the `0` examples, then run it a few times
 at `1.0` and compare.
 
-:::prompt{id="moon-tagline" xp=40}
+:::prompt{id="moon-tagline" xp=40 coach}
 Write the prompt yourself — no pasting the answer
 
+- goal "Get a short tagline for a coffee shop on the moon, then compare a few runs"
 - placeholder "Write a tagline for…"
 - draft "Write a tagline for a coffee shop on the moon."
 - check "Asks for a tagline"   /tagline|slogan/i
 - check "Coffee + moon"        /coffee|caf[eé]/i
 - check "Coffee + moon"        /moon|lunar/i
 - check "Sets a length limit"  /\bwords?\b|\bshort\b|\bunder\b|\bmax/i
+- expect "A tagline, not a paragraph" words<=12
+- rubric "It's a tagline for a coffee shop on the moon" must
+- hint "Is the reply one tagline, or a list of options with notes? Ask for exactly what you want back."
+- hint "Add “Reply with one tagline of under 8 words, nothing else.”"
+- reference "Write one tagline for a coffee shop on the moon. Under 8 words. Reply with the tagline only."
 - run temperature=[0, 1.0]
 - example T=0 "Brewed beyond gravity."
 - example T=0.7 "One small sip for mankind."

@@ -61,13 +61,18 @@ Your turn. Ask Claude to **name one animal, in one word**, then run it a few
 times. You're sampling the same list of odds again and again. Which
 answers keep coming back?
 
-:::prompt{id="one-animal" xp=20}
+:::prompt{id="one-animal" xp=20 coach}
 Ask Claude for one animal, in one word
 
+- goal "Get exactly one word back: an animal. Then run it a few more times and watch which one keeps winning"
 - placeholder "Name one animal. Reply with one word."
 - draft "Name an animal."
 - check "Asks for an animal"  /animal/i
-- check "Asks for one word"   /one word|single word|1 word|one-word|just one/i
+- check "Asks for one word"   /one word|single word|1 word|one-word|just one|only the/i
+- expect "Replies with one word" one-word
+- rubric "The word is an animal" must evidence
+- hint "Is the reply one word, or a word wrapped in a sentence? What would you add to stop the sentence?"
+- reference "Name one animal. Reply with that one word only."
 - run temperature=[1.0]
 - example T=1.0 "Elephant"
 - example T=1.0 "Fox"
@@ -76,7 +81,6 @@ Ask Claude for one animal, in one word
 - example T=1.0 "Elephant"
 - success "Same odds, several draws. The favourite shows up most." next="Next: greedy vs. sampled →"
 :::
-
 :::rabbithole
 - video "Transformers, the tech behind LLMs" by="3Blue1Brown" mins=27 url="https://www.youtube.com/watch?v=wjZofJX0v4M"
 - read "Next-token prediction" by="Matt Pocock (AI Hero)" url="https://www.aihero.dev/ai-coding-dictionary/next-token-prediction"
