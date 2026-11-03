@@ -48,8 +48,14 @@ export default createController(routes.api, {
           return jsonError('invalid', 422, { issues: parsed.issues.map((issue) => issue.message) })
         }
         let { course, lesson, ask } = parsed.value
-        let raw = context.formData.get(fieldNames.ask(ask))
-        let answer = typeof raw === 'string' ? raw.trim() : ''
+        // A multiple-choice ask posts one value per ticked box without JS
+        // (decision 067): "a" and "c" read as "a, c", as the island sends it.
+        let answer = context.formData
+          .getAll(fieldNames.ask(ask))
+          .filter((value): value is string => typeof value === 'string')
+          .map((value) => value.trim())
+          .filter(Boolean)
+          .join(', ')
         let wantsJson = (context.headers.get('Accept') ?? '').includes('application/json')
         let back = () =>
           redirect(`${routes.courses.lesson.index.href({ course, lesson })}#ask-${ask}`, 303)

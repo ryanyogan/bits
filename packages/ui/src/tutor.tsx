@@ -46,6 +46,12 @@ const avatarSizes = {
 export interface TutorMessageProps {
   /** `lesson` prose (default: 16–17px fluid, 1.65, ~68ch lines) or `preview` 16/1.6 (Main). */
   variant?: 'lesson' | 'preview'
+  /**
+   * The same tutor turn goes on (decision 067): no second avatar, the text
+   * stays on the turn's indent. Phones never draw the avatar, so prose gets
+   * the full width.
+   */
+  continued?: boolean
   mix?: MixInput<HTMLElement>
   /** Paragraphs (`<p>`), `<strong>`, `<code>`. */
   children?: RemixNode
@@ -57,10 +63,12 @@ export interface TutorMessageProps {
  */
 export function TutorMessage(handle: Handle<TutorMessageProps>) {
   return () => {
-    let { variant = 'lesson', mix, children } = handle.props
+    let { variant = 'lesson', continued, mix, children } = handle.props
     return (
       <article mix={[messageStyle, mix]}>
-        <TutorAvatar size={variant === 'preview' ? 30 : 32} />
+        <span mix={[avatarSlot, continued ? continuedSlot : undefined, variant === 'lesson' ? phoneNoAvatar : undefined]}>
+          <TutorAvatar size={variant === 'preview' ? 30 : 32} />
+        </span>
         <div mix={[contentStyle, variant === 'preview' ? previewContent : lessonContent]}>
           <span class="sr-only">Tutor:</span>
           {children}
@@ -76,6 +84,11 @@ const messageStyle = css({
   alignItems: 'flex-start',
   '@media (max-width: 480px)': { gap: 'var(--space-2_5)' },
 })
+const avatarSlot = css({ display: 'flex', flex: 'none' })
+// Keeps the indent, hides the face (and keeps it out of the accessibility tree).
+const continuedSlot = css({ visibility: 'hidden' })
+// Phones: the turn's text runs the full column (attached blocks already drop their indent).
+const phoneNoAvatar = css({ '@media (max-width: 480px)': { display: 'none' } })
 const contentStyle = css({
   flex: 1,
   minWidth: 0,

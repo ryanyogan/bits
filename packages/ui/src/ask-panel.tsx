@@ -2,7 +2,6 @@ import type { Handle, RemixNode } from 'remix/component'
 import { clientEntry, css, on, ref } from 'remix/component'
 
 import { CheckChip, checkListStyle } from './check-chip.tsx'
-import { SuggestionChip } from './chip.tsx'
 import { Keycap } from './keycap.tsx'
 import {
   announceGate,
@@ -34,9 +33,12 @@ export interface AskPanelProps {
   /** The question, as plain elements (`<strong>`, `<code>`, links). */
   question: RemixNode
   placeholder?: string
-  /** Options: chips that fill the field (a typed letter or option text counts too). */
+  /**
+   * Options: a real radio group (or checkboxes with `multiple`) instead of
+   * the text field (decision 067). Select, then Check.
+   */
   choices?: AskChoiceOption[]
-  /** Several options are right: chips toggle letters ("a, c") instead of filling the text. */
+  /** Several options are right: checkboxes, sent as their letters ("a, c"). */
   multiple?: boolean
   /** Neurons a right answer is worth (shown in the strip). */
   xp: number
@@ -57,6 +59,7 @@ export interface AskPanelProps {
 
 interface Entry {
   id: number
+  /** What the learner sees in their bubble (option labels for a choice). */
   answer: string
   verdict?: AskVerdict
   /** The request failed: shown instead of a verdict. */
@@ -65,12 +68,14 @@ interface Entry {
 
 /**
  * A quick check in the prompt window (decision 052): the question as a
- * tutor turn, a single-line field that grows, option chips that fill it,
- * and a Check key. The server grades each answer (`/api/ask`); the verdict
+ * tutor turn, then either a single-line field that grows or, for options, a
+ * real radio group / checkbox list (decision 067), and a Check key. The server grades each answer (`/api/ask`); the verdict
  * lands in the log with ✓/✗, the check chips and the explanation or hint.
  * Retrying is fine. A right answer opens the lesson's gate (`bits:gate`)
- * and, when it earned neurons, fires `bits:reward` with the server's xp.
- * Enter checks, Shift+Enter adds a line. Client entry.
+ * and, when it earned neurons, fires `bits:reward` with the server's xp;
+ * the panel then folds its answer controls away ("Answer again" reopens
+ * them). In the text field, Enter checks and Shift+Enter adds a line.
+ * Client entry.
  */
 export const AskPanel = clientEntry(
   import.meta.url,
@@ -80,6 +85,10 @@ export const AskPanel = clientEntry(
     let count = 0
     let entries: Entry[] = handle.props.initial ? [{ id: ++count, answer: handle.props.initial.answer, verdict: handle.props.initial }] : []
     let passed = Boolean(handle.props.passed || handle.props.initial?.correct)
+    /** Answer controls shown again after a right answer. */
+    let reopened = false
+    /** Option keys picked (choice asks). */
+    let selected: string[] = []
     let pending = false
     let field: HTMLTextAreaElement | undefined
     let inflight: AbortController | undefined
@@ -103,31 +112,26 @@ export const AskPanel = clientEntry(
       handle.update().then(grow)
     }
 
-    function pick(choice: AskChoiceOption) {
-      if (!handle.props.multiple) {
-        setValue(choice.label)
-      } else {
-        let keys = picked()
-        keys = keys.includes(choice.key) ? keys.filter((key) => key !== choice.key) : [...keys, choice.key].sort()
-        setValue(keys.join(', '))
-      }
-      field?.focus()
+    function select(key: string, on: boolean) {
+      if (!handle.props.multiple) selected = on ? [key] : []
+      else selected = on ? [...new Set([...selected, key])].sort() : selected.filter((k) => k !== key)
+      handle.update()
     }
 
-    /** Letters in the field (multiple asks): "a, c" → ["a", "c"]. */
-    function picked(): string[] {
-      return value
-        .split(/[,;\s]+/)
-        .map((part) => part.trim().toLowerCase())
-        .filter((part) => /^[a-z]$/.test(part))
+    /** What's sent, and what the learner's bubble shows. */
+    function answerOf(): { sent: string; shown: string } {
+      let choices = handle.props.choices ?? []
+      if (!choices.length) return { sent: value.trim(), shown: value.trim() }
+      let labels = selected.map((key) => choices.find((choice) => choice.key === key)?.label ?? key)
+      return { sent: selected.join(', '), shown: labels.join(' · ') }
     }
 
     async function check() {
       let endpoint = handle.props.endpoint
-      let answer = value.trim()
+      let { sent: answer, shown } = answerOf()
       if (!endpoint || !answer || pending) return
       pending = true
-      let entry: Entry = { id: ++count, answer }
+      let entry: Entry = { id: ++count, answer: shown }
       entries = [...entries, entry].slice(-3)
       handle.update()
       inflight?.abort()
@@ -145,6 +149,8 @@ export const AskPanel = clientEntry(
         entry.verdict = result.verdict
         if (result.verdict.correct) {
           passed = true
+          reopened = false
+          selected = []
           announceGate(handle.props.id)
           if (result.verdict.xp > 0) {
             announceReward({ xp: result.verdict.xp, message: result.verdict.feedback, source: 'ask' })
@@ -165,8 +171,8 @@ export const AskPanel = clientEntry(
       let base = `ask-${id}`
       let fieldId = `${base}-answer`
       let questionId = `${base}-question`
-      let keys = multiple ? picked() : []
       let live = Boolean(endpoint)
+      let folded = passed && !reopened && !pending
       return (
         <form
           id={base}
@@ -213,82 +219,117 @@ export const AskPanel = clientEntry(
               ))}
             </ol>
           </div>
+          {folded ? (
+            <div mix={foldedStyle}>
+              <p mix={foldedText}>
+                <span aria-hidden="true">✓ </span>
+                {entries.length ? 'Answered.' : 'You answered this one right.'}
+              </p>
+              <Keycap
+                type="button"
+                variant="ghost-mono"
+                size="sm"
+                disabled={!hydrated || !live}
+                mix={on('click', () => {
+                  reopened = true
+                  handle.update().then(() => (choices.length ? undefined : field?.focus()))
+                })}
+              >
+                Answer again
+              </Keycap>
+            </div>
+          ) : (
           <div mix={composerStyle}>
             {choices.length ? (
-              <div role="group" aria-label={multiple ? 'Options (pick every one that fits)' : 'Options'} mix={chipsStyle}>
+              <fieldset mix={choiceSetStyle} disabled={!live}>
+                <legend class="sr-only">{multiple ? 'Pick every option that fits' : 'Pick one option'}</legend>
                 {choices.map((choice) => (
-                  <SuggestionChip
-                    key={choice.key}
-                    // Before hydration a chip submits its option as the answer.
-                    type={hydrated ? 'button' : 'submit'}
-                    name={endpoint?.answerField}
-                    value={choice.key}
-                    pressed={multiple ? keys.includes(choice.key) : undefined}
-                    mix={on('click', (event) => {
-                      if (!hydrated) return
-                      event.preventDefault()
-                      pick(choice)
-                    })}
-                  >
+                  <label key={choice.key} mix={choiceRowStyle}>
+                    <input
+                      type={multiple ? 'checkbox' : 'radio'}
+                      name={endpoint?.answerField}
+                      value={choice.key}
+                      checked={selected.includes(choice.key)}
+                      mix={[
+                        choiceInputStyle,
+                        on('change', (event) => select(choice.key, event.currentTarget.checked)),
+                      ]}
+                    />
                     <span aria-hidden="true" mix={keyStyle}>
                       {choice.key}
                     </span>
-                    {choice.label}
-                  </SuggestionChip>
+                    <span mix={choiceLabelStyle}>{choice.label}</span>
+                  </label>
                 ))}
+              </fieldset>
+            ) : (
+              /* The shared field (decision 051): › answer, mono 16px, the Check key inside the frame. */
+              <div mix={[fieldFrameStyle, fieldKeyedStyle, answerFrameStyle]}>
+                <span aria-hidden="true" mix={[fieldGlyphStyle, fieldGlyphTopStyle, answerGlyphStyle]}>
+                  ›
+                </span>
+                <textarea
+                  id={fieldId}
+                  name={endpoint?.answerField}
+                  rows={1}
+                  placeholder={placeholder}
+                  value={value}
+                  disabled={!live}
+                  autocomplete="off"
+                  aria-labelledby={questionId}
+                  aria-keyshortcuts="Enter"
+                  mix={[
+                    fieldInputStyle,
+                    answerInputStyle,
+                    ref((node) => (field = node)),
+                    on('input', (event) => {
+                      value = event.currentTarget.value
+                      grow()
+                      handle.update()
+                    }),
+                    on('keydown', (event) => {
+                      if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+                        event.preventDefault()
+                        event.currentTarget.form?.requestSubmit()
+                      }
+                    }),
+                  ]}
+                />
+                <Keycap type="submit" size="md" disabled={!live} loading={pending} mix={checkKeyStyle}>
+                  Check ↵
+                </Keycap>
               </div>
-            ) : null}
-            {/* The shared field (decision 051): › answer, mono 16px, the Check key inside the frame. */}
-            <div mix={[fieldFrameStyle, fieldKeyedStyle, answerFrameStyle]}>
-              <span aria-hidden="true" mix={[fieldGlyphStyle, fieldGlyphTopStyle, answerGlyphStyle]}>
-                ›
-              </span>
-              <textarea
-                id={fieldId}
-                name={endpoint?.answerField}
-                rows={1}
-                placeholder={placeholder}
-                value={value}
-                disabled={!live}
-                autocomplete="off"
-                aria-labelledby={questionId}
-                aria-keyshortcuts="Enter"
-                mix={[
-                  fieldInputStyle,
-                  answerInputStyle,
-                  ref((node) => (field = node)),
-                  on('input', (event) => {
-                    value = event.currentTarget.value
-                    grow()
-                    handle.update()
-                  }),
-                  on('keydown', (event) => {
-                    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
-                      event.preventDefault()
-                      event.currentTarget.form?.requestSubmit()
-                    }
-                  }),
-                ]}
-              />
-              <Keycap type="submit" size="md" disabled={!live} loading={pending} mix={checkKeyStyle}>
-                Check ↵
-              </Keycap>
+            )}
+            <div mix={choices.length ? choiceFootStyle : undefined}>
+              <p mix={hintStyle}>
+                {!live
+                  ? 'Answers are checked on the published lesson.'
+                  : choices.length
+                    ? multiple
+                      ? 'Tick every option that fits, then Check.'
+                      : 'Pick one, then Check.'
+                    : 'Enter checks · Shift+Enter adds a line'}
+              </p>
+              {choices.length ? (
+                <Keycap
+                  type="submit"
+                  size="md"
+                  // Before hydration the native form sends what's ticked.
+                  disabled={!live || (hydrated && selected.length === 0)}
+                  loading={pending}
+                  mix={checkKeyStyle}
+                >
+                  Check
+                </Keycap>
+              ) : null}
             </div>
-            <p mix={hintStyle}>
-              {!live
-                ? 'Answers are checked on the published lesson.'
-                : choices.length
-                  ? multiple
-                    ? 'Tap every option that fits, or type their letters · Enter checks'
-                    : 'Type your answer or tap an option · Enter checks'
-                  : 'Enter checks · Shift+Enter adds a line'}
-            </p>
             {endpoint
               ? Object.entries(endpoint.fields).map(([name, fieldValue]) => (
                   <input key={name} type="hidden" name={name} value={fieldValue} />
                 ))
               : null}
           </div>
+          )}
         </form>
       )
     }
@@ -410,8 +451,68 @@ const composerStyle = css({
   padding: 'var(--space-4)',
   '@media (max-width: 480px)': { padding: 'var(--space-3_5) var(--space-3)' },
 })
-const chipsStyle = css({ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' })
-const keyStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
+// Options as a ruled list of full-width rows (decision 067): the whole row
+// is the target, a native radio/checkbox drawn in volt, the letter beside it.
+const choiceSetStyle = css({
+  margin: 0,
+  padding: 0,
+  minWidth: 0,
+  border: 'var(--border-w) solid var(--line-panel)',
+  display: 'flex',
+  flexDirection: 'column',
+  '&:disabled': { opacity: 0.7 },
+})
+const choiceRowStyle = css({
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: 'var(--space-3)',
+  minHeight: 'var(--touch-target)',
+  boxSizing: 'border-box',
+  padding: 'var(--space-3) var(--space-4)',
+  borderBottom: 'var(--border-w) solid var(--line-cell)',
+  fontSize: 'var(--fs-15)',
+  lineHeight: 1.5,
+  color: 'var(--text-body)',
+  cursor: 'pointer',
+  transition: 'background-color var(--duration-fast)',
+  '&:last-child': { borderBottom: 0 },
+  '&:hover': { background: 'var(--fill-hover)', color: 'var(--text)' },
+  '&:has(input:checked)': { background: 'var(--volt-tint-on)', color: 'var(--text)', boxShadow: 'inset 2px 0 0 var(--volt)' },
+  '&:has(input:focus-visible)': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
+  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+  [FORCED_COLORS]: { '&:has(input:checked)': { outline: 'var(--focus-outline-w) solid Highlight', outlineOffset: '-2px' } },
+  '@media (max-width: 480px)': { paddingInline: 'var(--space-3)' },
+})
+const choiceInputStyle = css({
+  flex: 'none',
+  width: '18px',
+  height: '18px',
+  margin: '0.2em 0 0',
+  accentColor: 'var(--volt)',
+  cursor: 'pointer',
+  // The row draws the focus.
+  '&:focus-visible': { outline: 'none' },
+})
+const choiceLabelStyle = css({ minWidth: 0, overflowWrap: 'anywhere' })
+const choiceFootStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  flexWrap: 'wrap',
+  gap: 'var(--space-3)',
+})
+// After a right answer: one quiet line and a way back in.
+const foldedStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  flexWrap: 'wrap',
+  gap: 'var(--space-3)',
+  padding: 'var(--space-3) var(--space-4)',
+  '@media (max-width: 480px)': { paddingInline: 'var(--space-3)' },
+})
+const foldedText = css({ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--volt-soft)' })
+const keyStyle = css({ flex: 'none', minWidth: '1.2em', fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', lineHeight: 'inherit', color: 'var(--muted)' })
 const hintStyle = css({ margin: 0, fontSize: 'var(--fs-13)', color: 'var(--muted)' })
 // The field's own look is the shared spec (decision 051); these only let the
 // one-line answer grow: the key stays at the bottom, the › on the first line.

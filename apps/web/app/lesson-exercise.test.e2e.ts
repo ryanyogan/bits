@@ -61,7 +61,8 @@ describe('lesson exercise', () => {
 
     let save = page.getByRole('button', { name: /Complete and continue/ })
     await save.click()
-    await page.waitForURL((url) => !url.pathname.endsWith('/temperature'))
+    // The save redirects on to the next lesson.
+    await page.waitForURL('**/top-p-and-friends')
 
     // Back on the lesson, it is saved: the key now just moves on.
     await page.goto(temperature)

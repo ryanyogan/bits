@@ -47,7 +47,13 @@ export function ReadMode(handle: Handle<{ view: LessonView }>) {
       <div mix={columnStyle}>
         {hasVideo(view.content) ? <LessonVideo view={view} /> : null}
         {view.content.blocks.map((block, index) => (
-          <ReadBlock key={keyOf(block)} view={view} block={block} index={index} />
+          <ReadBlock
+            key={keyOf(block)}
+            view={view}
+            block={block}
+            index={index}
+            continued={block.type === 'markdown' && !block.ask && view.content.blocks[index - 1]?.type === 'markdown'}
+          />
         ))}
       </div>
     )
@@ -81,15 +87,16 @@ function LessonVideo(handle: Handle<{ view: LessonView }>) {
   }
 }
 
-function ReadBlock(handle: Handle<{ view: LessonView; block: Block; index: number }>) {
+function ReadBlock(handle: Handle<{ view: LessonView; block: Block; index: number; continued?: boolean }>) {
   return () => {
-    let { view, block, index } = handle.props
+    let { view, block, index, continued } = handle.props
     switch (block.type) {
       case 'markdown':
         return (
           <>
             {block.ask ? <LearnerBubble variant="plain">{block.ask}</LearnerBubble> : null}
-            <TutorMessage>{proseNodes(block.paragraphs)}</TutorMessage>
+            {/* One avatar per turn (decision 067): a markdown block right after another continues it. */}
+            <TutorMessage continued={continued}>{proseNodes(block.paragraphs)}</TutorMessage>
           </>
         )
       case 'odds':

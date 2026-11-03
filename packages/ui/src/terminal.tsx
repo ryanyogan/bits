@@ -672,9 +672,11 @@ export interface OutputPanelProps {
 }
 
 /**
- * `:::terminal` block (components §10.16): Run replays the scripted output
- * line by line (120ms a line; instant under reduced motion). The full output
- * is server-rendered for JS-off readers. Client entry.
+ * `:::terminal` block (components §10.16): Replay plays the recorded output
+ * line by line (120ms a line; instant under reduced motion). Nothing runs:
+ * the strip says "recorded output" and the key says "Replay" (decision 067:
+ * a "Run" that only replays reads as a live run). The full output is
+ * server-rendered for JS-off readers. Client entry.
  */
 export const OutputPanel = clientEntry(
   import.meta.url,
@@ -714,9 +716,15 @@ export const OutputPanel = clientEntry(
       return (
         <div mix={[panelStyle, handle.props.flush ? flushStyle : undefined]}>
           <div mix={panelHeader}>
-            <span>OUTPUT</span>
-            <Keycap size="sm" disabled={running} mix={on('click', () => void replay())}>
-              ▶ Run
+            <span>recorded output</span>
+            <Keycap
+              size="sm"
+              variant="ghost-mono"
+              disabled={running}
+              aria-label={`Replay the recorded output of ${command}`}
+              mix={on('click', () => void replay())}
+            >
+              <span aria-hidden="true">↻ </span>Replay
             </Keycap>
           </div>
           {/* The full output is a Ghost under the replay, so the panel is its
