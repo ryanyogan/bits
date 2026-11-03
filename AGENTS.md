@@ -408,6 +408,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | Footer | footer.tsx | brand, homeHref, links, copyright, themes {current, action, options} (the System / Dark / Light switch: a native POST form of submit buttons with `aria-pressed`; decision 062) | static |
 | ThemeScope / themePreference | theme.tsx | preference (provider; the app's renderer wraps every page) / `themePreference(handle)` reads it, for `Document` and the theme controls | static |
 | XpPill / StreakPill / AvatarButton | xp-pill.tsx / streak-pill.tsx / avatar-button.tsx | neurons / days / initials, href, current, prefetch | static |
+| AccountMenu | account-menu.tsx | initials, name, handle, links, signOutAction (a POST form), currentPath, id (the signed-in avatar as a `popovertarget` button; a native popover sheet under the bar; decision 065) | island |
 | CourseCover / Sigil | course-cover.tsx | pattern (8 `coverPatterns`), tone volt/ion/synapse, sigil, variant card/banner/art/thumb | static |
 | CourseCard / WriteCourseCard | course-card.tsx | href, title, desc, level, lessons, mins, sigil, tone, pattern, formats, pct, prefetch, variant card/cell (`cell`: a whole-cell link in a `CellGrid`, built on `cellLinkStyle`) | static |
 | ContinueBanner | continue-banner.tsx | href, courseTitle, eyebrow, nextLesson, mins, pct, sigil, tone, pattern, prefetch, edge boxed/flush (`flush`: fills a ruled band rail to rail) | static |
