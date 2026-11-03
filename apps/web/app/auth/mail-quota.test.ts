@@ -83,7 +83,8 @@ describe('daily mail cap', () => {
         assert.equal(response.status, 429)
         let html = await response.text()
         assert.match(html, /sent all the email we can for today/)
-        assert.match(html, /Continue with GitHub/)
+        // Providers show only when configured (decision 065); the passkey is always offered.
+        assert.match(html, /Use a passkey/)
         assert.equal(outbox.length, mailed, 'no email sent')
         let stored = await testDb.d1
           .prepare('select count(*) as n from email_tokens where email = ?')

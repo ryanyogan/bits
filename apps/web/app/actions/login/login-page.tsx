@@ -1,16 +1,15 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 import { Callout } from '@bits/ui/callout'
-import { ChoiceChip } from '@bits/ui/chip'
 import { ProviderButton } from '@bits/ui/provider-button'
 import { TextField } from '@bits/ui/text-field'
 
-import { isPreview } from '../../auth/config.ts'
+import { isPreview, oauthCredentials } from '../../auth/config.ts'
 import { routes } from '../../routes.ts'
 import { PasskeyButton } from './public/passkey-button.tsx'
 import { PendingSubmit } from '@bits/ui/pending-submit'
 import { TimezoneField } from './public/timezone-field.tsx'
-import { issueFor, signupGoals, type FormIssue, type LoginMode, type SignupGoal } from './schema.ts'
+import { issueFor, type FormIssue } from './schema.ts'
 import { AuthShell, formHeadingStyle, headingGroupStyle, riseStyle, subStyle } from './ui/auth-shell.tsx'
 
 export interface LoginNotice {
@@ -19,9 +18,8 @@ export interface LoginNotice {
 }
 
 export interface LoginPageProps {
-  mode: LoginMode
   next?: string
-  values?: { email?: string; displayName?: string; goals?: readonly SignupGoal[] }
+  values?: { email?: string }
   issues?: readonly FormIssue[]
   /** A message above the providers: OAuth errors, rate limits, sign-out confirmations. */
   notice?: LoginNotice
@@ -29,43 +27,31 @@ export interface LoginPageProps {
   unknownPasskey?: { rpId: string; credentialId: string }
 }
 
-const copy = {
-  signin: {
-    title: 'Sign in',
-    heading: 'Welcome back.',
-    sub: 'Pick up exactly where you left off — mid-lesson, mid-prompt.',
-    cta: 'Email me a sign-in link →',
-    previewCta: 'Get a sign-in code →',
-  },
-  signup: {
-    title: 'Create account',
-    heading: 'Make it yours.',
-    sub: 'Free forever. Save your progress, streaks and every prompt you write.',
-    cta: 'Create account →',
-    previewCta: 'Create account →',
-  },
-} as const
-
-/** `/login` and `/login?mode=signup` (Auth spec, states A and B). */
+/**
+ * `/login` (Auth spec, state A; decision 065): one passwordless flow. The
+ * same email code signs a returning learner in or, for a new address,
+ * creates the account; there is no separate sign-up form.
+ */
 export function LoginPage(handle: Handle<LoginPageProps>) {
   return () => {
-    let { mode, next, values = {}, issues, notice, unknownPasskey } = handle.props
-    let signup = mode === 'signup'
-    let text = copy[mode]
+    let { next, values = {}, issues, notice, unknownPasskey } = handle.props
     // Workers Previews (decision 038): no OAuth (the apps' callbacks are
     // production's and previews get no client secrets) and no mail.
     let preview = isPreview()
+    // Only the providers that are set up: an unconfigured one is a dead end.
+    let github = !preview && oauthCredentials('github') !== null
+    let google = !preview && oauthCredentials('google') !== null
     let nextParam = next ? { next } : {}
-    let nameError = issueFor(issues, 'displayName')?.message
     let emailError = issueFor(issues, 'email')?.message
-    let goals = values.goals ?? (issues ? [] : ['curious'])
 
     return (
-      <AuthShell title={text.title} mode={mode} next={next}>
+      <AuthShell title="Sign in" next={next}>
         <div mix={[riseStyle, blockStyle]}>
           <div data-rmx-key="heading" mix={headingGroupStyle}>
-            <h1 mix={formHeadingStyle}>{text.heading}</h1>
-            <p mix={subStyle}>{text.sub}</p>
+            <h1 mix={formHeadingStyle}>Sign in or sign up.</h1>
+            <p mix={subStyle}>
+              One email, no password. New here? Your free account is made when you enter the code.
+            </p>
           </div>
 
           {notice ? (
@@ -81,22 +67,16 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
               next={next}
               unknownCredential={unknownPasskey}
             />
-            {preview ? null : (
-              <>
-                <ProviderButton
-                  icon="github"
-                  href={routes.auth.oauth.start.href({ provider: 'github' }, { searchParams: nextParam })}
-                >
-                  Continue with GitHub
-                </ProviderButton>
-                <ProviderButton
-                  icon="globe"
-                  href={routes.auth.oauth.start.href({ provider: 'google' }, { searchParams: nextParam })}
-                >
-                  Continue with Google
-                </ProviderButton>
-              </>
-            )}
+            {github ? (
+              <ProviderButton icon="github" href={routes.auth.oauth.start.href({ provider: 'github' }, { searchParams: nextParam })}>
+                Continue with GitHub
+              </ProviderButton>
+            ) : null}
+            {google ? (
+              <ProviderButton icon="globe" href={routes.auth.oauth.start.href({ provider: 'google' }, { searchParams: nextParam })}>
+                Continue with Google
+              </ProviderButton>
+            ) : null}
           </div>
 
           <div data-rmx-key="divider" mix={dividerStyle}>
@@ -111,30 +91,7 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
                 {issues.length === 1 ? 'Check the highlighted field.' : 'Check the highlighted fields.'}
               </Callout>
             ) : null}
-            <input type="hidden" name="mode" value={mode} />
             {next ? <input type="hidden" name="next" value={next} /> : null}
-            {/*
-              Keyed slots (decision 044): switching tabs reconciles this form
-              in place, and without keys the sign-in email box was reused as
-              sign-up's name box, carrying the typed email into "name".
-              Keyed, the email box keeps its node and what was typed in it.
-            */}
-            {signup ? (
-              <div data-rmx-key="name" mix={slotStyle}>
-                <TextField
-                  id="auth-name"
-                  name="displayName"
-                  label="What should we call you?"
-                  placeholder="Ada"
-                  value={values.displayName}
-                  error={nameError}
-                  autoComplete="name"
-                  enterKeyHint="next"
-                  maxLength={60}
-                  autoFocus={Boolean(nameError)}
-                />
-              </div>
-            ) : null}
             <div data-rmx-key="email" mix={slotStyle}>
               <TextField
                 id="auth-email"
@@ -144,42 +101,21 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
                 placeholder="you@somewhere.dev"
                 value={values.email}
                 error={emailError}
-                autoComplete={signup ? 'email' : 'email webauthn'}
+                autoComplete="email webauthn"
                 inputMode="email"
-                enterKeyHint={signup ? 'next' : 'send'}
+                enterKeyHint="send"
                 required
                 mono
-                autoFocus={Boolean(emailError) && !nameError}
+                autoFocus={Boolean(emailError)}
               />
             </div>
-            {signup ? (
-              <fieldset data-rmx-key="goals" mix={goalsFieldsetStyle}>
-                <legend mix={legendStyle}>
-                  What brings you here? <span mix={legendHintStyle}>— we'll suggest a first course</span>
-                </legend>
-                <div mix={chipsStyle}>
-                  {signupGoals.map((goal) => (
-                    <ChoiceChip
-                      key={goal.id}
-                      name="goals"
-                      value={goal.id}
-                      defaultChecked={goals.includes(goal.id)}
-                      mix={chipStyle}
-                    >
-                      {goal.label}
-                    </ChoiceChip>
-                  ))}
-                </div>
-              </fieldset>
-            ) : null}
-            {signup ? (
-              <div data-rmx-key="timezone" mix={slotStyle}>
-                <TimezoneField />
-              </div>
-            ) : null}
+            {/* A new account's time zone, for streak days; ignored when the address has one. */}
+            <div data-rmx-key="timezone" mix={slotStyle}>
+              <TimezoneField />
+            </div>
             <div data-rmx-key="submit" mix={submitWrapStyle}>
               <PendingSubmit
-                label={preview ? text.previewCta : text.cta}
+                label={preview ? 'Get a sign-in code →' : 'Email me a sign-in link →'}
                 pendingLabel={preview ? 'Working…' : 'Sending…'}
                 block
               />
@@ -219,32 +155,6 @@ const dividerStyle = css({
 const ruleStyle = css({ flex: 1, height: 'var(--border-w)', background: 'var(--line-cell)' })
 
 const formStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' })
-
-const goalsFieldsetStyle = css({
-  margin: 0,
-  padding: 0,
-  border: 0,
-  minWidth: 0,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--space-2_5)',
-})
-
-const legendStyle = css({
-  padding: 0,
-  marginBottom: 'var(--space-2_5)',
-  fontSize: 'var(--fs-14)',
-  color: 'var(--text-body)',
-})
-
-const legendHintStyle = css({ color: 'var(--dim)' })
-
-const chipsStyle = css({ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' })
-
-// Two chips per row on phones (Auth spec, responsive).
-const chipStyle = css({
-  '@media (max-width: 480px)': { flex: '1 1 calc(50% - var(--space-1))', justifyContent: 'center' },
-})
 
 const submitWrapStyle = css({ marginTop: 'var(--space-1)', display: 'flex' })
 

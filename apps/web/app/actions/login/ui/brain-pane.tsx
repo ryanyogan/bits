@@ -5,7 +5,8 @@ import { BrainCanvas } from '../public/brain-canvas.tsx'
 
 /**
  * The Auth "living brain" pane (Auth spec, left pane): WebGL point cloud,
- * dot grid, "Your neurons, saved." and the decorative SessionPanel. The
+ * dot grid, "Your neurons, saved." and the decorative SessionPanel (no
+ * made-up numbers: it's the same for everyone; decision 065). The
  * logo is AuthShell's, laid over this pane's top row (decision 044).
  *
  * A cell of the auth band (decision 047): the canvas stays inside it, over
@@ -35,10 +36,10 @@ export function BrainPane(_handle: Handle) {
               <span mix={voltStyle}>›</span> session.restore()
             </div>
             <div>
-              <span mix={ionStyle}>✓</span> 5 lessons · 12-day streak · 1,240 neurons
+              <span mix={ionStyle}>✓</span> lessons, streak and badges
             </div>
             <div>
-              <span mix={ionStyle}>✓</span> resuming “Temperature &amp; randomness”
+              <span mix={ionStyle}>✓</span> resuming your last lesson
               <span mix={caretStyle}>▍</span>
             </div>
           </div>

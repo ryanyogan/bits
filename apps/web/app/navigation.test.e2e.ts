@@ -18,6 +18,16 @@ const course = 'tokens-and-temperature'
 const temperature = routes.courses.lesson.index.href({ course, lesson: 'temperature' })
 const firstLesson = routes.courses.lesson.index.href({ course, lesson: 'what-is-a-token' })
 
+/** The 6-digit code the newest sign-in email to `email` carries. */
+async function waitForCode(email: string): Promise<string> {
+  for (let i = 0; i < 50; i++) {
+    let code = /code is (\d{6})/.exec(outbox.findLast((m) => m.to === email)?.text ?? '')?.[1]
+    if (code) return code
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+  throw new Error(`No code for ${email}`)
+}
+
 // One flat suite: remix test runs after() around every describe.
 describe('client navigation', () => {
   after(() => disposePlatform())
@@ -126,23 +136,29 @@ describe('client navigation', () => {
     )
   })
 
-  it('switches sign in / create account in place (decision 044)', async (t) => {
+  it('signs out from the account menu on the client (decision 065)', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.setViewportSize({ width: 1440, height: 900 })
+    let email = `e2e-menu-${Date.now()}@example.com`
     await page.goto(routes.login.index.href())
-    await page.getByLabel('Email').fill('ada@example.com')
-    let tabs = page.locator('nav[aria-label="Account"]')
-    let before = await tabs.boundingBox()
+    await page.getByLabel('Email').fill(email)
+    await page.getByRole('button', { name: /Email me a sign-in link/ }).click()
+    await page.getByRole('button', { name: 'Verify & continue' }).waitFor()
+    assert.doesNotMatch(page.url(), /email=/, 'the address is not in the URL')
+    await page.getByLabel('Digit 1').fill(await waitForCode(email))
+    await page.waitForURL((url) => url.pathname === routes.courses.index.href())
+
     await page.evaluate(() => ((window as { navMarker?: number }).navMarker = 1))
-
-    await tabs.getByRole('link', { name: 'Create account' }).click()
-    await page.getByRole('heading', { level: 1, name: 'Make it yours.' }).waitFor()
-
+    let header = page.locator('body > header')
+    assert.ok(await header.getByRole('link', { name: 'Continue' }).isVisible(), 'Continue is in the bar')
+    await header.getByRole('button', { name: /^Your profile, / }).click()
+    let menu = page.locator('#account-menu:popover-open')
+    await menu.waitFor()
+    await menu.getByRole('button', { name: 'Sign out' }).click()
+    await page.waitForURL((url) => url.pathname === routes.home.href())
+    await header.getByRole('link', { name: 'Start free' }).waitFor()
     assert.equal(await page.evaluate(() => (window as { navMarker?: number }).navMarker), 1, 'navigated on the client')
-    assert.equal((await tabs.boundingBox())?.y, before?.y, 'the tabs stay put')
-    assert.equal(await page.getByLabel('Email').inputValue(), 'ada@example.com', 'the typed email stays in Email')
-    assert.equal(await page.getByLabel('What should we call you?').inputValue(), '', 'and not in the name box')
-    assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Create account', 'focus stays on the tab')
+    assert.equal(await page.locator('#account-menu:popover-open').count(), 0, 'the menu closed')
   })
 
   it('sends one request when the submit key is pressed twice', async (t) => {

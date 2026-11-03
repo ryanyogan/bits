@@ -115,7 +115,17 @@ describe('sign-in on a Workers Preview', () => {
     let html = await (await fetchAs(cookie, location)).text()
     assert.match(html, /Check your inbox\./)
     assert.doesNotMatch(html, /Preview sign-in code|Mail is off/)
+    // Providers render only when their app is set up (decision 065).
     let login = await (await request(routes.login.index.href())).text()
-    assert.match(login, /Continue with GitHub/)
+    assert.doesNotMatch(login, /Continue with GitHub/)
+    let env = platform.env as unknown as Record<string, unknown>
+    Object.assign(env, { GITHUB_CLIENT_ID: 'id', GITHUB_CLIENT_SECRET: 'secret' })
+    try {
+      let configured = await (await request(routes.login.index.href())).text()
+      assert.match(configured, /href="\/auth\/oauth\/github" data-rmx-document=""/)
+      assert.doesNotMatch(configured, /Continue with Google/)
+    } finally {
+      Object.assign(env, { GITHUB_CLIENT_ID: undefined, GITHUB_CLIENT_SECRET: undefined })
+    }
   })
 })
