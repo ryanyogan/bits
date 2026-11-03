@@ -34,7 +34,7 @@ export interface ContinueBannerProps {
 
 /**
  * "Continue where you left off" banner (components §9.4). The whole banner is
- * one link; the "Resume →" keycap inside is visual. Static; the page decides
+ * one link; the "Continue →" keycap inside is visual. Static; the page decides
  * whether to show it (server-side for signed-in users).
  */
 export function ContinueBanner(handle: Handle<ContinueBannerProps>) {
@@ -58,7 +58,7 @@ export function ContinueBanner(handle: Handle<ContinueBannerProps>) {
               <span class="sr-only"> complete</span>
             </span>
             <span aria-hidden="true" class="key" mix={[...keycapFace, keyNarrow]}>
-              Resume →
+              Continue →
             </span>
           </span>
         </div>

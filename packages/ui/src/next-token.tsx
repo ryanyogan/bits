@@ -145,8 +145,19 @@ export const NextTokenPlayer = clientEntry(
       let longestStatus = steps.map((_, i) => statusAt(i)).concat(statusAt(total)).reduce((a, b) => (b.length > a.length ? b : a))
       // The step with the most candidates sets the height of the odds area.
       let tallest = steps.reduce((a, b) => (b.alternatives.length > a.alternatives.length ? b : a), steps[0]!)
+      // The finished state uses the room the odds took: every pick with its
+      // odds, then the takeaway. Ghosted in the other states, so the box is
+      // the size of its largest state and nothing moves (decision 023).
       let doneNote = (
-        <p mix={toyNoteStyle}>That’s the whole trick: score every possible next token, pick one, append it, repeat.</p>
+        <div mix={oddsBlock}>
+          <OddsList
+            rows={steps.map((s) => ({ token: s.token, p: s.p, picked: true }))}
+            label={`The ${total} picks, each with its odds`}
+            top={false}
+            mix={recapStyle}
+          />
+          <p mix={toyNoteStyle}>That’s the whole trick: score every possible next token, pick one, append it, repeat.</p>
+        </div>
       )
       return (
         <ToyPanel context="the reply, one token at a time" label="next-token prediction" illustrative={illustrative} mix={watch}>
@@ -274,6 +285,23 @@ const caretStyle = css({
 })
 const oddsBlock = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' })
 const stepLabel = css({ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
+// The recap: every pick with its odds, in tight rows of two (three on
+// phones from 360px, without bars), so the finished state takes about the room the
+// tallest step's candidates did and the reserved box isn't left empty.
+const recapStyle = css({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: 'var(--space-1) var(--space-6)',
+  '@media (max-width: 480px)': {
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    columnGap: 'var(--space-3)',
+    '& > li': { gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 'var(--space-1_5)' },
+    '& > li > span:nth-child(2)': { display: 'none' },
+    '& > li > span:first-child': { fontSize: 'var(--fs-13)' },
+  },
+  // Under 360px three columns cut words short: two.
+  '@media (max-width: 359.98px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
+})
 const controlsStyle = css({
   display: 'flex',
   alignItems: 'center',

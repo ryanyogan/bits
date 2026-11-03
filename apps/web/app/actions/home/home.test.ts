@@ -28,7 +28,7 @@ describe('landing page', () => {
   it('server-renders every section with the spec copy', async () => {
     let { status, html } = await page(routes.home.href())
     assert.equal(status, 200)
-    assert.match(html, /<title>Bits — learn AI by typing to it<\/title>/)
+    assert.match(html, /<title>bits — learn AI by typing to it<\/title>/)
     assert.equal(count(html, /<h1[\s>]/), 1)
     assert.match(html, /Learn AI by <span[^>]*>typing<\/span> to it\./)
     for (let heading of [
@@ -40,7 +40,7 @@ describe('landing page', () => {
       assert.ok(html.includes(heading), heading)
     }
     assert.ok(html.includes('Read\u00a0it. Watch\u00a0it. Run\u00a0it.'), 'modes heading')
-    assert.match(html, /© 2026 Bits/)
+    assert.match(html, /© 2026 bits/)
     assert.doesNotMatch(html, /latent/i)
   })
 
@@ -77,8 +77,8 @@ describe('landing page', () => {
     assert.equal(count(html, /Free to start/), 2)
     // The hero badge is gone: the h1 is the first thing in the hero.
     assert.doesNotMatch(html, /from zero to your first agent/)
-    // The phone chip row scrolls sideways, so it is focusable and named.
-    assert.match(html, /<ul aria-labelledby="hero-questions" tabindex="0"/i)
+    // The question chips wrap (stack on phones): a plain named list, no scroller.
+    assert.match(html, /<ul aria-labelledby="hero-questions"(?! tabindex)/i)
     // No paid tier exists yet, so the page never promises one.
     assert.doesNotMatch(html, /pro courses/i)
     // The progress showcase's numbers are made up, and it says so.
@@ -110,7 +110,7 @@ describe('landing page', () => {
     let { html } = await page(routes.home.href())
     assert.match(html, /<div aria-hidden="true"[^>]*><canvas data-field=""/)
     // The formation legend is gone (decision 065).
-    assert.doesNotMatch(html, /01 · Bits|04 · You/)
+    assert.doesNotMatch(html, /01 · bits|04 · You/)
     assert.match(html, /<div inert[^>]*aria-hidden="true"/)
     assert.match(html, /<figcaption class="sr-only">Example lesson:/)
     // three is loaded lazily by the island, never preloaded.

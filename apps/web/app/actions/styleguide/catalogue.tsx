@@ -3,6 +3,7 @@ import { css } from 'remix/component'
 import { ActivityGrid, sampleActivity } from '@bits/ui/activity-grid'
 import { AttentionMap } from '@bits/ui/attention-map'
 import { AppBar } from '@bits/ui/app-bar'
+import { AccountMenu } from '@bits/ui/account-menu'
 import { AvatarButton } from '@bits/ui/avatar-button'
 import { BackButton } from '@bits/ui/back-button'
 import { BitCells } from '@bits/ui/bit-cells'
@@ -200,7 +201,7 @@ export function Catalogue(handle: Handle) {
       </Section>
 
       <Section id="sg-nav" title="Navigation">
-        <Specimen caption="AppBar — the one header on every page (decision 059), signed in. Static here; sticky on an ink ground on pages. Logo left, the nav centred as a row of hairline cells, actions right, --appbar-h tall; its column and rails are a PageFrame's, with + marks where its rule crosses them. Under 760px the nav becomes the menu sheet.">
+        <Specimen caption="AppBar — the one header on every page (decision 059), signed in. Static here; sticky on an ink ground on pages. Logo left, the nav centred as a row of hairline cells, actions right, --appbar-h tall; its column and rails are a PageFrame's, with + marks where its rule crosses them. Under 760px the nav becomes the menu sheet. One primary key (decision 070): Continue, then the AccountMenu.">
           <div mix={barFrame}>
             <AppBar
               brand={APP_NAME}
@@ -212,13 +213,44 @@ export function Catalogue(handle: Handle) {
               menuId="sg-nav-sheet-app"
               actions={
                 <>
-                  <AvatarButton initials="JR" href="#sg-nav" />
+                  <Keycap href="#sg-nav" prefetch={false}>
+                    Continue
+                  </Keycap>
+                  <AccountMenu
+                    id="sg-account-menu"
+                    initials="JR"
+                    name="Jamie Rivera"
+                    handle="@jamie"
+                    links={[
+                      { href: '#sg-nav', label: 'My learning' },
+                      { href: '#sg-nav-pp', label: 'Public profile' },
+                      { href: '#sg-nav-st', label: 'Settings' },
+                    ]}
+                    signOutAction="#sg-nav"
+                    currentPath="#sg-nav"
+                  />
                 </>
               }
             />
           </div>
         </Specimen>
-        <Specimen caption="AppBar — same bar, other content: the landing's links (signed out). In-page links take `section` and light up while that section is on screen; Sign in also goes in the sheet (menuExtras) because the bar hides it under 420px.">
+        <Specimen caption="AccountMenu (island, decision 065) — the avatar is a button that opens a native popover under the bar: who is signed in, the account's pages (the current one marked), and Sign out as a POST form. Works without JS; Escape or an outside click closes it. Open the one in the bar above. Here Sign out posts to this page, so it only shows a 404.">
+          <div mix={row}>
+            <AccountMenu
+              id="sg-account-menu-solo"
+              initials="RY"
+              name="Riley Young"
+              handle="@riley"
+              links={[
+                { href: '#sg-nav', label: 'My learning' },
+                { href: '#sg-nav-st', label: 'Settings' },
+                { href: '#sg-nav-ad', label: 'Admin: authors' },
+              ]}
+              signOutAction="#sg-nav"
+            />
+          </div>
+        </Specimen>
+        <Specimen caption="AppBar — same bar, other content: the landing's links (signed out). In-page links take `section` and light up while that section is on screen; Sign in also goes in the sheet (menuExtras) because the bar hides it under 420px. One primary key (decision 070): Start free for a new visitor, Continue once the session has progress, and none on a lesson page.">
           <div mix={barFrame}>
             <AppBar
               brand={APP_NAME}
@@ -244,7 +276,7 @@ export function Catalogue(handle: Handle) {
             />
           </div>
         </Specimen>
-        <Specimen caption="App shell (decision 022) — on lesson pages the LessonBar is the AppBar's sub-bar (position shell): one sticky header, same bar as every page. The neurons sit in the sub-bar, never the AppBar (decision 048). Under 760px the sub-bar keeps back + a two-line title with the progress along its bottom edge, and LessonRow is the page's one chrome row: the depth tabs (decision 053, only when the lesson has depth blocks), with the outline disclosure as its aside (decisions 051, 055).">
+        <Specimen caption="App shell (decision 022) — on lesson pages the LessonBar is the AppBar's sub-bar (position shell): one sticky header, same bar as every page. The neurons sit in the sub-bar, never the AppBar (decision 048). Under 1024px (decision 067) the sub-bar keeps back + a two-line title with the progress along its bottom edge, and LessonRow is the page's one chrome row: the depth tabs (decision 053, only when the lesson has depth blocks), with the outline disclosure as its aside (decisions 051, 055).">
           <div mix={barFrame}>
             <AppBar
               brand={APP_NAME}
@@ -284,12 +316,12 @@ export function Catalogue(handle: Handle) {
             />
           </div>
         </Specimen>
-        <Specimen caption="LessonBar — back · context · segmented progress · depth tabs · neurons (a lesson has one view, decision 055)">
+        <Specimen caption="LessonBar — back · context (course · lesson n of N · minutes; the position shows only here, decision 067) · segmented progress · depth tabs · neurons (a lesson has one view, decision 055)">
           <div mix={barFrame}>
             <LessonBar
               position="static"
               backHref="#sg-nav"
-              context="Tokens & temperature · Lesson 6 of 8"
+              context="Tokens & temperature · Lesson 6 of 8 · 7 min"
               title="Temperature & randomness"
               segments={['done', 'done', 'done', 'done', 'done', 'current', 'upcoming', 'upcoming']}
               progressLabel="Lesson 6 of 8, 5 complete"
@@ -427,7 +459,7 @@ export function Catalogue(handle: Handle) {
           <Specimen caption="Keycap — sizes, glow (the CTA key: flat since 047, no glow drawn), pending (aria-busy), link">
             <div mix={row}>
               <Keycap size="sm">sm Copy</Keycap>
-              <Keycap size="md">md Resume →</Keycap>
+              <Keycap size="md">md Continue →</Keycap>
               <Keycap size="lg">lg Start free</Keycap>
             </div>
             <div mix={row}>
@@ -667,7 +699,7 @@ export function Catalogue(handle: Handle) {
               ))}
             </ul>
           </Specimen>
-          <Specimen caption="Switch (Settings) · QuizChoice (progressive form)">
+          <Specimen caption="Switch (Settings) · QuizChoice (progressive form: real radios, Check, then right / wrong per option with the explanation)">
             <Switch
               name="motion"
               legend="Motion"
@@ -710,7 +742,7 @@ export function Catalogue(handle: Handle) {
               explanation="At 0 the favourite wins every time, so the same token comes back."
             />
           </Specimen>
-          <Specimen caption="AskPanel (island, decision 052) — unanswered (preview: no endpoint) · wrong · right">
+          <Specimen caption="AskPanel (island, decisions 052, 067) — a quick check: real radio buttons (checkboxes when several are right) or one text answer, graded by POST /api/ask. A right answer folds the check to its verdict with Answer again. Unanswered (preview: no endpoint) · wrong (text) · right (choices)">
             <div mix={column}>
               <AskPanel
                 id="sg-ask-open"
@@ -815,13 +847,15 @@ export function Catalogue(handle: Handle) {
               </div>
             </div>
           </Specimen>
-          <Specimen caption="Callout — danger · warning · ok · info · compact">
+          <Specimen caption="Callout — danger · warning · ok · info (inline text and a link flow as one paragraph) · compact">
             <Callout tone="danger" title="That code didn’t match.">
               Request a new one or check the latest email.
             </Callout>
             <Callout tone="warning">Lesson 3 has no checks yet.</Callout>
             <Callout tone="ok">9 files compiled.</Callout>
-            <Callout tone="info">Progress is saved on this device until you sign in.</Callout>
+            <Callout tone="info">
+              Progress is saved on this device until you <a href="#sg-layout">sign in</a>, then it moves to your account.
+            </Callout>
             <Callout tone="danger" compact>
               lesson-04.md: unknown block :::quizz
             </Callout>

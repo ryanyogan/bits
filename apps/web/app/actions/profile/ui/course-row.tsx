@@ -11,7 +11,7 @@ const toneColour = { volt: 'var(--volt)', ion: 'var(--ion)', synapse: 'var(--syn
 
 export interface CourseRowProps {
   course: CourseSummary
-  /** Own profile says "Resume →"; the public profile links to the course. */
+  /** Own profile says "Continue →"; the public profile links to the course. */
   own: boolean
   /** The profile's handle, for the certificate link of a finished course. */
   handle: string
@@ -66,7 +66,7 @@ export function CourseRow(handle: Handle<CourseRowProps>) {
             </span>
           </span>
         </span>
-        <span mix={actionStyle}>{own ? 'Resume →' : 'View course →'}</span>
+        <span mix={actionStyle}>{own ? 'Continue →' : 'View course →'}</span>
       </a>
     )
   }

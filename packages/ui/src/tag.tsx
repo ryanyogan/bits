@@ -82,12 +82,16 @@ const variantStyles: Record<TagVariant, ReturnType<typeof css>> = {
     letterSpacing: 'var(--tracking-tag)',
     textTransform: 'uppercase',
   }),
+  // The meta tag's geometry (padding, 13px, a hairline in its own colour),
+  // so it is exactly as tall as the meta tags it sits beside.
   done: css({
-    padding: 'var(--space-1_25) var(--space-2_25)',
-    borderRadius: 'var(--radius-7)',
+    padding: 'var(--space-1_75) var(--space-2_75)',
+    borderRadius: 'var(--radius-sm)',
+    border: 'var(--border-w) solid var(--volt)',
     background: 'var(--volt)',
     color: 'var(--on-volt)',
-    fontSize: 'var(--fs-11)',
+    fontSize: 'var(--fs-13)',
+    [FORCED_COLORS]: { border: '1px solid CanvasText' },
   }),
   'your-turn': css({
     padding: 'var(--space-0_75) var(--space-2)',

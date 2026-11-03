@@ -6,6 +6,7 @@ import { PendingSubmit } from '@bits/ui/pending-submit'
 
 import { routes } from '../../../routes.ts'
 import { AuthShell, formHeadingStyle, headingGroupStyle, riseStyle, subStyle } from '../../login/ui/auth-shell.tsx'
+import { APP_NAME } from '../../../config.ts'
 
 export type EmailLinkPageProps =
   /** The account's own session: one click confirms the new email. */
@@ -24,7 +25,7 @@ export function EmailLinkPage(handle: Handle<EmailLinkPageProps>) {
   return () => {
     let props = handle.props
     return (
-      <AuthShell title={titles[props.kind]} mode="signin">
+      <AuthShell title={titles[props.kind]}>
         <div mix={[riseStyle, blockStyle]}>
           <div aria-hidden="true" mix={tileStyle}>
             <Icon name="mail" />
@@ -47,7 +48,7 @@ export function EmailLinkPage(handle: Handle<EmailLinkPageProps>) {
               <div mix={headingGroupStyle}>
                 <h1 mix={formHeadingStyle}>Sign in first.</h1>
                 <p mix={subStyle}>
-                  This link moves a Bits account (<span mix={emailStyle}>{props.account}</span>) to{' '}
+                  This link moves a {APP_NAME} account (<span mix={emailStyle}>{props.account}</span>) to{' '}
                   <span mix={emailStyle}>{props.email}</span>. Only the account that asked for this change can confirm
                   it: sign in to it on this device, then type the code from the email in Settings.
                 </p>

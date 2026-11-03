@@ -206,14 +206,14 @@ describe('passkeys', () => {
     let stranger = await createSoftAuthenticator()
     await stranger.register({
       challenge: 'x',
-      rp: { id: 'localhost', name: 'Bits' },
+      rp: { id: 'localhost', name: 'bits' },
       user: { id: 'dGVzdA', name: 't', displayName: 't' },
       pubKeyCredParams: [],
     })
     let unknown = await passkeySignIn(await stranger.authenticate(await loginOptions()))
     assert.equal(unknown.status, 404)
     let html = await unknown.text()
-    assert.match(html, /That passkey isn’t on any Bits account/)
+    assert.match(html, /That passkey isn’t on any bits account/)
     assert.ok(html.includes(stranger.credentialId), 'unknownCredential prop for the Signal API')
 
     assert.equal((await passkeySignIn('not json')).status, 422)

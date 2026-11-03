@@ -71,7 +71,7 @@ describe('/admin/authors and author invites', () => {
     assert.equal(response.headers.get('Cache-Control'), 'no-store')
     assert.match(response.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="5 queries, 2 round trips"$/)
     let html = await response.text()
-    assert.match(html, /<title>Authors · Bits<\/title>/)
+    assert.match(html, /<title>Authors · bits<\/title>/)
     assert.equal(html.match(/<h1[\s>]/g)?.length, 1)
     for (let heading of ['Invite an author', 'Open invites', 'Authors and admins', 'Courses']) {
       assert.match(html, new RegExp(`>${heading}<`))

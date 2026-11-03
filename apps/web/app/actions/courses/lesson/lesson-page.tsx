@@ -57,6 +57,8 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
         // lines and shifted the lesson by a line (CLS 0.043, decision 051).
         preloadFonts={['unbounded-latin-500-normal.woff2', 'geist-latin-600-normal.woff2']}
         currentPath={view.draft ? routes.author.index.href() : routes.courses.index.href()}
+        // Already in a lesson: no "Start free" in the bar (decision 070).
+        start={false}
         head={<style innerHTML={unsafeHTML(pageStyles)} />}
         viewer={viewer}
         reward={reward}

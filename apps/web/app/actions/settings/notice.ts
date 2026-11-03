@@ -6,6 +6,7 @@ import type { CalloutTone } from '@bits/ui/callout'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from '../../routes.ts'
+import { APP_NAME } from '../../config.ts'
 
 export type SettingsSection = 'profile' | 'appearance' | 'email' | 'sign-in' | 'data' | 'sessions' | 'danger'
 
@@ -76,7 +77,7 @@ export function noticeFor({ saved, method }: SavedFlash): SettingsNotice | undef
       return {
         section: 'email',
         tone: 'warning',
-        text: 'That address already has a Bits account, so your email hasn’t changed.',
+        text: `That address already has a ${APP_NAME} account, so your email hasn’t changed.`,
       }
     case 'email-cancelled':
       return { section: 'email', tone: 'ok', text: 'Cancelled. Your email hasn’t changed.' }
@@ -104,7 +105,7 @@ export function noticeFor({ saved, method }: SavedFlash): SettingsNotice | undef
       return {
         section: 'sign-in',
         tone: 'warning',
-        text: `That ${provider} account is already connected to a different Bits account.`,
+        text: `That ${provider} account is already connected to a different ${APP_NAME} account.`,
       }
     case 'passkey-needs-js':
       return { section: 'sign-in', tone: 'warning', text: 'Adding a passkey needs JavaScript. Turn it on and try again.' }

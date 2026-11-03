@@ -5,6 +5,7 @@
 import { platform } from '#platform'
 
 import { previewMode, type PreviewSignals } from './preview-mode.ts'
+import { APP_NAME } from '../config.ts'
 
 const env = platform.env
 export const appEnv: string = env.APP_ENV ?? 'development'
@@ -35,7 +36,7 @@ export function sessionSecrets(): string[] {
 
 /** The From address for sign-in mail; must be on a domain onboarded to Email Sending. */
 export function emailFrom(): { email: string; name: string } {
-  return { email: env.EMAIL_FROM ?? 'signin@bits.yogan.dev', name: 'Bits' }
+  return { email: env.EMAIL_FROM ?? 'signin@bits.yogan.dev', name: APP_NAME }
 }
 
 export interface OAuthCredentials {

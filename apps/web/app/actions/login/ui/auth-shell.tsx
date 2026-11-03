@@ -13,8 +13,6 @@ export interface AuthShellProps {
   /** Page name for the document title ("Sign in", "Check your inbox"). */
   title: string
   next?: string
-  /** Ignored: there are no account tabs any more (decision 065). */
-  mode?: string
   children?: RemixNode
 }
 
@@ -39,9 +37,9 @@ export function AuthShell(handle: Handle<AuthShellProps>) {
         {/*
           The squared grid (decision 047): one PageFrame under the header,
           one ruled band of two cells sharing a hairline: the brain and the
-          form. Stacked under 1040px (brain first), and under 760px the form
-          comes first (resolutions §8). The header's logo is the only
-          href="/" here (decision 044).
+          form. Under 1040px the decorative brain is hidden and the form has
+          the band to itself. The header's logo is the only href="/" here
+          (decision 044).
         */}
         <PageFrame mix={rootStyle}>
           {/* Joined to the header (decision 050): the bar's rule closes it. */}
@@ -114,7 +112,7 @@ const bodyStyle = css({
   '& > div:last-child': { flex: 1, display: 'flex', flexDirection: 'column' },
 })
 
-// Two cells sharing one hairline: side by side from 1040px, stacked below.
+// Two cells sharing one hairline from 1040px; one cell (the form) below.
 const cellsStyle = css({
   flex: 1,
   display: 'grid',
@@ -132,11 +130,9 @@ const formPaneStyle = css({
   alignItems: 'flex-start',
   justifyContent: 'center',
   padding: 'clamp(var(--space-12), 10vh, var(--space-24)) var(--section-pad-x) var(--space-12)',
-  // Stacked under the brain pane (760–1039px): a fixed gap below it.
+  // Alone in the band (760–1039px): a fixed gap under the header.
   '@media (max-width: 1039px)': { paddingTop: 'var(--space-12)' },
-  // resolutions §8: below 760px the form comes first, under the logo row,
-  // and the brain pane follows it.
-  '@media (max-width: 759px)': { order: -1, padding: 'var(--space-8) var(--section-pad-x)' },
+  '@media (max-width: 759px)': { padding: 'var(--space-8) var(--section-pad-x)' },
 })
 
 const columnStyle = css({

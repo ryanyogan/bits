@@ -73,5 +73,12 @@ const toneStyles: Record<CalloutTone, ReturnType<typeof css>> = {
 }
 
 const markStyle = css({ flex: 'none', fontFamily: 'var(--font-mono)', fontWeight: 500 })
-const bodyStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', minWidth: 0 })
-const titleStyle = css({ fontWeight: 600, color: 'inherit' })
+// Flow layout, not flex: inline children (text, a link, <strong>) stay in
+// one line box. The title and block children stack with a small gap.
+const bodyStyle = css({
+  display: 'block',
+  minWidth: 0,
+  '& > :is(p, ul, ol, div)': { margin: 0 },
+  '& > :is(p, ul, ol, div) + :is(p, ul, ol, div)': { marginTop: 'var(--space-1)' },
+})
+const titleStyle = css({ display: 'block', marginBottom: 'var(--space-1)', fontWeight: 600, color: 'inherit' })

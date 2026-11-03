@@ -18,12 +18,13 @@ import type { RewardNotice } from '../progress/reward.ts'
 import { routes } from '../routes.ts'
 import { HOME_ALT, ogImage } from './og.ts'
 import { BadgeNotice } from './badge-notice.tsx'
+import { learnerHasProgress } from './learner-scope.tsx'
 import { pageShell } from './page-shell.ts'
 
 export interface LayoutProps {
-  /** Page name; the document title becomes "<title> · Bits". Omit on the landing page. */
+  /** Page name; the document title becomes "<title> · bits". Omit on the landing page. */
   title?: string
-  /** The whole document title, as is, instead of "<title> · Bits" (the landing page). */
+  /** The whole document title, as is, instead of "<title> · bits" (the landing page). */
   documentTitle?: string
   description?: string
   /** Pathname of this page, to mark the active nav link. */
@@ -47,7 +48,14 @@ export interface LayoutProps {
    */
   startHref?: string
   /**
-   * Where the signed-in "Continue" key goes: `GET /continue` by default,
+   * `false` on lesson pages: the learner is already in a lesson, so the
+   * signed-out bar offers no "Start free" (decision 070). With progress the
+   * bar still shows Continue.
+   */
+  start?: boolean
+  /**
+   * Where the "Continue" key goes (signed in, or signed out with progress
+   * in the session; decision 070): `GET /continue` by default,
    * which finds the next lesson (decision 065). A page that already knows
    * the next lesson (the landing) passes it.
    */
@@ -71,7 +79,8 @@ export interface LayoutProps {
   preloadFonts?: string[]
   /**
    * The signed-in viewer, or `null` when signed out: the avatar when signed
-   * in (no XP or streak pill: one uniform header, decision 048), "Sign in" + "Start free" otherwise (components §3.1b).
+   * in (no XP or streak pill: one uniform header, decision 048), "Sign in" + one primary key otherwise
+   * ("Start free", or "Continue" once the session has progress; decision 070).
    * Omitting it renders the signed-out actions, so pass it on every page that
    * knows who is viewing.
    */
@@ -123,8 +132,8 @@ export function footerLinksFor(viewer: Viewer | null | undefined): FooterProps['
   ]
 }
 
-/** "© 2026 Bits". */
-export const copyright = `© 2026 ${APP_NAME.charAt(0).toUpperCase()}${APP_NAME.slice(1)}`
+/** "© 2026 bits" (lowercase, decision 005). */
+export const copyright = `© 2026 ${APP_NAME}`
 
 /** The account menu's links (decision 065): the viewer's own pages. */
 function accountLinksFor(viewer: Viewer): AccountMenuLink[] {
@@ -172,6 +181,7 @@ export function Layout(handle: Handle<LayoutProps>) {
       links,
       account = true,
       startHref = lessonOneHref(),
+      start = true,
       continueHref = routes.continue.href(),
       head,
       image = ogImage('home', HOME_ALT),
@@ -187,6 +197,14 @@ export function Layout(handle: Handle<LayoutProps>) {
     let framed = !bare && hasPageFrame(children)
     let loginHref = routes.login.index.href()
     let navLinks = links ?? appLinksFor(viewer)
+    // One primary key in the bar (decision 070): Continue once there is
+    // progress (signed in, or a signed-out session with lessons done), else
+    // Start free, never on a lesson page or on the page it points at.
+    let primary: 'continue' | 'start' | null = viewer || learnerHasProgress(handle)
+      ? 'continue'
+      : start && currentPath !== startHref
+        ? 'start'
+        : null
 
     return (
       <Document
@@ -217,7 +235,7 @@ export function Layout(handle: Handle<LayoutProps>) {
           links={navLinks}
           currentPath={currentPath}
           sub={sub}
-          // Under 420px the bar keeps Start free and the menu; Sign in moves
+          // Under 420px the bar keeps its one key and the menu; Sign in moves
           // into the menu sheet, so it is never out of reach. Signed in, the
           // sheet adds the account's pages (Sign out stays in the avatar menu:
           // it is a POST form).
@@ -253,7 +271,15 @@ export function Layout(handle: Handle<LayoutProps>) {
                 <a href={loginHref} data-rmx-prefetch={prefetchFor(loginHref)} mix={signInStyle}>
                   Sign in
                 </a>
-                {currentPath === startHref ? null : <Keycap href={startHref}>Start free</Keycap>}
+                {primary === 'continue' ? (
+                  <Keycap href={continueHref} prefetch={false} mix={signedOutKeyStyle}>
+                    Continue
+                  </Keycap>
+                ) : primary === 'start' ? (
+                  <Keycap href={startHref} mix={signedOutKeyStyle}>
+                    Start free
+                  </Keycap>
+                ) : null}
               </>
             )
           }
@@ -297,6 +323,10 @@ const skipLinkStyle = css({
 // The bar's key: the same size as signed out's Start free. Under 420px it
 // moves into the menu sheet (menuExtras), like Sign in.
 const barKeyStyle = css({ flex: 'none', '@media (max-width: 420px)': { display: 'none' } })
+
+// Signed out, the one key stays in the bar at every width; under 360px it
+// tightens so the wordmark keeps its room at 320 (decision 070).
+const signedOutKeyStyle = css({ flex: 'none', '@media (max-width: 359.98px)': { padding: '0 var(--space-3)' } })
 
 const signInStyle = css({
   display: 'inline-flex',

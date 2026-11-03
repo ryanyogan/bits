@@ -26,7 +26,7 @@ describe('router smoke test', () => {
     assert.match(response.headers.get('Content-Type') ?? '', /text\/html/)
     let html = await response.text()
     assert.match(html, /<html[\s>]/)
-    assert.match(html, /<title>Bits — learn AI by typing to it<\/title>/)
+    assert.match(html, /<title>bits — learn AI by typing to it<\/title>/)
     assert.match(html, /rel="stylesheet"/)
     assert.match(html, /type="importmap"/)
   })
@@ -35,7 +35,7 @@ describe('router smoke test', () => {
     let response = await request('/definitely/not/a/page')
     assert.equal(response.status, 404)
     let html = await response.text()
-    assert.match(html, /<title>Page not found · Bits<\/title>/)
+    assert.match(html, /<title>Page not found · bits<\/title>/)
     assert.match(html, /<h1[^>]*>That page isn't here\.<\/h1>/)
   })
 

@@ -41,7 +41,7 @@ describe('/me and /u/:handle', () => {
     let response = await getSignedIn(routes.me.index.href())
     assert.equal(response.status, 200)
     let html = await response.text()
-    assert.match(html, /<title>My learning · Bits<\/title>/)
+    assert.match(html, /<title>My learning · bits<\/title>/)
     assert.equal(html.match(/<h1[\s>]/g)?.length, 1)
     // The next lesson comes first, linking to the lesson itself (decision 068).
     assert.match(html, /aria-label="Continue where you left off"/)
@@ -90,7 +90,7 @@ describe('/me and /u/:handle', () => {
     let response = await getSignedIn(routes.me.index.href(undefined, { searchParams: { tab: 'journal' } }))
     assert.equal(response.status, 200)
     let html = await response.text()
-    assert.match(html, /<title>Prompt journal · Bits<\/title>/)
+    assert.match(html, /<title>Prompt journal · bits<\/title>/)
     assert.ok((html.match(/<li[^>]*><p[^>]*><span aria-hidden="true"[^>]*>›/g)?.length ?? 0) > 3)
   })
 
@@ -105,7 +105,7 @@ describe('/me and /u/:handle', () => {
     let response = await get(routes.profile.index.href({ handle: 'jamie_park' }))
     assert.equal(response.status, 200)
     let html = await response.text()
-    assert.match(html, /<title>Jamie Park \(@jamie_park\) · Bits<\/title>/)
+    assert.match(html, /<title>Jamie Park \(@jamie_park\) · bits<\/title>/)
     // A visitor has the link already: no Share, and no wall of locked badges.
     assert.doesNotMatch(html, /Share ↗/)
     assert.doesNotMatch(html, /jamie@example\.com/)

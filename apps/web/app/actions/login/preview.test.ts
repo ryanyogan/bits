@@ -55,7 +55,7 @@ describe('sign-in on a Workers Preview', () => {
       assert.doesNotMatch(location, /\d{6}/, 'never in the URL')
 
       let html = await (await fetchAs(cookie, location)).text()
-      assert.match(html, /<title>Your sign-in code · Bits<\/title>/)
+      assert.match(html, /<title>Your sign-in code · bits<\/title>/)
       assert.match(html, /Mail is off on this preview/)
       let code = /Preview sign-in code: <span[^>]*>(\d{6})<\/span>/.exec(html)?.[1]
       assert.ok(code, 'the code is on the page')

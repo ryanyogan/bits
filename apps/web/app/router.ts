@@ -48,6 +48,7 @@ import { serveRobots, serveSitemap } from './middleware/site-files.ts'
 import { anyOf, pathPrefix, under } from './middleware/route-match.ts'
 import { logServerErrors } from './middleware/server-errors.ts'
 import { theme } from './middleware/theme.tsx'
+import { learner } from './middleware/learner.tsx'
 import { webAnalytics } from './middleware/web-analytics.tsx'
 import { routes } from './routes.ts'
 
@@ -120,6 +121,9 @@ export const router = createRouter({
     // The theme (decision 062): pages render inside <ThemeScope>, so
     // Document sets <html data-theme>.
     theme(),
+    // The header's primary action (decision 070): pages render inside
+    // <LearnerScope>, so a signed-out visitor with progress gets Continue.
+    learner(),
   ],
 })
 

@@ -39,7 +39,7 @@ export interface CatalogPageProps {
   results: CourseSummary[]
   counts: Record<TrackSlug | 'all', number>
   continueTarget?: ContinueTarget
-  /** "8 courses · about 7 hours in all", over the whole catalog. */
+  /** "About 7 hours in all", over the whole catalog (the count is the strip's). */
   summary: string
   /** A few real courses to offer when a search finds nothing. */
   suggestions: CourseSummary[]
@@ -49,6 +49,16 @@ export interface CatalogPageProps {
 }
 
 const SEARCH_ID = 'course-search'
+
+// CellGrid's 3 columns from 1024px, as 4 from 1440px: every 3rd cell gets
+// its right hairline back and every 4th ends the row (CellGrid's rule).
+const fourUpStyle = css({
+  '@media (min-width: 1440px)': {
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    '& > :nth-child(3n)': { borderRight: 'var(--border-w) solid var(--line-cell)' },
+    '& > :nth-child(4n)': { borderRight: 0 },
+  },
+})
 
 /**
  * `/courses` (docs/design/spec/pages/Catalog.md), on the squared grid
@@ -87,7 +97,7 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
                 <Eyebrow>All courses · free</Eyebrow>
                 <h1 mix={h1Style}>Pick your next rabbit hole.</h1>
                 <p mix={leadStyle}>
-                  {`${summary}. Short, hands-on lessons that start with Claude, in your browser.`}
+                  {`${summary}: short, hands-on lessons that start with Claude, in your browser.`}
                 </p>
               </div>
             </RuledSection>
@@ -180,7 +190,9 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
                 </div>
               ) : null}
               {results.length > 0 ? (
-                <CellGrid as="ul" cols={3} fill="ink">
+                // From 1440px a grid of 4n cells takes 4 columns, so 8 courses
+                // fill two rows instead of leaving an empty ninth plate.
+                <CellGrid as="ul" cols={3} fill="ink" mix={(results.length + (canWrite ? 1 : 0)) % 4 === 0 ? fourUpStyle : undefined}>
                   {results.map((course) => (
                     <li key={course.slug} mix={cellStyle}>
                       <CourseCard

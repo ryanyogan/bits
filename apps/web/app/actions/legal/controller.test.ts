@@ -32,7 +32,7 @@ describe('terms, privacy and link previews (decision 028)', () => {
     ] as const) {
       let { status, html } = await page(href)
       assert.equal(status, 200, href)
-      assert.match(html, new RegExp(`<title>${title} · Bits</title>`))
+      assert.match(html, new RegExp(`<title>${title} · bits</title>`))
       assert.match(html, new RegExp(`<h1 id="legal-title"[^>]*>${title}</h1>`))
       assert.match(html, /Last updated/)
       assert.match(html, new RegExp(`href="${routes.legal.terms.href()}"`))

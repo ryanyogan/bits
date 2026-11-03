@@ -14,6 +14,7 @@ import { receiveCspReport } from './csp-report.ts'
 import { robotsResponse, sitemapResponse } from './site-files.ts'
 import { HomePage } from './home-page.tsx'
 import { continueHref, nextStep } from './home/continue.ts'
+import { hasSessionProgress } from '../middleware/learner.tsx'
 import { NotFoundPage } from '../ui/not-found-page.tsx'
 
 export default createController(routes, {
@@ -53,13 +54,17 @@ export default createController(routes, {
     },
     async home(context) {
       let viewer = getViewer(context)
-      // Signed in, the landing opens on the learner's next lesson (decision 065).
-      let next = viewer
-        ? await Promise.all([getCatalog(context), loadCompleted(context)]).then(([catalog, completed]) =>
-            nextStep(catalog, completed),
-          )
-        : undefined
-      return context.render(<HomePage viewer={viewer} next={next} />)
+      // With progress (signed in, or signed out with lessons done in the
+      // session), the landing opens on the learner's next lesson (decisions
+      // 065, 070). A fresh visitor needs neither read.
+      let progress = viewer !== null || hasSessionProgress(context)
+      let next =
+        progress
+          ? await Promise.all([getCatalog(context), loadCompleted(context)]).then(([catalog, completed]) =>
+              nextStep(catalog, completed),
+            )
+          : undefined
+      return context.render(<HomePage viewer={viewer} next={next} progress={progress} />)
     },
     // The header's "Continue" key (decision 065): one link on every page, so
     // no page loads progress just to draw the bar. Signed out, lesson 1.

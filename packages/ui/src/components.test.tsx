@@ -334,17 +334,17 @@ describe('Document', () => {
 
   it('renders the canonical URL and link-preview meta', async () => {
     let html = await renderToString(
-      <Document assets={assets} title="Tokens · Bits" description="Learn tokens." url="https://bits.example/courses/tokens" siteName="Bits" />,
+      <Document assets={assets} title="Tokens · bits" description="Learn tokens." url="https://bits.example/courses/tokens" siteName="bits" />,
     )
     assert.match(html, /<link data-rmx-key="canonical" rel="canonical" href="https:\/\/bits.example\/courses\/tokens"/)
-    assert.match(html, /<meta property="og:title" content="Tokens · Bits"/)
+    assert.match(html, /<meta property="og:title" content="Tokens · bits"/)
     assert.match(html, /<meta property="og:description" content="Learn tokens."/)
     assert.match(html, /<meta property="og:url" content="https:\/\/bits.example\/courses\/tokens"/)
-    assert.match(html, /<meta property="og:site_name" content="Bits"/)
+    assert.match(html, /<meta property="og:site_name" content="bits"/)
   })
 
   it('leaves out the canonical URL when there is none', async () => {
-    let html = await renderToString(<Document assets={assets} title="Settings · Bits" />)
+    let html = await renderToString(<Document assets={assets} title="Settings · bits" />)
     assert.doesNotMatch(html, /rel="canonical"|og:url/)
   })
 })
@@ -474,7 +474,9 @@ describe('layout stability', () => {
     )
     assert.match(html, /aria-hidden="true"[^>]*>(?:<[^>]+>)*The capital of France is Paris\.▍/)
     assert.match(html, /aria-hidden="true"[^>]*>(?:<[^>]+>)*step 2\/2 · candidates/)
-    assert.match(html, /aria-hidden="true"[^>]*>(?:<[^>]+>)*That’s the whole trick/)
+    // The finished state (every pick, then the takeaway) is reserved too.
+    assert.match(html, /aria-hidden="true"[^>]*>(?:<[^>]+>)*<ul aria-label="The 2 picks, each with its odds"/)
+    assert.match(html, /That’s the whole trick/)
   })
 
   it('OddsBars reserves every temperature note', async () => {

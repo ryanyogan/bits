@@ -115,6 +115,9 @@ export function AppBar(handle: Handle<AppBarProps>) {
 }
 
 const NARROW = '@media (max-width: 759.98px)'
+// Under 360px (iPhone SE, small Androids) the logo, one key and the menu
+// button only fit at 320 with tighter edges (decision 070).
+const TINY = '@media (max-width: 359.98px)'
 const MID = '@media (max-width: 1023.98px)'
 
 // The bar's ground and rule are the header's own, so they run the full
@@ -156,10 +159,16 @@ const rowStyle = css({
     '--appbar-link-fs': 'var(--fs-13)',
   },
   [NARROW]: { gridTemplateColumns: '1fr auto' },
+  [TINY]: { gap: 'var(--space-2)' },
   [FORCED_COLORS]: { borderColor: 'GrayText' },
 })
 
-const logoStyle = css({ justifySelf: 'start', alignSelf: 'center', marginLeft: 'var(--section-pad-x)' })
+const logoStyle = css({
+  justifySelf: 'start',
+  alignSelf: 'center',
+  marginLeft: 'var(--section-pad-x)',
+  [TINY]: { marginLeft: 'var(--space-3)' },
+})
 
 // The bar's rule is the header's bottom border, one pixel under this row.
 const onRuleStyle = css({ bottom: 'calc((var(--mark-size) + 1px) / -2)' })
@@ -225,4 +234,5 @@ const actionsStyle = css({
   gap: 'var(--space-2)',
   minWidth: 0,
   marginRight: 'var(--space-3)',
+  [TINY]: { gap: 'var(--space-1)', marginRight: 'var(--space-1)' },
 })

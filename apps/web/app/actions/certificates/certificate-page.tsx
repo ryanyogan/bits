@@ -70,7 +70,6 @@ export function CertificatePage(handle: Handle<CertificatePageProps>) {
           {certificate.isPrivate ? (
             <RuledSection as="div" rule={false} pad="tight" mix={noPrint}>
               <Callout tone="info" title="Only you can see this.">
-                {/* One text run: the callout lays its children out as blocks. */}
                 <span>
                   {'Your profile is private, so this certificate is too. '}
                   <a href={settingsProfileHref} data-rmx-prefetch={prefetchFor(routes.settings.index.href())}>
