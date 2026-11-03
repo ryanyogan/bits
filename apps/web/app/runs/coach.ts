@@ -255,7 +255,7 @@ async function judge(
     usage = result.usage
     let parsed = result.stopReason === 'refusal' ? undefined : parseJudgeVerdict(result.text, block.rubric?.length ?? 0)
     if (parsed) {
-      let applied = applyJudge(block, grade.criteria, parsed, run.output)
+      let applied = applyJudge(block, grade.criteria, parsed, run.output, run.prompt)
       let hint = applied.passed
         ? safeJudgeHint(parsed.hint, block.reference) ?? block.success.message
         : safeJudgeHint(parsed.hint, block.reference) ?? authoredHint(block, misses + 1) ?? 'Not yet. Look at the ✗ lines.'

@@ -67,7 +67,13 @@ function judgeReply(verdict: unknown, stopReason = 'end_turn'): Response {
   )
 }
 
-const metBoth = { criteria: [{ id: 0, met: true, evidence: 'Priya is on call on Tuesday' }, { id: 1, met: true, evidence: '' }], hint: 'Grounded in the rota.' }
+const metBoth = {
+  criteria: [
+    { id: 0, met: true, evidence: 'Priya is on call on Tuesday', source: 'Tue Priya' },
+    { id: 1, met: true, evidence: '', source: 'Tue Priya' },
+  ],
+  hint: 'Grounded in the rota.',
+}
 
 /**
  * Configures the model and stubs the gateway: runs stream `reply`, judge
@@ -269,7 +275,7 @@ describe('/api/coach', () => {
 
   it('evidence the reply doesn’t contain is not met, whatever the judge says', async () => {
     let { cookie } = await signIn('coach-evidence@example.com')
-    let made = { criteria: [{ id: 0, met: true, evidence: 'Sam is on call on Tuesday' }, { id: 1, met: true, evidence: '' }], hint: 'Good.' }
+    let made = { criteria: [{ id: 0, met: true, evidence: 'Sam is on call on Tuesday', source: 'Tue Priya' }, { id: 1, met: true, evidence: '', source: '' }], hint: 'Good.' }
     await withGateway({ judge: () => judgeReply(made) }, async () => {
       let verdict = await verdictOf((await attempt(cookie, GOOD)).response)
       assert.equal(verdict.layer, 'coach')

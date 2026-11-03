@@ -24,7 +24,7 @@ import { buildCourse } from '../app/content/compile/index.ts'
 import { gradeRun } from '../app/runs/grade.ts'
 import { applyJudge, judgeSystem, judgeUser, parseJudgeVerdict, screensAsInjection, verdictSchema } from '../app/runs/judge.ts'
 import { judgeModel, modelConfigured, type ModelEnv } from '../app/runs/model.ts'
-import { exercises } from './coach-eval/cases.ts'
+import { exercises, injectionTarget } from './coach-eval/cases.ts'
 
 const here = path.dirname(new URL(import.meta.url).pathname)
 const PRICE = { input: 0.1 / 1e6, output: 0.5 / 1e6 }
@@ -98,7 +98,7 @@ async function grade(env: ModelEnv, block: PromptBlock, prompt: string, reply: s
   // As in production: a refusal or an unreadable verdict is a miss ("try
   // again"), never a pass. Counted separately so it shows in the report.
   if (!parsed) return { passed: false, via: 'unusable', criteria: deterministic.criteria }
-  let applied = applyJudge(block, deterministic.criteria, parsed, reply)
+  let applied = applyJudge(block, deterministic.criteria, parsed, reply, prompt)
   return { passed: applied.passed, via: 'judge', criteria: applied.criteria }
 }
 
@@ -141,7 +141,9 @@ async function main() {
   let injections = JSON.parse(await fs.readFile(path.join(here, 'coach-eval', 'injections.json'), 'utf8')) as {
     cases: { name: string; prompt: string; reply: string }[]
   }
-  let onCall = compile(exercises[0]!.source)
+  // The on-call exercise with only a weak check, so the screen and the judge
+  // are what's tested, not the rota check.
+  let onCall = compile(injectionTarget)
   let screened = 0
   let judgedFail = 0
   let passes: string[] = []

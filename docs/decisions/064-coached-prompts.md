@@ -141,14 +141,16 @@ isn't allowed. Write two checks with the same label instead.
   - Thinking can be disabled at effort high or below.
   - Sampling parameters are rejected on API version 2026-10-21.
   - Structured-output schemas take no string length limits, so the server
-    truncates instead: evidence to 160 characters and the hint to 240.
-- The schema is `{ criteria: [{ id: integer, met: boolean, evidence: string }],
-  hint: string }`, with `additionalProperties: false`. The server rejects a
+    truncates instead: evidence and source to 160 characters and the hint
+    to 240.
+- The schema is `{ criteria: [{ id: integer, met: boolean, evidence: string,
+  source: string }], hint: string }`, with `additionalProperties: false`. The server rejects a
   verdict with an unknown, missing or duplicate id.
 - The system prompt is stable for each exercise and carries
   `cache_control`. It holds the grader's rules, the task, the goal, the
   numbered rubric (each line tagged
-  `[reply|prompt; required|advice; quote evidence]`) and the authored hints.
+  `[reply|prompt; required|advice; quote evidence; quote source]`) and the
+  authored hints.
   The reference is never sent to the judge.
 - The user message is `<learner_prompt>…</learner_prompt>` then
   `<model_reply>…</model_reply>`, with `&`, `<` and `>` escaped, so the data
@@ -159,7 +161,8 @@ The judge resists injection in depth:
 1. **The pass arithmetic is on the server** (`applyJudge`): `must` lines
    decide.
 2. **Evidence must be real.** An `evidence` line counts as met only if its
-   quote is in the reply, ignoring case and whitespace.
+   quote is in the reply, ignoring case, whitespace, typographic quotes and
+   wrapping (quotes, brackets, an ellipsis).
 3. **There is always a deterministic anchor** (the build rule above).
 4. **An injection screen** (`screensAsInjection`) reads both the prompt and
    the reply, because a learner can ask Claude to say the words. It catches
@@ -179,6 +182,18 @@ The judge resists injection in depth:
    differs from the draft, which made these a soft pass. The eval (§8) found
    that a base64-encoded instruction makes the judge refuse, so a soft pass
    there would have been an injection that works.
+7. **Grounding needs the material, not a claim about it** (amended
+   2026-11-02). A reply line whose label grounds the answer in something
+   ("from the rota", "taken from the email", "based on the document";
+   `groundedLine()`) is tagged `quote source`: the judge must copy the
+   material itself from the learner's prompt into `source`. It counts as
+   met only if that quote is in the prompt and isn't a sentence about the
+   texts ("this prompt contains the rota", "the reply will answer from
+   it"; `isSelfClaim()`). The rules also tell the judge that such
+   sentences are claims, never evidence, and that a reply naming a source
+   the prompt doesn't hold isn't grounded. The eval's "rubric restated"
+   injection (a prompt that only claims to hold the rota, against the weak
+   `/tuesday/` check) passed about 1 run in 3 before this.
 
 ### 4. The loop the learner sees (PromptComposer)
 
@@ -304,6 +319,24 @@ The run on 2026-11-02 (3 repeats, live judge through the gateway):
   and the judge refused 1 (base64), which now counts as a miss. Before the
   §3.6 fix, that refusal passed as soft.
 - Cost: 52 judge calls, about $0.0035.
+
+After the grounding fix (§3.7), three runs in a row on 2026-11-02:
+
+- Agreement: 39, 37 and 38 of 39 (100%, 95%, 97%). Every miss was a
+  false fail on the tone exercise, never a false pass: the judge marked the
+  next step met but paraphrased its quote, so the evidence check refused it,
+  or it read the formal refund reply as policy.
+- Injections: 0 of 20 passed in each run (7 screened, 12 failed by the
+  judge, 1 refusal). "Rubric restated" was failed by the judge in all 18
+  extra tries as well.
+- Cost: 49 judge calls per run, about $0.0036 each.
+
+The eval's on-call exercise now checks for a rota's shape: a Tuesday entry
+and one other day, each followed by a capitalised name (two checks, since
+the grammar has no repetition). The injection set runs against a copy with
+only the weak `/tuesday|\btue\b/i` check (`injectionTarget` in
+`scripts/coach-eval/cases.ts`), so the screen and the judge stay the thing
+under test.
 
 Re-run the eval before widening the judge to a new kind of rubric, and
 before changing the model.
