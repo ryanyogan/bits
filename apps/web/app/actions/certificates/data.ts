@@ -2,7 +2,7 @@
 // lesson_progress, never stored. It exists while the user has completed
 // every lesson of the live course, and is visible when their profile is
 // public (or to themselves). It carries only what the public profile shows.
-import { listCoursePassedBuilds, readUserWithCompleted, type D1DataTableDatabase, type User } from '@bits/db'
+import { readUserWithCompleted, type D1DataTableDatabase, type PassedBuild, type User } from '@bits/db'
 
 import { verifiesOf } from '../courses/lesson/content.ts'
 
@@ -40,10 +40,10 @@ export async function getCertificate(
   courseSlug: string,
   viewer: Pick<User, 'id'> | null,
 ): Promise<Certificate | undefined> {
-  // The user and their progress in one batch (decision 035).
-  let found = await readUserWithCompleted(db, handle)
+  // The user, their progress and (public profiles) the course's passing deploy checks in one batch (decisions 035, 072).
+  let found = await readUserWithCompleted(db, handle, { passedBuildsFor: courseSlug })
   if (!found) return undefined
-  let { user, completed: rows } = found
+  let { user, completed: rows, passedBuilds } = found
   if (!user.is_public && viewer?.id !== user.id) return undefined
   let completed = new Map(rows.map((row) => [`${row.course_id}/${row.lesson_slug}`, row.completed_at]))
   let course = catalog.getCourse(courseSlug, completed)
@@ -52,7 +52,7 @@ export async function getCertificate(
   let times = lessons.map((lesson) => completed.get(`${course.slug}/${lesson.slug}`))
   if (lessons.length === 0 || times.some((at) => at === undefined)) return undefined
   let badge = badgeDefinitions(catalog).find((b) => b.id === `course:${course.slug}`)
-  let proof = user.is_public ? await finalDeploy(db, catalog, user.id, course.slug, lessons.map((lesson) => lesson.slug)) : undefined
+  let proof = user.is_public ? await finalDeploy(catalog, passedBuilds, course.slug, lessons.map((lesson) => lesson.slug)) : undefined
   return {
     name: user.display_name || user.handle,
     handle: user.handle,
@@ -67,16 +67,9 @@ export async function getCertificate(
 /**
  * Where the course's final `:::verify` block (the last one in course order)
  * passed for this user, if it did. Reads lesson content only when the user
- * has a passing check in the course at all, so most certificates cost nothing.
+ * has a passing check in the course at all, so most certificates cost no R2 read.
  */
-async function finalDeploy(
-  db: D1DataTableDatabase,
-  catalog: Catalog,
-  userId: string,
-  courseSlug: string,
-  lessonSlugs: string[],
-): Promise<Certificate['proof']> {
-  let passed = await listCoursePassedBuilds(db, userId, courseSlug)
+async function finalDeploy(catalog: Catalog, passed: PassedBuild[], courseSlug: string, lessonSlugs: string[]): Promise<Certificate['proof']> {
   if (!passed.length) return undefined
   for (let slug of [...lessonSlugs].reverse()) {
     let content = await catalog.lessonContent(courseSlug, slug)

@@ -117,17 +117,20 @@ export interface PassedBuild {
   created_at: number
 }
 
-/** The user's newest passing check for each verify block of a course. */
-export async function listCoursePassedBuilds(db: D1DataTableDatabase, userId: string, courseId: string): Promise<PassedBuild[]> {
-  let result = await db.d1
+/**
+ * The newest passing check for each verify block of a course, for the user
+ * `userSql` selects (an id subquery bound to ?1, so it can join a batch keyed
+ * by handle; decision 035). `userSql` is always a constant from this package,
+ * never input.
+ */
+export function passedBuildsStatement(db: D1DataTableDatabase, userSql: string, userParam: string, courseId: string) {
+  return db.d1
     .prepare(
       `select lesson_slug, verify_id, origin, max(created_at) as created_at from build_checks
-       where user_id = ? and course_id = ? and outcome = 'pass'
+       where user_id = ${userSql} and course_id = ?2 and outcome = 'pass'
        group by lesson_slug, verify_id`,
     )
-    .bind(userId, courseId)
-    .all<PassedBuild>()
-  return result.results
+    .bind(userParam, courseId)
 }
 
 /** The user's build checks, newest first (the settings export). */

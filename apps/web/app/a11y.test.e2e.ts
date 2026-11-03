@@ -206,12 +206,12 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
       await expectClean(page, 'deploy check refused URL')
       await field.fill('https://klippy.a11y.workers.dev')
       await panel.getByRole('button', { name: /Check/ }).click()
-      await panel.locator('[data-passed="false"]').waitFor()
+      await panel.locator('div[data-passed="false"]').waitFor()
       await settled(page)
       await expectClean(page, 'deploy check failing')
       healthy = true
       await panel.getByRole('button', { name: /Check/ }).click()
-      await panel.locator('[data-passed="true"]').waitFor()
+      await panel.locator('div[data-passed="true"]').waitFor()
       await settled(page)
       await expectClean(page, 'deploy check passed')
     } finally {

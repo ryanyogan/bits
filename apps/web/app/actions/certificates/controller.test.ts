@@ -52,9 +52,9 @@ describe('certificates and the badge toast', () => {
     assert.match(html, /<meta property="og:image" content="[^"]*\/og\/home\.png\?v=/)
     assert.match(html, /<meta name="twitter:card" content="summary_large_image"/)
     assert.doesNotMatch(html, /name="robots" content="noindex"/)
-    // The holder and their progress come back in one batch (decision 035).
+    // The holder, their progress and the course's passing deploy checks come back in one batch (decisions 035, 072).
     let timed = await fetchAs(null, href)
-    assert.match(timed.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="2 queries, 1 round trips", catalog;dur=\d+;desc="memo"$/)
+    assert.match(timed.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="3 queries, 1 round trips", catalog;dur=\d+;desc="memo"$/)
     await timed.text()
 
     // /me and the public profile link to it from the finished course row.
