@@ -1,245 +1,277 @@
-# Build-along courses: plan (2026-11-03, proposed)
+# Build-along courses: plan (2026-11-03, accepted)
 
-Status: **proposed**, waiting for the owner. Decision record: `docs/decisions/071-build-along-courses.md`.
-Nothing here is written as lessons or code yet.
+Status: **accepted** (owner answers 2026-11-03). Decision record: `docs/decisions/071-build-along-courses.md`.
+Phase 2 (§7) has not started.
 
 The owner's ask: turn the code courses into full tutorials. Each one builds something real on your own
 machine, starting from the first `npm` install and assuming no prior knowledge. Everything runs on
 Cloudflare, with clean, checked code from popular packages that fit together. Together the courses build
-one small app, a personal agent, feature by feature. Add a course on building the front end with a coding
-agent and skills, and stub an MCP course as "coming soon".
+one small app, a personal agent called **Klippy**, feature by feature. One course builds the front end by
+directing a coding agent with skills and MCP. An MCP course is stubbed as "coming soon".
 
-APIs and versions below were checked on 2026-11-03 against Cloudflare's docs (Firecrawl, `maxAge: 0`) and
-`npm view`. The reference-repo lane re-checks them on the day it pins versions.
+APIs and versions below were checked on 2026-11-03 against Cloudflare's docs (Firecrawl, `maxAge: 0`),
+`npm view` and the installed Remix 3.1 docs. The reference-repo lane re-checks them on the day it pins
+versions.
 
 ---
 
-## 1. The app
+## 1. The app: Klippy
 
-### Concepts considered
+Klippy (lowercase `klippy` in code) is a personal agent that remembers you, saves what you send it
+(notes, links, files), answers from it with sources, and nudges you on schedule. It's one agent per
+person, a Durable Object, reached first from a terminal, then from a Remix web app, and later from Claude
+through MCP.
 
-| Concept | Pitch | For | Against |
-|---|---|---|---|
-| **Pip, your pocket agent** (recommended) | A personal assistant that remembers you, saves what you send it (notes, links, PDFs), answers from it with sources, and nudges you on schedule. | Feels like the popular "second brain" apps; useful on day one; every Cloudflare product earns its place (DO = one Pip per person, D1 = notes, Vectorize = recall, Workflows = ingest, Cron/alarms = nudges, Access = lock); grows naturally into MCP ("use Pip from Claude"). | "Personal assistant" is a crowded idea, so the fun has to come from personality and the nudges. |
-| Trip buddy | Plans a weekend: weather, places, packing list, reminders. | Continues today's weather-agent thread; very demo-able. | Needs third-party APIs for places; RAG over "your docs" is forced. |
-| Kitchen agent | Recipes from what's in your fridge, a shopping list, meal plans. | Fun and visual. | Thin on tools beyond the list; Vectorize over recipes is less "yours". |
-
-### Recommendation: **Pip**
-
-Pip is one agent per person (a Durable Object), reached from a terminal, then a web app, and later from
-Claude through MCP. What it can do, by course:
-
-| After course | Pip can… |
+| After course | Klippy can… |
 |---|---|
 | Your first Worker | answer one question with Claude, over HTTP, deployed |
 | Give your model tools | check the weather, tell the time, save and list notes (D1), read a link |
 | Your first agent loop | hold a conversation, remember facts about you, ask before it writes, nudge you at a set time |
-| Build the front end with agents | do all of that in a web app you prompted into being with Claude Code |
+| Build the front end with agents | do all of that in a Remix web app with GitHub sign-in, built by prompting Claude Code |
 | Retrieval without tears | answer from your saved notes and links, with sources, and say when it doesn't know |
 | Ship an agent to the edge | run as your private, rate-limited, logged, tested app on your own domain |
-| MCP (coming soon) | be used from Claude (Pip as an MCP server) and use other MCP servers |
+| MCP (coming soon) | be used from Claude (Klippy as a remote MCP server with OAuth) and use other MCP servers |
 
 The weather tool stays as the first tool (Open-Meteo: free, no key), so today's weather lessons carry over.
 
+Other concepts considered: a trip planner (needs third-party place APIs, and RAG feels forced) and a
+kitchen agent (thin on tools). Klippy won because every Cloudflare product earns its place: DO for one
+Klippy per person, D1 for notes, Vectorize for recall, Workflows for ingest, alarms for nudges, and service
+bindings to lock the door.
+
 ### Where this leaves us against the field
 
-From the first pass of `docs/research/competitors/data.json` (2026-11-03; the competitor lane is still
-writing it):
-- Only Cloudflare's own tutorials (hands-on 3) and paid Maven cohorts take a learner all the way to
-  "build and deploy a real project". Cloudflare's tutorials are separate apps that assume Workers knowledge.
-  freeCodeCamp's Workers RAG handbook is one standalone build.
-- Nobody free builds **one app across six courses from zero**. Nobody pairs that with a Claude sandbox that
-  grades your prompts, or teaches directing a coding agent (skills + MCP) as its own course. AI Hero does
-  the coding-agent build in a paid workshop.
-- Gaps to watch, for the steel-man pass: evals as a first-class topic (Kaggle, LangChain, Maven), and MCP in
-  depth (Hugging Face, Microsoft). That's why course G and E8 matter.
+From `docs/research/competitors/README.md` (complete, 2026-11-03):
+- **The open lane** is a from-zero, Claude-first, graded Cloudflare path. Cloudflare's own guides are
+  hands-on but aren't a course: there's no sequence from zero, no checks and no feedback, and they're
+  Workers AI or OpenAI first. Nobody free goes from `npm create` to a deployed Claude agent and then
+  **verifies** it. So the plan adds a checkpoint grader that calls the learner's deployed Worker (§5).
+- **Churn is real.** On 2026-10-29 Cloudflare reshaped the Agents docs. The quick start was rewritten,
+  and the runtime is now explained as a Lifecycle plus capabilities added with `.use()`. We pin every
+  version, put a "verified on" date in each code lesson, and run the tutorial weekly in CI against the
+  latest releases (§5). Lessons use the docs' current framing (Lifecycle, capabilities). The reference lane
+  re-reads those pages on pin day.
+- **MCP is our weakest topic in the most crowded category.** Our angle is remote, TypeScript, on
+  Workers, with OAuth. It's graded by connecting to the learner's deployed server and calling a tool.
+- **Coding-agent courses are crowded.** Course D doesn't teach skills theory, which Anthropic and Hugging
+  Face cover and we link. It teaches good prompts and review while building a real, deployed UI.
+- **Evals are a gap** that Kaggle, DLAI, OpenAI Academy and Maven all cover. An evals course is a
+  **future candidate**, built on the coach and judge bits already runs (§3, H). It's not in this phase.
 
 ---
 
 ## 2. Stack
 
-Rule: use the fewest, most popular packages that already fit together, and prefer Cloudflare's own glue.
+Rule: use the fewest, most popular packages that already fit together. Prefer Cloudflare's glue on the
+agent side and Remix's own packages on the web side.
 
 | Need | Choice | Version (2026-11-03) | Why |
 |---|---|---|---|
 | Package manager, monorepo | pnpm workspaces | pnpm 10 (via `corepack`) | Same as bits; no extra monorepo tool. |
 | Scaffold | `create-cloudflare` | 2.74.8 | `pnpm create cloudflare@latest` is the official first command. |
 | Runtime, CLI | Workers, `wrangler` | 4.157.0 | |
-| Agent, per-user state | `agents` (Agents SDK) | 0.33.0 | One `Agent`/`AIChatAgent` = one Durable Object with SQLite, scheduling, WebSockets, routing. |
+| Agent, per-user state | `agents` (Agents SDK) | 0.33.0 | One agent = one Durable Object with SQLite, scheduling, WebSockets, routing. |
 | Chat agent | `@cloudflare/ai-chat` | 0.12.2 | `AIChatAgent`: message persistence, resumable streams, tool approval (`needsApproval`). Peers: `ai` ^6 or ^7, `agents` <1. |
 | Model calls | `ai` (AI SDK) | 7.0.162 | `streamText`, `tool()`, `stopWhen: stepCountIs(n)`; what the Agents docs use. |
-| Claude through AI Gateway | `createAI` from `agents/models/ai-sdk` + the `AI` binding | (in `agents`) | `createAI({ binding: env.AI, id: "pip" })` then `ai("anthropic/claude-haiku-5.5")`. **No provider key in the Worker**: Unified Billing or a key stored on the gateway (BYOK). `ai-gateway-provider` is now deprecated. |
+| Claude through AI Gateway | `createAI` from `agents/models/ai-sdk` + the `AI` binding | (in `agents`) | `createAI({ binding: env.AI, id: "klippy" })` then `ai("anthropic/claude-haiku-5.5")`. **The learner's own Anthropic key is stored in their own gateway (BYOK)**, never in the Worker. One-line switch to a free Workers AI model. `ai-gateway-provider` is deprecated. |
 | Tool schemas | `zod` | 4.6.7 | Peer of `agents`. |
-| Ready-made tools | `agents/webfetch/ai-sdk`, `agents/websearch/ai-sdk` | (in `agents`) | Read a link as Markdown, or search the web, through the `AI` binding: no code of our own. |
-| App database | D1 + `drizzle-orm` / `drizzle-kit` | 0.45.4 / 0.31.11 | Typed schema and SQL migrations that `wrangler d1 migrations apply` runs. |
-| Vector store | Vectorize + Workers AI embeddings | `@cf/baai/bge-base-en-v1.5` (768 dims, cosine) | The model in Cloudflare's own Vectorize tutorial. The lane re-checks for a newer default (e.g. `qwen3-embedding-0.6b`). |
+| Ready-made tools | `agents/webfetch/ai-sdk`, `agents/websearch/ai-sdk` | (in `agents`) | Read a link as Markdown, or search the web, through the `AI` binding. |
+| Database layer | **`remix/data-table`** on D1, in both Workers | `remix` 3.1.0 | One query layer from Remix (the owner's choice). D1 needs a driver: §2.2. |
+| Vector store | Vectorize + Workers AI embeddings | `@cf/baai/bge-base-en-v1.5` (768 dims, cosine) | The model in Cloudflare's Vectorize tutorial; the lane re-checks for a newer default. |
 | Reranker | Workers AI `@cf/baai/bge-reranker-base` | | No extra service. |
 | Ingest | Cloudflare Workflows (`AgentWorkflow`) | (in `agents`) | Durable steps for fetch → chunk → contextualise → embed. |
-| Front end | **Remix 3** (`remix`) on Workers, see §2.1 | 3.1.0 | The owner's ask; our own stack, with the `remix` skill. |
-| Client connection | `agents/client` (`AgentClient`) | (in `agents`) | Framework-free WebSocket client, used by the terminal chat and the Remix island. |
-| Tests | `vitest` + `@cloudflare/vitest-pool-workers` | **vitest 4.1.x** (pool 0.23.0 peers `^4.1`; vitest 5 is out but unsupported) | Tests run inside the real Workers runtime. |
+| Front end | **Remix 3** on Workers | 3.1.0 | The owner's choice, no React fallback. Uses Remix's own `remix/auth` (GitHub), `remix/session` with cookie storage, `remix/data-schema`, `remix/data-table`, and `remix/component` islands. |
+| Chat UI pieces | Small parts of **AI Elements** (Apache-2.0), converted into Remix components | ai-elements 1.9.1 (reference only) | Message, conversation, prompt input, tool card and sources, rebuilt as Remix components with plain CSS. Keep the Apache-2.0 notice and credit in the ported files. |
+| Client connection | `agents/client` (`AgentClient`) | (in `agents`) | Framework-free WebSocket client, used by the terminal chat and the Remix chat island. |
+| Tests | `vitest` + `@cloudflare/vitest-pool-workers` | **vitest 4.1.x** (pool 0.23.0 peers `^4.1`; vitest 5 is out but unsupported) | Agent tests run inside the real Workers runtime. **Front-end tests are skipped** (owner). |
 | MCP (coming soon) | `createMcpHandler` from `agents/mcp/server` + `@modelcontextprotocol/server` v2 | 2.4.0 (pinned by `agents`) | `McpAgent` is deprecated. The handler is stateless, so no Durable Object is needed. |
-| Auth (ship course) | Cloudflare Access in front of the app | n/a | It's a personal app, so lock it with zero auth code and verify the Access JWT. |
 
-Not used: Hono, a React UI kit, LangChain, `@anthropic-ai/sdk` in the app. (The SDK appears once, in the
-"write the loop by hand" lesson, so learners see what `streamText` does for them. See §4.)
+Not used: React, Drizzle, Hono, LangChain, Cloudflare Access, and `@anthropic-ai/sdk` in the app. The SDK
+appears once, in the "write the loop by hand" lesson, so learners see what `streamText` does for them.
 
-### 2.1 Front end: Remix 3, with a gate
+### 2.1 Monorepo layout (end state)
 
-| Option | Beginner simplicity | Fit with the owner's ask | Risk |
-|---|---|---|---|
-| React + Vite (`@cloudflare/vite-plugin`, `useAgentChat`) | Best: official hooks and examples, the least code | Misses "remix skills" | Low |
-| **Remix 3 on Workers** | Good once set up; server-first, few concepts | Exact: the remix skill, our own stack, we dogfood it | Remix's starter is Node-based. On Workers we must bundle browser modules ourselves (bits does it in `scripts/build.ts`), and Remix has no `useAgentChat` |
-| Static Vite SPA, no framework | Medium | Misses the skills story | Low |
-
-**Recommendation: Remix 3**, gated on spike S0 (§6), which must show:
-1. a Remix 3 app on Workers with one small build script (≤ 60 lines) or a documented Remix option; and
-2. a chat island streaming from `AIChatAgent` through `agents/client`, using `WebSocketChatTransport`
-   (`agents/chat/transport`). Fallback: a `@callable({ streaming: true })` method.
-
-If S0 fails either check, fall back to React + Vite and tell the owner before writing course D.
-
-### 2.2 Monorepo layout (end state)
+Public repo: **github.com/ryanyogan/klippy**, MIT, one git tag per lesson.
 
 ```
-pip/
+klippy/
   package.json            scripts: dev, test, typecheck, deploy, chat
   pnpm-workspace.yaml
-  apps/agent/             Worker: Pip (AIChatAgent DO), ingest Workflow, cron; D1, Vectorize, AI, rate limits
-  apps/web/               Worker: Remix 3 front end; service binding AGENT → apps/agent (same origin, no CORS)
+  apps/agent/             Worker: Klippy (AIChatAgent DO), ingest Workflow; D1, Vectorize, AI, rate limits.
+                          No public route: reachable only through the web app's service binding (course F)
+  apps/web/               Worker: Remix 3 front end, GitHub sign-in, notes pages, chat island;
+                          service binding AGENT → apps/agent
   apps/mcp/               Worker (MCP course): createMcpHandler over the same D1
-  packages/db/            Drizzle schema + migrations, shared by agent and mcp
+  packages/db/            data-table table() definitions + SQL migrations (wrangler d1 migrations), shared
   scripts/chat.ts         terminal chat client (agents/client), `pnpm chat`
+  .github/workflows/      ci.yml (per push), latest.yml (weekly, against the latest releases)
 ```
 
 Why two stores: **Durable Object SQLite** holds one person's conversation, memory and schedule (fast,
 private, one writer). **D1** holds data that other parts read: notes, sources and usage, read by the web
 app, the MCP server and the ingest Workflow. A lesson says this out loud, with the rule of thumb.
 
+### 2.2 data-table on D1
+
+`remix/data-table` ships SQLite, Postgres and MySQL drivers, but none for D1 (decision 003). bits has a
+tested D1 driver of its own (`packages/db/src/d1/`, about 700 lines, with a vendored compiler), and two
+small community drivers exist on npm (`@sdxc/data-table-d1`, `@pitlane/data-table-d1`). A course can't
+vendor 700 lines. Spike S0 picks one:
+- **Preferred:** publish bits' driver as its own small MIT package from this repo (lane P), so the lesson
+  is one `pnpm add`. The owner runs `npm publish`.
+- Otherwise: a community driver that passes our driver's test suite against Miniflare.
+
 ---
 
 ## 3. Course arc
 
-Order on the catalog (conceptual courses unchanged and first): what-is-an-llm → tokens-and-temperature →
-prompting-that-works → context-is-everything → **A** your-first-worker (new) → **B** give-your-model-tools
-→ **C** first-agent-loop → **D** build-the-front-end-with-agents (new) → **E** retrieval-without-tears →
-**F** ship-an-agent-to-the-edge → **G** mcp (coming soon).
+Catalog order (conceptual courses unchanged and first): what-is-an-llm → tokens-and-temperature →
+prompting-that-works → context-is-everything → **A** your-first-worker (new, its own beginner course) →
+**B** give-your-model-tools → **C** first-agent-loop → **D** build-the-front-end-with-agents (new) →
+**E** retrieval-without-tears → **F** ship-an-agent-to-the-edge → **G** mcp (coming soon).
 
-Each course starts from the previous course's final tag, and its first lesson says how to get it
-(`git clone … && git checkout b-10`). So a learner can start at any course.
+The four existing code courses are **replaced in place**, keeping slugs where a lesson maps. Each course
+starts from the previous course's final tag, and its first lesson says how to get it
+(`git clone https://github.com/ryanyogan/klippy && git checkout b-09`).
 
 Columns: **Builds** = what exists at the end; **Touches** = commands and files; **Concept**; **Source** =
-the "Down the rabbit hole" link to lead with. Lesson numbers are the planned order; slugs get set when writing.
+the "Down the rabbit hole" link to lead with.
 
 ### A. Your first Worker (new, beginner, 5 lessons)
 
 | # | Title | Builds | Touches | Concept | Source |
 |---|---|---|---|---|---|
 | A1 | Your workbench | Node 22 LTS, pnpm, an editor, a terminal you're not scared of | `node -v`, `corepack enable`, `pnpm -v` | What a runtime, a package manager and a terminal are | nodejs.org download; pnpm.io installation |
-| A2 | Make the monorepo | `pip/` with a workspace and an empty `apps/agent` Worker | `mkdir pip`, `git init`, `pnpm-workspace.yaml`, `pnpm create cloudflare@latest apps/agent --type=hello-world --lang=ts` | Workspaces; what c3 generated, file by file | Cloudflare Workers get started |
-| A3 | Hello, Worker | A Worker that answers on localhost, and its first test | `pnpm dev` (`wrangler dev`), `src/index.ts`, `test/index.spec.ts`, `pnpm test` | Request in, Response out; `wrangler types`; tests run in the real runtime | Workers "How Workers works"; vitest-pool-workers docs |
-| A4 | Your first call to Claude | `POST /ask` answers with Claude Haiku 5.5 through your AI Gateway | Dashboard: create gateway `pip`; `wrangler.jsonc` `ai` binding; `pnpm add agents ai @ai-sdk/provider`; `createAI`, `generateText`; `curl` | Bindings; why no key lives in the Worker (gateway BYOK or Unified Billing); the free Workers AI model as a no-card option | AI Gateway: Vercel AI SDK; Claude models overview |
-| A5 | Checkpoint: ship it | Pip v0 live on `*.workers.dev`, logs and traces on | `wrangler login`, `pnpm deploy`, `observability` block, `wrangler tail` | Deploys, versions, rollback; compatibility date | Workers best practices (observability) |
+| A2 | Make the monorepo | `klippy/` with a workspace and an empty `apps/agent` Worker | `git init`, `pnpm-workspace.yaml`, `pnpm create cloudflare@latest apps/agent --type=hello-world --lang=ts` | Workspaces; what c3 generated, file by file | Workers get started |
+| A3 | Hello, Worker | A Worker on localhost, and its first test | `pnpm dev`, `src/index.ts`, `wrangler types`, `test/index.spec.ts`, `pnpm test` | Request in, Response out; tests run in the real runtime | How Workers works; vitest-pool-workers |
+| A4 | Your first call to Claude | `POST /ask` answers with Claude Haiku 5.5 through your AI Gateway | Dashboard: create gateway `klippy`, store your Anthropic key (BYOK); `ai` binding; `pnpm add agents ai @ai-sdk/provider`; `createAI`, `generateText`; `curl` | Bindings; why no key lives in the Worker; **the one-line switch to a free Workers AI model** | AI Gateway: Vercel AI SDK, BYOK; Claude models overview |
+| A5 | Checkpoint: ship it | Klippy v0 live on `*.workers.dev`, logs and traces on; **graded**: bits calls your Worker | `wrangler login`, `pnpm deploy`, `observability`, `wrangler tail`, `/klippy/check` | Deploys, versions, rollback; compatibility date | Workers best practices |
 
-### B. Give your model tools (rewritten on Pip, 10 → 9 lessons)
-
-| # | Title | Builds | Touches | Concept | Source | From today |
-|---|---|---|---|---|---|---|
-| B1 | Why models need tools | (sandbox only) | in-app prompt + compare | What a tool is; Claude asks, your code acts | Anthropic tool use overview | keeps 01, reframed on Pip |
-| B2 | Your first tool: the weather | `getWeather` (Open-Meteo) on `/ask` | `src/tools/weather.ts`, `tool({ description, inputSchema: z.object(…) , execute })`, `stopWhen: stepCountIs(2)` | name + description + schema | AI SDK tool calling; Anthropic "define tools" | merges 02 + 03 |
-| B3 | Watch one round trip | A log of each step: tool call, tool result, final text | `onStepFinish`, `wrangler dev` output | The tool_use → tool_result exchange the SDK runs for you | Anthropic "how tool use works" | 03's idea, shown in real logs |
-| B4 | Descriptions Claude follows | Better descriptions, plus a test that "what's 2+2?" calls no tool | in-app prompt; `test/tools.spec.ts` with a stubbed gateway | Descriptions are prompts | Anthropic "best practices for tool definitions" | keeps 04 |
-| B5 | Pip remembers notes | `saveNote` / `listNotes` tools over D1 | `wrangler d1 create pip-db`, `packages/db` (Drizzle schema), `drizzle-kit generate`, `wrangler d1 migrations apply --local` | Your first database; migrations; tools that write | D1 get started; Drizzle D1 docs | new (D1 enters) |
-| B6 | Choosing when Claude calls | `toolChoice` per route; a "notes only" mode | `toolChoice: "required" / { type: "tool", toolName }` | auto / any / tool / none | Anthropic tool_choice | keeps 05 |
-| B7 | Strict inputs, honest failures | Zod refinements; a failed fetch comes back as an error result, not a crash | `tool` errors; `strict` | Schemas guard inputs; errors are tool results | Anthropic strict tool use; handling tool errors | merges 06 + 07 |
-| B8 | Read a link | `readLink` via `webFetchTool({ binding: env.AI })` | one import, one line | Reuse a ready tool before writing one; fetched pages are untrusted | Agents webfetch docs | replaces 08 ("tools Anthropic runs" becomes one paragraph here) |
-| B9 | Checkpoint: Pip with tools | Weather, time, notes, links over `curl`; tests green; deployed | `pnpm test`, `pnpm deploy`, `d1 migrations apply --remote` | Put it together | — | replaces 10 |
-| — | *MCP: tools you can share* | | | | | **moves** to course G; B9 links to it |
-
-### C. Your first agent loop (rewritten on Pip, 9 lessons)
+### B. Give your model tools (replaced in place, 10 → 9 lessons)
 
 | # | Title | Builds | Touches | Concept | Source | From today |
 |---|---|---|---|---|---|---|
-| C1 | Agents are loops | (sandbox) | prompt + compare | plan → act → observe | Anthropic "Building effective agents" | keeps 01 |
-| C2 | Write the loop by hand, once | A 30-line loop in `scripts/loop.ts` with `@anthropic-ai/sdk`, then deleted | `pnpm add -D @anthropic-ai/sdk tsx`; `pnpm tsx scripts/loop.ts` | What `stopWhen` does for you; `stop_reason` | Anthropic Messages API, tool use | merges 02, 03, 04 |
-| C3 | One Pip per person | `Pip extends AIChatAgent`, a Durable Object with SQLite | `wrangler.jsonc` `durable_objects` + `migrations` (`new_sqlite_classes`), `routeAgentRequest`, `onChatMessage` | Durable Objects: name → same instance; why a global array is a bug | Agents: chat agents; DO overview | moves from ship 03 |
-| C4 | Talk to Pip from your terminal | `pnpm chat`: a streaming REPL | `scripts/chat.ts` with `agents/client` | WebSockets; resumable streams | Agents client SDK | new |
-| C5 | Pip remembers you | `remember` / `forget` tools; facts in agent SQL, in the system prompt | `this.sql`, `system:` built per turn | Short-term (messages) vs long-term (facts) memory; `maxPersistedMessages` | Anthropic context engineering post; Agents state | rewrites 07 |
-| C6 | Ask before you write | `saveNote` needs approval; terminal shows y/n | `needsApproval`, approval response | Human in the loop | Agents human-in-the-loop | new |
-| C7 | When loops go wrong | Step cap, repeat-call guard, a stuck-loop test | `stepCountIs(8)`, `prepareStep`, test | Runaway loops, cost | Anthropic agents post (guardrails) | keeps 06 |
-| C8 | Pip nudges you | "Remind me at 6pm to call Sam" → `this.schedule`, then a server-driven turn | `schedule()`, `saveMessages` | Agents that act without being asked | Agents schedule tasks; server-driven messages | new (fun one) |
-| C9 | Checkpoint: Pip, the agent | Memory, approvals, nudges, terminal chat; deployed | `pnpm test`, `pnpm deploy` | — | — | replaces 09 |
+| B1 | Why models need tools | (sandbox) | prompt + compare | Claude asks, your code acts | Anthropic tool use overview | keeps 01 |
+| B2 | Your first tool: the weather | `getWeather` (Open-Meteo) on `/ask` | `src/tools/weather.ts`, `tool({ description, inputSchema, execute })`, `stopWhen: stepCountIs(2)` | name + description + schema | AI SDK tool calling; Anthropic define tools | merges 02 + 03 |
+| B3 | Watch one round trip | A log of each step | `onStepFinish`, `wrangler dev` output | tool_use → tool_result, run for you | Anthropic how tool use works | 03's idea in real logs |
+| B4 | Descriptions Claude follows | Better descriptions, plus a test that "what's 2+2?" calls no tool | in-app prompt; `test/tools.spec.ts`, stubbed gateway | Descriptions are prompts | Anthropic, Writing effective tools for agents | keeps 04 |
+| B5 | Klippy keeps notes | `saveNote` / `listNotes` over D1 with data-table | `wrangler d1 create klippy-db`, `packages/db` (`table()`), `migrations/0001_notes.sql`, `wrangler d1 migrations apply --local` | Your first database; migrations; tools that write | D1 get started; Remix data-table README | new |
+| B6 | Choosing when Claude calls | `toolChoice` per route | `toolChoice` | auto / any / tool / none | Anthropic tool_choice | keeps 05 |
+| B7 | Strict inputs, honest failures | Zod refinements; a failed fetch is an error result | tool errors, `strict` | Schemas guard inputs; errors are results | Anthropic strict tool use; tool errors | merges 06 + 07 |
+| B8 | Read a link | `readLink` via `webFetchTool({ binding: env.AI })` | one import | Reuse a ready tool; fetched pages are untrusted | Agents webfetch docs | replaces 08 |
+| B9 | Checkpoint: Klippy with tools | Weather, time, notes, links over `curl`; tests green; deployed; graded | `pnpm test`, `pnpm deploy`, `d1 migrations apply --remote` | — | — | replaces 10 |
+| — | *MCP: tools you can share* | | | | | **moves** to G |
+
+### C. Your first agent loop (replaced in place, 9 lessons)
+
+| # | Title | Builds | Touches | Concept | Source | From today |
+|---|---|---|---|---|---|---|
+| C1 | Agents are loops | (sandbox) | prompt + compare | plan → act → observe | Anthropic, Building effective agents | keeps 01 |
+| C2 | Write the loop by hand, once | A 30-line loop in `scripts/loop.ts` with `@anthropic-ai/sdk`, then deleted | `pnpm add -D @anthropic-ai/sdk tsx` | What `stopWhen` does for you; `stop_reason` | Anthropic Messages API | merges 02–04 |
+| C3 | One Klippy per person | `Klippy extends AIChatAgent` | `durable_objects` + `migrations` (`new_sqlite_classes`), `routeAgentRequest`, `onChatMessage` | Durable Objects, in the docs' Lifecycle framing; why a global array is a bug | Agents chat agents; Lifecycle; DO overview | moves from ship 03 |
+| C4 | Talk to Klippy from your terminal | `pnpm chat`: a streaming REPL | `scripts/chat.ts`, `agents/client` | WebSockets; resumable streams | Agents client SDK | new |
+| C5 | Klippy remembers you | `remember` / `forget`; facts in agent SQL, in the system prompt | `this.sql`, `system:` per turn | Short vs long-term memory | Anthropic, Effective context engineering | rewrites 07 |
+| C6 | Ask before you write | `saveNote` needs approval (y/n in the terminal) | `needsApproval` | Human in the loop | Agents human-in-the-loop | new |
+| C7 | When loops go wrong | Step cap, repeat-call guard, a stuck-loop test | `stepCountIs(8)`, `prepareStep` | Runaway loops, cost | Anthropic agents post | keeps 06 |
+| C8 | Klippy nudges you | "Remind me at 6pm to call Sam" → `schedule()`, then a server-driven turn | `schedule()`, `saveMessages` | Agents that act unasked | Agents schedule tasks; server-driven messages | new |
+| C9 | Checkpoint: Klippy, the agent | Memory, approvals, nudges; deployed; graded | — | — | — | replaces 09 |
 | — | *Limits and logs* | | | | | **moves** to F |
 
-### D. Build the front end with agents (new, beginner-friendly, 8 lessons)
+### D. Build the front end with agents (new, 11 lessons)
 
-The skill this course teaches is **directing a coding agent well**: setting up its context, its skills and
-its tools, writing a clear brief, and reviewing what it builds. The UI is the vehicle.
+**What it teaches:** the prompts a learner gives Claude Code to build a Remix front end, what to expect
+back, and how to review and steer the result. Claude Code runs with the `remix`, `cloudflare` and
+`frontend-design` skills plus the Firecrawl and Context7 MCPs (and Cloudflare's docs MCP,
+`https://agents.cloudflare.com/mcp`). Code appears only where understanding needs it: the service
+binding, the session-to-agent naming, and the island's stream loop.
 
-| # | Title | Builds | Touches | Concept | Source |
-|---|---|---|---|---|---|
-| D1 | Your coding agent | Claude Code installed; an `AGENTS.md` for `pip/` | install, `/init`, edit AGENTS.md | Context files: what the agent reads first and why | Claude Code docs: memory, best practices |
-| D2 | Skills: teach it your stack | Cloudflare, Remix and frontend-design skills installed in the repo | `npx skills add cloudflare/skills`, the Remix skill, `anthropics/skills` frontend-design (lane verifies each command) | What a skill is; prefer current docs over memory | Anthropic Agent Skills docs; skill repos |
-| D3 | Tools for your agent: MCP | Firecrawl MCP (find design references, read docs) and Context7 connected to Claude Code | `claude mcp add …` | MCP from the user's side; keep tool access small | Claude Code MCP docs; Firecrawl MCP docs |
-| D4 | Write the brief | `docs/ui-brief.md`: screens, states, tokens, accessibility bar; plan mode | Prompting a plan, not code | Briefs beat vibes; references via Firecrawl | Anthropic Claude Code best practices |
-| D5 | The Remix shell | `apps/web`: Remix 3 on Workers, service binding to the agent, the stylesheet | Agent-built, learner-reviewed; the one full stylesheet allowed (§4) | Server-first pages; service bindings | Remix guides (start here, request handling); service bindings docs |
-| D6 | The chat island | Streaming chat, tool cards, approval buttons, memory panel | `clientEntry` island, `agents/client` | Islands; what streams and what doesn't | Remix interactivity guide; Agents client SDK |
-| D7 | Review what it built | Tests, typecheck, axe run, a list of what you rejected and why | `pnpm test`, Playwright + axe | Never merge unread code | Anthropic "Claude Code best practices" (verification) |
-| D8 | Checkpoint: Pip on the web | The web app deployed beside the agent | `pnpm deploy` (both Workers) | — | — |
+**Lesson shape (D only):** goal → **the prompt** (copyable, with why each line is there) → what to expect
+(files it should touch, our recorded run, dated) → **review checklist** (what to read in the diff, what
+to reject) → **steer prompts** for the two or three usual misses → see it running. Prompt-writing parts
+can be coached `:::prompt` exercises in the sandbox, which grade the brief, not the build.
 
-Honesty rule for D: the agent's output differs from run to run. Lessons show **our** recorded run (dated),
-give the reference result at the tag, and teach the learner to judge theirs. They never promise identical
-output.
+**Code bar:** clean, isolated code that follows the installed Remix guides (`node_modules/remix/INDEX.md`
+→ guides → package READMEs) and the `remix` skill: routes in `routes.ts`, controllers per area, native
+forms, `data-schema` validation, middleware for session and auth. **No front-end tests** (owner).
 
-### E. Retrieval without tears (rewritten on Pip, 9 lessons)
+| # | Title | The learner prompts for… / builds | Concept | Source |
+|---|---|---|---|---|
+| D1 | Your coding agent | Install Claude Code; write `klippy/AGENTS.md` together with it | Context files: what the agent reads first | Claude Code docs: memory, best practices |
+| D2 | Skills: teach it your stack | Install the remix, cloudflare and frontend-design skills; ask it to explain what each changes | Skills over memory; read installed docs first | Anthropic Agent Skills; `cloudflare/skills`; `anthropics/skills` |
+| D3 | Tools for your agent: MCP | Connect Firecrawl, Context7 and the Cloudflare docs MCP | MCP from the user's side; keep tool access small | Claude Code MCP docs; Firecrawl MCP |
+| D4 | Write the brief | `docs/ui-brief.md`: screens, states, tokens, accessibility bar, Firecrawl-gathered references; plan mode | Briefs beat vibes; plan before code | Anthropic, Claude Code best practices |
+| D5 | The Remix shell on Workers | `apps/web`: `remix new`, then onto Workers with static assets; service binding `AGENT`; layout and **the one full stylesheet** | Server-first pages; service bindings | Remix guides 01, 03, 11; service bindings docs |
+| D6 | Sign in with GitHub | `remix/auth` GitHub provider, `remix/session` cookie storage, `remix/middleware/auth`; the session names the agent instance | Auth from the framework, not hand-rolled; choose the agent instance on the server | Remix guide 10; `remix/auth` README |
+| D7 | Your notes, as pages | List, search and delete notes from D1 with `remix/data-table`; native forms with `data-schema` | One query layer shared with the agent | Remix guides 08–09; data-table README |
+| D8 | Borrow from AI Elements | Convert message, conversation, prompt input, tool card and sources into Remix components + CSS, keeping the Apache-2.0 notice | Reuse popular pieces, adapted to your framework | AI Elements docs; Remix guide 04 |
+| D9 | The chat island | A `clientEntry` island streaming from the agent via `agents/client` (the S0 pattern); approve/deny buttons | Islands; what streams, what renders on the server | Remix guide 05; Agents client SDK |
+| D10 | Review and steer | Read the diff with the agent; `pnpm typecheck`, `remix doctor`; ask for a refactor where code isn't isolated | Never merge unread code | Anthropic, Claude Code best practices |
+| D11 | Checkpoint: Klippy on the web | Both Workers deployed; graded (bits calls your web app's check route) | — | — |
 
-| # | Title | Builds | Touches | Concept | Source | From today |
-|---|---|---|---|---|---|---|
-| E1 | Paste it or search it? | (sandbox) Measure when notes outgrow the window | prompt | Long context vs retrieval; prompt caching first | Anthropic long-context tips; contextual retrieval post | keeps 01 |
-| E2 | Ingest with a Workflow | Saving a link starts `IngestWorkflow`: fetch → Markdown → store | `AgentWorkflow`, `step.do`, `wrangler.jsonc` `workflows`; `env.AI.toMarkdown` for files | Durable steps; retries | Workflows docs; Agents run workflows | new |
-| E3 | Chunking | Chunks in D1 with a source id and position | `chunk.ts` (~20 lines, ours) | Size, overlap, structure | Anthropic contextual retrieval post | keeps 02 |
-| E4 | Embeddings into Vectorize | Chunks embedded and upserted with metadata | `wrangler vectorize create pip-notes --dimensions=768 --metric=cosine`, `metadata-index`, remote binding for dev | Vectors, cosine, metadata filters (per-user!) | Vectorize get started; 3Blue1Brown on embeddings | keeps 03 |
-| E5 | Keywords too: hybrid search | D1 FTS5 + Vectorize, merged with reciprocal rank fusion | FTS5 migration, `rrf.ts` | Why hybrid wins | Anthropic contextual retrieval (BM25 + embeddings) | keeps 04 |
-| E6 | Contextual retrieval | Haiku writes one line of context per chunk at ingest, with prompt caching | a Workflow step | Retrieval failures drop when chunks carry context | Anthropic contextual retrieval post | keeps 05 |
-| E7 | Rerank, then answer with sources | `searchNotes` tool: hybrid → rerank → top 5; Pip cites; the UI shows sources | `@cf/baai/bge-reranker-base`; search-result content blocks / citations | Precision at the top; citations | Anthropic citations / search results docs | merges 06 + 07 |
-| E8 | Measure it | `pnpm eval:retrieval`: recall@5 on 12 of your own questions | a vitest file | Measure before tuning | Anthropic "demystifying evals" | keeps 08 |
-| E9 | Checkpoint: ask my notes | Pip answers from your saved notes and links, says "not in your notes" when they don't cover it; deployed | — | — | replaces 09 |
+Honesty rule for D: the agent's output differs from run to run. Lessons show **our** recorded run
+(dated), give the reference result at the tag, and teach the learner to judge theirs. They never promise
+identical output.
 
-E4 also gives one paragraph to **AI Search** (Cloudflare's managed RAG): when to use it instead of
-building, and why we build it once by hand.
-
-### F. Ship an agent to the edge (rewritten on Pip, 8 lessons)
+### E. Retrieval without tears (replaced in place, 9 lessons)
 
 | # | Title | Builds | Touches | Concept | Source | From today |
 |---|---|---|---|---|---|---|
-| F1 | Lock the door | Cloudflare Access on the web app; the Access identity names the Pip instance | Zero Trust dashboard; verify `Cf-Access-Jwt-Assertion` with `jose`; `getAgentByName` | Choose the agent instance on the server, never from the client | Cloudflare Access: validate JWT; Agents routing | new (replaces "one agent per user", now in C3) |
-| F2 | The gateway earns its keep | Caching, logs, a fallback model, spend alerts | `createAI({ cacheTtl, metadata })`, `fallback: […]` | Observability and cost control at the gateway | AI Gateway docs | rewrites 04 |
-| F3 | Limits that hold | A rate-limit binding per user, plus a daily token budget in agent state | `ratelimits` binding; `onFinish` usage → budget | Limits enforced on the server, before the call | Workers Rate Limiting binding | rewrites 05 |
-| F4 | Logs you can query | Structured JSON per turn; traces; one saved query | `console.log(JSON.stringify(…))`, Workers Logs query builder | Log the shape, never the secrets | Workers Logs; traces | rewrites 06 |
-| F5 | Safety at the edge | Saved links are untrusted: wrapped, never obeyed; writes need approval; an injection test | `webfetch` untrusted wrapper, a test with a poisoned page | Prompt injection through retrieval; least privilege | Anthropic prompt-injection guidance; OWASP LLM top 10 | rewrites 07 |
-| F6 | Tests and CI | GitHub Actions: typecheck, test, deploy on main | `.github/workflows/ci.yml`, `cloudflare/wrangler-action`, secrets | Deploys you trust | wrangler-action README; vitest-pool-workers | new |
-| F7 | Your own domain, previews | A custom domain; preview URLs per PR | `routes` / custom domain; Workers previews | Environments | Workers custom domains; previews | new |
-| F8 | Checkpoint: Pip in production | Everything above, live | — | — | replaces 08 |
-| — | *Stream the reply* | | | | | **goes**: `AIChatAgent` streams by default; C4 covers it |
+| E1 | Paste it or search it? | (sandbox) | prompt | Long context vs retrieval; caching first | Anthropic long-context tips | keeps 01 |
+| E2 | Ingest with a Workflow | Saving a link starts `IngestWorkflow`: fetch → Markdown → store | `AgentWorkflow`, `step.do`, `workflows` binding; `env.AI.toMarkdown` | Durable steps; retries | Workflows docs; Agents run workflows | new |
+| E3 | Chunking | Chunks in D1 with source id and position | `chunk.ts` (~20 lines) | Size, overlap, structure | Anthropic, Contextual retrieval | keeps 02 |
+| E4 | Embeddings into Vectorize | Chunks embedded and upserted with per-user metadata | `wrangler vectorize create klippy-notes --dimensions=768 --metric=cosine`, metadata index, remote binding in dev | Vectors, cosine, filters; when **AI Search** (managed) is the better call | Vectorize get started; 3Blue1Brown | keeps 03 |
+| E5 | Keywords too: hybrid | D1 FTS5 + Vectorize, merged by reciprocal rank fusion | FTS5 migration, `rrf.ts` | Why hybrid wins | Anthropic, Contextual retrieval | keeps 04 |
+| E6 | Contextual retrieval | Haiku adds one line of context per chunk at ingest, with prompt caching | Workflow step | Chunks that carry context | Anthropic, Contextual retrieval | keeps 05 |
+| E7 | Rerank, then answer with sources | `searchNotes`: hybrid → rerank → top 5; Klippy cites; the UI shows sources | reranker; search-result blocks / citations | Precision at the top; citations | Anthropic citations docs | merges 06 + 07 |
+| E8 | Measure it | `pnpm eval:retrieval`: recall@5 on 12 of your questions | a vitest file | Measure before tuning | Anthropic, Demystifying evals | keeps 08 |
+| E9 | Checkpoint: ask my notes | Answers from notes and links; "not in your notes" when they don't cover it; graded | — | — | replaces 09 |
+
+### F. Ship an agent to the edge (replaced in place, 8 lessons)
+
+| # | Title | Builds | Touches | Concept | Source | From today |
+|---|---|---|---|---|---|---|
+| F1 | Close the side door | `apps/agent` has no public route; only the web app's service binding reaches it, with the signed-in user's id | `workers_dev: false`, service binding, `getAgentByName` from the session | The instance comes from the server, never the client | Service bindings; Agents routing | new |
+| F2 | The gateway earns its keep | Caching, logs, a fallback model, spend alerts | `createAI({ cacheTtl, metadata })`, `fallback` | Cost control at the gateway | AI Gateway docs | rewrites 04 |
+| F3 | Limits that hold | A rate-limit binding per user, plus a daily token budget in agent state | `ratelimits`, `onFinish` usage | Limits on the server, before the call | Workers Rate Limiting | rewrites 05 |
+| F4 | Logs you can query | Structured JSON per turn; traces; a saved query | Workers Logs query builder | Log the shape, never the secrets | Workers Logs; traces | rewrites 06 |
+| F5 | Safety at the edge | Saved links are untrusted (wrapped, never obeyed); writes need approval; an injection test | webfetch wrapper, a poisoned-page test | Prompt injection through retrieval | Anthropic prompt-injection guidance; OWASP LLM top 10 | rewrites 07 |
+| F6 | Tests and CI | GitHub Actions: typecheck, test, deploy on main | `ci.yml`, `cloudflare/wrangler-action`, secrets | Deploys you trust | wrangler-action; vitest-pool-workers | new |
+| F7 | Your own domain, previews | A custom domain; preview URLs per PR | custom domain; Workers previews | Environments | Workers custom domains; previews | new |
+| F8 | Checkpoint: Klippy in production | Everything live; graded | — | — | replaces 08 |
+| — | *Stream the reply* | | | | | **goes** (AIChatAgent streams; C4) |
+| — | *One agent per user* | | | | | **moves** to C3 |
 
 ### G. MCP (coming soon, outline only)
 
-`course.md` only, marked coming soon (engine support needed, §6). Planned lessons: what MCP is (from
-B9's pointer) → Pip as an MCP server (`apps/mcp`, `createMcpHandler`, tools over the D1 notes) → lock it
-with OAuth (`@cloudflare/workers-oauth-provider` or Access) → use Pip from Claude (Desktop/Code) → Pip as an
-MCP client (`addMcpServer`) → checkpoint: two-way MCP.
+`course.md` only, marked coming soon (engine, §7). The angle: **remote, TypeScript, on Workers, with
+OAuth, graded by connecting to the learner's deployed server.** Planned lessons:
+1. What MCP is.
+2. Klippy as a remote MCP server: `apps/mcp`, `createMcpHandler`, Streamable HTTP, tools over the D1 notes.
+3. Test with MCP Inspector and Claude.
+4. Lock it with OAuth (`@cloudflare/workers-oauth-provider`, scoped tokens).
+5. MCP security: tool poisoning, confused deputy.
+6. Klippy as an MCP client (`addMcpServer`).
+7. Checkpoint: bits connects to your deployed server, lists its tools and calls one.
+
+It links Anthropic's and DLAI's Python MCP courses for anyone who wants the long version.
+
+### H. Evals (future candidate, not planned in this phase)
+
+A short course built on the coach and judge bits already runs. Learners write cases and a rubric for
+Klippy, then see where their judge agrees or disagrees with ours. It links the Maven AI Evals cohort and
+Kaggle's *Agent Quality* for the deep end.
 
 ### What happens to today's lessons
 
 | Course | Stay (reframed) | Change | Go / move |
 |---|---|---|---|
-| give-your-model-tools | 01, 04, 05 | 02+03 merge, 06+07 merge, 08 becomes "read a link", 10 → B9 | 09 MCP → G |
-| first-agent-loop | 01, 06 | 02+03+04 → C2, 07 → C5, 09 → C9 | 08 limits/logs → F |
+| give-your-model-tools | 01, 04, 05 | 02+03, 06+07 merge; 08 → "read a link"; 10 → B9 | 09 MCP → G |
+| first-agent-loop | 01, 06 | 02–04 → C2, 07 → C5, 09 → C9 | 08 → F |
 | retrieval-without-tears | 01–05, 08 | 06+07 merge, 09 → E9 | — |
-| ship-an-agent-to-the-edge | — | 04–07 rewritten, 08 → F8 | 01–02 go (covered by A, C4); 03 → C3 |
+| ship-an-agent-to-the-edge | — | 04–07 rewritten, 08 → F8 | 01–02 go; 03 → C3 |
 
-Completed lessons whose slug survives keep their progress. A retired slug drops from the course, and the
-certificate rule (all current lessons) applies (open question 5).
+Lessons whose slug survives keep their progress. Retired slugs drop from their course and stop counting
+toward certificates.
 
 ---
 
@@ -253,26 +285,29 @@ conceptual courses keep the short format.
 
 | Rule | Limit |
 |---|---|
-| Lesson length (tutorial courses A–G) | 10–30 minutes, read and build together. Hard cap: 30. Over that, split the lesson. Frontmatter `minutes` is the honest total. |
+| Lesson length (courses A–G) | 10–30 minutes, read and build together. Hard cap: 30. Over that, split the lesson. Frontmatter `minutes` is the honest total. |
 | Lesson length (conceptual courses) | 5–8 minutes, unchanged. |
 | Steps per lesson | 3–8. |
 | Largest new snippet per step | **15 new or changed lines**, highlighted (`highlight=`) inside the file. Unchanged context lines around them don't count, up to 30 lines shown. |
 | A whole file in one step | Only when it's ≤ 30 lines and every line is explained in that step, or it's generated config the lesson walks through. |
-| The one exception | The Remix front-end course (D5) may give one full stylesheet in one go, labelled as such. Nothing else. |
+| The one exception | Course D (D5) may give one full stylesheet in one go, labelled as such. Nothing else. |
+| Course D | Mostly prompts. A prompt block is the step's "snippet": it states the goal and constraints and names the skill or MCP to use, with why each line is there. The code bar above still applies to any code shown. |
 | Never | A "copy all of this" block; an unexplained line; a step that changes two files without saying why both. |
-| Every step ends with something you can see or run | A command and a "you should see" output, a page that visibly changed, or a test that turns green. |
+| Every step ends with something you can see or run | A command and its output, a page that visibly changed, or a test that turns green. |
 | Recorded output | Shown in `OutputPanel` (recorded output, a Replay key, never "Run"). It's real output from the reference repo, dated in the lesson's sources comment. Never invented. |
-| Step shape | Why (1–3 sentences) → snippet → what the important lines do → run it → what you should see → if it didn't work (the 1–2 likely mistakes). |
+| Versions | Each code lesson states the pinned versions it was verified with and the date ("verified on"). |
+| Step shape | Why (1–3 sentences) → snippet or prompt → what the important lines do → run it → what you should see → if it didn't work (the 1–2 likely mistakes). |
 | Lesson ends | With the tag (`git checkout c-05`) and a link to the diff, so a stuck learner catches up. |
-| Checkpoint lesson per course | Joins the parts, deploys, and ends with a quick check of the course's ideas. |
+| Checkpoint lesson per course | Joins the parts, deploys, is graded by bits calling the deployment (§5), and ends with a quick check of the course's ideas. |
+| Phone or desk | Build lessons are marked "at a desk". Conceptual and sandbox lessons work on a phone. |
 
 **What the in-app sandbox does in these courses** (honest split):
-- It **does** run Claude for the prompt-shaped parts: writing tool descriptions, system prompts, the brief
-  for course D, judging retrieval answers. These stay coached `:::prompt` exercises, graded as now.
-- It **does not** run the learner's local code. The learner runs it on their own machine. Lessons show
-  our recorded output and say plainly that it's ours.
-- Quick checks (`:::ask`) test what the step taught ("what does `new_sqlite_classes` do?"), never "paste
-  your terminal output", which we can't verify honestly.
+- It **does** run Claude for the prompt-shaped parts: tool descriptions, system prompts, the course D
+  brief and prompts, judging retrieval answers. These stay coached `:::prompt` exercises.
+- It **does not** run the learner's local code. The learner runs it on their own machine. Lessons show our
+  recorded output and say plainly that it's ours.
+- Quick checks (`:::ask`) test what the step taught, never "paste your terminal output". Proof of the build
+  comes from the checkpoint grader instead.
 
 ---
 
@@ -280,51 +315,52 @@ conceptual courses keep the short format.
 
 | Layer | How |
 |---|---|
-| Reference repo | Public `ryanyogan/pip` (name pending). Built forward, one commit and one git tag per lesson (`a-01` … `f-08`). Each tag has a green CI run. |
-| CI per tag | `pnpm i --frozen-lockfile`, `pnpm typecheck`, `pnpm test` (vitest-pool-workers, model calls stubbed), `wrangler deploy --dry-run` for each app. |
-| Live proof | The reference agent runs each step against real Cloudflare and real Claude, through a gateway on the owner's account, and saves the output that the lesson's `OutputPanel` shows (dated). |
-| Snippets match the repo | A bits CLI check, `pnpm content snippets <course> --repo ../pip`: every `:::code` block with `file=` and a `tag=` attribute must match that file at that tag (highlighted lines included). It runs in bits CI against a pinned commit of the repo. Engine lane, §6. |
-| Fresh-learner run | Per course, an Opus agent with no repo context follows the lessons literally in a clean directory, from A1 or the course's start tag. It logs every place it got stuck, guessed, or needed knowledge the lesson hadn't given. A course doesn't ship with an unresolved "stuck". |
-| Steel-man review | Per course, a fork reviewer argues the strongest case against the course. It compares with the best sources (Anthropic docs and engineering posts, Cloudflare docs, AI Hero, Karpathy, 3Blue1Brown) and with the competitor notes in `docs/research/competitors/` (being written in parallel). Its questions: what would a senior engineer say is wrong or outdated? What do competitors teach that we skip? Which line could be cut? Findings get fixed or answered in writing. |
-| Format check | The reviewer checks §4 line by line. The build can enforce some rules: `minutes ≤ 30`, and highlighted lines per `:::code` ≤ 15 unless `stylesheet`. Engine lane, §6. |
-| Dates | Every lesson's sources comment carries "checked YYYY-MM-DD". Model names and prices are checked against Claude docs on that date. |
+| Reference repo | Public **github.com/ryanyogan/klippy** (MIT). Built forward, one commit and one tag per lesson (`a-01` … `f-08`). Each tag has a green CI run. |
+| CI per push | `pnpm i --frozen-lockfile`, `pnpm typecheck`, `pnpm test` (agent tests in vitest-pool-workers, model calls stubbed; no front-end tests), `wrangler deploy --dry-run` for each app. |
+| Weekly against latest | `latest.yml`, a scheduled job, bumps `agents`, `@cloudflare/ai-chat`, `ai`, `wrangler` and `remix` to their latest versions, then replays every tag's checks. It opens an issue on failure, so we hear about Cloudflare churn before learners do. |
+| Live proof | The reference agent runs each step against real Cloudflare and Claude (owner's gateway, BYOK) and saves the output the lessons show, dated. |
+| Snippets match the repo | A bits check, `pnpm content snippets <course> --repo ../klippy`: every `:::code` with `file=` and `tag=` must match that file at that tag. It runs in bits CI against a pinned commit. |
+| Checkpoint grader | Each course's checkpoint asks for the learner's deployed URL. bits calls `GET /klippy/check?nonce=…`, which returns the nonce, the tag the app is at, and a probe answer. The MCP course instead connects as an MCP client, lists tools and calls one. Guards: `https` only; hosts on `*.workers.dev` (custom domains later); no redirects; 5 s timeout; 16 KiB cap; rate limited; journalled like the coach. It proves a deploy, and it isn't anti-cheat, so the lesson says so. |
+| Fresh-learner run | Per course, an Opus agent with no repo context follows the lessons literally in a clean directory. It logs every place it got stuck, guessed, or needed knowledge the lesson hadn't given. A course doesn't ship with an unresolved "stuck". |
+| Steel-man review | Per course, a fork reviewer argues the strongest case against the course. It compares with the best sources and with `docs/research/competitors/README.md`: what's wrong or outdated, what competitors teach that we skip, and which line could be cut. Findings get fixed or answered in writing. |
+| Format check | The reviewer checks §4 line by line. The build enforces `minutes ≤ 30` and ≤ 15 highlighted lines per `:::code` (unless `stylesheet`) in tutorial courses. |
+| Dates | Every lesson's sources comment carries "checked YYYY-MM-DD", with model names and prices checked against Claude docs that day. |
 
 ---
 
-## 6. Sub-agent plan (phase 2, after approval)
+## 6. Owner answers (2026-11-03)
+
+1. Front end: Remix 3 with skills, no React fallback. Use popular libraries and convert small AI Elements
+   pieces into Remix components. Use Remix's own packages (auth, data-table, session). Clean, isolated
+   code. Front-end tests skipped. The course is mostly prompts, expectations and review. S0 checks
+   streaming feasibility only; it doesn't gate the framework.
+2. Name: **Klippy** (`klippy` in code).
+3. Repo: public **github.com/ryanyogan/klippy**, MIT, a tag per lesson.
+4. Model cost: the learner's own Anthropic key in their own AI Gateway, with a one-line switch to a free
+   Workers AI model.
+5. Replace the four courses in place, keeping slugs where a lesson maps (our recommendation; the owner
+   deferred).
+6. "Your first Worker" is its own beginner course (our recommendation; the owner deferred).
+
+---
+
+## 7. Sub-agent plan (phase 2, not started)
 
 At most about 8 running at once. Model split per the owner: Opus for code, research and testing; a fork for
-curriculum and review. Ports: bits dev servers 44200–44209; reference repo `wrangler dev` 8800–8809.
+curriculum and review. Ports: bits dev servers 44200–44209; Klippy `wrangler dev` 8800–8809.
 
-| Lane | Model | Owns | Port | Starts after |
-|---|---|---|---|---|
-| S0 spike: Remix on Workers + chat island | Opus | throwaway dir in scratchpad; report only | 8800 | approval |
-| R reference repo (spine) | Opus | the `pip` repo, tags `a-01…` onward; hands off at about 250k tokens | 8801 | approval (D tags wait for S0) |
-| X engine | Opus | bits: `tag=` on `:::code`, the snippets check, `minutes` cap + highlight limit, a coming-soon course state, a course "start from tag" field, catalog order | 44200 | approval |
-| W1 writer A + B | fork | `content/courses/your-first-worker/`, `give-your-model-tools/` | 44201 | R reaches `b-09` |
-| W2 writer C + D | fork | `first-agent-loop/`, `build-the-front-end-with-agents/` | 44202 | R reaches `d-08` |
-| W3 writer E + F + G stub | fork | `retrieval-without-tears/`, `ship-an-agent-to-the-edge/`, `mcp/course.md` | 44203 | R reaches `f-08` |
-| T fresh learner (one per course, reused) | Opus | report files under `docs/plans/build-along/qa/` | 8802–8805 | each writer's course |
-| V steel-man reviewer (one per course) | fork | review files under `docs/plans/build-along/review/` | — | each writer's course |
+| Lane | Model | Owns | Port | Starts after | Done when |
+|---|---|---|---|---|---|
+| S0 spike: streaming + D1 driver | Opus | throwaway dir in scratchpad; report in `docs/plans/build-along/s0.md` | 8800 | go-ahead | A Remix 3 island streams an `AIChatAgent` reply through `agents/client` via a service binding (`WebSocketChatTransport`, else a streaming `@callable`); the smallest Remix-on-Workers asset setup is written down; a D1 driver for data-table is chosen (§2.2) |
+| P package the D1 driver | Opus | `packages/data-table-d1/` in bits (extracted from `packages/db/src/d1`, bits switched to it), README, MIT | 44200 | S0 picks "publish ours" | Tests green in bits; tarball ready; **the owner runs `npm publish`** |
+| R reference repo (spine) | Opus | the `klippy` repo: tags `a-01`… in order, `ci.yml`, `latest.yml`, recorded outputs; hands off at about 250k tokens | 8801 | go-ahead (B5 waits for the driver; D waits for S0) | Every tag green; outputs saved per lesson |
+| X engine | Opus | bits: `tag=` on `:::code`, the snippets check, the tutorial format limits, a coming-soon course state, a "start from tag" course field, phone/desk marking, the **checkpoint grader** (`/klippy/check`, then an MCP probe), catalog order | 44201 | go-ahead | Build tests per rule; grader tests with a stubbed learner Worker; a security review of the grader |
+| W1 writer A + B | fork | `content/courses/your-first-worker/`, `give-your-model-tools/` | 44202 | R reaches `b-09`; X merged | Validates clean; T and V resolved |
+| W2 writer C + D | fork | `first-agent-loop/`, `build-the-front-end-with-agents/` (D: prompts, expectations, review checklists) | 44203 | R reaches `d-11` | Same |
+| W3 writer E + F + G stub | fork | `retrieval-without-tears/`, `ship-an-agent-to-the-edge/`, `mcp/course.md` | 44204 | R reaches `f-08` | Same |
+| T fresh learner (one per course, reused) | Opus | `docs/plans/build-along/qa/<course>.md` | 8802–8805 | each writer's course | No unresolved "stuck" |
+| V steel-man reviewer (one per course) | fork | `docs/plans/build-along/review/<course>.md` | — | each writer's course | Every finding fixed or answered |
 
-Merge order: X first (writers need `tag=` and the coming-soon state) → A+B → C+D → E+F+G. Each course
-merges only after its T and V reports are resolved, then deploy and publish (per the deploy-frequently
-rule). Writers follow `docs/plans/build-along.md` §4 and edit only their course folders. Anything outside
-goes into their report.
-
----
-
-## 7. Open questions for the owner
-
-1. **Front end: Remix 3, gated on spike S0** (recommended), or React + Vite (official chat hooks, less
-   code). Remix matches your ask and our stack. The risk is the Workers build step.
-2. **Name: "Pip"?** (recommended; short, friendly, no clash we found). Alternatives: "Sidekick", "Kip".
-3. **Companion repo:** public `ryanyogan/pip` under MIT (recommended), so learners can clone any tag.
-4. **Who pays for Claude?** Learners use their own Cloudflare account. Recommended: Claude Haiku 5.5 through
-   their gateway (BYOK or Unified Billing, about cents per course), with a one-line switch to a free
-   Workers AI model for anyone without a card. The lessons say so up front.
-5. **Retired lessons:** replace the four courses in place, keeping slugs where a lesson maps (recommended).
-   Progress on retired slugs stops counting toward certificates. The other option is to ship the new courses
-   under new slugs and retire the old ones later.
-6. **A new beginner course before tools** ("Your first Worker"), or fold it into the tools course as a
-   first module. Recommended: a separate course, so anyone can start the build there.
+Merge order: S0 report → P (if chosen) → X → A+B → C+D → E+F+G. Each course merges after its T and V
+reports are resolved, then deploys and publishes (per the deploy-frequently rule). Writers follow §4 and
+edit only their course folders. Anything outside goes into their report.
