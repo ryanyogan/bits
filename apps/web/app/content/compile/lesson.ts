@@ -61,7 +61,31 @@ type ContainerDirective = Extract<RootContent, { type: 'containerDirective' }>
 type LeafDirective = Extract<RootContent, { type: 'leafDirective' }>
 type Directive = ContainerDirective | LeafDirective
 
-const processor = unified().use(remarkParse).use(remarkFrontmatter, ['yaml']).use(remarkGfm).use(remarkDirective)
+const processor = unified()
+  .use(remarkParse)
+  .use(remarkFrontmatter, ['yaml'])
+  .use(remarkGfm)
+  .use(remarkDirective)
+  .use(blockDirectivesOnly)
+
+/**
+ * Lessons use `:::container` and `::leaf` blocks only. remark-directive also
+ * reads `:name` inside a line as a text directive, which turns every time,
+ * ratio and timestamp in prose ("9:40", "14:02:37", "node:fs") into a node
+ * whose text is lost. This drops the inline tokenizer (character code 58,
+ * `:`) from the extension it registered, so a colon in a line is always
+ * literal text. It must run after remarkDirective.
+ */
+function blockDirectivesOnly(this: { data(key: 'micromarkExtensions'): unknown }) {
+  let extensions = this.data('micromarkExtensions')
+  if (!Array.isArray(extensions)) return
+  for (let extension of extensions as { text?: Record<number, unknown> }[]) {
+    if (extension.text && 58 in extension.text) {
+      let { 58: _colon, ...rest } = extension.text
+      extension.text = rest
+    }
+  }
+}
 
 /** The markdown syntax tree of a file (no transforms run). */
 export function parseMarkdown(text: string): Root {
@@ -1884,10 +1908,6 @@ function inline(nodes: PhrasingContent[], report: FileReport, line: number): Par
         if (problem && text) pushText(text)
         break
       }
-      case 'textDirective':
-        // `word:thing` in prose parses as a directive; put the text back.
-        pushText(`:${node.name}${node.children.length ? plainText(node.children) : ''}`)
-        break
       case 'html':
         report.error('raw HTML isn’t allowed in lessons', at)
         break

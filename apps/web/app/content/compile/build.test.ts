@@ -666,6 +666,39 @@ describe('content build', () => {
     )
   })
 
+  it('keeps every colon in prose: times, timestamps and :name are text, never directives', () => {
+    let result = build({
+      '01-one.md': lesson(
+        [
+          'Meeting A runs **9:40 to\n10:25**, B runs 10:15 to 11:00, at 14:02:37.',
+          '',
+          '- Import from node:fs, ratio 3:2 and :unknown[label]{x=1} stay as written',
+          '',
+          ':::quiz{id="clock" xp=10}',
+          'Which comes first?',
+          '- [x] “Current time: 14:02:37”',
+          '- [ ] **12:30**',
+          ':::',
+        ].join('\n'),
+      ),
+    })
+    assert.deepEqual(errors(result), [])
+    let blocks = result.lessons?.get('one')?.blocks ?? []
+    assert.deepEqual(blocks[0], {
+      type: 'markdown',
+      paragraphs: [
+        ['Meeting A runs ', { strong: '9:40 to 10:25' }, ', B runs 10:15 to 11:00, at 14:02:37.'],
+        { list: 'bullet', items: [{ paragraphs: [['Import from node:fs, ratio 3:2 and :unknown[label]{x=1} stay as written']] }] },
+      ],
+    })
+    let quiz = blocks.find((block) => block.type === 'ask')
+    assert.ok(quiz?.type === 'ask')
+    assert.deepEqual(
+      quiz.choices.map((choice) => choice.label),
+      ['“Current time: 14:02:37”', '12:30'],
+    )
+  })
+
   it('builds quick checks: typed, picked, and a legacy quiz as an ask (decision 052)', async () => {
     let dir = path.join(coursesDir, '../fixtures/toys')
     let result = buildCourse(await readCourseFolder(dir), { folder: 'toys' })
