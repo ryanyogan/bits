@@ -34,7 +34,7 @@ describe('client navigation', () => {
       window.dispatchEvent(new CustomEvent('bits:reward', { detail: { xp: 0, message: 'test' } }))
       return !document.body.textContent?.includes('Pass every check to finish')
     })
-    await page.getByRole('button', { name: /Next: Top-p and friends/ }).waitFor()
+    await page.getByRole('button', { name: /Complete and continue/ }).waitFor()
 
     // A marker on window survives only client navigation, not a document load.
     await page.evaluate(() => ((window as { navMarker?: number }).navMarker = 1))
@@ -240,7 +240,7 @@ describe('client navigation', () => {
     })
     // Untouched before the save: the checks passed, nothing is saved yet.
     await page.getByText('Checks passed').waitFor()
-    await page.getByRole('button', { name: /Next: Top-p and friends/ }).click()
+    await page.getByRole('button', { name: /Complete and continue/ }).click()
 
     // Optimistic: complete at once, while the POST is held.
     await page.getByText(/^✓ Lesson complete$/).waitFor()
@@ -280,7 +280,7 @@ describe('client navigation', () => {
     await field.fill('a')
     await field.press('Enter')
     await answers.locator('[data-correct="true"]').waitFor()
-    await save.getByRole('button', { name: /^Next:/ }).waitFor()
+    await save.getByRole('button', { name: /^Complete and continue/ }).waitFor()
     assert.deepEqual(posts, ['/api/ask', '/api/ask'])
   })
 

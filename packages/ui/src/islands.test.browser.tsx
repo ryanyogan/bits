@@ -41,9 +41,9 @@ describe('OddsBars', () => {
 })
 
 describe('PromptComposer', () => {
-  it('evaluates live checks and runs on Enter (Shift+Enter is a newline)', async (t) => {
+  it('evaluates live checks; Enter adds a line and Ctrl+Enter runs (decision 067)', async (t) => {
     try {
-      window.localStorage.removeItem('bits:draft:t-composer')
+      for (let k of ['draft', 'ran', 'last-run']) window.localStorage.removeItem(`bits:${k}:t-composer`)
     } catch {}
     let { $, $$, act, cleanup } = render(
       <PromptComposer
@@ -64,13 +64,17 @@ describe('PromptComposer', () => {
       textarea.value = 'Write a tagline'
       textarea.dispatchEvent(new Event('input', { bubbles: true }))
     })
+    // Input renders are coalesced to one per task.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
     assert.equal($('li[data-passed]')?.getAttribute('data-passed'), 'true')
 
-    let shift = new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true })
-    await act(() => textarea.dispatchEvent(shift))
-    assert.equal(shift.defaultPrevented, false)
+    for (let shiftKey of [false, true]) {
+      let newline = new KeyboardEvent('keydown', { key: 'Enter', shiftKey, bubbles: true, cancelable: true })
+      await act(() => textarea.dispatchEvent(newline))
+      assert.equal(newline.defaultPrevented, false)
+    }
 
-    let enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    let enter = new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true })
     await act(() => textarea.dispatchEvent(enter))
     assert.equal(enter.defaultPrevented, true)
     await act(() => new Promise((resolve) => setTimeout(resolve, 600)))
@@ -81,7 +85,7 @@ describe('PromptComposer', () => {
 
   it('keeps the reward under the run that earned it, so later runs land below it', async (t) => {
     try {
-      window.localStorage.removeItem('bits:draft:t-reward')
+      for (let k of ['draft', 'ran', 'last-run']) window.localStorage.removeItem(`bits:${k}:t-reward`)
     } catch {}
     let { $, $$, act, cleanup } = render(
       <PromptComposer
@@ -110,7 +114,7 @@ describe('PromptComposer', () => {
 
   it('streams a server run, labels canned output, and only then ticks the run check', async (t) => {
     try {
-      window.localStorage.removeItem('bits:draft:t-live')
+      for (let k of ['draft', 'ran', 'last-run']) window.localStorage.removeItem(`bits:${k}:t-live`)
     } catch {}
     let realFetch = window.fetch
     let sent: FormData[] = []

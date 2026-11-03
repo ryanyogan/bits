@@ -175,7 +175,7 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await settled(page)
     let prompt = page.getByRole('textbox').first()
     await prompt.fill('Say hi in five words.')
-    await prompt.press('Enter')
+    await prompt.press('Control+Enter')
     await page.getByRole('region', { name: 'Your runs' }).getByRole('listitem').first().waitFor()
     await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'))
     await expectClean(page, 'composer after a run')

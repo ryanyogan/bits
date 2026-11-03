@@ -17,6 +17,8 @@ export interface LessonCompleteProps {
   /** Where finishing leads: the next lesson, or back to the course. */
   href: string
   label: string
+  /** A quiet line beside the key: what comes next, or what's still open. */
+  upNext?: string
   /**
    * The native form that saves the lesson (absent in the author preview).
    * Exercises add their prompt and runs to it with `form=`.
@@ -88,7 +90,7 @@ export const LessonComplete = clientEntry(
     })
 
     return () => {
-      let { gated, passed, href, label, form, issues, loginHref } = handle.props
+      let { gated, passed, href, label, upNext, form, issues, loginHref } = handle.props
       let hint =
         remaining.size === 0
           ? 'Pass every check to finish'
@@ -125,6 +127,8 @@ export const LessonComplete = clientEntry(
             <span id={hintId} mix={hintStyle}>
               {hint}
             </span>
+          ) : upNext && !saving ? (
+            <span mix={hintStyle}>{upNext}</span>
           ) : null}
           {passed || !form ? (
             open ? (

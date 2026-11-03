@@ -116,6 +116,21 @@ function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean; issues?
     let { prev, next } = view
     // Prompts join the save with form=; asks are read from the journal (decision 052).
     let asks = openAsks(view)
+    // The one save-and-continue action (decision 067). Its label says what
+    // it does in this state: saved lessons just move on; the last lesson
+    // finishes the course only when nothing else is open.
+    let open = view.lessons.filter((l) => l.state !== 'done' && l.slug !== view.lesson.slug).length
+    let saved = view.lesson.state === 'done'
+    let label = next
+      ? saved
+        ? `Next: ${next.title} →`
+        : `Complete and continue →`
+      : saved
+        ? 'Back to the course →'
+        : open === 0
+          ? 'Finish the course →'
+          : 'Complete lesson →'
+    let left = !next && open > 0 ? (open === 1 ? '1 lesson still open in this course' : `${open} lessons still open in this course`) : undefined
     return (
       <nav aria-label="Lesson navigation" mix={footerBand}>
         <Crosshair placement="top-start" mix={phoneHidden} />
@@ -136,7 +151,8 @@ function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean; issues?
             issues={issues}
             passed={view.lesson.state === 'done'}
             href={next ? view.href.lesson(next.slug) : view.href.back}
-            label={next ? `Next: ${next.title} →` : 'Finish the course →'}
+            label={label}
+            upNext={next && !saved ? `Up next: ${next.title}` : left}
             loginHref={view.viewer ? undefined : view.href.login}
           />
         </div>
