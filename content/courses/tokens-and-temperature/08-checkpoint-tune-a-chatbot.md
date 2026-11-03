@@ -36,12 +36,14 @@ Here's the difference that makes:
 
 Checkpoint. Write the bot's prompt: who it is, its tone, a length limit,
 what to do with off-topic questions, the menu, and a customer question to
-answer. Hit every check, then run it a few times. A well-tuned prompt gives
+answer. Run it, read the coach's notes under the reply, and adjust until
+every line under “What good looks like” is met. Then run it a few more times. A well-tuned prompt gives
 you **different words but the same behaviour** on every run.
 
-:::prompt{id="moon-cafe-bot" xp=60}
+:::prompt{id="moon-cafe-bot" xp=60 coach}
 Tune the Moon Café help bot with a prompt
 
+- goal "Get a reply that sounds like Moon Café's own bot: short, friendly, and using only the menu you gave it"
 - placeholder "You are Moon Café's assistant. Be … Reply in under … words. If asked about anything else, … Menu: … Customer: …"
 - draft "Answer this customer: Do you have anything without caffeine?"
 - check "Gives it a role"              /you are|you're|act as|\brole\b|assistant for|assistant at/i
@@ -50,13 +52,19 @@ Tune the Moon Café help bot with a prompt
 - check "Handles off-topic questions"  /\bonly\b|off.topic|unrelated|anything else|can.t help|cannot help|decline/i
 - check "Includes the menu"            /menu/i
 - check "Includes a customer question" /customer|\?/i
+- expect "Short: under 60 words" words<=60
+- rubric "Answers the customer's question using only items from the menu" must evidence
+- rubric "Sounds like Moon Café's own assistant, in the tone you set" should
+- rubric "Tells the bot what to do with off-topic questions" should on=prompt
+- hint "Check the reply against your menu. Did it mention anything you didn't list?"
+- hint "Say “use only this menu” right before you paste the menu."
+- reference "You are Moon Café's assistant. Be friendly and brief: reply in under 40 words. Use only the menu below. If asked about anything other than the café, politely say you can only help with Moon Café.\n\nMenu: Lunar latte $4, Crater cold brew $4, Zero-g mint tea (caffeine-free) $3, Moon pie $3.\n\nCustomer: Do you have anything without caffeine?"
 - run temperature=[1.0]
 - example T=1.0 "Yes! Our Zero-g mint tea is caffeine-free, $3. Want it iced?"
 - example T=1.0 "Sure do: the Zero-g mint tea has no caffeine at all. $3, and it's lovely iced."
 - example T=1.0 "Our Zero-g mint tea is caffeine-free ($3). Everything else on the menu has a kick!"
 - success "Different words, same behaviour. That's a tuned bot." next="Finish the course →"
 :::
-
 Finish this checkpoint and the **Temperature tamer** badge is yours. You now
 know what a token costs, where the odds come from, how a reply gets drawn from
 them, and how to steer Claude without touching a dial. Next up: **Prompting

@@ -65,20 +65,25 @@ library; it gives you that provider's count, not Claude's.
 The cheapest output token is the one you never ask for. Your turn: ask Claude
 to explain what a token is, with a length limit.
 
-:::prompt{id="short-answer" xp=20}
+:::prompt{id="short-answer" xp=20 coach}
 Ask for an explanation with a length limit
 
+- goal "Get a correct explanation of what a token is, in under 30 words"
 - placeholder "Explain … in under … words."
 - draft "Explain what a token is."
 - check "Asks about tokens"     /token/i
 - check "Sets a length limit"   /\bwords?\b|\bsentences?\b|\bunder\b|\bshort\b|\bbrief\b|\bmax/i
+- expect "Under 30 words" words<=30
+- rubric "Explains a token correctly: a chunk of text, like a word or part of one" must
+- hint "Count the words in the reply. Did you give Claude a number to aim under?"
+- hint "Put the limit in words: “in under 25 words”."
+- reference "In under 25 words, explain what a token is to someone new to AI."
 - run temperature=[1.0]
 - example T=1.0 "A token is a chunk of text, like a word or part of one, that a model reads and writes."
 - example T=1.0 "Tokens are the small pieces a model splits text into before turning them into numbers."
 - example T=1.0 "A token is a piece of text, often a word or word fragment, that a language model processes as one unit."
-- success "Short ask, short (cheap) answer." next="Next: probabilities, not answers →"
+- success "Short ask, short (cheap) answer. Output is the expensive half." next="Next: probabilities, not answers →"
 :::
-
 :::rabbithole
 - read "Token counting" by="Anthropic" url="https://platform.claude.com/docs/en/build-with-claude/token-counting"
 - read "Pricing" by="Anthropic" url="https://platform.claude.com/docs/en/about-claude/pricing"

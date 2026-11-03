@@ -37,21 +37,24 @@ system prompt of yours, no history, no tools. Add “in one sentence” to the
 draft and run it.
 :::
 
-:::prompt{id="say-hi" xp=30}
+:::prompt{id="say-hi" xp=30 coach}
 Ask Claude what it is, in one sentence
 
+- goal "Get Claude to tell you what it is, in a sentence or two"
 - placeholder "Hi Claude! …"
 - draft "Hi Claude! What are you, exactly?"
-- check "Talks to Claude"        /\byou\b|claude/i
 - check "Asks what it is"        /what|who|explain|describe|tell me/i
-- check "Asks for one sentence"  /one sentence|1 sentence|single sentence|one line|\bbrief/i
+- check "Asks for one sentence"  /one sentence|1 sentence|single sentence|one line|\bbrief|short/i
+- expect "Short: a sentence or two" sentences<=2
+- rubric "Says what it is" must evidence
+- hint "You asked for one sentence. Does the reply fit in one? If not, how could you say it more firmly?"
+- reference "Hi Claude! In one sentence, what are you?"
 - run temperature=[1.0]
 - example T=1.0 "I'm Claude, an AI model made by Anthropic: I read your text and write a reply, one small piece at a time."
 - example T=1.0 "I'm Claude, an AI assistant built by Anthropic that turns your words into a written answer by predicting what comes next."
 - example T=1.0 "I'm Claude, a large language model from Anthropic, trained on lots of text to understand questions and write helpful replies."
 - success "You just talked to a large language model. The rest of this course shows what happened in between." next="Next: a very good next-word guesser →"
 :::
-
 :::new
 You just talked to a **large language model**, an LLM. “Large” because it's
 built from a huge number of internal settings and trained on a huge amount of

@@ -48,24 +48,14 @@ what form the answer takes (“reply with one word”), list the answers you'll
 accept (“positive, negative or neutral”), and show an example of a good
 answer.
 
-:::quiz{id="consistent" xp=20}
-You need Claude to label 1,000 reviews the same way every time. What helps most?
-
-- [ ] Ask it to be consistent
-  Not quite. Being asked to “be consistent” barely changes the odds of any single label.
-- [x] Give the exact labels allowed and the format to reply in
-  Right. Narrow choices make one answer the clear favourite, so sampling lands on it reliably.
-- [ ] Set temperature to 0
-  Not on Claude's current API: it doesn't accept a temperature, so you shape the odds with the prompt instead.
-:::
-
 Your turn. Write a prompt that labels the review **“Arrived late, but it
 works great.”** and only allows `positive`, `negative` or `neutral`. Run it a
 few times. Does the label hold?
 
-:::prompt{id="sentiment-label" xp=20}
+:::prompt{id="sentiment-label" xp=30 coach}
 Label one review, with a fixed set of answers
 
+- goal "Get back exactly one of positive, negative or neutral for the review, and the same label when you run it again"
 - placeholder "Label this review as positive, negative or neutral…"
 - draft "Is this review good? Arrived late, but it works great."
 - check "Includes the review"     /arrived late/i
@@ -73,13 +63,17 @@ Label one review, with a fixed set of answers
 - check "Lists the labels"        /negative/i
 - check "Lists the labels"        /neutral/i
 - check "Limits the reply"        /\bonly\b|one word|single word|just the|reply with|answer with/i
+- expect "Replies with one allowed label" oneof "positive|negative|neutral"
+- rubric "The label is a fair reading of a review with one complaint and real praise" should
+- hint "Does the reply contain anything besides the label? Say exactly what the whole reply should be."
+- hint "List the three labels, then: “Reply with the label only.”"
+- reference "Label this review as positive, negative or neutral. Reply with the label only.\n\nReview: Arrived late, but it works great."
 - run temperature=[1.0]
 - example T=1.0 "positive"
 - example T=1.0 "positive"
 - example T=1.0 "positive"
-- success "Narrow the choices and the dice stop mattering." next="Next: temperature →"
+- success "Narrow the choices and the dice stop mattering. Asking it to “be consistent” wouldn't have done that; changing the odds did." next="Next: temperature →"
 :::
-
 :::rabbithole
 - read "The Curious Case of Neural Text Degeneration" by="Holtzman et al." deep url="https://arxiv.org/abs/1904.09751"
 - read "Prompting best practices" by="Anthropic" url="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices"

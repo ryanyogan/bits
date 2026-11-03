@@ -62,22 +62,28 @@ needs: the customer's message, what to offer, the tone and a length. The
 checks can only see what's there, not what you removed, so read your
 version back before you run it.
 
-:::prompt{id="trim-the-prompt" xp=40}
+:::prompt{id="trim-the-prompt" xp=40 coach}
 Trim the bloated prompt to what the reply needs
 
+- goal "Get the same good reply from a prompt half the size: a free replacement for order #4417, kindly and briefly"
 - placeholder "Reply to this customer: … Offer … Tone: … Under … words."
 - draft "Hi! Hope you're well. Context: I've been at Acme for 3 years, our office moved floors last month and the coffee machine is broken again. Here are the 2019 returns rules (refunds within 14 days) and the 2021 rules that replaced them (we replace damaged items free, no return needed). Customer says: “My order #4417 arrived damaged. I want a replacement, not a refund.” Write a reply. Be nice. Be nice! Remember to be nice."
 - check "Keeps the customer's message"  /4417|damaged/i
 - check "Says what to offer"            /replac/i
 - check "Sets a tone"                   /friendly|warm|polite|kind|apolog|empath|tone|calm|sincere/i
 - check "Sets a length"                 /\bwords?\b|\bsentences?\b|\bunder\b|\bshort\b|\bbrief\b/i
+- expect "Half the size of the draft"   prompt-shorter-than 300
+- rubric "Offers a free replacement for #4417, with no return needed" must evidence
+- rubric "Doesn't offer a refund or mention the old 14-day rule" must
+- hint "Go through the draft line by line. Would the reply change if that line were gone?"
+- hint "The old 2019 rules aren't just extra. Could they pull the reply the wrong way?"
+- reference "Reply to this customer. Our rule: we replace damaged items free, no return needed. Be warm and apologetic, under 50 words.\n\nCustomer: “My order #4417 arrived damaged. I want a replacement, not a refund.”"
 - run temperature=[1.0]
 - example T=1.0 "Sorry your order #4417 arrived damaged! We'll send a replacement free of charge, and there's no need to return the damaged item."
 - example T=1.0 "I'm sorry order #4417 reached you damaged. A free replacement is on the way, no return needed. Thanks for bearing with us."
 - example T=1.0 "Apologies that #4417 arrived broken. We're shipping you a replacement at no cost; you can keep or recycle the damaged one."
 - success "Same answer, a fraction of the context." next="Next: checkpoint →"
 :::
-
 :::rabbithole
 - read "Effective context engineering for AI agents" by="Anthropic" url="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents"
 - read "Prompting best practices" by="Anthropic" url="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices"

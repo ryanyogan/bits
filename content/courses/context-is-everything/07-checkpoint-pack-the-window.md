@@ -49,9 +49,10 @@ source, a request to quote first, permission to say the sheet doesn't cover
 something, a length limit, and a customer question at the end. Then try a
 question the sheet can't answer.
 
-:::prompt{id="pack-the-window" xp=60}
+:::prompt{id="pack-the-window" xp=60 coach}
 Pack the window: job, tagged document, quote first, honest gaps, short answer, question last
 
+- goal "Get a short, correct answer to the customer from the café's sheet, with its evidence quoted, and an honest “it doesn't say” when the sheet is silent"
 - placeholder "You answer questions for Moon Café… <document><source>…</source><document_content>…</document_content></document> Quote … If … Under … words. Customer: …?"
 - draft "Are you open on Sunday? Moon Café, open Mon–Fri 7am–6pm, Sat 8am–4pm, closed Sunday. Oat milk is free. Dogs welcome on the terrace."
 - check "Gives Claude its job"             /you are|you're|your job|you answer|answer (customer|questions)|assistant/i
@@ -61,13 +62,20 @@ Pack the window: job, tagged document, quote first, honest gaps, short answer, q
 - check "Allows “it doesn't say”"          /not (in|on|covered|mentioned|listed)|doesn.t (say|cover|mention)|don.t know|not sure|can.t find|isn.t (there|covered|listed)/i
 - check "Sets a length limit"              /\bwords?\b|\bsentences?\b|\bunder\b|\bshort\b|\bbrief\b/i
 - check "Ends with a customer question"    /\?/
+- expect "Short"                           words<=50
+- rubric "The answer matches the sheet and adds no hours or facts it doesn't have" must evidence
+- rubric "Quotes the line from the sheet it relies on, before answering" must
+- rubric "Tells the assistant what to say when the sheet doesn't cover a question" should on=prompt
+- hint "Ask your bot something the sheet doesn't cover, like parking. Does it admit that, or invent an answer?"
+- hint "Check the quote against the sheet. Is it the sheet's words, and does the answer follow from it?"
+- hint "Give it a line for gaps: “If the sheet doesn't say, tell the customer you're not sure.”"
+- reference "You answer customer questions for Moon Café, using only the sheet below.\n\n<document><source>moon-cafe-info.txt</source><document_content>Open Mon–Fri 7am–6pm, Sat 8am–4pm, closed Sunday. Oat milk is free. Dogs welcome on the terrace.</document_content></document>\n\nFirst quote the line that answers the question in <quotes> tags. If the sheet doesn't say, tell the customer you're not sure. Answer in under 30 words.\n\nCustomer: Are you open on Sunday?"
 - run temperature=[1.0]
 - example T=1.0 "<quotes>“closed Sunday”</quotes> Sorry, we're closed on Sundays. On Saturday we're open 8am–4pm."
 - example T=1.0 "Quote: “Sat 8am–4pm, closed Sunday.” No, Moon Café is closed on Sunday. Come by Saturday until 4pm!"
 - example T=1.0 "<quotes>“closed Sunday”</quotes> We're closed Sundays, but open Monday from 7am."
 - success "Docs in tags, question last, quotes first, honest about gaps. That's a packed window." next="Finish the course →"
 :::
-
 Finish this checkpoint and the **Context is everything** badge is yours. You
 can now say what fills a context window, why less is often more, how to lay
 out long documents and long chats, and how to make a stable prefix cheap.

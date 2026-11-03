@@ -152,20 +152,25 @@ The flip side is the most useful habit in this course. If Claude needs a
 fact, **put it in the prompt**. Try it: tell Claude something it can't know,
 then ask it to use that fact in the same message.
 
-:::prompt{id="put-it-in-the-prompt" xp=40}
+:::prompt{id="put-it-in-the-prompt" xp=40 coach}
 Tell Claude a fact about you, then ask it to use that fact
 
+- goal "Give Claude one fact it couldn't know, then get a reply that clearly uses it"
 - placeholder "My … is …. Now …?"
 - draft "My dog is called Biscuit and he hates rain. Suggest a name for his raincoat."
 - check "Gives Claude a fact"        /\bmy (name|dog|cat|team|city|town|job|boss|sister|brother|kid|favourite|favorite)\b|\bi (am|live|work|have|like|love|run)\b|\bi.m\b/i
 - check "Asks it to use the fact"    /\?|suggest|write|tell me|what|which|remind|repeat|use/i
+- rubric "The reply uses the fact you gave" must evidence
+- rubric "It answers the question you asked" should
+- hint "Find your fact in the reply. If it isn't there, is the question really one that needs it?"
+- hint "Ask for something only your fact can answer, like a name for your own pet or a plan for your own city."
+- reference "My dog is called Biscuit and he hates rain. Suggest a name for his raincoat, and say why it suits him."
 - run temperature=[1.0]
 - example T=1.0 "For a rain-hating dog called Biscuit, how about “The Crumb Cover”? Dry biscuits are the whole point."
 - example T=1.0 "Call it the Biscuit Tin: the one place Biscuit stays dry."
 - example T=1.0 "“Soggy-Proof” has a ring to it, though Biscuit may still refuse to go out."
 - success "It used your fact because your fact was in the text. Now send the same question without it, and see what it does." next="Next: attention, how it keeps track →"
 :::
-
 Now run the second half without the fact (just “suggest a name for his
 raincoat”). Claude will ask whose raincoat, or guess. Nothing from your last
 run reached it. That's not forgetfulness; it's the interface.

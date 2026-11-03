@@ -59,21 +59,29 @@ list of rules that don't say what they're for.
 Your turn. Write the prompt for the dentist reminder above. Say **what it's
 for** (a text message) and give **a reason** for at least one constraint.
 
-:::prompt{id="say-why" xp=40}
+:::prompt{id="say-why" xp=40 coach}
 Write the reminder prompt, with a reason for your constraints
 
+- goal "Get a text reminder that fits a phone's lock screen and keeps the time, the dentist and the insurance card"
 - placeholder "Turn this into a text reminder … It's sent as … so … because …"
 - draft "Turn this into a text reminder: Dentist, Tue 3pm, Dr Ali, Bright Smile Clinic, bring your insurance card. Keep it short."
 - check "Includes the appointment"  /dentist|dr ali|appointment/i
 - check "Says what it's for"        /\bsms\b|text message|\btexts?\b|lock screen|notification|\bphones?\b/i
 - check "Gives a reason"            /because|so that|\bsince\b|\bas (it|they|people|patients|most)\b|which means|otherwise|so (it|they|people|patients)\b/i
+- expect "Keeps the time"            match /3 ?pm|15:00|3:00/i
+- expect "Keeps the insurance card"  match /insurance/i
+- expect "Fits a lock screen"        words<=30
+- rubric "The most important facts come first, where a preview would show them" should
+- rubric "Reads like a reminder from the clinic, not a chat reply" must
+- hint "Your reason tells Claude why the limit exists. Does the reply act like it understood that reason?"
+- hint "Say where it's read and what that means: “It shows on a lock screen, so put the day and time first.”"
+- reference "Turn this into a text reminder from the clinic: Dentist, Tue 3pm, Dr Ali, Bright Smile Clinic, bring your insurance card. It's sent as an SMS. Put the day and time first, because most patients only read the lock-screen preview, and keep it under 25 words."
 - run temperature=[1.0]
 - example T=1.0 "Tue 3pm: dentist with Dr Ali, Bright Smile Clinic. Please bring your insurance card."
 - example T=1.0 "Reminder: Tue 3pm, Dr Ali at Bright Smile Clinic. Bring your insurance card. See you then!"
 - example T=1.0 "Tuesday 3pm, Dr Ali (Bright Smile Clinic). Don't forget your insurance card."
 - success "A reason turns a rule into a judgement Claude can make for you." next="Next: show, don't tell →"
 :::
-
 Try deleting your reason and running it again. Does the reply still put the
 time first?
 

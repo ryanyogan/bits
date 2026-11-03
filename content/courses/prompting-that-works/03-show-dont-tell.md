@@ -93,9 +93,10 @@ Your turn. The draft has one example. Add **a second example** for a
 error at the end. Run it, then try changing your examples' style and watch
 the reply follow.
 
-:::prompt{id="show-dont-tell" xp=40}
+:::prompt{id="show-dont-tell" xp=40 coach}
 Add a second, different example and run it
 
+- goal "Get a house-style rewrite of ECONNRESET that copies the examples' voice, not their exact words"
 - placeholder "Rewrite error messages … <example>…</example> <example>…</example> Now rewrite: …"
 - draft "Rewrite error messages for our app's users, in our house style. <example>Error: 504 upstream timeout. Rewrite: That took too long on our side. Try again in a minute.</example> Now rewrite: Error: ECONNRESET"
 - check "Wraps examples in tags"            /<example>/i
@@ -103,13 +104,19 @@ Add a second, different example and run it
 - check "Keeps the first example"           /504|too long/i
 - check "Adds a sign-in or password example" /sign.?in|log.?in|password|session|401|403/i
 - check "Ends with the error to rewrite"    /econnreset/i
+- expect "Short, like the examples" sentences<=3
+- rubric "Plain words a user understands, with no error code jargon" must
+- rubric "Tells the user what to do next" must
+- rubric "Doesn't reuse an example's sentence word for word" should
+- hint "Read your two examples side by side. What do they share that you want copied, and what do they share by accident?"
+- hint "Make the second example differ in length or wording, so only the voice repeats."
+- reference "Rewrite error messages for our app's users, in our house style: plain words, no blame, one next step.\n<example>Error: 504 upstream timeout. Rewrite: That took too long on our side. Try again in a minute.</example>\n<example>Error: 401 session expired. Rewrite: You've been signed out to keep your account safe. Sign in again to pick up where you left off.</example>\nNow rewrite: Error: ECONNRESET"
 - run temperature=[1.0]
 - example T=1.0 "We lost the connection for a moment. Check you're online, then try again."
 - example T=1.0 "The connection dropped on our side. Give it a few seconds and try again."
 - example T=1.0 "We couldn't reach our servers just then. Try again in a moment."
 - success "Show it once, well, and Claude picks up the pattern." next="Next: structure with XML tags →"
 :::
-
 :::rabbithole
 - read "Prompting best practices: Use examples effectively" by="Anthropic" url="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices"
 - read "Prompt engineering interactive tutorial (written for Claude 3)" by="Anthropic" url="https://github.com/anthropics/prompt-eng-interactive-tutorial"

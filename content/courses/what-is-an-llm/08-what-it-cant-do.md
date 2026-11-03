@@ -119,20 +119,26 @@ treat run-to-run variance as a signal, not noise.
 Your turn. Ask about something obscure or made up (a half-familiar book
 works well), and give Claude permission to say it doesn't know.
 
-:::prompt{id="catch-a-guess" xp=50}
+:::prompt{id="catch-a-guess" xp=50 coach}
 Ask about something obscure, and let Claude say it doesn't know
 
+- goal "Ask about something Claude can't reliably know, and get an honest “I'm not sure” instead of an invented answer"
 - placeholder "Who wrote …? If you're not sure, say so."
 - draft "Who wrote the 1923 novel The Glass Orchard?"
 - check "Asks about a specific fact"   /\bwho\b|\bwhen\b|what year|which|how many|what (is|was)/i
 - check "Lets it say it doesn't know"  /not sure|don.t know|do not know|unsure|uncertain|say so|admit/i
+- expect "Admits it isn't sure" match /not sure|don.t know|do not know|unsure|uncertain|not aware|no record|not familiar|don.t recogni|can.t (find|confirm|verify)|cannot (find|confirm|verify)|no reliable|may not exist|might not exist/i
+- rubric "Doesn't invent an answer (no made-up name, date or detail)" must
+- rubric "Says it doesn't know, in plain words" must evidence
+- hint "Is your question about something Claude could actually have read about? Pick something smaller or newer."
+- hint "Add a line that makes “I don't know” an acceptable answer."
+- reference "Who wrote the 1923 novel The Glass Orchard? If you're not sure, say so plainly rather than guessing."
 - run temperature=[1.0]
 - example T=1.0 "I don't know of a 1923 novel called The Glass Orchard. It may not exist, or it may be too obscure for me to know reliably, so I won't guess an author. A library catalogue would settle it."
 - example T=1.0 "I'm not sure. I don't have reliable information about that title, and I'd rather not invent an author. If you have a source, I can help you check it."
 - example T=1.0 "I don't recognise that book, so I can't name its author with any confidence. It may not exist."
 - success "Giving it room to say “I don't know” is one of the best habits you can build." next="Next: checkpoint →"
 :::
-
 :::rabbithole
 - video "Tracing the thoughts of a large language model" by="Anthropic" mins=3 url="https://www.youtube.com/watch?v=Bj9BD2D3DzA"
 - read "Reduce hallucinations" by="Anthropic" url="https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations"
