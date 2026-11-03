@@ -11,6 +11,7 @@ import {
   listRightAsks,
   findUserById,
   listCompletedLessons,
+  listHeldBadgeIds,
   listPassedExercises,
   lessonCompletionStatements,
   recordLessonCompletion,
@@ -203,11 +204,11 @@ async function awardNewBadges(db: D1DataTableDatabase, catalog: Catalog, userId:
     listCompletedLessons(db, userId),
     listPassedExercises(db, userId),
     findUserById(db, userId),
-    db.d1.prepare('select badge_id from user_badges where user_id = ?').bind(userId).all<{ badge_id: string }>(),
+    listHeldBadgeIds(db, userId),
   ])
   let completed: Completed = new Map(completedRows.map((row) => [`${row.course_id}/${row.lesson_slug}`, row.completed_at]))
   let earned = earnedBadgeIds({ completed, exercisesPassed: passed.length, bestStreak: user?.best_streak ?? 0 }, catalog)
-  let already = new Set(held.results.map((row) => row.badge_id))
+  let already = new Set(held)
   let fresh = earned.filter((id) => !already.has(id))
   await awardBadges(db, userId, fresh, now)
   return badgeDefinitions(catalog).filter((badge) => fresh.includes(badge.id))
