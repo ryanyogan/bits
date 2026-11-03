@@ -377,6 +377,23 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await expectClean(page, 'code editor in type mode', 360)
   })
 
+  it('landing "Try it now" (decision 074): a pass with its reward and the one next step', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    await page.goto(routes.home.href())
+    await settled(page)
+    let section = page.locator('#try')
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('#try button')].some((b) => /^Run/.test(b.textContent?.trim() ?? '') && !(b as HTMLButtonElement).disabled),
+    )
+    let prompt = section.getByRole('textbox').first()
+    await prompt.fill("Hi Claude! In two short sentences: what are you, and what's one thing you can't do?")
+    await prompt.press('Control+Enter')
+    // No model in tests: a labelled saved example, graded by pattern (decision 064).
+    await section.getByRole('link', { name: 'Continue the course →' }).waitFor()
+    await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'))
+    await expectClean(page, 'landing try it passed')
+  })
+
   it('reward toasts: a composer reward and a badge after completing a lesson', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.goto(lesson('tokens-and-temperature', 'temperature'))

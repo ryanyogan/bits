@@ -54,7 +54,9 @@ describe('landing page', () => {
 
   it('offers links, never a prompt box it would throw away (decision 065)', async () => {
     let { html } = await page(routes.home.href())
-    let hero = html.slice(html.indexOf('id="hero-title"'), html.indexOf('id="how'))
+    // The hero ends where "Try it now" starts: that box is lesson 1's own
+    // exercise, so what's typed there does reach a lesson (decision 074).
+    let hero = html.slice(html.indexOf('id="hero-title"'), html.indexOf('id="try"'))
     assert.doesNotMatch(hero, /<input|<form/)
     assert.doesNotMatch(html, /\?q=/)
     assert.ok(hero.includes(`href="${escape(lessonOneHref())}"`), 'Start lesson 1')

@@ -30,6 +30,8 @@ export const runForm = f.object({
   ),
   /** T × 100, one of the exercise's offered temperatures. */
   temperature: f.field(coerce.number().pipe(checks.min(0), checks.max(100))),
+  /** The landing's composer (decision 074): tighter live caps. Anything else is a lesson run. */
+  from: f.field(s.optional(s.literal('landing'))),
 })
 
 /**
