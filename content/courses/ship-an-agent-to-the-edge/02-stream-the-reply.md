@@ -3,7 +3,7 @@
 # - Anthropic, Streaming Messages (client.messages.stream, content_block_delta / text_delta
 #   events; stream long or high-max_tokens requests to avoid HTTP timeouts)
 #   https://platform.claude.com/docs/en/build-with-claude/streaming
-# - Cloudflare, Workers limits (CPU time excludes time waiting on fetch; Free 10 ms CPU,
+# - Cloudflare, Workers limits (re-checked 2026-11-02 via Context7: CPU time excludes time waiting on fetch; Free 10 ms CPU,
 #   Paid 30 s default up to 5 min; no wall-clock limit on HTTP requests while the client is
 #   connected; work may be cancelled when the client disconnects)
 #   https://developers.cloudflare.com/workers/platform/limits/
