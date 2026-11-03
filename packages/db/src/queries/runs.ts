@@ -4,6 +4,7 @@
 // browser's claim that it ran.
 import type { D1DataTableDatabase } from '../d1/database.ts'
 import type { AttemptSource } from '../tables.ts'
+import { liveTodaySql } from './coach.ts'
 
 /** Whose runs: the signed-in user, else the session's visitor id. */
 export type RunOwner = { userId: string; visitor?: string | null } | { userId?: null; visitor: string }
@@ -22,7 +23,7 @@ export interface RunCounts {
   day: number
   /** Signed-out runs from this IP since `hourSince` (0 when no ipHash). */
   ipHour: number
-  /** Live (model) runs by everyone since `todaySince`: the spend guard. */
+  /** Live model calls by everyone since `todaySince` (runs and coach judge calls): the spend guard. */
   liveToday: number
 }
 
@@ -39,7 +40,7 @@ export async function countRuns(
          (select count(*) from exercise_attempts where ${column} = ?1 and ${RUNS} and created_at >= ?2) as hour,
          (select count(*) from exercise_attempts where ${column} = ?1 and ${RUNS} and created_at >= ?3) as day,
          (select count(*) from exercise_attempts where ip_hash = ?4 and user_id is null and created_at >= ?2) as ipHour,
-         (select count(*) from exercise_attempts where source = 'live' and created_at >= ?5) as liveToday`,
+         ${liveTodaySql('?5')} as liveToday`,
     )
     .bind(bind, windows.hourSince, windows.daySince, ipHash, windows.todaySince)
     .first<RunCounts>()
@@ -95,7 +96,7 @@ export interface RunCaps {
   day: number
   /** Signed-out runs from `ipHash` since `hourSince` (ignored without an ipHash). */
   ipHour: number
-  /** Live runs by everyone since `todaySince`; null leaves it out. */
+  /** Live model calls (runs and judge calls) by everyone since `todaySince`; null leaves it out. */
   liveToday: number | null
 }
 
@@ -119,7 +120,7 @@ export async function insertRunWithin(
        where (select count(*) from exercise_attempts where ${column} = ?14 and ${RUNS} and created_at >= ?15) < ?16
          and (select count(*) from exercise_attempts where ${column} = ?14 and ${RUNS} and created_at >= ?17) < ?18
          and (?4 is null or (select count(*) from exercise_attempts where ip_hash = ?4 and user_id is null and created_at >= ?15) < ?19)
-         and (?20 is null or (select count(*) from exercise_attempts where source = 'live' and created_at >= ?21) < ?20)`,
+         and (?20 is null or ${liveTodaySql('?21')} < ?20)`,
     )
     .bind(
       ...runValues(input),
