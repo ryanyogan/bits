@@ -104,15 +104,21 @@ Your turn. The sandbox has no tools, so play it out. Write the **error
 message** your weather tool would return for a misspelled city, then ask
 Claude, in one sentence, what it would do next.
 
-:::prompt{id="helpful-error" xp=30}
+:::prompt{id="helpful-error" xp=30 coach}
 Write a tool error that tells Claude what to try next
-
+- goal "Write the error your weather tool returns for a misspelled city, so well that Claude's next step is obvious and right"
 - placeholder "Your get_weather call returned this error: “…” In one sentence, what do you do next?"
 - draft "Your tool call returned: Error 404. What next?"
-- check "Says it's a tool error"       /error|failed|is_error/i
-- check "Says what went wrong"         /no city|not found|unknown|couldn.t find|does not exist|doesn.t exist|misspel/i
-- check "Says what to try instead"     /\btry\b|check|add the country|did you mean|instead|e\.g\./i
-- check "Asks what Claude would do"    /what (would|do|will) you|next/i
+- check "Says it's a tool error" /error|failed|is_error/i
+- check "Asks what Claude would do" /what (would|do|will) you|next/i
+- expect "Answers in a sentence or two" sentences<=2
+- rubric "The error says what went wrong and what to try instead" must on=prompt
+- rubric "Claude's next step follows from your error's suggestion, not from a guess" must evidence
+- rubric "Claude doesn't make up the weather" should
+- hint "Read your error as Claude would. Does it say what went wrong, or only that something did?"
+- hint "A good error is a hint: what failed, and one thing to try next."
+- hint "Name the city that wasn't found, suggest a likely spelling or adding the country, then ask Claude what it would do next."
+- reference "Your get_weather call returned this error, as a tool_result with is_error: “No city called Pariss. Did you mean Paris, France? Try again with the corrected spelling and the country.”\n\nIn one sentence, what do you do next?"
 - run temperature=[1.0]
 - example T=1.0 "I'd call get_weather again with \"Paris, France\", since \"Pariss\" looks like a typo."
 - example T=1.0 "I'd retry the lookup with the corrected spelling, Paris, and add the country to be safe."
