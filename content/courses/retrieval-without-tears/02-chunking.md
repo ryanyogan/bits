@@ -12,8 +12,8 @@
 # The compare toy is illustrative. The terminal output is example output, not a live run.
 title: "Chunking"
 order: 2
-minutes: 7
-xp: 40
+minutes: 8
+xp: 60
 module: Finding the right bits
 ---
 
@@ -84,6 +84,46 @@ Example output from running it on a short warranty page (yours will differ):
 [ion]warranty.md#0[quiet] 412 chars · E-bike batteries have a 2-year warranty…
 [ion]warranty.md#1[quiet] 655 chars · Claims must be filed within 30 days…
 [ion]warranty.md#2[quiet] 388 chars · Frames have a lifetime warranty…
+:::
+
+In production the code above does the cutting. To see where the cuts
+belong, have Claude do it once by hand. Here's a short warranty page:
+
+```text
+# Orbit Bikes warranty
+## Batteries
+E-bike batteries have a 2-year warranty from delivery. It covers capacity below 70%.
+## Claims
+Claims must be filed within 30 days of noticing the fault. Send the order number and a photo of the battery label.
+## Frames
+Frames have a lifetime warranty for the first owner.
+```
+
+Paste it and ask Claude to split it on its structure, as JSON, with each
+chunk keeping the heading it came from.
+
+:::prompt{id="chunk-on-structure" xp=20 coach}
+Get Claude to chunk a page on its headings, keeping the metadata
+- goal "Get Claude to split the warranty page into chunks on its own structure, as JSON, each chunk carrying its heading"
+- placeholder "Split this page into chunks for search, one per section. Reply with only a JSON array of {\"heading\": …, \"text\": …}. Page: …"
+- draft "Chunk this for me."
+- check "Pastes the page" /batteries/i
+- check "Pastes the page" /claims/i
+- check "Pastes the page" /lifetime/i
+- check "Asks to split it" /chunk|split|break/i
+- check "Keeps the heading with each chunk" /heading|section|metadata|title|source/i
+- expect "Parses as JSON" json
+- expect "Keeps the frames line" match /lifetime/i
+- rubric "Cuts only on the page's sections: no chunk splits a sentence or mixes two sections" must evidence
+- rubric "Each chunk carries the heading of the section it came from" must evidence
+- rubric "Keeps the page's words instead of rewriting them" should
+- hint "Claude can only cut a page it can see. Is the page itself in your prompt?"
+- hint "Say where to cut. The page already has its own boundaries."
+- hint "Ask for one chunk per ## section, as a JSON array of objects with heading and text, and the text copied as written."
+- reference "Split this page into chunks for a search index. Cut only at the ## headings, one chunk per section, and copy the text exactly as written. Reply with only a JSON array of objects with \"heading\" and \"text\".\n\n# Orbit Bikes warranty\n## Batteries\nE-bike batteries have a 2-year warranty from delivery. It covers capacity below 70%.\n## Claims\nClaims must be filed within 30 days of noticing the fault. Send the order number and a photo of the battery label.\n## Frames\nFrames have a lifetime warranty for the first owner."
+- run temperature=[1.0]
+- example T=1.0 "[\n  { \"heading\": \"Batteries\", \"text\": \"E-bike batteries have a 2-year warranty from delivery. It covers capacity below 70%.\" },\n  { \"heading\": \"Claims\", \"text\": \"Claims must be filed within 30 days of noticing the fault. Send the order number and a photo of the battery label.\" },\n  { \"heading\": \"Frames\", \"text\": \"Frames have a lifetime warranty for the first owner.\" }\n]"
+- success "Cut where the author did, and keep the label on every piece." next="Next: embeddings and similarity →"
 :::
 
 Notice that a chunk can still lose its meaning on its own. Lesson 5 fixes

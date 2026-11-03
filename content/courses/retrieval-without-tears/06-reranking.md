@@ -15,8 +15,8 @@
 # The compare toy and the terminal output are illustrative.
 title: "Reranking"
 order: 6
-minutes: 6
-xp: 40
+minutes: 8
+xp: 60
 module: Finding the right bits
 ---
 
@@ -100,6 +100,43 @@ Put the steps in order for one question.
   Right. Retrieve wide and cheap, rerank narrow and careful, then answer.
 - [ ] Send 150 chunks to Claude and ask it to rerank them
   Not quite. That works for small lists, but it costs far more than a reranker and adds a slow step.
+:::
+
+For a handful of candidates, Claude can do a reranker's job: read the
+question with each passage and put them in order. A dedicated reranker is
+faster and cheaper per chunk, which is why it wins on long lists. Your turn,
+on a short one. Question: “Can I claim on a battery that's 18 months old?”
+
+- [1] Frames: lifetime warranty for the first owner.
+- [2] Battery care: store at 40–60% charge in winter.
+- [3] E-bike batteries: 2-year warranty from delivery, covering capacity below 70%.
+- [4] Claims must be filed within 30 days of noticing the fault.
+
+Ask Claude to rank them for the question, best first, numbers only.
+
+:::prompt{id="rerank-by-hand" xp=20 coach}
+Get Claude to rerank four passages for one question
+- goal "Get Claude to rank the four passages by how well they answer the question, best first, replying with the numbers only"
+- placeholder "Question: … Passages: [1] … [2] … [3] … [4] … Rank them by how well each answers the question, best first. Reply with the numbers only, like 2, 4, 1, 3."
+- draft "Which passage is best? Can I claim on a battery that's 18 months old?"
+- check "Pastes the question" /18 months/i
+- check "Pastes the passages" /lifetime/i
+- check "Pastes the passages" /winter/i
+- check "Pastes the passages" /2-year|2 year/i
+- check "Pastes the passages" /30 days/i
+- check "Asks for a ranking" /rank|order|sort|best first|most relevant/i
+- expect "Best first: passage 3" match /^\W?3\b/
+- expect "Numbers only" words<=12
+- rubric "Puts passage 3, the 2-year battery warranty, first" must evidence
+- rubric "Puts passage 4, the 30-day claims rule, second" should
+- hint "Claude can't rank passages it can't see. Are all four, with their numbers, in your prompt?"
+- hint "Ask about the question, not the topic: which passage says whether an 18-month-old battery is covered?"
+- hint "Ask for the passage numbers only, best first, separated by commas, and nothing else."
+- reference "Question: Can I claim on a battery that's 18 months old?\n\nPassages:\n[1] Frames: lifetime warranty for the first owner.\n[2] Battery care: store at 40–60% charge in winter.\n[3] E-bike batteries: 2-year warranty from delivery, covering capacity below 70%.\n[4] Claims must be filed within 30 days of noticing the fault.\n\nRank the passages by how well each one answers the question, best first. Reply with the passage numbers only, separated by commas."
+- run temperature=[1.0]
+- example T=1.0 "3, 4, 2, 1"
+- example T=1.0 "3, 4, 1, 2"
+- success "Read the question and the passage together: that's what a reranker adds." next="Next: answers with sources →"
 :::
 
 :::rabbithole
