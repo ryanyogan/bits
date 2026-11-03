@@ -15,23 +15,17 @@ Done and live:
   reply checks, and the save reads journalled passes. Check patterns no longer reach the browser (verified on prod).
   Eval: 97% agreement and 0 of 20 injections passing. Only `content/fixtures/plain-course` lesson 3 is coached so far.
 
-IN FLIGHT: wave 2 content conversion, two curriculum lanes (fork agents), brief `release-audit/CONTENT-BRIEF.md`:
-| Lane | Worktree (`.claude/worktrees/agent-<id>`) | Courses | Port/host | State at save |
-|---|---|---|---|---|
-| C1 | affc09e8efd461e01 | what-is-an-llm, tokens-and-temperature, prompting-that-works, context-is-everything | 44308 c1.localhost | 4 commits, clean |
-| C2 | a2225981e9311c557 | give-your-model-tools, retrieval-without-tears, first-agent-loop, ship-an-agent-to-the-edge | 44309 c2.localhost | 0 commits, 22 files WIP |
-
-These agents may still be running, or may have been stopped by the context clear. To resume:
-1. Check each worktree: `git -C <wt> log --oneline master..HEAD` and `git -C <wt> status`.
-2. If a lane isn't finished, respawn a fork in that worktree with `release-audit/RESUME.md` and `CONTENT-BRIEF.md`,
-   naming its courses.
-
-To merge each lane:
-1. Merge it. Both lanes append to `apps/web/scripts/coach-eval/cases.ts`, so expect a conflict there and keep both blocks.
-2. Run typecheck, test and doctor.
-3. Run `pnpm deploy`, then `pnpm content upload --all --publish --remote`.
-4. Smoke-test a converted lesson, then push.
-5. Then run a QA pass on the converted lessons, with live coaching, at 360 and 1440 in both themes.
+Wave 2 content: C1 and C2 are MERGED on master (all 8 courses converted; validate clean; 519 tests green) but NOT
+YET PUBLISHED (no `content upload --remote` and no deploy since 2716b4f). The combined eval gave 107/108 agreement
+(99%), but injection "rubric restated" passed 1 of 20, which fails the 0/20 gate. A fix lane (W2-injection, fresh
+worktree) is hardening the judge in app/runs/{judge,grade,coach}.ts and the eval exercise's check. Once it's merged
+and 3 eval runs in a row show 0/20:
+1. `pnpm deploy`
+2. `pnpm content upload --all --publish --remote`
+3. QA the converted lessons live.
+Run eval: `pnpm --filter @bits/web coach:eval --vars apps/web/.dev.vars` (no `--`).
+Content follow-up (C2): quiz-only lessons with no hands-on block: first-agent-loop 04/05/08; give-your-model-tools
+03/05/08/09; retrieval-without-tears 02/03/04/06; ship-an-agent-to-the-edge 01/02/04/06/08.
 
 Engine gaps (from the engine report and decision 064):
 - `:::ask{coach}` isn't built (explain-it-back quizzes become coached `:::prompt`s instead).
