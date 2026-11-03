@@ -14,8 +14,8 @@
 # The terminal output is an example.
 title: "Logs you can query"
 order: 6
-minutes: 6
-xp: 40
+minutes: 8
+xp: 60
 module: Running it safely
 ---
 
@@ -107,6 +107,41 @@ Which of these belongs in your per-turn log line?
   Not quite. Query strings often carry tokens and email addresses.
 - [x] Token counts, stop reason and duration
   Right. Numbers and shapes tell you what went wrong without exposing what people wrote.
+:::
+
+Your turn. Here's a log line from an old version of the agent, a sentence
+with the user's question pasted in:
+
+```text
+turn 2 for user 8f3a done (end_turn), 1834 in / 212 out, 2310 ms, prompt: "is it raining at 14 Elm Street right now?"
+```
+
+Ask Claude to turn it into one JSON object you can filter in Workers Logs,
+with the user's words left out.
+
+:::prompt{id="log-line" xp=20 coach}
+Get Claude to turn a log sentence into a JSON object you can filter
+- goal "Get Claude to rewrite the log sentence as one JSON object with numbers as numbers, keeping the run's shape and leaving out what the user wrote"
+- placeholder "Turn this log line into one JSON object for Workers Logs with the fields event, user, turn, stop_reason, input_tokens, output_tokens and ms. Numbers as numbers. Leave out … JSON only. Line: …"
+- draft "Make this log better: turn 2 for user 8f3a done (end_turn), 1834 in / 212 out, 2310 ms, prompt: \"is it raining at 14 Elm Street right now?\""
+- check "Pastes the log line" /8f3a/
+- check "Pastes the log line" /1834/
+- check "Pastes the log line" /end_turn/
+- check "Asks for JSON" /json|object/i
+- check "Says to leave out the user's words" /no prompt|leave out|drop|omit|without|don.t include|do not include|exclude|remove/i
+- expect "Has the fields" json keys=stop_reason,input_tokens,output_tokens types=input_tokens:number,output_tokens:number
+- expect "Keeps the user id" match /8f3a/
+- expect "Keeps the input tokens" match /input_tokens..\s?1834/
+- expect "Keeps the output tokens" match /output_tokens..\s?212/
+- expect "Keeps the duration" match /2310/
+- rubric "Leaves out the user's prompt text and the street address" must
+- hint "Which part of this line is the user's own words? Does your prompt tell Claude what to do with it?"
+- hint "Name the fields you want, and say the numbers must be numbers, not strings."
+- hint "Ask for one JSON object with event, user, turn, stop_reason, input_tokens, output_tokens and ms, numbers as numbers, and say to drop the prompt. JSON only."
+- reference "Turn this log line into one JSON object for Workers Logs with the fields event (\"turn\"), user, turn, stop_reason, input_tokens, output_tokens and ms. Numbers must be numbers. Leave out the user's prompt entirely. Reply with the JSON object only.\n\nturn 2 for user 8f3a done (end_turn), 1834 in / 212 out, 2310 ms, prompt: \"is it raining at 14 Elm Street right now?\""
+- run temperature=[1.0]
+- example T=1.0 "{\"event\":\"turn\",\"user\":\"8f3a\",\"turn\":2,\"stop_reason\":\"end_turn\",\"input_tokens\":1834,\"output_tokens\":212,\"ms\":2310}"
+- success "Fields you can filter, and nothing a user wrote." next="Next: safety at the edge →"
 :::
 
 :::rabbithole
