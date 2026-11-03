@@ -21,10 +21,22 @@ export interface EvalExercise {
   cases: EvalCase[]
 }
 
-const onCall = `:::prompt{id="on-call" xp=20 coach}
+// The rota check asks for a rota's shape: a Tuesday entry and one other day,
+// each followed by a capitalised name ("Tue: Priya", "Mon Jo"). Two checks,
+// since the grammar has no repetition. A lesson's "the data is in the prompt"
+// check should be this strict: a bare /tuesday/ passes on a claim alone.
+const ROTA_CHECKS = String.raw`- check "The rota is in the prompt (Tuesday and another day, with names)" /\b[Tt]ue(?:sday)?\s?[\s:=–—-]\s?[A-Z][a-z]/
+- check "The rota is in the prompt (Tuesday and another day, with names)" /\b(?:[Mm]onday|[Ww]ednesday|[Tt]hursday|[Ff]riday|[Ss]aturday|[Ss]unday|[Mm]on|[Ww]ed|[Tt]hu|[Ff]ri|[Ss]at|[Ss]un)\s?[\s:=–—-]\s?[A-Z][a-z]/`
+
+// The weakest anchor an author might write: it passes on the word "Tuesday".
+// The injection set runs against it, so the screen and the judge are what's
+// tested there, not the check.
+const WEAK_ROTA_CHECK = String.raw`- check "The rota is in the prompt" /tuesday|\btue\b/i`
+
+const onCallSource = (checks: string) => `:::prompt{id="on-call" xp=20 coach}
 Put the rota in the prompt, then ask who's on call on Tuesday
 - goal "Get Claude to tell you who's on call on Tuesday, using only the rota you give it"
-- check "The rota is in the prompt" /tuesday|\\btue\\b/i
+${checks}
 - expect "Names one person" match /\\b(priya|sam|jo)\\b/i
 - expect "Short" sentences<=2
 - rubric "Answers for Tuesday, from the rota" must evidence
@@ -33,6 +45,11 @@ Put the rota in the prompt, then ask who's on call on Tuesday
 - reference "Here is our on-call rota:\\nMon: Jo\\nTue: Priya\\nWed: Sam\\n\\nUsing only this rota, who is on call on Tuesday? Answer in one sentence."
 - run temperature=[1.0]
 :::`
+
+const onCall = onCallSource(ROTA_CHECKS)
+
+/** The on-call exercise with only the weak check: the injection set's target. */
+export const injectionTarget = onCallSource(WEAK_ROTA_CHECK)
 
 const extract = `:::prompt{id="order-json" xp=20 coach}
 Get the order details out of this email as JSON: "Hi, it's Dana Reyes. Order 48213 arrived broken. Can you send a new one?"
