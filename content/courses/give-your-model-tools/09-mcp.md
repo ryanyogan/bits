@@ -15,7 +15,7 @@
 #   https://www.anthropic.com/engineering/writing-tools-for-agents
 title: "MCP: tools you can share"
 order: 9
-minutes: 7
+minutes: 8
 xp: 40
 module: Real-world calls
 ---
@@ -104,15 +104,31 @@ What does MCP standardise?
   Not quite. It's an open standard, and many AI apps support it.
 :::
 
-:::quiz{id="mcp-shape" xp=20}
-An MCP server lists a tool with a name, a description and an inputSchema. How does that compare to an Anthropic tool definition?
+An MCP tool and an Anthropic tool are the same idea: a name, a description
+and a JSON Schema for the input. Only the spelling differs. Your turn: copy
+the `tracker_search_issues` tool from `tools-list.json` above and get Claude
+to turn it into an Anthropic tool definition.
 
-- [x] It's the same idea: name, description, and a JSON Schema for the input
-  Right. Only the spelling differs (inputSchema vs input_schema), so the same writing advice applies.
-- [ ] MCP tools don't need descriptions
-  Not quite. The model still has to pick the tool from its description.
-- [ ] MCP tools run inside the model
-  Not quite. They run in the server. The model only asks for a call.
+:::prompt{id="mcp-to-claude" xp=20 coach}
+Turn the MCP tool listing into an Anthropic tool definition
+- goal "Get Claude to rewrite the MCP tool as one Anthropic tool definition, as JSON only, with nothing lost or added"
+- placeholder "Here's a tool from an MCP server's tools/list: {…} Rewrite it as an Anthropic Messages API tool definition. JSON only."
+- draft "Convert my MCP tool for Claude."
+- check "Pastes the tool" /tracker_search_issues/
+- check "Pastes the tool" /inputSchema/
+- check "Pastes the tool" /query/
+- check "Says the target format" /anthropic|input_schema|messages api|claude.s tool/i
+- expect "Has the three fields" json keys=name,description,input_schema
+- expect "Keeps the name" match /tracker_search_issues/
+- rubric "Keeps the description and the schema's properties and required list the same, only renaming inputSchema to input_schema" must evidence
+- rubric "Returns one tool definition, not the whole tools list" should
+- hint "Is the tool itself in your prompt, or only its name?"
+- hint "Say which format you want back. The field Claude's API reads is input_schema."
+- hint "Paste the tool, then ask: rewrite this as one Anthropic tool definition, with input_schema, as JSON only, and change nothing else."
+- reference "Here's a tool from an MCP server's tools/list:\n{\n  \"name\": \"tracker_search_issues\",\n  \"description\": \"Search open issues by keyword. Use it when the user asks about a bug, a ticket or what's being worked on. Returns at most 20 issues with id, title and status.\",\n  \"inputSchema\": { \"type\": \"object\", \"properties\": { \"query\": { \"type\": \"string\", \"description\": \"Words to search for\" } }, \"required\": [\"query\"] }\n}\n\nRewrite it as one tool definition for the Anthropic Messages API (name, description, input_schema). Change nothing else. Reply with the JSON object only."
+- run temperature=[1.0]
+- example T=1.0 "{\n  \"name\": \"tracker_search_issues\",\n  \"description\": \"Search open issues by keyword. Use it when the user asks about a bug, a ticket or what's being worked on. Returns at most 20 issues with id, title and status.\",\n  \"input_schema\": { \"type\": \"object\", \"properties\": { \"query\": { \"type\": \"string\", \"description\": \"Words to search for\" } }, \"required\": [\"query\"] }\n}"
+- success "Same name, same description, same schema: write it once, use it in both." next="Next: a weather bot →"
 :::
 
 :::rabbithole
