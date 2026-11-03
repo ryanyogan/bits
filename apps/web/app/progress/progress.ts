@@ -158,15 +158,10 @@ async function journalledRightAsks(context: ProgressContext, lesson: { courseId:
   return owner ? listRightAsks(getDatabase(context), owner, lesson) : []
 }
 
-/** At sign-in: the visitor's answers and verdicts move into the account, like their runs. */
+/** At sign-in: the visitor's answers move into the account, like their runs. */
 async function claimAnswers(db: D1DataTableDatabase, session: Session, userId: string): Promise<void> {
   let visitor = session.get(VISITOR_KEY)
-  if (typeof visitor === 'string') {
-    await Promise.all([
-      claimVisitorAsks(db, visitor, userId),
-      claimVisitorVerdicts(db, visitor, userId),
-    ])
-  }
+  if (typeof visitor === 'string') await Promise.all([claimVisitorAsks(db, visitor, userId), claimVisitorVerdicts(db, visitor, userId)])
 }
 
 /**

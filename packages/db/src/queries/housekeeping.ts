@@ -99,11 +99,7 @@ export async function deleteExpiredRows(db: D1DataTableDatabase, now: number): P
     d1
       .prepare('delete from coach_verdicts where user_id is null and created_at < ?')
       .bind(now - retention.anonymousVerdictsMs),
-    d1
-      .prepare(
-        `delete from build_checks where outcome != 'pass' and created_at < ?`,
-      )
-      .bind(now - retention.failedBuildChecksMs),
+    d1.prepare(`delete from build_checks where outcome != 'pass' and created_at < ?`).bind(now - retention.failedBuildChecksMs),
   ])
   let changes = results.map((result) => result.meta.changes)
   return {

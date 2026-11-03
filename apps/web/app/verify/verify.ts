@@ -9,6 +9,7 @@ import type { RequestContext } from 'remix/router'
 import { Session } from 'remix/session'
 
 import { verifiesOf } from '../actions/courses/lesson/content.ts'
+import { isPreview } from '../auth/config.ts'
 import { currentUser } from '../auth/identity.ts'
 import { getCatalog } from '../content/request.ts'
 import { log } from '../log.ts'
@@ -44,12 +45,19 @@ export interface VerifyInput {
 
 export type VerifyOutcomeResult =
   | { ok: true; verdict: VerifyVerdict }
-  | { ok: false; status: 401 | 404 | 422 | 429; error: 'sign_in' | 'not_found' | 'invalid_url' | 'limit'; message: string }
+  | { ok: false; status: 401 | 404 | 422 | 429; error: 'sign_in' | 'not_found' | 'invalid_url' | 'preview' | 'limit'; message: string }
 
 export async function verifyDeploy(context: AnyContext, input: VerifyInput): Promise<VerifyOutcomeResult> {
   let content = await (await getCatalog(context)).lessonContent(input.course, input.lesson)
   let block = content && verifiesOf(content).find((b) => b.id === input.verify)
   if (!block) return { ok: false, status: 404, error: 'not_found', message: 'That deploy check isn’t in this lesson any more. Reload the page.' }
+
+  // Previews never call out (decision 072, as they send no mail and run no
+  // model): their journal is a separate database, so a check there would
+  // sit outside production's per-origin caps.
+  if (isPreview()) {
+    return { ok: false, status: 422, error: 'preview', message: 'Deploy checks are off on preview deploys. Check yours on bits.yogan.dev.' }
+  }
 
   let origin = learnerOrigin(input.url)
   if (!origin.ok) return { ok: false, status: 422, error: 'invalid_url', message: origin.message }

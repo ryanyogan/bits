@@ -75,3 +75,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 068 | [Signed-in surfaces: private by default, honest authoring, notices where you are](068-signed-in-surfaces.md) |
 | 070 | [One primary action, one verb: Start free or Continue](070-one-primary-action.md) |
 | 071 | [Build-along courses: Klippy, one Cloudflare personal agent built from zero](071-build-along-courses.md) |
+| 072 | [Proof of build: `:::verify` checks the learner's deployed Worker](072-proof-of-build.md) |

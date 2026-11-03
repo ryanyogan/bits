@@ -6,7 +6,7 @@ import { findUserById } from '@bits/db'
 import * as assert from 'remix/assert'
 import { after, describe, it } from 'remix/test'
 
-import { disposePlatform } from '#platform'
+import { disposePlatform, platform } from '#platform'
 
 import { routes } from '../routes.ts'
 import { completeLesson, fetchAs, form, signIn, testDb, testIp } from '../test/auth.ts'
@@ -175,6 +175,26 @@ describe('/api/verify (decision 072)', () => {
     })
     let page = await (await fetchAs(null, lessonHref)).text()
     assert.match(page, /Sign in to check your deploy/)
+  })
+
+  it('a Workers Preview never calls out: refused before journalling or fetching', async () => {
+    let { user, cookie } = await signIn('verify-preview@example.com')
+    let env = platform.env as unknown as Record<string, unknown>
+    let saved = { APP_ENV: env.APP_ENV, CANONICAL_ORIGIN: env.CANONICAL_ORIGIN, EMAIL: env.EMAIL }
+    Object.assign(env, { APP_ENV: 'preview', CANONICAL_ORIGIN: undefined, EMAIL: undefined })
+    try {
+      await withWorker(healthy, async (calls) => {
+        let response = await postVerify(cookie, { url: 'https://klippy-preview.someone.workers.dev' })
+        assert.equal(response.status, 422)
+        let body = await response.json()
+        assert.equal(body.error, 'preview')
+        assert.match(body.message, /off on preview deploys/)
+        assert.equal(calls.length, 0)
+      })
+    } finally {
+      Object.assign(env, saved)
+    }
+    assert.equal((await rows('user_id = ?', user.id)).length, 0)
   })
 
   it('caps checks per user, per user per origin, and per origin (soft for newcomers, hard for all)', async () => {
