@@ -257,6 +257,14 @@ describe('/api/coach', () => {
     // The save adds the rest of the lesson, never the exercise twice.
     assert.equal((await completeLesson(cookie, COURSE, LESSON)).status, 303)
     assert.equal(await xpOf(user.id), 50)
+    // The verdicts are in the data export (the privacy page says so).
+    let exported = (await (await fetchAs(cookie, routes.settings.export.href())).json()) as {
+      coach: { exercise: string; layer: string; passed: boolean; criteria: unknown[] }[]
+    }
+    assert.deepEqual(
+      exported.coach.map((row) => [row.exercise, row.layer, row.passed, row.criteria.length]),
+      [[EXERCISE, 'coach', true, 6]],
+    )
   })
 
   it('evidence the reply doesn’t contain is not met, whatever the judge says', async () => {

@@ -5,6 +5,7 @@ import {
   findUserByHandle,
   listAskAttempts,
   listAttempts,
+  listCoachVerdicts,
   listCompletedLessons,
   listUserBadges,
   renamePasskey,
@@ -59,12 +60,13 @@ export default createController(routes.settings, {
 
     async export(context) {
       let user = context.auth.identity
-      let [account, lessons, attempts, badges, answers] = await Promise.all([
+      let [account, lessons, attempts, badges, answers, verdicts] = await Promise.all([
         getAccountSettings(context.db, user, context.session.id),
         listCompletedLessons(context.db, user.id),
         listAttempts(context.db, user.id, 10_000),
         listUserBadges(context.db, user.id),
         listAskAttempts(context.db, user.id, 10_000),
+        listCoachVerdicts(context.db, user.id, 10_000),
       ])
       let body = {
         format: 'bits-export',
@@ -118,6 +120,19 @@ export default createController(routes.settings, {
           ask: row.ask_id,
           answer: row.answer,
           correct: row.correct,
+          at: new Date(row.created_at).toISOString(),
+        })),
+        // The coach's verdicts on prompt runs (decision 064): the layer that
+        // decided, each criterion and the hint. A reveal row has no run.
+        coach: verdicts.map((row) => ({
+          course: row.course_id,
+          lesson: row.lesson_slug,
+          exercise: row.exercise_id,
+          run: row.attempt_id,
+          layer: row.layer,
+          passed: row.passed,
+          criteria: row.criteria,
+          hint: row.hint,
           at: new Date(row.created_at).toISOString(),
         })),
       }
