@@ -37,7 +37,13 @@ Reports in `docs/plans/release-audit/`:
   /privacy (`*_UPDATED`).
 - Home Ask box: the lead chose an honest CTA, with suggestion chips linking to the lessons that answer them.
 
-## Fix wave 1 (started 2026-11-02, stopped for a break)
+## Fix wave 1: DONE, deployed 2026-11-02
+
+Merged and deployed in this order: L4 `ab5d07a`, L3 `de965e7`, L1b `6d45c6d`, L2 `5e55de6`, L1a `53d3328`
+(Worker 23dcea4b). Decisions 065–068 recorded. Lanes checked with Playwright, not Chrome, so a QA pass of the
+merged site follows. Leftovers from the lane reports are listed under Follow-ups.
+
+### Original wave-1 notes
 
 These five lanes were launched in their own worktrees (`.claude/worktrees/agent-<id>`, branch
 `worktree-agent-<id>`) and stopped mid-work when the owner paused. Check each branch for commits and
@@ -135,6 +141,17 @@ The order follows `D-coached-prompts.md`:
 7. The eval gate before going wide.
 
 ## Follow-ups (not assigned)
+
+- `me/next-lesson.tsx` duplicates `nextStep()` in `home/continue.ts`; fold /me onto the shared one.
+- Logout should accept `next=` (the wrong-account invite page needs it).
+- `AuthShell`'s ignored `mode` prop is still passed by `actions/auth/{email,verify}`.
+- Styleguide: an AccountMenu specimen; the quick check and lesson bar captions still describe chips.
+- Callout lays out its children as blocks, so inline text breaks; Tag's `done` variant is shorter than the tags beside it.
+- Lesson: on phones the check labels stack one per line; the depth tabs have no explanation; the reply area reserves empty space.
+- Sign-in pane: the headline overlaps the sphere; the hero dead band.
+- Course frontmatter needs a `prerequisites` field (content lane).
+- New email accounts: check the handle is neutral (L3's createUser) now that L1a dropped the name field.
+- A person should hand-type in the prompt composer once to confirm the keystroke fix.
 
 - Move `readText`/`issueField` out of `login/schema.ts` into a shared module, after wave 1 merges.
 - Island `fetch()` calls without an abort signal outside L3's islands.
