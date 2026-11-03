@@ -13,6 +13,7 @@ interface __BaseEnv_Env {
 	RL_ASKS: RateLimit;
 	RL_ACCOUNT: RateLimit;
 	RL_PUBLISH: RateLimit;
+	RL_LOGOUT: RateLimit;
 	ASSETS: Fetcher;
 	APP_ENV: string;
 	EMAIL_FROM: string;

@@ -68,7 +68,7 @@ describe('router smoke test', () => {
     routes.courses.course.index.href({ course: 'tokens-and-temperature' }),
     routes.courses.lesson.index.href({ course: 'tokens-and-temperature', lesson: 'temperature' }),
     routes.login.index.href(),
-    routes.login.check.index.href(),
+    // /login/check needs the address POST /login put in the session (decision 065): login/controller.test.ts.
   ]
 
   for (let path of publicPages) {
@@ -180,7 +180,8 @@ describe('router smoke test', () => {
     assert.equal(response.status, 303)
     let location = new URL(response.headers.get('Location')!, 'http://localhost')
     assert.equal(location.pathname, routes.login.check.index.href())
-    assert.equal(location.searchParams.get('email'), 'ada@example.com')
+    // The address rides in the session, never the URL (decision 065).
+    assert.equal(location.searchParams.get('email'), null)
     assert.equal(location.searchParams.get('next'), '/courses')
   })
 

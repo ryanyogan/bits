@@ -132,7 +132,6 @@ const publicPages: Array<{ name: string; href: string; ready?: (page: Page) => P
   { name: 'lesson read: code', href: lesson('first-agent-loop', 'the-loop') },
   { name: 'lesson read: composer', href: lesson('what-is-an-llm', 'say-hi-to-claude') },
   { name: 'login email', href: routes.login.index.href() },
-  { name: 'login signup', href: routes.login.index.href(undefined, { searchParams: { mode: 'signup' } }) },
   { name: 'terms', href: routes.legal.terms.href() },
   { name: 'privacy', href: routes.legal.privacy.href() },
   { name: 'styleguide', href: routes.styleguide.index.href() },
@@ -428,6 +427,15 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
       await page.goto(href)
       await settled(page)
       await expectClean(page, label)
+    }
+    // The account menu open (decision 065), on a phone and a desktop.
+    for (let width of [360, 1440]) {
+      await page.setViewportSize({ width, height: width === 360 ? 800 : 900 })
+      await page.goto(routes.courses.index.href())
+      await settled(page)
+      await page.locator('body > header').getByRole('button', { name: /^Your profile, / }).click()
+      await page.locator('#account-menu:popover-open').waitFor()
+      await expectClean(page, `account menu open @ ${width}`, width)
     }
   })
 

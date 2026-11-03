@@ -93,7 +93,7 @@ export function AppBar(handle: Handle<AppBarProps>) {
                   key={link.href}
                   href={link.href}
                   aria-current={link.href === currentPath ? 'page' : undefined}
-                  data-rmx-prefetch={prefetchFor(link.href)}
+                  data-rmx-prefetch={link.prefetch === false ? undefined : prefetchFor(link.href)}
                   mix={cellStyle}
                 >
                   {link.label}

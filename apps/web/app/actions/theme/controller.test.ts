@@ -217,7 +217,8 @@ describe('the theme preference (decision 062)', () => {
     let { cookie, user } = await signIn('theme-timing@example.com')
     let timing = async (href: string) => (await fetchAs(cookie, href)).headers.get('Server-Timing') ?? ''
     let before = /desc="[^"]*"/.exec(await timing(home))?.[0]
-    assert.equal(before, 'desc="1 queries, 1 round trips"')
+    // The landing's session read also brings the completed lessons (decision 065): one round trip.
+    assert.equal(before, 'desc="2 queries, 1 round trips"')
     await saveTheme(testDb, user.id, 'light')
     assert.equal(/desc="[^"]*"/.exec(await timing(home))?.[0], before, 'a pinned theme costs nothing')
 

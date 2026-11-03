@@ -8,12 +8,11 @@ import { Keycap } from '@bits/ui/keycap'
 import { isPreview } from '../../../auth/config.ts'
 import { routes } from '../../../routes.ts'
 import { PendingSubmit } from '@bits/ui/pending-submit'
-import { issueFor, type FormIssue, type LoginMode } from '../schema.ts'
+import { issueFor, type FormIssue } from '../schema.ts'
 import { AuthShell, formHeadingStyle, headingGroupStyle, riseStyle, subStyle } from '../ui/auth-shell.tsx'
 
 export interface CheckEmailPageProps {
   email: string
-  mode?: LoginMode
   next?: string
   code?: string
   /** On a Workers Preview, the code POST /login flashed for this browser (decision 038). */
@@ -28,14 +27,14 @@ export interface CheckEmailPageProps {
  */
 export function CheckEmailPage(handle: Handle<CheckEmailPageProps>) {
   return () => {
-    let { email, mode = 'signin', next, code, previewCode, issues } = handle.props
+    let { email, next, code, previewCode, issues } = handle.props
     let nextParam = next ? { next } : {}
     let error = issueFor(issues, 'code')?.message ?? issueFor(issues, 'email')?.message
     // A Workers Preview sends no mail: the code is on this page instead.
     let preview = isPreview()
 
     return (
-      <AuthShell title={preview ? 'Your sign-in code' : 'Check your inbox'} mode={mode} next={next}>
+      <AuthShell title={preview ? 'Your sign-in code' : 'Check your inbox'} next={next}>
         <div mix={[riseStyle, blockStyle]}>
           <div aria-hidden="true" mix={tileStyle}>
             <Icon name="mail" />
@@ -78,9 +77,7 @@ export function CheckEmailPage(handle: Handle<CheckEmailPageProps>) {
               <Keycap
                 variant="ghost-mono"
                 size="lg"
-                href={routes.login.index.href(undefined, {
-                  searchParams: { ...(mode === 'signup' ? { mode } : {}), ...nextParam },
-                })}
+                href={routes.login.index.href(undefined, { searchParams: nextParam })}
                 mix={secondaryStyle}
               >
                 Use another email
@@ -91,7 +88,6 @@ export function CheckEmailPage(handle: Handle<CheckEmailPageProps>) {
           {email ? (
             <form method="post" action={routes.login.action.href()} mix={resendStyle}>
               <input type="hidden" name="email" value={email} />
-              <input type="hidden" name="mode" value={mode} />
               {next ? <input type="hidden" name="next" value={next} /> : null}
               Didn't get it?{' '}
               <button type="submit" mix={linkButtonStyle}>

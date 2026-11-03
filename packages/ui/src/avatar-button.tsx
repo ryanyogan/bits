@@ -41,7 +41,8 @@ export function AvatarButton(handle: Handle<AvatarButtonProps>) {
   }
 }
 
-const avatarStyle = css({
+/** The avatar's face: shared with `AccountMenu`'s button. */
+export const avatarStyle = css({
   position: 'relative',
   flex: 'none',
   display: 'grid',
@@ -59,7 +60,7 @@ const avatarStyle = css({
   transition: 'border-color var(--duration-fast)',
   '&::before': { content: '""', position: 'absolute', inset: '-3px' },
   [HOVER]: { borderColor: 'var(--line-drop)' },
-  '&[aria-current="page"]': {
+  '&[aria-current="page"], &[data-current="true"]': {
     background: 'var(--volt)',
     color: 'var(--on-volt)',
     borderColor: 'var(--volt)',

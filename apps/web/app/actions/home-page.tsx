@@ -1,6 +1,7 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 import type { AppBarLink } from '@bits/ui/app-bar'
+import { ContinueBanner } from '@bits/ui/continue-banner'
 import { Footer, type FooterThemeOption } from '@bits/ui/footer'
 import { PageFrame } from '@bits/ui/page-frame'
 import { RuledSection } from '@bits/ui/ruled-section'
@@ -9,11 +10,11 @@ import { themePreference } from '@bits/ui/theme'
 import { APP_NAME, APP_TAGLINE } from '../config.ts'
 import type { Viewer } from '../auth/identity.ts'
 import { routes } from '../routes.ts'
-import { Layout } from '../ui/layout.tsx'
+import { authorLinkFor, copyright, footerLinksFor, Layout } from '../ui/layout.tsx'
 import { ClosingCta } from './home/closing-cta.tsx'
+import type { NextStep } from './home/continue.ts'
 import { Hero } from './home/hero.tsx'
 import { HowItWorks } from './home/how-it-works.tsx'
-import { lessonOneHref } from './home/links.ts'
 import { Modes } from './home/modes.tsx'
 import { Progress } from './home/progress.tsx'
 import { NeuralField } from './home/public/neural-field.tsx'
@@ -24,23 +25,18 @@ const brandName = `${APP_NAME.charAt(0).toUpperCase()}${APP_NAME.slice(1)}`
 /** "Bits — learn AI by typing to it" (Main.md). */
 export const homeTitle = `${brandName} — learn AI by typing to it`
 
-// The landing's content for the one header (decision 059): in-page
-// section links, lit while their section is on screen.
-const navLinks: AppBarLink[] = [
-  { href: routes.courses.index.href(), label: 'Courses' },
-  { href: '#how', label: 'How it works', section: 'how' },
-  { href: '#path', label: 'The path', section: 'path' },
-  { href: routes.author.index.href(), label: 'For authors' },
-]
-
-const footerLinks = [
-  { href: routes.courses.index.href(), label: 'Courses' },
-  { href: routes.author.index.href(), label: 'Write a course' },
-  { href: routes.login.index.href(), label: 'Sign in' },
-  { href: routes.me.index.href(), label: 'Profile' },
-  { href: routes.legal.terms.href(), label: 'Terms' },
-  { href: routes.legal.privacy.href(), label: 'Privacy' },
-]
+// The landing's content for the one header (decisions 059, 065): in-page
+// section links, lit while their section is on screen, then My learning
+// (signed in) and Write a course (authors).
+function navLinksFor(viewer: Viewer | null): AppBarLink[] {
+  return [
+    { href: routes.courses.index.href(), label: 'Courses' },
+    { href: '#how', label: 'How it works', section: 'how' },
+    { href: '#path', label: 'The path', section: 'path' },
+    ...(viewer ? [{ href: routes.me.index.href(), label: 'My learning' }] : []),
+    ...authorLinkFor(viewer),
+  ]
+}
 
 // The footer's theme switch (decision 062): `POST /theme`, then back here.
 const themeOptions: FooterThemeOption[] = [
@@ -60,9 +56,10 @@ const themeOptions: FooterThemeOption[] = [
  * `PageFrame`; every section and the footer are bands of that frame,
  * divided by full-bleed rules with `+` marks on the rails.
  */
-export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
+export function HomePage(handle: Handle<{ viewer: Viewer | null; next?: NextStep }>) {
   return () => {
-    let { viewer } = handle.props
+    let { viewer, next } = handle.props
+    let signedIn = viewer !== null
     return (
       <Layout
         documentTitle={homeTitle}
@@ -72,8 +69,8 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
         // The hero h1 (the LCP element) is Unbounded 800, outside the global preloads.
         preloadFonts={['unbounded-latin-800-normal.woff2']}
         head={<style>{pageCss}</style>}
-        links={navLinks}
-        startHref={lessonOneHref()}
+        links={navLinksFor(viewer)}
+        continueHref={next?.href}
         viewer={viewer}
         bare
       >
@@ -81,19 +78,36 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null }>) {
           <NeuralField />
           <PageFrame mix={contentStyle}>
             <main id="main" tabIndex={-1} mix={mainStyle}>
-              <Hero signedIn={viewer !== null} />
+              <Hero signedIn={signedIn} next={next} />
+              {next ? (
+                // Signed in: where they left off, right under the fold (decision 065).
+                <RuledSection aria-label="Continue where you left off" pad="none">
+                  <ContinueBanner
+                    href={next.href}
+                    courseTitle={next.courseTitle}
+                    eyebrow={next.kind === 'resume' ? `Continue · lesson ${next.n} of ${next.total}` : `Start here · lesson 1 of ${next.total}`}
+                    nextLesson={next.lessonTitle}
+                    mins={next.mins}
+                    pct={next.pct}
+                    sigil={next.sigil}
+                    tone={next.tone}
+                    pattern={next.pattern}
+                    edge="flush"
+                  />
+                </RuledSection>
+              ) : null}
               <HowItWorks />
               <ThePath />
               <Modes />
-              <Progress />
-              <ClosingCta />
+              <Progress signedIn={signedIn} />
+              <ClosingCta signedIn={signedIn} next={next} />
             </main>
             <RuledSection as="div" pad="none" open>
               <Footer
                 brand={APP_NAME}
                 homeHref={routes.home.href()}
-                links={footerLinks}
-                copyright={`© 2026 ${brandName}`}
+                links={footerLinksFor(viewer)}
+                copyright={copyright}
                 themes={{ current: themePreference(handle), action: routes.theme.action.href(), options: themeOptions }}
                 mix={footerStyle}
               />

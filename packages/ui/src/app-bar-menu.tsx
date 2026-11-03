@@ -14,6 +14,8 @@ export interface AppBarLink {
    * prefetched, never `aria-current`.
    */
   section?: string
+  /** `false`: never prefetched (a link whose GET redirects per viewer, like `/continue`). */
+  prefetch?: false
 }
 
 export interface AppBarMenuProps {
@@ -66,7 +68,7 @@ export const AppBarMenu = clientEntry(
                   key={link.href}
                   href={link.href}
                   aria-current={!link.section && link.href === currentPath ? 'page' : undefined}
-                  data-rmx-prefetch={link.section ? undefined : prefetchFor(link.href)}
+                  data-rmx-prefetch={link.section || link.prefetch === false ? undefined : prefetchFor(link.href)}
                   mix={linkStyle}
                 >
                   {link.label}

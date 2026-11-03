@@ -3,32 +3,30 @@ import { css } from 'remix/component'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
 import { PageFrame } from '@bits/ui/page-frame'
 import { RuledSection } from '@bits/ui/ruled-section'
-import { SegmentedTabs } from '@bits/ui/segmented-tabs'
 
 import { routes } from '../../../routes.ts'
 import { Layout } from '../../../ui/layout.tsx'
 import { lessonOneHref } from '../../home/links.ts'
-import type { LoginMode } from '../schema.ts'
 import { BrainPane } from './brain-pane.tsx'
 
 export interface AuthShellProps {
   /** Page name for the document title ("Sign in", "Check your inbox"). */
   title: string
-  /** Which account tab is current. */
-  mode: LoginMode
   next?: string
+  /** Ignored: there are no account tabs any more (decision 065). */
+  mode?: string
   children?: RemixNode
 }
 
 /**
  * The Auth artboard frame under the one header (decision 059): the
- * "living brain" pane and the form pane with the account tabs and footer.
+ * "living brain" pane and the form pane with its footer. One passwordless
+ * flow, so no Sign in / Create account tabs (decision 065).
  * The header holds the nav but no account actions: this page is the way in.
  */
 export function AuthShell(handle: Handle<AuthShellProps>) {
   return () => {
-    let { title, mode, next, children } = handle.props
-    let nextParam = next ? { next } : {}
+    let { title, children } = handle.props
 
     return (
       <Layout
@@ -52,23 +50,6 @@ export function AuthShell(handle: Handle<AuthShellProps>) {
               <BrainPane />
               <main id="main" tabIndex={-1} mix={[skipTargetStyle, formPaneStyle]}>
                 <div mix={columnStyle}>
-                  <SegmentedTabs
-                    label="Account"
-                    flavour="account"
-                    keepPlace
-                    items={[
-                      {
-                        label: 'Sign in',
-                        href: routes.login.index.href(undefined, { searchParams: nextParam }),
-                        current: mode === 'signin',
-                      },
-                      {
-                        label: 'Create account',
-                        href: routes.login.index.href(undefined, { searchParams: { mode: 'signup', ...nextParam } }),
-                        current: mode === 'signup',
-                      },
-                    ]}
-                  />
                   {children}
                   <footer mix={footerStyle}>
                     <a href={lessonOneHref()} data-rmx-prefetch={prefetchFor(lessonOneHref())} mix={exploreLinkStyle}>
@@ -143,9 +124,8 @@ const cellsStyle = css({
 
 // The skip link's target takes focus (tabIndex -1) without drawing a ring round the pane (decision 031).
 const skipTargetStyle = css({ '&:focus': { outline: 'none' } })
-// The column hangs from a fixed top instead of being centred: sign-up is
-// ~240px taller than sign-in, so a centred column moved the tabs (and
-// everything under them) by half that on every switch (decision 044).
+// The column hangs from a fixed top instead of being centred, so the code
+// step's form starts where the email step's did (decision 044).
 const formPaneStyle = css({
   minWidth: 0,
   display: 'flex',

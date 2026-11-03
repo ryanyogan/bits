@@ -9,8 +9,9 @@ import { startUserSession } from '../../auth/users.ts'
 import { rateLimit } from '../../middleware/rate-limit.tsx'
 import { routes } from '../../routes.ts'
 import { LoginPage, type LoginNotice } from './login-page.tsx'
+import { rememberPendingEmail } from './pending-email.ts'
 import { flashPreviewCode } from './preview-code.ts'
-import { issueField, loginForm, readGoals, readText, safeNextPath, type FormIssue, type LoginMode } from './schema.ts'
+import { issueField, loginForm, readText, safeNextPath, type FormIssue } from './schema.ts'
 
 export default createController(routes.login, {
   actions: {
@@ -19,10 +20,10 @@ export default createController(routes.login, {
       let next = safeNextPath(params.get('next'))
       // Already signed in: nothing to do here.
       if (currentUser(context)) return redirect(next ?? routes.courses.index.href(), 303)
-      let mode: LoginMode = params.get('mode') === 'signup' ? 'signup' : 'signin'
+      // One flow for new and returning learners (decision 065): an old
+      // `?mode=signup` link just opens it.
       return context.render(
         <LoginPage
-          mode={mode}
           next={next}
           notice={noticeFor(params.get('notice') ?? params.get('error'))}
         />,
@@ -30,22 +31,18 @@ export default createController(routes.login, {
     },
 
     // Request a magic link + code: the per-email and per-IP limits, then
-    // store the hashed token and send the email (decisions 015, 017).
+    // store the hashed token and send the email (decisions 015, 017). The
+    // same request signs in a returning learner or, once the code is
+    // entered, creates the account (decision 065).
     action: {
       middleware: [rateLimit('RL_SIGNIN')],
       async handler(context) {
         let parsed = s.parseSafe(loginForm, context.formData)
-        let mode: LoginMode = readText(context.formData, 'mode') === 'signup' ? 'signup' : 'signin'
         let rerender = (status: number, extra: { issues?: FormIssue[]; notice?: LoginNotice }) =>
           context.render(
             <LoginPage
-              mode={mode}
               next={safeNextPath(readText(context.formData, 'next'))}
-              values={{
-                email: readText(context.formData, 'email'),
-                displayName: readText(context.formData, 'displayName'),
-                goals: readGoals(context.formData),
-              }}
+              values={{ email: readText(context.formData, 'email') }}
               {...extra}
             />,
             { status },
@@ -55,10 +52,11 @@ export default createController(routes.login, {
 
         let ip = context.headers.get('CF-Connecting-IP')
 
-        let { email, mode: parsedMode, next, displayName, goals, timezone } = parsed.value
+        let { email, next, displayName, goals, timezone } = parsed.value
         let result = await requestEmailSignIn(context.db, {
           email,
-          signup: parsedMode === 'signup' ? { displayName, goals, timezone } : null,
+          // Used only if this address has no account yet; a name is set later in Settings.
+          signup: displayName || goals.length || timezone ? { displayName, goals, timezone } : null,
           next: next ?? null,
           ip,
           origin: context.url.origin,
@@ -68,13 +66,10 @@ export default createController(routes.login, {
           return rerender(failure.status, { notice: { tone: failure.tone ?? 'danger', text: failure.text } })
         }
         if (result.shownCode) flashPreviewCode(context, email, result.shownCode)
+        // The address goes to the check page through the session, not the URL.
+        rememberPendingEmail(context, email)
 
-        return redirect(
-          routes.login.check.index.href(undefined, {
-            searchParams: { email, ...(parsedMode === 'signup' ? { mode: parsedMode } : {}), ...(next ? { next } : {}) },
-          }),
-          303,
-        )
+        return redirect(routes.login.check.index.href(undefined, next ? { searchParams: { next } } : undefined), 303)
       },
     },
 
@@ -92,7 +87,6 @@ export default createController(routes.login, {
           let rp = relyingParty(context.url, context.headers.get('Origin'))
           return context.render(
             <LoginPage
-              mode="signin"
               next={next}
               unknownPasskey={
                 result.reason === 'unknown' && /^[\w-]{1,1400}$/.test(result.credentialId)

@@ -46,7 +46,7 @@ describe('/me and /u/:handle', () => {
     // The next lesson comes first, linking to the lesson itself (decision 068).
     assert.match(html, /aria-label="Continue where you left off"/)
     assert.match(html, /Continue · lesson \d+ of \d+/)
-    assert.ok(html.indexOf('Continue where you left off') < html.indexOf('Jamie Park'), 'the band is above the identity')
+    assert.ok(html.indexOf('Continue where you left off') < html.search(/<h1[\s>]/), 'the band is above the identity')
     assert.match(html, /href="\/courses\/tokens-and-temperature\/[a-z0-9-]+"/)
     // Public: Share. "Download my data" lands on its section.
     assert.match(html, /Share ↗/)

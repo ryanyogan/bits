@@ -23,10 +23,7 @@ export function safeNextPath(value: string | undefined | null): string | undefin
 
 const trimmed = s.defaulted(s.string(), '').transform((value) => value.trim())
 
-export const loginModes = ['signin', 'signup'] as const
-export type LoginMode = (typeof loginModes)[number]
-
-/** "What brings you here?" on sign-up (Auth spec, state B). */
+/** The goals a new account can carry (`users.goals`; shown on the profile). */
 export const signupGoals = [
   { id: 'curious', label: 'Curious about AI' },
   { id: 'work', label: 'Use AI at work' },
@@ -36,7 +33,12 @@ export const signupGoals = [
 export type SignupGoal = (typeof signupGoals)[number]['id']
 const goalIds = signupGoals.map((goal) => goal.id) as [SignupGoal, ...SignupGoal[]]
 
-/** POST /login: request a magic link + 6-digit code. */
+/**
+ * POST /login: request a magic link + 6-digit code (decision 065: one flow,
+ * no mode). The form sends only the email, `next` and the time zone. A
+ * `displayName` and `goals` are still accepted for a new account (the test
+ * helpers create named users this way); a `mode` field is ignored.
+ */
 export const loginForm = f.object({
   email: f.field(
     s
@@ -44,7 +46,6 @@ export const loginForm = f.object({
       .transform((value) => value.trim().toLowerCase())
       .pipe(checks.email(), checks.maxLength(254)),
   ),
-  mode: f.field(s.defaulted(s.enum_(loginModes), 'signin')),
   displayName: f.field(trimmed.pipe(checks.maxLength(60))),
   goals: f.fields(s.array(s.enum_(goalIds))),
   /** IANA zone filled in by the browser (TimezoneField); stored at sign-up. */
@@ -82,11 +83,4 @@ export function issueFor(issues: readonly FormIssue[] | undefined, name: string)
 export function readText(formData: FormData | undefined, name: string): string {
   let value = formData?.get(name)
   return typeof value === 'string' ? value : ''
-}
-
-export function readGoals(formData: FormData | undefined): SignupGoal[] {
-  let ids: readonly string[] = goalIds
-  return (formData?.getAll('goals') ?? []).filter(
-    (value): value is SignupGoal => typeof value === 'string' && ids.includes(value),
-  )
 }

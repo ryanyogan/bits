@@ -56,6 +56,8 @@ import { routes } from './routes.ts'
 const coursePages = anyOf(under(pathPrefix(routes.courses)))
 const lessonPage = createMatcher(routes.courses.lesson.index.pattern)
 const mePage = createMatcher(routes.me.index.pattern)
+const landingPage = createMatcher(routes.home.pattern)
+const continuePage = createMatcher(routes.continue.pattern)
 
 export const router = createRouter({
   middleware: [
@@ -89,7 +91,9 @@ export const router = createRouter({
     // lessons with the session, in one D1 round trip (decision 026).
     // A lesson page also brings the viewer's drafts in that lesson (decision 029).
     loadSession({
-      withCompleted: (context) => context.method === 'GET' && coursePages.test(context.url),
+      // The landing and /continue find the next lesson too (decision 065).
+      withCompleted: (context) =>
+        context.method === 'GET' && (coursePages.test(context.url) || landingPage.match(context.url) != null || continuePage.match(context.url) != null),
       withDrafts: (context) => {
         if (context.method !== 'GET') return undefined
         let match = lessonPage.match(context.url)

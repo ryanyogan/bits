@@ -109,8 +109,8 @@ describe('response headers', () => {
   })
 
   it('no-store covers everything under those areas, matched from the route map, and nothing beside them', async () => {
+    // (/login/check redirects to /login without a pending address; decision 065.)
     let noStore = [
-      routes.login.check.index.href(),
       '/settings/',
       '/settings/no-such-page',
       '/me/no-such-page',

@@ -31,6 +31,8 @@ export type RateLimitTier =
   | 'RL_ACCOUNT'
   /** Publishing or rolling back a course (each rewrites catalog/live.json): 10 a minute (decision 068). */
   | 'RL_PUBLISH'
+  /** Sign out (POST /logout): 10 a minute (decision 065; 2010/3010, after L3's 2008–2009). */
+  | 'RL_LOGOUT'
 
 /**
  * Keyed by the signed-in user, else by the client IP. The binding is
