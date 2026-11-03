@@ -208,6 +208,8 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
                         pattern={course.pattern}
                         formats={course.formats}
                         pct={course.pct}
+                        // Coming soon (decision 073). Pro tags wait for ownership data (decision 048).
+                        access={course.access === 'soon' ? 'soon' : undefined}
                         variant="cell"
                       />
                     </li>

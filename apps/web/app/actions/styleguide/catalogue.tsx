@@ -19,6 +19,7 @@ import { ComparePanel } from '@bits/ui/compare-panel'
 import { ContinueBanner } from '@bits/ui/continue-banner'
 import { CourseCard, WriteCourseCard } from '@bits/ui/course-card'
 import { CourseCover, coverPatterns } from '@bits/ui/course-cover'
+import { DeskTag } from '@bits/ui/desk-tag'
 import { EmptyState } from '@bits/ui/empty-state'
 import { Eyebrow, MonoHeading } from '@bits/ui/eyebrow'
 import { FilterPill, scrollRowFade } from '@bits/ui/filter-pill'
@@ -330,6 +331,19 @@ export function Catalogue(handle: Handle) {
                 { label: 'Engineer', href: '#sg-nav-e', prefetch: false },
               ]}
               neurons={1240}
+            />
+          </div>
+        </Specimen>
+        <Specimen caption="LessonBar desk — a lesson whose build steps need a computer (frontmatter device: desk, decision 073) gets a Desk tag after its title; in the shell it shows from 1024px, and LessonRow carries it below">
+          <div mix={barFrame}>
+            <LessonBar
+              position="static"
+              backHref="#sg-nav"
+              context="Your first Worker · Lesson 3 of 5 · 18 min"
+              title="Hello, Worker"
+              segments={['done', 'done', 'current', 'upcoming', 'upcoming']}
+              progressLabel="Lesson 3 of 5, 2 complete"
+              desk
             />
           </div>
         </Specimen>
@@ -664,7 +678,7 @@ export function Catalogue(handle: Handle) {
             </nav>
             <span mix={note}>a row that scrolls sideways: scrollRowFade fades its end until you reach it (decision 051)</span>
           </Specimen>
-          <Specimen caption="Tags — meta · meta-ion · format · cover · done · your turn · run hint · free · pro">
+          <Specimen caption="Tags — meta · meta-ion · format · cover · done · your turn · run hint · free · pro · soon · desk (DeskTag: “Desk”, and the reason for screen readers; decision 073)">
             <div mix={row}>
               <Tag variant="meta">8 lessons</Tag>
               <Tag variant="meta-ion">text + video</Tag>
@@ -680,6 +694,8 @@ export function Catalogue(handle: Handle) {
               <Tag variant="run-hint">Run ↵</Tag>
               <Tag variant="free">Free</Tag>
               <Tag variant="pro">Pro</Tag>
+              <Tag variant="soon">Coming soon</Tag>
+              <DeskTag />
             </div>
           </Specimen>
           <Specimen caption="Landing path rows (decision 048) — free · pro · pro, owned (no tag). Every course is free today.">
@@ -976,10 +992,27 @@ export function Catalogue(handle: Handle) {
             />
           </li>
           <li mix={cardCell}>
+            <CourseCard
+              href="#sg-courses"
+              title="MCP"
+              desc="A remote MCP server on Workers, with OAuth. Coming soon: the outline is listed, no lesson opens."
+              track="Tools"
+              level="Intermediate"
+              lessons={0}
+              mins={0}
+              sigil="mcp"
+              tone="ion"
+              pattern="grid"
+              formats={['text', 'code']}
+              access="soon"
+              variant="cell"
+            />
+          </li>
+          <li mix={cardCell}>
             <WriteCourseCard href="#sg-courses" variant="cell" />
           </li>
         </CellGrid>
-        <span mix={note}>CourseCard variant cell in a CellGrid: started (bar) · done (DoneTag) · hover (fill step, sigil scale) with access="pro" (Pro tag; none when owned) · WriteCourseCard. The default card variant keeps its own hairline box. Under 760px a cell is a compact row: a 64px thumbnail cover, two-line description, no track or format tags (decision 051).</span>
+        <span mix={note}>CourseCard variant cell in a CellGrid: started (bar) · done (DoneTag) · hover (fill step, sigil scale) with access="pro" (Pro tag; none when owned) · access="soon" (Coming soon, no progress; with no lessons yet the counts drop; decision 073) · WriteCourseCard. The default card variant keeps its own hairline box. Under 760px a cell is a compact row: a 64px thumbnail cover, two-line description, no track or format tags (decision 051).</span>
         <Specimen caption="CourseCover — the 8 named patterns, drawn from bits since decision 058: lattice · bit stream · ruled with bits · graph paper with nodes · dashed rings · checker with bits · dashed rays · byte rows">
           <ul mix={coverGrid}>
             {coverPatterns.map((pattern, index) => (

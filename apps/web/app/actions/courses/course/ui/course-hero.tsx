@@ -47,6 +47,13 @@ export function CourseHero(handle: Handle<CourseHeroProps>) {
             </h1>
             <p mix={leadStyle}>{view.lead}</p>
             <ul aria-label="About this course" mix={metaList}>
+              {view.soon ? (
+                <li>
+                  <Tag variant="soon" mix={soonTag}>
+                    Coming soon
+                  </Tag>
+                </li>
+              ) : null}
               {view.state === 'finished' ? (
                 <li>
                   <Tag variant="done">✓ Finished</Tag>
@@ -55,25 +62,40 @@ export function CourseHero(handle: Handle<CourseHeroProps>) {
               <li>
                 <Tag variant="meta">{course.level}</Tag>
               </li>
-              <li>
-                <Tag variant="meta">{`${view.total} lessons`}</Tag>
-              </li>
-              <li>
-                <Tag variant="meta">{formatMins(view.totalMins)}</Tag>
-              </li>
+              {view.total > 0 ? (
+                <>
+                  <li>
+                    <Tag variant="meta">{`${view.total} lessons`}</Tag>
+                  </li>
+                  <li>
+                    <Tag variant="meta">{formatMins(view.totalMins)}</Tag>
+                  </li>
+                </>
+              ) : null}
               <li>
                 <Tag variant="meta-ion" mix={toneTag}>
                   {course.formats.join(' + ')}
                 </Tag>
               </li>
             </ul>
+            {view.soon ? (
+              // Coming soon (decision 073): no Start key, just what to expect.
+              <p mix={ctaSub}>
+                {view.total > 0
+                  ? "Not open yet. The outline below is the plan; the lessons open when they're written and checked."
+                  : "Not open yet. The lessons open here when they're written and checked."}
+              </p>
+            ) : null}
+            {view.cta || view.secondary ? (
             <div mix={actionsStyle}>
-              <div mix={ctaBlock}>
-                <Keycap size="lg" href={view.cta.href} mix={ctaStyle}>
-                  {view.cta.label}
-                </Keycap>
-                {view.cta.sub ? <p mix={ctaSub}>{view.cta.sub}</p> : null}
-              </div>
+              {view.cta ? (
+                <div mix={ctaBlock}>
+                  <Keycap size="lg" href={view.cta.href} mix={ctaStyle}>
+                    {view.cta.label}
+                  </Keycap>
+                  {view.cta.sub ? <p mix={ctaSub}>{view.cta.sub}</p> : null}
+                </div>
+              ) : null}
               {view.secondary ? (
                 <Keycap variant="ghost-mono" size="lg" href={view.secondary.href} mix={[ctaStyle, ghostStyle]}>
                   {view.secondary.icon ? <Icon name={view.secondary.icon} /> : null}
@@ -81,6 +103,7 @@ export function CourseHero(handle: Handle<CourseHeroProps>) {
                 </Keycap>
               ) : null}
             </div>
+            ) : null}
           </div>
           <div aria-hidden="true" mix={artCol}>
             <CourseCover pattern={course.pattern} tone={course.tone} sigil={course.sigil} variant="art" mix={artStyle} />
@@ -154,6 +177,8 @@ const metaList = css({
   gap: 'var(--space-2)',
   flexWrap: 'wrap',
 })
+// The hero's tags are 13px; the soon tag matches their height.
+const soonTag = css({ padding: 'var(--space-1_75) var(--space-2_75)', fontSize: 'var(--fs-13)' })
 const toneTag = css({ borderColor: toneAlpha(35), color: 'var(--tone)' })
 const actionsStyle = css({
   display: 'flex',

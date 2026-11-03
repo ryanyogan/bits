@@ -12,6 +12,8 @@ import { completeLesson, loadCompleted } from '../../../progress/progress.ts'
 import { flashReward, rewardNotice, savedNotice, takeReward } from '../../../progress/reward.ts'
 import { routes } from '../../../routes.ts'
 import { buildLessonView } from './lesson-view.ts'
+import { isComingSoon } from '../../../content/types.ts'
+import { StatusPage } from '../../../ui/not-found-page.tsx'
 import { LessonNotFoundPage } from './ui/not-found.tsx'
 
 // The lesson page (its islands, the editor, the video player)
@@ -33,6 +35,28 @@ export default createController(routes.courses.lesson, {
       let asks = { passed: passedAsks(context, course, lesson), verdict: takeVerdict(context, course, lesson) }
       let view = await buildLessonView(catalog, course, lesson, context.url, { viewer, completed, drafts, asks, depth })
       if (!view) {
+        let soon = catalog.getCourse(course)
+        if (soon && isComingSoon(soon)) {
+          // Coming soon (decision 073): the course page lists the plan; no lesson opens yet.
+          return context.render(
+            <StatusPage
+              title={`${soon.title}: coming soon`}
+              code="404"
+              eyebrow="Coming soon"
+              heading="This lesson isn't open yet."
+              viewer={viewer}
+              currentPath={routes.courses.index.href()}
+              hint={
+                <>
+                  {`${soon.title} is still being written. `}
+                  <a href={routes.courses.course.index.href({ course: soon.slug })}>Its course page</a>
+                  {' shows the plan.'}
+                </>
+              }
+            />,
+            { status: 404 },
+          )
+        }
         return context.render(
           <LessonNotFoundPage course={context.params.course} currentPath={context.url.pathname} viewer={viewer} />,
           { status: 404 },

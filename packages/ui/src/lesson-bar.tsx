@@ -3,6 +3,7 @@ import { css } from 'remix/component'
 
 import { BackButton } from './back-button.tsx'
 import { Crosshair } from './crosshair.tsx'
+import { DeskTag } from './desk-tag.tsx'
 import { FOCUS, FORCED_COLORS } from './lib/states.ts'
 import { SegmentedProgress, type SegmentState } from './progress-bar.tsx'
 import { SegmentedTabs, type SegmentedTabItem } from './segmented-tabs.tsx'
@@ -23,6 +24,12 @@ export interface LessonBarProps {
    * from 1024px; under it the page's `LessonRow` carries them.
    */
   depths?: SegmentedTabItem[]
+  /**
+   * The lesson's build steps need a computer (decision 073): a "Desk" tag
+   * after the title. In the shell it shows from 1024px; under it the page's
+   * `LessonRow` carries it (pass `desk` there too).
+   */
+  desk?: boolean
   /** The viewer's neurons, shown as an XpPill at the row's end (hidden at ≤480px). */
   neurons?: number
   /**
@@ -62,6 +69,7 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
       segments,
       progressLabel,
       depths,
+      desk = false,
       neurons,
       xp,
       titleAs = 'span',
@@ -76,6 +84,7 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
           <span mix={contextStyle}>{context}</span>
           {titleAs === 'h1' ? <h1 mix={titleStyle}>{title}</h1> : <span mix={titleStyle}>{title}</span>}
         </div>
+        {desk ? <DeskTag mix={deskStyle} /> : null}
         <div data-lesson-progress mix={[progressStyle, shell ? wideOnly : undefined]}>
           <SegmentedProgress segments={segments} label={progressLabel} />
         </div>
@@ -99,6 +108,11 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
               <span mix={contextStyle}>{context}</span>
               {titleAs === 'h1' ? <h1 mix={titleStyle}>{title}</h1> : <span mix={titleStyle}>{title}</span>}
             </div>
+            {desk ? (
+              <span mix={[deskStyle, wideOnly]}>
+                <DeskTag />
+              </span>
+            ) : null}
             <div data-lesson-progress mix={[progressStyle, wideOnly]}>
               <SegmentedProgress segments={segments} label={progressLabel} />
             </div>
@@ -126,6 +140,8 @@ export function LessonBar(handle: Handle<LessonBarProps>) {
 export interface LessonRowProps {
   /** The depth tabs (as `LessonBar`'s `depths`); pass them only when the lesson has depth blocks. */
   depths?: SegmentedTabItem[]
+  /** The "Desk" tag (decision 073), as `LessonBar`'s `desk`: this row carries it under 1024px. */
+  desk?: boolean
   /**
    * The row's end, e.g. the lesson outline disclosure ("Lesson 3 of 8 ▾").
    * The row is `position: relative`, so an open disclosure can hang its
@@ -144,10 +160,11 @@ export interface LessonRowProps {
  */
 export function LessonRow(handle: Handle<LessonRowProps>) {
   return () => {
-    let { depths, aside, mix } = handle.props
+    let { depths, desk = false, aside, mix } = handle.props
     return (
       <div mix={[lessonRow, mix]}>
         {depths?.length ? <SegmentedTabs label="Lesson depth" items={depths} keepPlace /> : null}
+        {desk ? <DeskTag mix={deskStyle} /> : null}
         {aside !== undefined ? <div mix={lessonRowAside}>{aside}</div> : null}
       </div>
     )
@@ -243,6 +260,7 @@ const xpCell = css({
 })
 const xpSlot = css({ display: 'flex', alignItems: 'center' })
 const wideOnly = css({ [LESSON_NARROW]: { display: 'none' } })
+const deskStyle = css({ flex: 'none', alignSelf: 'center' })
 // ≤480px (Lesson spec, 360px): row 1 back + title (truncated), row 2 depth tabs + progress.
 const titleBlock = css({
   display: 'flex',

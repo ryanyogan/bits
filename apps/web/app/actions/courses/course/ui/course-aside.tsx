@@ -6,7 +6,7 @@ import { Panel } from '@bits/ui/panel'
 import { ProgressRing } from '@bits/ui/progress-ring'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
 
-import { formatDate, formatMins, type CourseView } from '../course-data.ts'
+import { formatDate, formatDay, formatMins, type CourseView } from '../course-data.ts'
 
 /**
  * The course page's side panels (Course.md §3b, decision 066). Each is its
@@ -49,9 +49,11 @@ export function CourseProgress(handle: Handle<{ view: CourseView }>) {
             <div mix={stackText}>
               <span mix={badgeName}>{`${course.badge.name} badge`}</span>
               <span mix={badgeHint}>
-                {view.state === 'finished'
-                  ? `Earned, with ${view.neurons} neurons and a certificate`
-                  : `Plus ${view.neurons} neurons and a certificate`}
+                {view.soon
+                  ? 'When the course opens: finish it for the badge and a certificate'
+                  : view.state === 'finished'
+                    ? `Earned, with ${view.neurons} neurons and a certificate`
+                    : `Plus ${view.neurons} neurons and a certificate`}
               </span>
             </div>
           </div>
@@ -108,7 +110,7 @@ export function CourseSource(handle: Handle<{ view: CourseView }>) {
       <Panel id="source-heading" title="Source">
         <div mix={partBody}>
           <p mix={sourceText}>
-            {`This course is ${source.files} markdown files on GitHub. Spot a typo? Fix it in one pull request.`}
+            {`This course is ${source.files} markdown file${source.files === 1 ? '' : 's'} on GitHub. Spot a typo? Fix it in one pull request.`}
           </p>
           <a href={source.href} rel="noopener" data-rmx-document mix={sourceLink}>
             {`${source.path} ↗`}
@@ -117,6 +119,13 @@ export function CourseSource(handle: Handle<{ view: CourseView }>) {
             {`Written by ${source.author} · updated `}
             <time datetime={source.updated}>{formatDate(source.updated)}</time>
           </p>
+          {source.verified ? (
+            // The newest lesson `verified:` date (decision 073): when the code was last run.
+            <p mix={bylineStyle}>
+              {'Code verified '}
+              <time datetime={source.verified}>{formatDay(source.verified)}</time>
+            </p>
+          ) : null}
         </div>
       </Panel>
     )

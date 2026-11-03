@@ -53,7 +53,7 @@ export function CoursePage(handle: Handle<CoursePageProps>) {
           <RuledSection as="div" pad="none" rule={false}>
             <div mix={bodyStyle}>
               <Slot area="syl">
-                <Syllabus modules={view.modules} />
+                <Syllabus modules={view.modules} soon={view.soon} />
               </Slot>
               <Slot area="prog" side>
                 <CourseProgress view={view} />
@@ -61,9 +61,11 @@ export function CoursePage(handle: Handle<CoursePageProps>) {
               <Slot area="out" side>
                 <CourseOutcomes outcomes={course.outcomes} />
               </Slot>
-              <Slot area="how" side>
-                <CourseLearn view={view} />
-              </Slot>
+              {view.learn.length ? (
+                <Slot area="how" side>
+                  <CourseLearn view={view} />
+                </Slot>
+              ) : null}
               <Slot area="src" side>
                 <CourseSource view={view} />
               </Slot>

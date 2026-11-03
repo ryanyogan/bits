@@ -23,6 +23,7 @@ import { outbox } from './auth/mailer.ts'
 import { router } from './router.ts'
 import { routes } from './routes.ts'
 import { ageSessions, completeLesson, requestCode, signIn, testDb } from './test/auth.ts'
+import { buildAlongCourse, soonCourse } from './test/metadata-courses.ts'
 import { plainCourse } from './test/plain-course.ts'
 
 const axeSource = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8')
@@ -131,6 +132,12 @@ const publicPages: Array<{ name: string; href: string; ready?: (page: Page) => P
   { name: 'lesson read: video + odds', href: lesson('tokens-and-temperature', 'temperature') },
   { name: 'lesson read: code', href: lesson('first-agent-loop', 'the-loop') },
   { name: 'lesson read: composer', href: lesson('what-is-an-llm', 'say-hi-to-claude') },
+  // Course metadata (decision 073): a coming-soon course and its lesson 404,
+  // and a build-along lesson with the freshness line, the Desk tag and the start-from-tag sample.
+  { name: 'course: coming soon', href: routes.courses.course.index.href({ course: soonCourse.slug }) },
+  { name: 'lesson 404: coming soon', href: lesson(soonCourse.slug, soonCourse.lessons[0]) },
+  { name: 'course: build-along, desk lesson', href: routes.courses.course.index.href({ course: buildAlongCourse.slug }) },
+  { name: 'lesson read: build-along (verified, desk, start from tag)', href: lesson(buildAlongCourse.slug, buildAlongCourse.build) },
   { name: 'login email', href: routes.login.index.href() },
   { name: 'terms', href: routes.legal.terms.href() },
   { name: 'privacy', href: routes.legal.privacy.href() },

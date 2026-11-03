@@ -22,6 +22,7 @@ import type { LessonView } from '../lesson-view.ts'
 import { TokenizerToy } from '../public/tokenizer-toy.tsx'
 import { askProps, codeEditorProps, draftPersist, exerciseProps, runLines } from './exercise.ts'
 import { inlineNodes } from './inline.tsx'
+import { LessonMeta } from './lesson-meta.tsx'
 import { proseNodes } from './prose.tsx'
 
 /**
@@ -45,6 +46,7 @@ export function ReadMode(handle: Handle<{ view: LessonView }>) {
     }
     return (
       <div mix={columnStyle}>
+        <LessonMeta content={view.content} />
         {hasVideo(view.content) ? <LessonVideo view={view} /> : null}
         {view.content.blocks.map((block, index) => (
           <ReadBlock
