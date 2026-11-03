@@ -603,8 +603,10 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
 - Coached prompts (decision 064): `:::prompt` takes `- expect` reply
   checks (`json`, `words<=N`, `sentences<=N`, `one-word`, `oneof`, `tag`,
   `cites`, `quotes doc-id`, `match /re/`, `prompt-shorter-than`), and with
-  `coach` a `- rubric "label" must|should [on=prompt] [evidence]` judged by
-  Claude, plus `- goal`, `- hint` (required with `coach`; `- hint for="label"` ties one to a criterion), `- reference`,
+  `coach` a `- rubric "label" must|should [on=prompt] [evidence] [grounded]`
+  judged by Claude (`grounded`: the judge quotes the pasted material from
+  the prompt; an unflagged "from the rota" label falls back to a heuristic
+  and the build warns, so flag it, or `grounded=false`), plus `- goal`, `- hint` (required with `coach`; `- hint for="label"` ties one to a criterion), `- reference`,
   `- document id "…"` and `gate=false`. Every prompt needs a `check` or an
   `expect`. The syntax and limits are in the decision and on `/author`;
   each build rule has a case in `compile/build.test.ts`.

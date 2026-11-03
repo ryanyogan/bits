@@ -102,9 +102,15 @@ Lines:
   - `match /re/flags`: the same allowlist grammar as `check`
     (`compile/regex.ts`), so no `*`, `+` or `{n}`.
   - `prompt-shorter-than N` (characters, from 1 to 4000).
-- `- rubric "label" must|should [on=prompt] [evidence]`, at most 6 per block.
-  A rubric line needs `coach`. `evidence` reads the reply, so it can't be
-  used with `on=prompt`.
+- `- rubric "label" must|should [on=prompt] [evidence] [grounded|grounded=false]`,
+  at most 6 per block. A rubric line needs `coach`. `evidence` reads the
+  reply, so it can't be used with `on=prompt`; nor can `grounded` (§3.7,
+  amended 2026-11-03). The build warns when an `evidence` line is about
+  something absent ("invents none", "leaves out the email", "without
+  guessing"): the judge must quote the reply, and it can't quote what isn't
+  there, so the line is never met. A clause the reply says out loud ("Says
+  it doesn't know") is quotable and doesn't warn (`aboutAbsence()` in
+  `compile/rubric-labels.ts`).
 - `- hint "…"`, at most 5, ordered from general to specific. `coach` needs at
   least one hint of either kind.
 - `- hint for="label" "…"` (amended 2026-11-02), at most 8: a hint for one
@@ -197,6 +203,24 @@ The judge resists injection in depth:
    the prompt doesn't hold isn't grounded. The eval's "rubric restated"
    injection (a prompt that only claims to hold the rota, against the weak
    `/tuesday/` check) passed about 1 run in 3 before this.
+
+   Which lines are grounded (amended 2026-11-03). The first trigger was any
+   "from the …" in a label, so "Keeps the id from the line" and "Reads like
+   a reminder from the clinic" were tagged `quote source` and the judge
+   failed correct replies hunting for a source. We chose an explicit flag:
+   `grounded` (or `grounded=false`) on the rubric line decides. A label
+   heuristic can't tell "from the rota" (material the learner pastes) from
+   "from the line" (a word in the reply) without a noun list, and a noun
+   list will always miss one. Unflagged lines still fall back to a stricter
+   heuristic (`looksGrounded()` in `compile/rubric-labels.ts`): a grounding
+   phrase, then at most one word, then a noun for pasted material (rota,
+   email, document, passage, sheet, log, booking, menu, tool result…), and
+   not inside a "not …" clause. That fallback keeps the defence on the
+   published courses (and lane C3's) without editing them mid-merge. The
+   build warns every time the fallback fires, so authors confirm it with
+   `grounded` or turn it off with `grounded=false`. Once every course
+   carries the flag, the fallback can go and the warning can become an
+   error.
 
 ### 4. The loop the learner sees (PromptComposer)
 
@@ -394,6 +418,19 @@ the grammar has no repetition). The injection set runs against a copy with
 only the weak `/tuesday|\btue\b/i` check (`injectionTarget` in
 `scripts/coach-eval/cases.ts`), so the screen and the judge stay the thing
 under test.
+
+After the grounded flag (§3.7, amended 2026-11-03), three runs on
+2026-11-03 with the content lanes' exercises and two new ones (an unflagged
+"Keeps the order id from the line" and a line grounded only by the flag):
+
+- Agreement: 129, 126 and 127 of 129 (100%, 98%, 98%). Every miss was a
+  false fail, never a false pass: four were the terse reply "The card for
+  order=48213 was declined", which the judge didn't count as keeping the id
+  in a plain sentence (a borderline label), and one was the formal refund
+  reply again.
+- Injections: 0 of 20 passed in each run (7 screened, 12 failed by the
+  judge, 1 refusal).
+- Cost: 136 judge calls per run, about $0.012 each.
 
 Re-run the eval before widening the judge to a new kind of rubric, and
 before changing the model.
