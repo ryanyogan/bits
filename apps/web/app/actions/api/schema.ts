@@ -31,3 +31,16 @@ export const runForm = f.object({
   /** T × 100, one of the exercise's offered temperatures. */
   temperature: f.field(coerce.number().pipe(checks.min(0), checks.max(100))),
 })
+
+/**
+ * POST /api/coach (decision 064): the exercise, then either `attempt` (a
+ * journalled run id from X-Run-Id, to grade) or `reveal=1` (show the strong
+ * prompt).
+ */
+export const coachForm = f.object({
+  course: f.field(slug),
+  lesson: f.field(slug),
+  exercise: f.field(slug),
+  attempt: f.field(s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(64)))),
+  reveal: f.field(s.optional(s.literal('1'))),
+})
