@@ -2,7 +2,7 @@
 title: "Evals that matter"
 track: prompting
 level: intermediate
-order: 10
+order: 45
 summary: "Stop trusting one good reply. Turn real failures into test cases, let code grade first, build an LLM judge you've checked against a person, and run it all on every change."
 outcomes:
   - "Turn real failures into test cases with clear, checkable expectations."
