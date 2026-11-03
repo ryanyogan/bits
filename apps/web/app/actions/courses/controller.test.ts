@@ -18,7 +18,7 @@ let courses: readonly CourseManifest[] = []
 const LLM_LESSONS: { lesson: string; prompt?: [id: string, text: string]; quiz?: [id: string, key: string] }[] = [
   { lesson: 'say-hi-to-claude', prompt: ['say-hi', 'Hi Claude, what are you? Explain in one sentence.'] },
   { lesson: 'a-very-good-next-word-guesser', prompt: ['finish-the-sentence', 'Finish this sentence with one word: The sky is ...'] },
-  { lesson: 'words-become-tokens', quiz: ['strawberry', 'b'] },
+  { lesson: 'words-become-tokens', prompt: ['spell-it-out', 'Spell strawberry letter by letter, then count the r letters.'] },
   { lesson: 'where-it-learned-pretraining', quiz: ['what-pretraining-practises', 'a'] },
   { lesson: 'from-autocomplete-to-assistant', quiz: ['knows-vs-behaves', 'a'] },
   { lesson: 'your-prompt-is-all-it-sees', prompt: ['put-it-in-the-prompt', 'My dog is called Biscuit and he hates rain. Suggest a name for his raincoat.'] },
@@ -39,7 +39,6 @@ const TOKENS_LESSONS: typeof LLM_LESSONS = [
   {
     lesson: 'greedy-vs-sampled',
     prompt: ['sentiment-label', 'Label this review as positive, negative or neutral. Reply with only the label. Review: Arrived late, but it works great.'],
-    quiz: ['consistent', 'b'],
   },
 ]
 
