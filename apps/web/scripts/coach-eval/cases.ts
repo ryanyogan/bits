@@ -169,7 +169,7 @@ Get Claude to count the r's in “strawberry” by spelling it out first
 - check "Names the word" /strawberry/i
 - check "Asks it to spell the word out" /spell|letter by letter|one letter|each letter|every letter|list the letters/i
 - expect "Gets the count right" match /\\b3\\b|\\bthree\\b/i
-- rubric "Spells the word out letter by letter before counting" must evidence
+- rubric "Spells the word out letter by letter before counting" must
 - rubric "The count it gives is three" must evidence
 - hint "Your prompt asks for the answer straight away. What could Claude write first that would make each letter visible?"
 - run temperature=[1.0]
@@ -192,7 +192,7 @@ const letItThink = `:::prompt{id="let-it-think" xp=20 coach}
 Ask Claude to reason it through, then answer in <answer> tags
 - goal "Get the right overlap, with the working first and the final answer alone in <answer> tags"
 - check "Includes the meetings" /10:15/
-- check "Asks it to reason first" /step by step|reason|think|work (it )?(through|out)|show (your )?work|before (you )?answer|explain why/i
+- check "Asks it to reason first" /step by step|each pair|every pair|pair by pair|reason|think|work (it )?(through|out)|show (your )?work|before (you )?answer|explain why/i
 - check "Asks for <answer> tags" /answer>|answer tags/i
 - expect "Puts the answer in <answer> tags" tag answer
 - rubric "The final answer is that only A and B overlap (B and C just touch at 11:00)" must evidence

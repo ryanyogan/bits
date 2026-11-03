@@ -97,7 +97,7 @@ Write the review step: the draft in tags, your criteria, problems in <review> ta
 - rubric "Lists problems instead of rewriting the draft" must
 - hint "Your criteria are the review's yardstick. Could someone check each one with a yes or no?"
 - hint "Give two or three plain criteria, like “no jargon” and “says how to turn it on”."
-- reference "<draft>We are thrilled to announce that, leveraging our cutting-edge theming infrastructure, we have shipped a paradigm-shifting dark mode experience that synergistically reduces ocular strain across every surface of the platform for all stakeholders.</draft>\n\nCheck the draft against these criteria: plain words with no jargon, under 30 words, says how a user turns it on. List each problem in <review> tags. Don't rewrite it."
+- reference "<draft>We are thrilled to announce that, leveraging our cutting-edge theming infrastructure, we have shipped a paradigm-shifting dark mode experience that synergistically reduces ocular strain across every surface of the platform for all stakeholders.</draft>\n\nCheck the draft against these criteria: plain words with no jargon, under 30 words, says how a user turns it on. List the problems in <review> tags. Don't rewrite it."
 - run temperature=[1.0]
 - example T=1.0 "<review>1. Jargon: leveraging, paradigm-shifting, synergistically, stakeholders. 2. Never says when it ships. 3. Doesn't say how to turn it on.</review>"
 - example T=1.0 "<review>Too much jargon (cutting-edge theming infrastructure, synergistically). Missing the launch date. Says nothing users can act on.</review>"

@@ -111,7 +111,7 @@ Ask Claude to reason it through, then answer in <answer> tags
 - placeholder "Which meetings overlap? … Work through it step by step, then give the final answer in <answer> tags."
 - draft "Which of these meetings overlap? A 9:40–10:25, B 10:15–11:00, C 11:00–11:30."
 - check "Includes the meetings"         /10:15/
-- check "Asks it to reason first"       /step by step|reason|think|work (it )?(through|out)|show (your )?work|before (you )?answer|explain why/i
+- check "Asks it to reason first"       /step by step|each pair|every pair|pair by pair|reason|think|work (it )?(through|out)|show (your )?work|before (you )?answer|explain why/i
 - check "Asks for <answer> tags"        /answer>|answer tags/i
 - expect "Puts the answer in <answer> tags" tag answer
 - rubric "The final answer is that only A and B overlap (B and C just touch at 11:00)" must evidence

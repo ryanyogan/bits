@@ -75,7 +75,7 @@ Write the reminder prompt, with a reason for your constraints
 - rubric "Reads like a reminder from the clinic, not a chat reply" must
 - hint "Your reason tells Claude why the limit exists. Does the reply act like it understood that reason?"
 - hint "Say where it's read and what that means: “It shows on a lock screen, so put the day and time first.”"
-- reference "Turn this into a text reminder from the clinic: Dentist, Tue 3pm, Dr Ali, Bright Smile Clinic, bring your insurance card. It's sent as an SMS and most patients only read the lock-screen preview, so put the day and time first and keep it under 25 words."
+- reference "Turn this into a text reminder from the clinic: Dentist, Tue 3pm, Dr Ali, Bright Smile Clinic, bring your insurance card. It's sent as an SMS. Put the day and time first, because most patients only read the lock-screen preview, and keep it under 25 words."
 - run temperature=[1.0]
 - example T=1.0 "Tue 3pm: dentist with Dr Ali, Bright Smile Clinic. Please bring your insurance card."
 - example T=1.0 "Reminder: Tue 3pm, Dr Ali at Bright Smile Clinic. Bring your insurance card. See you then!"

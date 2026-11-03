@@ -124,7 +124,7 @@ Write a prompt for a real task, with who it's for, why, a shape and room to ask
 - hint "Read the reply as the person it's for. Would they feel it was written for them?"
 - hint "Compare the reply's length with the limit you set. Did you give a number Claude can check itself against?"
 - hint "Name the reader, the reason, a size, and say “ask me if anything's unclear”."
-- reference "Write a welcome message for new members of my running club. Most are beginners and nervous about keeping up, so the message should make them feel they belong: our Saturday group runs slowly and nobody gets left behind. Keep it under 60 words, friendly and plain. If anything's unclear, ask me first."
+- reference "Write a welcome message for new members of my running club. Most are beginners and nervous about keeping up, so the goal is to make them feel they belong: our Saturday group runs slowly and nobody gets left behind. Keep it under 60 words, friendly and plain. If anything's unclear, ask me first."
 - run temperature=[1.0]
 - example T=1.0 "Welcome! Nobody gets left behind here. Our Saturday slow group runs at chatting pace, walk breaks included, so come as you are. See you Saturday!"
 - example T=1.0 "New to running? Perfect. Our Saturday slow group is built for beginners: easy pace, walk breaks welcome, no one left behind. We'd love to see you there."

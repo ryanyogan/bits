@@ -102,7 +102,7 @@ Get Claude to count the r's in “strawberry” by spelling it out first
 - check "Names the word"                 /strawberry/i
 - check "Asks it to spell the word out"  /spell|letter by letter|one letter|each letter|every letter|list the letters/i
 - expect "Gets the count right" match /\b3\b|\bthree\b/i
-- rubric "Spells the word out letter by letter before counting" must evidence
+- rubric "Spells the word out letter by letter before counting" must
 - rubric "The count it gives is three" must evidence
 - hint "Your prompt asks for the answer straight away. What could Claude write first that would make each letter visible?"
 - hint "Ask for the letters one per line, then the count."
