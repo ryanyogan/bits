@@ -115,7 +115,7 @@ Ask Claude to reason it through, then answer in <answer> tags
 - check "Asks for <answer> tags"        /answer>|answer tags/i
 - expect "Puts the answer in <answer> tags" tag answer
 - rubric "The final answer is that only A and B overlap (B and C just touch at 11:00)" must evidence
-- rubric "The working comes before the answer" should
+- rubric "Reasons through the pairs before the final answer" must
 - hint "Where does the reply put its final answer? Could your code find it without reading the working?"
 - hint "B ends at 11:00 and C starts at 11:00. Does your prompt help Claude decide whether touching counts?"
 - reference "Which of these meetings overlap? A 9:40–10:25, B 10:15–11:00, C 11:00–11:30. Meetings that only touch (one ends as the next starts) don't overlap. Check each pair first, then give the final answer in <answer> tags."
