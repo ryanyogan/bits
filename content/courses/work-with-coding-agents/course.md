@@ -2,7 +2,7 @@
 title: "Work with coding agents"
 track: agents
 level: beginner
-order: 9
+order: 50
 summary: "Claude Code in your repo: what a coding agent does, the context file it reads, plan → build → review, skills, MCP servers, subagents and hooks. Write each brief yourself and get coached on it."
 outcomes:
   - "Explain what a coding agent does in your repo: a loop that reads, edits, runs and checks."
