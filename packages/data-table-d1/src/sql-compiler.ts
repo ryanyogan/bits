@@ -1,10 +1,12 @@
 // Vendored from @remix-run/data-table-sqlite@1.0.0 (src/lib/sql-compiler.ts),
-// MIT License, Copyright (c) 2025 Shopify Inc.
+// MIT License, Copyright (c) 2025 Shopify Inc. The full notice is in this
+// package's LICENSE file.
 //
-// D1 speaks SQLite, so the D1 driver reuses the SQLite dialect compiler. The
+// D1 speaks SQLite, so this driver reuses the SQLite dialect compiler. The
 // upstream package only exports a driver bound to a synchronous client, so the
-// compiler is copied here unchanged apart from import specifiers. Re-sync it
-// when upgrading remix (see docs/decisions/003-data-table-on-d1.md).
+// compiler is copied here unchanged apart from the import specifiers
+// (`@remix-run/data-table` -> `remix/data-table`). Re-sync it when the `remix`
+// peer range moves to a release that ships a newer data-table-sqlite.
 
 import { getTableName, getTablePrimaryKey } from 'remix/data-table'
 import type { Predicate, SqlStatement } from 'remix/data-table'

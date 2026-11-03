@@ -1,13 +1,13 @@
 // A remix/data-table driver for Cloudflare D1.
 //
 // D1 is SQLite behind an async binding, so this driver compiles operations
-// with the SQLite dialect and executes them through `D1Database.prepare()`.
-// Two D1 constraints shape it (see docs/decisions/003-data-table-on-d1.md):
+// with the SQLite dialect and executes them through `prepare()`. Two D1
+// constraints shape it:
 //
-// - No interactive transactions. A Worker cannot hold BEGIN/COMMIT across
+// - No interactive transactions. A Worker can't hold BEGIN/COMMIT across
 //   awaits, so `db.transaction()` and scoped writes (update/delete with
-//   orderBy/limit) throw. Use `batch()` from this package for atomic writes.
-// - Migrations are owned by `wrangler d1 migrations`, not `db.migrate()`.
+//   orderBy/limit) throw. Use `batch()` on the database for atomic writes.
+// - Schema belongs to `wrangler d1 migrations`, not `db.migrate()`.
 import type {
   DatabaseCapabilities,
   DatabaseDriver,
@@ -19,8 +19,9 @@ import type {
 } from 'remix/data-table'
 import { getTablePrimaryKey } from 'remix/data-table'
 
+import { decodeRow, encodeOperation, rowCodecs } from './columns.ts'
 import { compileSqliteOperation } from './sql-compiler.ts'
-import type { D1Database, D1PreparedStatement } from './types.ts'
+import type { D1DatabaseLike, D1PreparedStatementLike } from './types.ts'
 
 const d1Capabilities: DatabaseCapabilities = Object.freeze({
   returning: true,
@@ -30,6 +31,7 @@ const d1Capabilities: DatabaseCapabilities = Object.freeze({
   migrationLock: false,
 })
 
+/** Thrown for anything D1 can't do from a Worker: transactions, scripts, wipe(). */
 export class D1UnsupportedError extends Error {
   constructor(feature: string, hint: string) {
     super(`D1 does not support ${feature}. ${hint}`)
@@ -40,15 +42,15 @@ export class D1UnsupportedError extends Error {
 export class D1DatabaseDriver implements DatabaseDriver<'sqlite'> {
   readonly dialect = 'sqlite' as const
   readonly capabilities = d1Capabilities
-  readonly #d1: D1Database
+  readonly #d1: D1DatabaseLike
 
-  constructor(d1: D1Database) {
+  constructor(d1: D1DatabaseLike) {
     this.#d1 = d1
   }
 
   /** Compiles an operation to a bound D1 statement without running it. */
-  prepare(operation: DataManipulationOperation): D1PreparedStatement {
-    let { text, values } = compileSqliteOperation(operation)
+  prepare(operation: DataManipulationOperation): D1PreparedStatementLike {
+    let { text, values } = compileSqliteOperation(encodeOperation(operation))
     return this.#d1.prepare(text).bind(...values.map(toD1Value))
   }
 
@@ -64,7 +66,8 @@ export class D1DatabaseDriver implements DatabaseDriver<'sqlite'> {
 
     if (readsRows(operation)) {
       let result = await statement.all<Record<string, unknown>>()
-      let rows = result.results.map((row) => ({ ...row }))
+      let codecs = rowCodecs(operation)
+      let rows = result.results.map((row) => decodeRow(row, codecs))
       if (operation.kind === 'count' || operation.kind === 'exists') {
         rows = rows.map((row) => ({ ...row, count: Number(row.count) }))
       }
@@ -87,7 +90,7 @@ export class D1DatabaseDriver implements DatabaseDriver<'sqlite'> {
     // schema changes belong to wrangler's migration journal anyway.
     throw new D1UnsupportedError(
       'multi-statement scripts from the driver',
-      'Apply schema with `wrangler d1 migrations apply`; use batch() for atomic writes.',
+      'Apply schema with `wrangler d1 migrations apply`; use db.batch() for atomic writes.',
     )
   }
 
@@ -145,7 +148,7 @@ export class D1DatabaseDriver implements DatabaseDriver<'sqlite'> {
 function transactionsUnsupported() {
   return new D1UnsupportedError(
     'interactive transactions (db.transaction(), or update/delete with orderBy/limit)',
-    'Use batch() from @bits/db to run several writes atomically.',
+    'Use db.batch() to run several writes atomically.',
   )
 }
 

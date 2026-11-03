@@ -1,0 +1,60 @@
+{
+  "name": "data-table-d1",
+  "version": "0.1.0",
+  "description": "Cloudflare D1 driver for remix/data-table: column-aware booleans and JSON, atomic batch(), and a loud refusal of interactive transactions",
+  "author": "Ryan Yogan",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ryanyogan/bits.git",
+    "directory": "packages/data-table-d1"
+  },
+  "homepage": "https://github.com/ryanyogan/bits/tree/master/packages/data-table-d1#readme",
+  "keywords": [
+    "remix",
+    "data-table",
+    "cloudflare",
+    "d1",
+    "workers",
+    "sqlite",
+    "database"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "prepack": "pnpm run build",
+    "test": "NODE_ENV=test remix test",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "remix": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "miniflare": "5.20261019.2-beta",
+    "remix": "^3.1.0",
+    "typescript": "^7.0.2"
+  }
+}
