@@ -91,14 +91,26 @@ export const LessonComplete = clientEntry(
 
     return () => {
       let { gated, passed, href, label, upNext, form, issues, loginHref } = handle.props
+      // The open quick check is a link to it: it can sit far above the footer (QA, 2026-11-02).
+      let nextAsk = [...remaining][0]
+      let toAsk = (text: string) =>
+        nextAsk ? (
+          <a href={`#ask-${nextAsk}`} mix={[askLinkStyle, on('click', (event) => goToAsk(event, nextAsk))]}>
+            {text}
+          </a>
+        ) : (
+          text
+        )
       let hint =
-        remaining.size === 0
-          ? 'Pass every check to finish'
-          : promptsDone
-            ? remaining.size === 1
-              ? 'Answer the quick check to finish'
-              : `Answer the ${remaining.size} quick checks to finish`
-            : 'Pass every check and answer the quick check to finish'
+        remaining.size === 0 ? (
+          'Pass every check to finish'
+        ) : promptsDone ? (
+          <>
+            {toAsk(remaining.size === 1 ? 'Answer the quick check' : `Answer the ${remaining.size} quick checks`)} to finish
+          </>
+        ) : (
+          <>Pass every check and {toAsk(remaining.size === 1 ? 'answer the quick check' : `answer the ${remaining.size} quick checks`)} to finish</>
+        )
       let open = passed || passedNow || !gated
       let hintId = `${handle.id}-hint`
       let issuesId = `${handle.id}-issues`
@@ -175,6 +187,19 @@ export const LessonComplete = clientEntry(
     }
   },
 )
+
+/** Scrolls the open quick check into view and puts focus in it, without a navigation. */
+function goToAsk(event: MouseEvent, id: string) {
+  let target = document.getElementById(`ask-${id}`)
+  if (!target) return
+  event.preventDefault()
+  let reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  target.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' })
+  let control = target.querySelector<HTMLElement>('input:not([type="hidden"]), textarea, button')
+  control?.focus({ preventScroll: true })
+}
+
+const askLinkStyle = css({ color: 'var(--text)', textDecoration: 'underline', textUnderlineOffset: '2px', '&:hover': { color: 'var(--volt-soft)' } })
 
 const wrapStyle = css({
   display: 'flex',

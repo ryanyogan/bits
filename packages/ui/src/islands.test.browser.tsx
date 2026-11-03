@@ -142,9 +142,14 @@ describe('PromptComposer', () => {
     }
     await runOnce()
     let log = () => $$('[aria-label="Your runs"] ol > li')
-    assert.match(log()[0]!.textContent ?? '', /1 of 2\..*What would make Claude answer/)
+    // The tally names what it counts; the turn lists only what isn't met.
+    assert.match(log()[0]!.textContent ?? '', /1 of 2 checks met\..*What would make Claude answer/)
+    assert.doesNotMatch(log()[0]!.textContent ?? '', /Asks for a tagline/)
     assert.match(log()[0]!.textContent ?? '', /One short line.*not yet/)
-    assert.match($('[role="status"]')?.textContent ?? '', /1 of 2/)
+    assert.match($('[role="status"]')?.textContent ?? '', /1 of 2 checks met/)
+    // After the first verdict the criteria fold to one line, with the tally.
+    assert.equal(($('[aria-label="Goal"] details') as HTMLDetailsElement).open, false)
+    assert.match($('[aria-label="Goal"] summary')?.textContent ?? '', /1 of 2 checks met/)
     assert.match($('[aria-label="Goal"]')?.textContent ?? '', /Attempt|One short line/)
     assert.equal($$('[aria-label="Goal"] li')[1]?.getAttribute('data-met'), 'no')
 
@@ -154,6 +159,8 @@ describe('PromptComposer', () => {
     assert.equal(entries.length, 3)
     assert.match(entries[1]!.textContent ?? '', /Passed\./)
     assert.match(entries[1]!.textContent ?? '', /\+30 neurons/)
+    // The success text shows once: in the reward, not again in the coach turn.
+    assert.equal((entries[1]!.textContent ?? '').split('Nice.').length - 1, 1)
     assert.doesNotMatch(entries[2]!.textContent ?? '', /neurons/)
     assert.deepEqual(calls.filter((url) => url === '/api/coach').length, 3)
   })
@@ -174,7 +181,7 @@ describe('PromptComposer', () => {
           passed: second,
           criteria: [{ label: 'Ran at 0 and 1.0', kind: 'run', met: second }],
           hint: second ? 'Same prompt, different answers.' : 'Now run it at 1.0.',
-          note: second ? undefined : 'Coach offline: this reply is a saved example. Checked by pattern, not by the coach.',
+          note: second ? undefined : 'No model is connected here, so this reply is a saved example. Your prompt was checked by pattern; the reply wasn’t judged.',
           misses: 1,
           canReveal: false,
           xp: 0,
@@ -220,8 +227,8 @@ describe('PromptComposer', () => {
     assert.equal(sent[0]?.get('temperature'), '0')
     let runs = () => $('[aria-label="Your runs"]')?.textContent ?? ''
     assert.match(runs(), /Brewed beyond gravity/)
-    assert.match(runs(), /hourly run limit/)
-    assert.match(runs(), /Checked by pattern, not by the coach/)
+    assert.match(runs(), /reached a run limit/)
+    assert.match(runs(), /checked by pattern/)
     assert.equal(state(), 'no')
 
     let hot = $$('input[name="temperature"]')[1] as HTMLInputElement
@@ -234,6 +241,80 @@ describe('PromptComposer', () => {
     assert.match(runs(), /Lunar lattes\./)
     assert.match(runs(), /model · T=1\.0/)
     assert.equal(state(), 'yes')
+  })
+})
+
+describe('PromptComposer coaching states (QA 2026-11-02)', () => {
+  it('says "passed earlier" for a lesson saved before coaching, leaves the strip alone on a run limit, and states the strong prompt’s cost first', async (t) => {
+    try {
+      for (let k of ['draft', 'ran', 'last-run', 'passed']) window.localStorage.removeItem(`bits:${k}:t-states`)
+    } catch {}
+    let realFetch = window.fetch
+    let n = 0
+    window.fetch = async (input, init) => {
+      let body = init?.body as FormData
+      if (String(input) === '/api/run') {
+        n++
+        return new Response('Saved reply.', { headers: { 'X-Run-Source': n === 1 ? 'live' : 'fallback', 'X-Run-Reason': n === 1 ? '' : 'limit', 'X-Run-Id': `s${n}` } })
+      }
+      let limited = body.get('attempt') === 's2'
+      return Response.json({
+        attempt: body.get('attempt'),
+        layer: limited ? 'limit' : 'coach',
+        passed: false,
+        criteria: [
+          { label: 'Asks for a tagline', kind: 'check', met: limited ? null : true },
+          { label: 'One short line', kind: 'rubric', level: 'must', met: limited ? null : false },
+        ],
+        hint: limited ? 'You’ve used this hour’s 10 live runs for signed-out learners, so this reply is a saved example and isn’t graded.' : 'Shorter?',
+        misses: 5,
+        canReveal: true,
+        xp: 0,
+        saved: false,
+      })
+    }
+    t.after(() => (window.fetch = realFetch))
+    let { $, $$, act, cleanup } = render(
+      <PromptComposer
+        id="t-states"
+        task="Write it"
+        defaultDraft="Write a tagline"
+        coached
+        passed
+        criteria={[
+          { label: 'Asks for a tagline', kind: 'check' },
+          { label: 'One short line', kind: 'rubric', level: 'must' },
+        ]}
+        temperatures={[{ value: 100, label: '1.0' }]}
+        run={{ action: '/api/run', fields: { course: 'c', lesson: 'l', exercise: 'e' } }}
+        coach={{ action: '/api/coach', fields: { course: 'c', lesson: 'l', exercise: 'e' } }}
+      />,
+    )
+    t.after(cleanup)
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+    let summary = () => $('[aria-label="Goal"] summary')?.textContent ?? ''
+    // Saved before the coach existed: no "not checked yet" under a pass.
+    assert.match(summary(), /Passed earlier · run it again to see the coach/)
+    assert.doesNotMatch($('[aria-label="Goal"]')?.textContent ?? '', /not checked yet/)
+
+    let runOnce = async () => {
+      await act(() => ($('form') as HTMLFormElement).requestSubmit())
+      await act(() => new Promise((resolve) => setTimeout(resolve, 80)))
+    }
+    await runOnce()
+    assert.match(summary(), /1 of 2 checks met/)
+    await runOnce()
+    let log = $$('[aria-label="Your runs"] ol > li')
+    assert.match(log[1]!.textContent ?? '', /Not graded\..*isn’t graded/)
+    // The strip keeps the last graded verdict.
+    assert.match(summary(), /1 of 2 checks met/)
+    assert.equal($$('[aria-label="Goal"] li')[0]?.getAttribute('data-met'), 'yes')
+
+    // The cost of the strong prompt is on the page before the click, and describes the button.
+    let reveal = [...$$('button')].find((button) => button.textContent === 'Show a strong prompt')
+    assert.ok(reveal)
+    let cost = document.getElementById(reveal.getAttribute('aria-describedby') ?? '')
+    assert.match(cost?.textContent ?? '', /earns half the neurons/)
   })
 })
 

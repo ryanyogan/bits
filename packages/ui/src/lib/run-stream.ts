@@ -72,9 +72,11 @@ export async function streamRun(
 export function runNote(result: RunResult): string | undefined {
   if (result.source === 'example') return 'Example output: this temperature doesn’t run live.'
   if (result.source === 'fallback') {
-    if (result.reason === 'limit') return 'You’ve reached the hourly run limit — showing the example output.'
-    if (result.reason === 'budget') return 'Live runs are paused for today — showing the example output.'
-    return 'Couldn’t reach the model — showing the example output.'
+    // The coach's turn says which limit and when it frees up (decision 064).
+    if (result.reason === 'limit') return 'You’ve reached a run limit — showing the example output.'
+    if (result.reason === 'budget') return 'Live runs are used up for today — showing the example output.'
+    if (result.reason === 'unconfigured') return 'No model is connected here — showing the example output.'
+    return 'Couldn’t reach Claude — showing the example output.'
   }
   if (result.source === 'error') {
     if (result.reason === 'interrupted') return 'The reply was cut off.'

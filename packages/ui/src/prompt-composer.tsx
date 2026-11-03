@@ -270,7 +270,11 @@ export const PromptComposer = clientEntry(
             ...(last.verdict && typeof last.verdict === 'object' && Array.isArray(last.verdict.criteria) ? { verdict: last.verdict } : {}),
           },
         ]
-        latest = runs[0]!.verdict
+        let restored = runs[0]!.verdict
+        if (restored && graded(restored)) {
+          latest = restored
+          latestPrompt = last.prompt
+        }
       }
       passedHere = readJson<boolean>(passedKey(storeId())) === true
       hydrated = true
@@ -290,8 +294,14 @@ export const PromptComposer = clientEntry(
       writeDraft(persist(), draft)
     }
 
-    // The newest verdict drives the goal strip and the escalation (decision 064).
+    // The newest graded verdict drives the goal strip and the escalation
+    // (decision 064). A reply that wasn't graded (a run limit) leaves it be.
     let latest: CoachVerdict | undefined
+    // The prompt that verdict graded: the strip says "From your last run" once the draft differs.
+    let latestPrompt = ''
+    // The learner's own open/closed choice for the criteria list; until then
+    // it's open before the first verdict and folded after (QA, 2026-11-02).
+    let criteriaOpen: boolean | undefined
     // Passed in an earlier visit (this browser); the server re-checks on save.
     let passedHere = false
     // What the polite live region says: "Reply ready, checking…", then the verdict.
@@ -302,12 +312,6 @@ export const PromptComposer = clientEntry(
     let revealing = false
     let coachAbort: AbortController | undefined
     handle.signal.addEventListener('abort', () => coachAbort?.abort())
-
-    function summary(verdict: CoachVerdict): string {
-      let graded = verdict.criteria.filter((criterion) => criterion.met !== null && criterion.level !== 'should')
-      let met = graded.filter((criterion) => criterion.met).length
-      return verdict.passed ? 'Passed.' : `${met} of ${graded.length}.`
-    }
 
     /** Grades a counted run on the server, then rewards a first pass. */
     async function check(entry: Run, runId: string) {
@@ -334,9 +338,12 @@ export const PromptComposer = clientEntry(
       let verdict = result.verdict
       entry.coach = undefined
       entry.verdict = verdict
-      latest = verdict
+      if (graded(verdict) || !latest) {
+        latest = verdict
+        latestPrompt = entry.prompt
+      }
       if (verdict.reference) reference = verdict.reference
-      announcement = `${summary(verdict)} ${verdict.hint}`
+      announcement = [tallyText(verdict), verdict.hint, verdict.passed ? verdict.success : ''].filter(Boolean).join(' ')
       writeJson(lastRunKey(storeId()), {
         prompt: entry.prompt,
         output: entry.output,
@@ -478,6 +485,17 @@ export const PromptComposer = clientEntry(
       let misses = latest?.misses ?? 0
       let stronger = latest && !latest.passed ? latest.stronger : undefined
       let canReveal = Boolean(handle.props.coach && (latest?.canReveal || reference))
+      // Saved before coaching (or in another browser): passed, with no verdict to show.
+      let passedEarlier = passedAlready && !latest
+      let stale = Boolean(latest && hydrated && draft.trim() !== latestPrompt)
+      let open = criteriaOpen ?? (!latest && !passedEarlier)
+      let status = passedEarlier
+        ? 'Passed earlier · run it again to see the coach'
+        : latest
+          ? `${stale ? 'From your last run · ' : ''}${tallyText(latest)}`
+          : handle.props.coached
+            ? 'The coach checks the reply'
+            : `${criteria.length} to meet`
       let runKeys = mac ? '⌘↵' : 'Ctrl+↵'
       let fieldId = `${id}-prompt`
       let tokens = draftTokens(draft)
@@ -497,25 +515,53 @@ export const PromptComposer = clientEntry(
                 <span mix={goalLabelStyle}>Goal</span> {goal}
               </p>
             ) : null}
-            <p id={`${id}-criteria-label`} mix={goalLabelStyle}>
-              What good looks like{handle.props.coached ? ' · the coach checks the reply' : ''}
-            </p>
-            <ul id={`${id}-checks`} aria-labelledby={`${id}-criteria-label`} mix={criteriaStyle}>
-              {criteria.map((criterion, index) => {
-                let met = criterionState(criterion, index, latest, passedAlready)
-                return (
-                  <li key={`${criterion.kind}:${criterion.label}`} data-met={met} mix={criterionStyle}>
-                    <span aria-hidden="true" mix={glyphStyle}>
-                      {met === 'yes' ? '✓' : met === 'no' ? '✗' : '·'}
-                    </span>
-                    <span>{criterion.label}</span>
-                    <span mix={stateTextStyle}>
-                      {met === 'yes' ? 'met' : met === 'no' ? 'not yet' : criterion.level === 'should' ? 'nice to have' : 'not checked yet'}
-                    </span>
-                  </li>
-                )
-              })}
-            </ul>
+            {/* Folds to one line after the first verdict, so the replies stay in view on a phone. */}
+            <details
+              open={open}
+              mix={[
+                criteriaDetailsStyle,
+                on('toggle', (event) => {
+                  let now = (event.currentTarget as HTMLDetailsElement).open
+                  if (now === open) return
+                  criteriaOpen = now
+                  handle.update()
+                }),
+              ]}
+            >
+              <summary id={`${id}-criteria-label`} mix={criteriaSummaryStyle}>
+                <span mix={goalLabelStyle}>What good looks like</span>
+                <span mix={summaryStatusStyle}>{status}</span>
+                <span aria-hidden="true" mix={summaryToggleStyle}>
+                  {open ? 'hide' : 'show'}
+                </span>
+              </summary>
+              <ul id={`${id}-checks`} aria-labelledby={`${id}-criteria-label`} mix={criteriaStyle}>
+                {criteria.map((criterion, index) => {
+                  let met = passedEarlier ? 'earlier' : criterionState(criterion, index, latest)
+                  return (
+                    <li key={`${criterion.kind}:${criterion.label}`} data-met={met} mix={criterionStyle}>
+                      <span aria-hidden="true" mix={glyphStyle}>
+                        {met === 'yes' ? '✓' : met === 'no' ? '✗' : '·'}
+                      </span>
+                      <span>{criterion.label}</span>
+                      <span mix={stateTextStyle}>
+                        {met === 'yes'
+                          ? 'met'
+                          : met === 'no'
+                            ? criterion.level === 'should'
+                              ? 'not yet (nice to have)'
+                              : 'not yet'
+                            : met === 'earlier'
+                              ? ''
+                              : criterion.level === 'should'
+                                ? 'nice to have'
+                                : 'not checked yet'}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </details>
           </section>
           <section
             aria-label="Your runs"
@@ -525,7 +571,11 @@ export const PromptComposer = clientEntry(
           >
             {runs.length ? null : (
               <p mix={emptyStyle}>
-                {passedAlready ? '✓ You passed this exercise. Run it again any time.' : 'Run your prompt and the replies land here.'}
+                {passedEarlier
+                  ? '✓ You passed this exercise. Run it again to see the coach.'
+                  : passedAlready
+                    ? '✓ You passed this exercise. Run it again any time.'
+                    : 'Run your prompt and the replies land here.'}
               </p>
             )}
             <ol mix={runsStyle}>
@@ -558,7 +608,7 @@ export const PromptComposer = clientEntry(
                       <p mix={coachNoteStyle}>The coach couldn’t check this run. Run it again.</p>
                     </TutorMessage>
                   ) : entry.verdict ? (
-                    <CoachTurn verdict={entry.verdict} />
+                    <CoachTurn verdict={entry.verdict} rewarded={entry.id === rewardedRun && Boolean(reward) && rewardXp > 0} />
                   ) : null}
                   {entry.id === rewardedRun && reward && (rewardXp > 0 || !entry.verdict) ? (
                     <RewardToast
@@ -616,9 +666,7 @@ export const PromptComposer = clientEntry(
                 ]}
               />
             </div>
-            {misses > 0 && !latest?.passed ? (
-              <p mix={attemptStyle}>Attempt {misses + 1} · hints get more specific</p>
-            ) : null}
+            {misses > 0 && !latest?.passed ? <p mix={attemptStyle}>Attempt {misses + 1}</p> : null}
             {stronger || canReveal ? (
               <div mix={escalationStyle}>
                 {stronger ? (
@@ -639,11 +687,18 @@ export const PromptComposer = clientEntry(
                     type="button"
                     aria-expanded={referenceOpen ? 'true' : 'false'}
                     aria-controls={`${id}-reference`}
+                    aria-describedby={latest?.passed ? undefined : `${id}-reveal-cost`}
                     aria-busy={revealing ? 'true' : undefined}
                     mix={[escalateKeyStyle, on('click', () => void reveal())]}
                   >
                     Show a strong prompt
                   </button>
+                ) : null}
+                {/* The cost is stated before the choice (decision 064 §6). */}
+                {canReveal && !latest?.passed && !reference ? (
+                  <p id={`${id}-reveal-cost`} mix={revealCostStyle}>
+                    Shows a model answer. Passing after you see it earns half the neurons.
+                  </p>
                 ) : null}
               </div>
             ) : null}
@@ -729,49 +784,70 @@ export const PromptComposer = clientEntry(
   },
 )
 
-/** A criterion's state in the goal strip: from the newest verdict, else "not checked yet". */
-function criterionState(criterion: ComposerCriterion, index: number, verdict: CoachVerdict | undefined, passed: boolean): 'yes' | 'no' | 'unknown' {
-  if (!verdict) return passed && criterion.kind !== 'rubric' ? 'yes' : 'unknown'
+/** A verdict that graded the reply (not a run limit's saved example, not a temperature that never runs live). */
+function graded(verdict: CoachVerdict): boolean {
+  return verdict.layer !== 'limit' && verdict.layer !== 'example'
+}
+
+/**
+ * The verdict in a few words. The count is of the checks that decide and
+ * were checked; the rest are named, so "3 of 4" never stands unexplained
+ * beside a longer list (QA, 2026-11-02).
+ */
+export function tallyText(verdict: CoachVerdict): string {
+  if (!graded(verdict)) return 'Not graded.'
+  if (verdict.passed) return 'Passed.'
+  let deciding = verdict.criteria.filter((criterion) => criterion.level !== 'should')
+  let checked = deciding.filter((criterion) => criterion.met !== null)
+  let met = checked.filter((criterion) => criterion.met).length
+  let waiting = deciding.length - checked.length
+  let tally = `${met} of ${checked.length} checks met`
+  if (!waiting) return `${tally}.`
+  return verdict.layer === 'pattern'
+    ? `${tally} · ${waiting} not checked on a saved example.`
+    : `${tally} · ${waiting} more checked once these pass.`
+}
+
+/** A criterion's state in the goal strip: from the newest graded verdict, else "not checked yet". */
+function criterionState(criterion: ComposerCriterion, index: number, verdict: CoachVerdict | undefined): 'yes' | 'no' | 'unknown' {
+  if (!verdict) return 'unknown'
   let match = verdict.criteria[index]
   let met = match && match.label === criterion.label ? match.met : verdict.criteria.find((c) => c.label === criterion.label)?.met
   return met === true ? 'yes' : met === false ? 'no' : 'unknown'
 }
 
-/** The coach's turn under a reply (decision 064): the tally, one hint, then each criterion as ✓ / ✗ / not checked. */
-function CoachTurn(handle: Handle<{ verdict: CoachVerdict }>) {
+/**
+ * The coach's turn under a reply (decision 064): the tally and one line,
+ * then only what isn't met (the goal strip holds the full list). On a pass
+ * the line comes from the verdict, and the success text shows here only
+ * when no reward box under this run already carries it.
+ */
+function CoachTurn(handle: Handle<{ verdict: CoachVerdict; rewarded?: boolean }>) {
   return () => {
-    let { verdict } = handle.props
-    let graded = verdict.criteria.filter((criterion) => criterion.met !== null && criterion.level !== 'should')
-    let met = graded.filter((criterion) => criterion.met).length
+    let { verdict, rewarded } = handle.props
+    let unmet = verdict.passed || !graded(verdict) ? [] : verdict.criteria.filter((criterion) => criterion.met === false)
+    let success = verdict.passed && !rewarded ? verdict.success : undefined
     return (
       <TutorMessage variant="preview" continued mix={coachTurnStyle}>
         <p>
-          <strong>{verdict.passed ? 'Passed.' : `${met} of ${graded.length}.`}</strong> {verdict.hint}
+          <strong>{tallyText(verdict)}</strong> {[verdict.hint, success].filter(Boolean).join(' ')}
         </p>
-        <ul mix={turnListStyle}>
-          {verdict.criteria.map((criterion) => (
-            <li key={`${criterion.kind}:${criterion.label}`} data-met={criterion.met === null ? 'unknown' : criterion.met ? 'yes' : 'no'} mix={criterionStyle}>
-              <span aria-hidden="true" mix={glyphStyle}>
-                {criterion.met === true ? '✓' : criterion.met === false ? '✗' : '·'}
-              </span>
-              <span>
-                {criterion.label}
-                {criterion.met === false && criterion.note ? <span mix={stateTextStyle}> {criterion.note}</span> : null}
-              </span>
-              <span mix={stateTextStyle}>
-                {criterion.met === true
-                  ? 'met'
-                  : criterion.met === false
-                    ? criterion.level === 'should'
-                      ? 'not yet (nice to have)'
-                      : 'not yet'
-                    : verdict.layer === 'soft'
-                      ? 'not checked (coach limit)'
-                      : 'not checked'}
-              </span>
-            </li>
-          ))}
-        </ul>
+        {unmet.length ? (
+          <ul aria-label="Not met yet" mix={turnListStyle}>
+            {unmet.map((criterion) => (
+              <li key={`${criterion.kind}:${criterion.label}`} data-met="no" mix={criterionStyle}>
+                <span aria-hidden="true" mix={glyphStyle}>
+                  ✗
+                </span>
+                <span>
+                  {criterion.label}
+                  {criterion.note ? <span mix={stateTextStyle}> {criterion.note}</span> : null}
+                </span>
+                <span mix={stateTextStyle}>{criterion.level === 'should' ? 'not yet (nice to have)' : 'not yet'}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         {verdict.note ? <p mix={coachNoteStyle}>{verdict.note}</p> : null}
       </TutorMessage>
     )
@@ -796,7 +872,39 @@ const goalLabelStyle = css({
   color: 'var(--dim)',
   marginRight: 'var(--space-2)',
 })
-const criteriaStyle = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' })
+const criteriaStyle = css({
+  listStyle: 'none',
+  margin: 0,
+  padding: 'var(--space-2) 0 0',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'var(--space-1)',
+})
+// "What good looks like" is a disclosure: one line (the label, the latest
+// tally, show/hide) that opens to the list.
+const criteriaDetailsStyle = css({ margin: 0 })
+const criteriaSummaryStyle = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'baseline',
+  gap: 'var(--space-1) var(--space-2)',
+  minHeight: 'var(--touch-target)',
+  alignContent: 'center',
+  cursor: 'pointer',
+  listStyle: 'none',
+  '&::-webkit-details-marker': { display: 'none' },
+  '&:focus-visible': focusOutline,
+})
+const summaryStatusStyle = css({ fontSize: 'var(--fs-13)', color: 'var(--text-quiet)' })
+const summaryToggleStyle = css({
+  marginLeft: 'auto',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-12)',
+  color: 'var(--muted)',
+  textDecoration: 'underline',
+  textUnderlineOffset: '2px',
+})
+const revealCostStyle = css({ margin: 0, flexBasis: '100%', fontSize: 'var(--fs-13)', color: 'var(--muted)' })
 const criterionStyle = css({
   display: 'grid',
   gridTemplateColumns: '1.25em 1fr auto',
