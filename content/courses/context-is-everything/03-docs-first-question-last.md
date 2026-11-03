@@ -99,12 +99,13 @@ Question: ${question}`,
 
 Your turn, at a small scale. The draft below asks first and pastes the policy
 after. Rebuild it: the policy inside `<document>` with a `<source>`, then ask
-for a quote, then the question **last**. The checks can see your tags and the
-quote request, but not the order, so the order is on you.
+for a quote, then the question **last**. The pattern checks can see your tags
+and the quote request, but not the order, so the order is on you.
 
-:::prompt{id="pack-a-doc" xp=30}
+:::prompt{id="pack-a-doc" xp=30 coach}
 Wrap the policy in tags, ask for a quote, put the question last
 
+- goal "Get the refund window answered from the policy, with the policy's own words quoted first"
 - placeholder "<document><source>…</source><document_content>…</document_content></document> Quote … then answer: …?"
 - draft "What's the refund window? Here's our policy: Refunds are accepted within 30 days of delivery for unused items. Sale items are final. Gift cards can't be refunded."
 - check "Keeps the policy"           /30 days/i
@@ -112,13 +113,20 @@ Wrap the policy in tags, ask for a quote, put the question last
 - check "Names the source"           /<source>/i
 - check "Asks for a quote"           /quot/i
 - check "Asks the question"          /\?/
+- document policy "Refunds are accepted within 30 days of delivery for unused items. Sale items are final. Gift cards can't be refunded."
+- expect "Quotes the policy word for word" quotes policy
+- expect "Gives the window"                match /30 days/i
+- rubric "The answer agrees with the quote it gives" must
+- rubric "The quote comes before the answer" should
+- hint "Is the quote in the reply really the policy's words, or a paraphrase? What would make Claude copy them exactly?"
+- hint "Ask for the relevant sentence word for word, in <quotes> tags, before the answer."
+- reference "<document><source>refund-policy.md</source><document_content>Refunds are accepted within 30 days of delivery for unused items. Sale items are final. Gift cards can't be refunded.</document_content></document>\n\nFirst quote the sentence that answers the question, word for word, in <quotes> tags. Then answer: what's the refund window?"
 - run temperature=[1.0]
 - example T=1.0 "<quotes>“Refunds are accepted within 30 days of delivery for unused items.”</quotes> The refund window is 30 days from delivery, for unused items. Sale items and gift cards can't be refunded."
 - example T=1.0 "Quote: “Refunds are accepted within 30 days of delivery for unused items.” So you have 30 days after delivery, as long as the item is unused."
 - example T=1.0 "<quotes>“within 30 days of delivery for unused items”</quotes> 30 days from delivery, unused items only."
 - success "Docs first, question last, evidence before answers." next="Next: when the chat gets long →"
 :::
-
 :::rabbithole
 - read "Long context prompting" by="Anthropic" url="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#long-context-prompting"
 - video "AI prompt engineering: A deep dive" by="Anthropic" mins=77 deep url="https://www.youtube.com/watch?v=T9aRN5JkmL8"

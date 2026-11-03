@@ -65,21 +65,26 @@ fresh request with nothing carried over. Ask Claude who's on call this
 weekend and it can only guess. Then give it the rota, **Saturday: Priya,
 Sunday: Marco**, in the same prompt, and ask again.
 
-:::prompt{id="on-call" xp=30}
+:::prompt{id="on-call" xp=30 coach}
 Put the rota in the prompt, then ask who's on call
 
+- goal "Get the right names for this weekend, taken from a rota you put in the prompt"
 - placeholder "Rota: … Who's on call …?"
 - draft "Who's on call this weekend?"
 - check "Includes the rota"     /priya/i
 - check "Includes the rota"     /marco/i
 - check "Asks a question"       /\?/
+- expect "Names someone from the rota" match /priya|marco/i
+- rubric "The answer comes from the rota in the prompt, not a guess" must evidence
+- hint "Claude has never seen your rota. Where would it get the names from?"
+- hint "Paste the rota above the question, e.g. “Rota: Sat Priya, Sun Marco.”"
+- reference "Rota: Saturday Priya, Sunday Marco.\n\nWho's on call this weekend?"
 - run temperature=[1.0]
 - example T=1.0 "Priya is on call on Saturday, and Marco takes Sunday."
 - example T=1.0 "Saturday: Priya. Sunday: Marco."
 - example T=1.0 "Priya has Saturday and Marco has Sunday, per the rota."
 - success "If it isn't in the window, Claude doesn't know it." next="Next: bigger isn't better →"
 :::
-
 :::rabbithole
 - read "Context windows" by="Anthropic" url="https://platform.claude.com/docs/en/build-with-claude/context-windows"
 - video "Deep Dive into LLMs like ChatGPT" by="Andrej Karpathy" mins=211 deep url="https://www.youtube.com/watch?v=7xTGNNLPyMI"
