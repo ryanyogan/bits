@@ -75,7 +75,7 @@ Rewrite the vague request so a brilliant new colleague could do it first time
 - check "Says where it will appear" /\bpage\b|website|\bsite\b|listing|\bshop\b|\bstore\b|email|\bads?\b|instagram|social|label|packaging|catalog/i
 - check "Sets a length"             /\bwords?\b|sentences?|\bunder\b|\bshort\b|\blines?\b|paragraph|characters/i
 - rubric "A colleague could do this from the prompt alone, with no follow-up questions" must on=prompt
-- rubric "The description uses the facts you gave, and invents none" must evidence
+- rubric "The description uses the facts you gave, and invents none" must
 - rubric "It fits the reader and the length you set" should
 - hint "Imagine handing this prompt to someone on their first day. What would they ask you before they could start?"
 - hint "Look for a claim in the reply you didn't give it. Facts you leave out get guessed."

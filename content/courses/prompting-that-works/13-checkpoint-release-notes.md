@@ -8,10 +8,10 @@
 #   https://platform.claude.com/docs/en/test-and-evaluate/develop-tests
 # Toy: both outputs are illustrative. The commits are made up.
 title: "Checkpoint: release notes"
-order: 10
+order: 13
 minutes: 8
 xp: 80
-module: Make it reliable
+module: Putting it together
 project: true
 ---
 
@@ -40,7 +40,9 @@ who reads the notes and what they care about (lesson 2). **An example** of a
 note in your style (lesson 3). **Tags** around the commits (lesson 4). **A
 role** at the top (lesson 5). **A format**: a length and a shape (lesson 6).
 And a rule for the **edge case** your tests would find: a week with nothing
-users would notice (lesson 9).
+users would notice (lesson 9). Lessons 10 to 12 come in when the commits
+arrive through a tool rather than a paste: plan first, name your sources,
+and treat what the tool returns as data.
 
 ---
 
@@ -79,7 +81,7 @@ Write a release-notes prompt that uses the whole toolkit
 Finish this checkpoint and the **Prompting that works** badge is yours. You
 can now write prompts that are clear and specific, steer Claude with
 examples, tags, roles and formats, know when to let it think or split the
-job, and test a prompt before you trust it.
+job, test a prompt before you trust it, and brief Claude for jobs that use tools.
 
 :::rabbithole
 - read "Prompting best practices" by="Anthropic" url="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices"
