@@ -69,3 +69,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 061 | [Lists, ``` samples and ### subheadings in lesson prose](061-lists-and-fences-in-lessons.md) |
 | 062 | [Light mode: a paper theme from the same tokens](062-light-mode.md) |
 | 063 | [Light mode depth: lifted surfaces on a deeper paper](063-light-mode-depth.md) |
+| 066 | [Course presentation: the syllabus first, one action per state](066-course-presentation.md) |

@@ -29,8 +29,8 @@ export interface CoursePageProps {
  * grid (decision 047), laid out like an LMS course page (decision 066): a
  * compact hero, then the syllabus in the first screen with the side panels
  * beside it (progress, what you'll learn, how you'll learn, source), the
- * two joined into one plate. On a phone the panels stack: the syllabus
- * first, or the progress first once the course is started.
+ * two joined into one plate. Below 1024px the syllabus comes first and the
+ * panels stack under it.
  */
 export function CoursePage(handle: Handle<CoursePageProps>) {
   return () => {
@@ -51,7 +51,7 @@ export function CoursePage(handle: Handle<CoursePageProps>) {
           <CourseHero view={view} coursesHref={coursesHref} trackHref={trackHref} />
 
           <RuledSection as="div" pad="none" rule={false}>
-            <div mix={bodyStyle} data-started={view.state === 'new' ? undefined : ''}>
+            <div mix={bodyStyle}>
               <Slot area="syl">
                 <Syllabus modules={view.modules} />
               </Slot>
@@ -94,8 +94,8 @@ const STACKED = '@media (max-width: 1023.98px)'
 const line = 'var(--border-w) solid var(--line-cell)'
 
 // Wide: the syllabus spans the rows of the side column, so it starts right
-// under the hero. Stacked: the syllabus (or, once started, the progress)
-// first, then the other panels.
+// under the hero. Stacked: the syllabus first (the hero's CTA already says
+// where you are), then the panels.
 const bodyStyle = css({
   display: 'grid',
   [WIDE]: {
@@ -109,11 +109,6 @@ const bodyStyle = css({
     gridTemplateAreas: '"syl" "prog" "out" "how" "src"',
     // A hairline between stacked panels; the first one sits under the hero's rule.
     '& > :not([data-area="syl"])': { borderTop: line },
-    '&[data-started]': {
-      gridTemplateAreas: '"prog" "syl" "out" "how" "src"',
-      '& > [data-area="prog"]': { borderTop: 0 },
-      '& > [data-area="syl"]': { borderTop: line },
-    },
   },
   '@media (forced-colors: active)': { '& > *': { borderColor: 'GrayText' } },
 })
