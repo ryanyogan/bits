@@ -612,6 +612,17 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   `- document id "…"` and `gate=false`. Every prompt needs a `check` or an
   `expect`. The syntax and limits are in the decision and on `/author`;
   each build rule has a case in `compile/build.test.ts`.
+- Deploy checks (decision 072): `:::verify{id path xp gate}` with a
+  `- goal`, 1–8 `- expect` reply checks and hints. The learner pastes
+  their `https://*.workers.dev` origin; the path is authored and checked
+  by the build and again by `POST /api/verify` (`app/verify/`). That
+  endpoint is signed-in only, never runs in a preview, makes one GET with
+  `redirect: 'manual'`, a 5 s timeout and a 64 KiB cap, and reserves its
+  `build_checks` row inside the insert against per-user and per-origin
+  caps (`RL_VERIFY`, 2012/3012). The save reads passes from the journal
+  (`listPassedBuildChecks`), never form fields; a public certificate links
+  the passing deploy. Tests stub `globalThis.fetch` for the learner's
+  Worker (`content/fixtures/verify-course/`).
 - Quick checks (decision 052): `:::ask` (and `:::quiz`, which builds into
   one) is graded only by `POST /api/ask` and journalled in `ask_attempts`;
   the save reads right answers from the journal, never form fields, and
