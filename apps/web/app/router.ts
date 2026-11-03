@@ -76,7 +76,8 @@ export const router = createRouter({
     // lessons with the session, in one D1 round trip (decision 026).
     // A lesson page also brings the viewer's drafts in that lesson (decision 029).
     loadSession({
-      withCompleted: (context) => context.method === 'GET' && /^\/courses(?:\/|$)/.test(context.url.pathname),
+      // The landing and /continue find the next lesson (decision 065).
+      withCompleted: (context) => context.method === 'GET' && /^\/(?:courses(?:\/|$)|continue$|$)/.test(context.url.pathname),
       withDrafts: (context) => {
         if (context.method !== 'GET') return undefined
         let match = /^\/courses\/([^/]+)\/([^/]+)\/?$/.exec(context.url.pathname)

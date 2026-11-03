@@ -47,7 +47,8 @@ describe('lesson page and author preview', () => {
     assert.equal(count(html, /Skip to content/), 1)
     // The same nav as every app page, with Courses current.
     assert.match(html, /aria-current="page"[^>]*>Courses</)
-    assert.match(html, />My learning</)
+    // Signed out, My learning is a sign-in wall, so the nav leaves it out (decision 065).
+    assert.doesNotMatch(html, />My learning</)
     // The lesson title is the page's h1, inside the header's sub-bar.
     assert.match(html, /<header[\s\S]*<h1[^>]*>Temperature &amp; randomness<\/h1>[\s\S]*<\/header>/)
     // One view (decision 055): no format tabs anywhere.

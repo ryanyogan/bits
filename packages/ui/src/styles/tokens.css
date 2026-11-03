@@ -341,6 +341,7 @@
 
     /* 7. Layout */
     --page-max: 1280px; /* --container */
+    --page-max-wide: 1440px; /* the ruled frame from 1680px (decision 065) */
     --page-gutter: 32px; /* desktop horizontal padding */
     --gutter-mobile: 16px; /* ≤480px */
     --read-width: 760px;
@@ -427,6 +428,7 @@
     --terminal-height: max(320px, min(clamp(420px, 72svh, 760px), calc(100svh - var(--shell-h) - var(--space-8))));
     --output-panel-height: 240px; /* :::terminal / code output */
     --toast-width: 480px; /* RewardRegion overlay */
+    --account-menu-width: 280px; /* AccountMenu sheet (decision 065) */
     /* Link-preview cards (decision 028): the Open Graph large-image size. */
     --og-width: 1200px;
     --og-height: 630px;
@@ -585,6 +587,15 @@
   @media (max-width: 1023.98px) {
     :root {
       --cell-pad-lg: var(--section-pad-x);
+    }
+  }
+
+  /* ≥1680px: the ruled frame widens to 1440 (decision 065), so a 1920 or
+     2560 screen isn't a 1280 column in a sea of ground. Text measures stay
+     capped by their own tokens. */
+  @media (min-width: 1680px) {
+    :root {
+      --frame-max: var(--page-max-wide);
     }
   }
 

@@ -87,8 +87,10 @@ const sideStyle = css({
   '@media (forced-colors: active)': { '& a': { borderColor: 'GrayText' }, '& a[aria-current="page"]': { textDecoration: 'underline' } },
   '@media (max-width: 899.98px)': { position: 'static', borderBottom: 0 },
 })
+// The cell fills the column; the text inside keeps a ~68-character line
+// (decision 065: at 760px the policies ran to 85–90).
 const proseStyle = css({
-  maxWidth: 'calc(var(--read-width) + 2 * var(--section-pad-x))',
+  '& > *': { maxWidth: 'var(--type-prose-measure)' },
   padding: 'var(--space-14) var(--section-pad-x) var(--section-pad-y)',
   borderLeft: 'var(--border-w) solid var(--line-cell)',
   '@media (max-width: 899.98px)': { borderLeft: 0, paddingTop: 'var(--space-10)' },

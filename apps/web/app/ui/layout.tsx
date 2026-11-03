@@ -1,16 +1,19 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css, Fragment } from 'remix/component'
+import { AccountMenu, type AccountMenuLink } from '@bits/ui/account-menu'
 import { AppBar, type AppBarLink } from '@bits/ui/app-bar'
 import { Document, type DocumentImage } from '@bits/ui/document'
-import { AvatarButton } from '@bits/ui/avatar-button'
+import { Footer, type FooterProps } from '@bits/ui/footer'
 import { Keycap } from '@bits/ui/keycap'
 import { PageFrame } from '@bits/ui/page-frame'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
+import { RuledSection } from '@bits/ui/ruled-section'
 
 import { platform } from '#platform'
 
 import { APP_NAME, APP_TAGLINE, pageTitle } from '../config.ts'
-import type { Viewer } from '../auth/identity.ts'
+import { canAuthor, type Viewer } from '../auth/identity.ts'
+import { lessonOneHref } from '../actions/home/links.ts'
 import type { RewardNotice } from '../progress/reward.ts'
 import { routes } from '../routes.ts'
 import { HOME_ALT, ogImage } from './og.ts'
@@ -28,8 +31,9 @@ export interface LayoutProps {
   /** This page's own path, for the canonical URL and link previews (shareable pages only). */
   canonicalPath?: string
   /**
-   * The header's centred nav (decision 059): the app links by default; the
-   * landing passes its own (with in-page `section` links).
+   * The header's centred nav (decision 059): the viewer's app links
+   * (`appLinksFor`) by default; the landing passes its own (with in-page
+   * `section` links).
    */
   links?: AppBarLink[]
   /**
@@ -37,8 +41,23 @@ export interface LayoutProps {
    * themselves the way in (decision 059).
    */
   account?: boolean
-  /** Where the signed-out "Start free" key goes (the course list by default). */
+  /**
+   * Where the signed-out "Start free" key goes (lesson 1 by default). The
+   * key is left out on the page it points at.
+   */
   startHref?: string
+  /**
+   * Where the signed-in "Continue" key goes: `GET /continue` by default,
+   * which finds the next lesson (decision 065). A page that already knows
+   * the next lesson (the landing) passes it.
+   */
+  continueHref?: string
+  /**
+   * The site footer (decision 065): Courses, Terms, Privacy and the
+   * viewer's links, under every page. On by default, except on `bare` pages
+   * (the lesson workspace; the landing draws its own, with the theme switch).
+   */
+  footer?: boolean
   head?: RemixNode
   /** The link-preview card (`ogImage()` from ui/og.ts); the landing card when omitted. */
   image?: DocumentImage
@@ -70,12 +89,52 @@ export interface LayoutProps {
   children?: RemixNode
 }
 
-/** The app's nav: the header on every page but the landing (decision 059). */
-export const appLinks: AppBarLink[] = [
-  { href: routes.courses.index.href(), label: 'Courses' },
-  { href: routes.me.index.href(), label: 'My learning' },
-  { href: routes.author.index.href(), label: 'Write a course' },
-]
+/** "Write a course" for the people who can (authors and admins; decision 065). */
+export function authorLinkFor(viewer: Viewer | null | undefined): AppBarLink[] {
+  return viewer && canAuthor(viewer) ? [{ href: routes.author.index.href(), label: 'Write a course' }] : []
+}
+
+/**
+ * The app's nav, the header on every page but the landing (decisions 059,
+ * 065): Courses for everyone, My learning once signed in (signed out it is
+ * only a sign-in wall), Write a course for authors.
+ */
+export function appLinksFor(viewer: Viewer | null | undefined): AppBarLink[] {
+  return [
+    { href: routes.courses.index.href(), label: 'Courses' },
+    ...(viewer ? [{ href: routes.me.index.href(), label: 'My learning' }] : []),
+    ...authorLinkFor(viewer),
+  ]
+}
+
+/** The footer's links (decision 065): what this viewer can open, then the policies. */
+export function footerLinksFor(viewer: Viewer | null | undefined): FooterProps['links'] {
+  return [
+    { href: routes.courses.index.href(), label: 'Courses' },
+    ...(viewer
+      ? [
+          { href: routes.me.index.href(), label: 'My learning' },
+          { href: routes.settings.index.href(), label: 'Settings' },
+        ]
+      : [{ href: routes.login.index.href(), label: 'Sign in' }]),
+    ...authorLinkFor(viewer),
+    { href: routes.legal.terms.href(), label: 'Terms' },
+    { href: routes.legal.privacy.href(), label: 'Privacy' },
+  ]
+}
+
+/** "© 2026 Bits". */
+export const copyright = `© 2026 ${APP_NAME.charAt(0).toUpperCase()}${APP_NAME.slice(1)}`
+
+/** The account menu's links (decision 065): the viewer's own pages. */
+function accountLinksFor(viewer: Viewer): AccountMenuLink[] {
+  return [
+    { href: routes.me.index.href(), label: 'My learning' },
+    ...(viewer.isPublic ? [{ href: routes.profile.index.href({ handle: viewer.handle }), label: 'Public profile' }] : []),
+    { href: routes.settings.index.href(), label: 'Settings' },
+    ...(viewer.role === 'admin' ? [{ href: routes.admin.authors.index.href(), label: 'Admin: authors' }] : []),
+  ]
+}
 
 /**
  * The public URL for a path, from CANONICAL_ORIGIN (production). Undefined
@@ -110,9 +169,10 @@ export function Layout(handle: Handle<LayoutProps>) {
       description = APP_TAGLINE,
       currentPath,
       canonicalPath,
-      links = appLinks,
+      links,
       account = true,
-      startHref = routes.courses.index.href(),
+      startHref = lessonOneHref(),
+      continueHref = routes.continue.href(),
       head,
       image = ogImage('home', HOME_ALT),
       reward,
@@ -121,10 +181,12 @@ export function Layout(handle: Handle<LayoutProps>) {
       sub,
       bleed,
       bare,
+      footer = !bare,
       children,
     } = handle.props
     let framed = !bare && hasPageFrame(children)
     let loginHref = routes.login.index.href()
+    let navLinks = links ?? appLinksFor(viewer)
 
     return (
       <Document
@@ -152,37 +214,68 @@ export function Layout(handle: Handle<LayoutProps>) {
         <AppBar
           brand={APP_NAME}
           homeHref={routes.home.href()}
-          links={links}
+          links={navLinks}
           currentPath={currentPath}
           sub={sub}
           // Under 420px the bar keeps Start free and the menu; Sign in moves
-          // into the menu sheet, so it is never out of reach.
-          menuExtras={account && !viewer ? [{ href: loginHref, label: 'Sign in' }] : undefined}
+          // into the menu sheet, so it is never out of reach. Signed in, the
+          // sheet adds the account's pages (Sign out stays in the avatar menu:
+          // it is a POST form).
+          menuExtras={
+            !account
+              ? undefined
+              : viewer
+                ? [
+                    // Under 420px the bar drops Continue (it would crowd the logo); the sheet keeps it.
+                    { href: continueHref, label: 'Continue', prefetch: false },
+                    ...accountLinksFor(viewer).filter((link) => !navLinks.some((nav) => nav.href === link.href)),
+                  ]
+                : [{ href: loginHref, label: 'Sign in' }]
+          }
           actions={
             !account ? null : viewer ? (
-              <AvatarButton
-                initials={viewer.initials}
-                href={routes.me.index.href()}
-                current={currentPath === routes.me.index.href()}
-              />
+              <>
+                {/* Never prefetched: /continue reads progress and redirects. */}
+                <Keycap href={continueHref} prefetch={false} mix={barKeyStyle}>
+                  Continue
+                </Keycap>
+                <AccountMenu
+                  initials={viewer.initials}
+                  name={viewer.name || viewer.handle}
+                  handle={`@${viewer.handle}`}
+                  links={accountLinksFor(viewer)}
+                  signOutAction={routes.logout.action.href()}
+                  currentPath={currentPath}
+                />
+              </>
             ) : (
               <>
                 <a href={loginHref} data-rmx-prefetch={prefetchFor(loginHref)} mix={signInStyle}>
                   Sign in
                 </a>
-                <Keycap href={startHref}>Start free</Keycap>
+                {currentPath === startHref ? null : <Keycap href={startHref}>Start free</Keycap>}
               </>
             )
           }
         />
-        {bare ? (
-          children
-        ) : (
-          // tabIndex -1: the skip link moves focus (and a screen reader's cursor) into it (decision 031).
-          <main id="main" tabIndex={-1} mix={[skipTargetStyle, framed ? framedMainStyle : bleed ? undefined : mainStyle]}>
-            {children}
-          </main>
-        )}
+        <div mix={footer ? stackStyle : undefined}>
+          {bare ? (
+            children
+          ) : (
+            // tabIndex -1: the skip link moves focus (and a screen reader's cursor) into it (decision 031).
+            <main id="main" tabIndex={-1} mix={[skipTargetStyle, framed ? [framedMainStyle, footer ? undefined : fullHeightStyle] : bleed ? undefined : mainStyle]}>
+              {children}
+            </main>
+          )}
+          {footer ? (
+            <PageFrame mix={footerFrameStyle}>
+              {/* The frame's last plate; a framed page's own bottom gap is the gap above it. */}
+              <RuledSection as="div" pad="none" mix={framed ? joinedFooterStyle : undefined}>
+                <Footer brand={APP_NAME} homeHref={routes.home.href()} links={footerLinksFor(viewer)} copyright={copyright} mix={footerStyle} />
+              </RuledSection>
+            </PageFrame>
+          ) : null}
+        </div>
         {reward ? <BadgeNotice reward={reward} /> : null}
       </Document>
     )
@@ -200,6 +293,10 @@ const skipLinkStyle = css({
   color: 'var(--on-volt)',
   '&:focus': { top: 'var(--space-4)' },
 })
+
+// The bar's key: the same size as signed out's Start free. Under 420px it
+// moves into the menu sheet (menuExtras), like Sign in.
+const barKeyStyle = css({ flex: 'none', '@media (max-width: 420px)': { display: 'none' } })
 
 const signInStyle = css({
   display: 'inline-flex',
@@ -241,6 +338,22 @@ const mainStyle = [pageShell, css({ display: 'block' })]
 const framedMainStyle = css({
   display: 'flex',
   flexDirection: 'column',
-  minHeight: 'calc(100dvh - var(--shell-h))',
   '& > :last-child': { flexGrow: 1 },
 })
+// Without a footer the page alone fills the screen (with one, `stackStyle` does).
+const fullHeightStyle = css({ minHeight: 'calc(100dvh - var(--shell-h))' })
+
+// With a footer, the page and the footer share the screen under the bar:
+// a short page's frame grows, so the footer sits at the foot of the screen
+// (decision 065), and a long page just flows into it.
+const stackStyle = css({
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: 'calc(100dvh - var(--shell-h))',
+  '& > main': { flexGrow: 1 },
+})
+
+const footerFrameStyle = css({ paddingBottom: 0 })
+const joinedFooterStyle = css({ marginTop: 0 })
+// The plate draws the rule and rails; the footer is its flat fill.
+const footerStyle = css({ borderTop: 0, background: 'var(--cell-fill)' })
