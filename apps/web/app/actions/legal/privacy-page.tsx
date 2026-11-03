@@ -7,7 +7,7 @@ import { routes } from '../../routes.ts'
 import { LegalPage } from './legal-page.tsx'
 
 /** When this text last changed. Update it with every edit (decision 028). */
-export const PRIVACY_UPDATED = '2 November 2026'
+export const PRIVACY_UPDATED = '3 November 2026'
 
 /**
  * /privacy: what the app stores, who else sees it, and how long it stays.
@@ -72,6 +72,13 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null; analytics: b
             you ask to see an exercise's strong prompt.
           </li>
           <li>
+            <strong>Deploy checks:</strong> when a lesson asks you to check your deployed Worker, the{' '}
+            <code>https://….workers.dev</code> address you give (its host only, never a path or query), the path the
+            lesson calls, how it went (passed, or why not), the status code, how long it took, and the time. {APP_TITLE}'s
+            server makes one GET request to that address, with no cookies; the reply is checked and then dropped, never
+            stored. Failed checks are deleted after 30 days; passing ones stay with your account.
+          </li>
+          <li>
             <strong>Sign-in methods:</strong> if you sign in with GitHub or Google, your account id there and the email
             they report. If you add a passkey, its public key and a name for it. We never see a password: there are
             none.
@@ -91,7 +98,8 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null; analytics: b
           finished lessons, the lesson depth and theme you picked and a random visitor id. Prompts you run are journalled under that visitor id with a hash of
           your IP address, which is how the hourly limits work. Quick-check answers and coach verdicts are kept the
           same way. A daily clean-up deletes signed-out runs, answers and verdicts after 7 days.
-          If you sign in, your progress, recent runs, answers and verdicts move into your account.
+          If you sign in, your progress, recent runs, answers and verdicts move into your account. Checking a deployed
+          Worker needs an account, so nothing about it is kept for signed-out visitors.
         </p>
 
         <h2>Signing in by email</h2>
@@ -138,8 +146,9 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null; analytics: b
           from your email or name, and nothing about you is shown to anyone else until you choose to make your profile
           public in <a href={settings} data-rmx-prefetch={prefetchFor(settings)}>Settings</a>, where you can also change
           the handle. A public profile at <code>/u/your-handle</code> shows your name, handle, stats, courses, badges and
-          activity heatmap, and certificates for finished courses are public with it. Your email and your prompt journal
-          are never shown. Accounts made before 2 November 2026 started public and keep the setting they have; you can
+          activity heatmap, and certificates for finished courses are public with it. When a course ends with a deploy
+          check you passed, its certificate also links the <code>workers.dev</code> address it passed on (only while your
+          profile is public). Your email and your prompt journal are never shown. Accounts made before 2 November 2026 started public and keep the setting they have; you can
           make yours private at any time.
         </p>
 
@@ -168,16 +177,16 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null; analytics: b
         <ul>
           <li>
             <strong>Export:</strong> Settings → Download my data gives you a JSON file with your account, sign-in
-            methods, progress, badges, every prompt in your journal, your quick-check answers and the coach's
-            verdicts.
+            methods, progress, badges, every prompt in your journal, your quick-check answers, the coach's
+            verdicts and your deploy checks.
           </li>
           <li>
             <strong>Sign out everywhere</strong> ends every session at once.
           </li>
           <li>
             <strong>Delete account</strong> removes your account and everything tied to it straight away: sessions,
-            sign-in methods, passkeys, progress, badges, your prompt journal, your quick-check answers and the coach's
-            verdicts. Courses you
+            sign-in methods, passkeys, progress, badges, your prompt journal, your quick-check answers, the coach's
+            verdicts and your deploy checks. Courses you
             published stay up but are
             no longer linked to you. Cloudflare's database keeps point-in-time recovery history for a limited time,
             after which deleted data is gone from backups too.

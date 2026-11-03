@@ -9,11 +9,10 @@ import type { RequestContext } from 'remix/router'
 import { Session } from 'remix/session'
 
 import { verifiesOf } from '../actions/courses/lesson/content.ts'
-import { sha256Hex } from '../auth/crypto.ts'
+import { currentUser } from '../auth/identity.ts'
 import { getCatalog } from '../content/request.ts'
 import { log } from '../log.ts'
 import { getDatabase } from '../middleware/database.ts'
-import { runOwner } from '../runs/run.ts'
 import { fetchLearnerWorker } from './fetch.ts'
 import { gradeVerify } from './grade.ts'
 import { markVerified, rememberOrigin } from './session.ts'
@@ -23,20 +22,14 @@ type AnyContext = RequestContext<any, any>
 
 /** Checks journalled per hour before the server refuses more (429). */
 export const verifyLimits = {
-  /** Signed in, per user. */
+  /** Per user, every origin. */
   userPerHour: 30,
-  /** Signed out, per session (visitor id). */
-  anonymousPerHour: 10,
-  /** Signed out, per IP: clearing cookies doesn't buy more checks. */
-  anonymousPerIpHour: 30,
-  /** Per owner, per target origin. */
-  originPerOwnerHour: 10,
-  /**
-   * Distinct owners checking one origin within an hour (owners who already
-   * checked it are always let in): with `originPerOwnerHour`, at most 200
-   * calls an hour reach any one Worker, so bits is never a request cannon.
-   */
-  originOwnersPerHour: 20,
+  /** Per user, per target origin. */
+  originPerUserHour: 10,
+  /** Everyone, per target origin: past this only users already checking it get in. */
+  originSoftHour: 120,
+  /** Everyone, per target origin, no exceptions: the most calls bits makes to one Worker in an hour. */
+  originHardHour: 240,
 }
 
 const HOUR = 60 * 60 * 1000
@@ -51,7 +44,7 @@ export interface VerifyInput {
 
 export type VerifyOutcomeResult =
   | { ok: true; verdict: VerifyVerdict }
-  | { ok: false; status: 404 | 400 | 422 | 429; error: 'not_found' | 'no_session' | 'invalid_url' | 'limit'; message: string }
+  | { ok: false; status: 401 | 404 | 422 | 429; error: 'sign_in' | 'not_found' | 'invalid_url' | 'limit'; message: string }
 
 export async function verifyDeploy(context: AnyContext, input: VerifyInput): Promise<VerifyOutcomeResult> {
   let content = await (await getCatalog(context)).lessonContent(input.course, input.lesson)
@@ -63,22 +56,23 @@ export async function verifyDeploy(context: AnyContext, input: VerifyInput): Pro
   let url = targetUrl(origin.origin, block.path)
   if (!url) return { ok: false, status: 422, error: 'invalid_url', message: 'bits can’t call that address. Paste your https://….workers.dev URL.' }
 
-  let owner = runOwner(context, { create: true })
-  if (!owner) return { ok: false, status: 400, error: 'no_session', message: 'Couldn’t start a session. Reload the page and try again.' }
+  // Signed-in only (decision 072): a visitor id costs nothing to mint, an
+  // account costs a verified email under the daily mail cap.
+  let user = currentUser(context)
+  if (!user) return { ok: false, status: 401, error: 'sign_in', message: 'Sign in to check your deploy: the check is saved to your account.' }
   let db = getDatabase(context)
   let now = Date.now()
   let id = crypto.randomUUID()
-  let ipHash = owner.userId ? null : await sha256Hex(`ip:${context.headers.get('CF-Connecting-IP') ?? 'local'}`)
-  let logFields = { course: input.course, lesson: input.lesson, verify: block.id, host: url.hostname, signedIn: Boolean(owner.userId) }
+  let logFields = { course: input.course, lesson: input.lesson, verify: block.id, host: url.hostname }
   let reserved = await reserveBuildCheck(
     db,
-    { id, owner, ipHash, courseId: input.course, lessonSlug: input.lesson, verifyId: block.id, origin: origin.origin, path: block.path, now },
+    { id, userId: user.id, courseId: input.course, lessonSlug: input.lesson, verifyId: block.id, origin: origin.origin, path: block.path, now },
     {
       hourSince: now - HOUR,
-      hour: owner.userId ? verifyLimits.userPerHour : verifyLimits.anonymousPerHour,
-      ipHour: verifyLimits.anonymousPerIpHour,
-      originHour: verifyLimits.originPerOwnerHour,
-      originOwnersHour: verifyLimits.originOwnersPerHour,
+      hour: verifyLimits.userPerHour,
+      originHour: verifyLimits.originPerUserHour,
+      originSoftHour: verifyLimits.originSoftHour,
+      originHardHour: verifyLimits.originHardHour,
     },
   )
   if (!reserved) {

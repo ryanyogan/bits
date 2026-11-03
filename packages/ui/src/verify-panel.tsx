@@ -36,6 +36,11 @@ export interface VerifyPanelProps {
   defaultUrl?: string
   /** Passed before (this browser's session). */
   passed?: boolean
+  /**
+   * Signed out: checks are saved to an account (decision 072), so the panel
+   * shows this sign-in link instead of the field.
+   */
+  signInHref?: string
   /** Mono label in the strip (default "deploy check"). */
   label?: string
 }
@@ -108,7 +113,7 @@ export const VerifyPanel = clientEntry(
     }
 
     return () => {
-      let { id, goal, task, path, checks, xp, endpoint, defaultUrl, label = 'deploy check' } = handle.props
+      let { id, goal, task, path, checks, xp, endpoint, defaultUrl, signInHref, label = 'deploy check' } = handle.props
       let base = `verify-${id}`
       let fieldId = `${base}-url`
       let goalId = `${base}-goal`
@@ -166,6 +171,16 @@ export const VerifyPanel = clientEntry(
                   ))}
             </ul>
           </div>
+          {signInHref && live ? (
+            <div mix={composerStyle}>
+              <p mix={hintStyle}>Sign in to check your deploy: the check is saved to your account, and a certificate can link it.</p>
+              <div>
+                <Keycap href={signInHref} variant="primary" size="md">
+                  Sign in to check →
+                </Keycap>
+              </div>
+            </div>
+          ) : (
           <div mix={composerStyle}>
             <label for={fieldId} mix={fieldLabel}>
               Your Worker’s URL
@@ -230,6 +245,7 @@ export const VerifyPanel = clientEntry(
             </div>
             {!live ? <p mix={noteStyle}>Deploys are checked on the published lesson.</p> : null}
           </div>
+          )}
         </form>
       )
     }

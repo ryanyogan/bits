@@ -1,5 +1,5 @@
 // POST /api/verify (decision 072) end to end, on real D1: the journal, the
-// caps, the lesson save, the sign-in claim, the no-JS path and the
+// caps, the lesson save, signed-out refusal, the no-JS path and the
 // certificate's proof link. The learner's Worker is a stub of
 // globalThis.fetch for *.workers.dev; nothing leaves the process.
 import { findUserById } from '@bits/db'
@@ -9,7 +9,7 @@ import { after, describe, it } from 'remix/test'
 import { disposePlatform } from '#platform'
 
 import { routes } from '../routes.ts'
-import { completeLesson, fetchAs, form, requestCode, sessionCookieFrom, signIn, testDb, testIp } from '../test/auth.ts'
+import { completeLesson, fetchAs, form, signIn, testDb, testIp } from '../test/auth.ts'
 import { verifyLimits } from './verify.ts'
 
 const COURSE = 'verify-course'
@@ -53,9 +53,9 @@ function postVerify(cookie: string | null, input: { verify?: string; url: string
 
 async function rows(where: string, ...binds: unknown[]) {
   let result = await testDb.d1
-    .prepare(`select user_id, visitor, ip_hash, verify_id, origin, path, outcome, status from build_checks where ${where} order by created_at`)
+    .prepare(`select user_id, verify_id, origin, path, outcome, status from build_checks where ${where} order by created_at`)
     .bind(...binds)
-    .all<{ user_id: string | null; visitor: string | null; ip_hash: string | null; verify_id: string; origin: string; path: string; outcome: string; status: number | null }>()
+    .all<{ user_id: string; verify_id: string; origin: string; path: string; outcome: string; status: number | null }>()
   return result.results
 }
 
@@ -157,76 +157,74 @@ describe('/api/verify (decision 072)', () => {
     assert.equal((await postVerify(cookie, { url: 'https://k.r.workers.dev', verify: 'no-such-check' })).status, 404)
   })
 
-  it('caps checks per visitor, per IP and per target origin in the insert', async () => {
+  it('signed out: refused with a sign-in prompt, never journalled or fetched, however many visitor ids', async () => {
+    let origin = 'https://klippy-visitor.someone.workers.dev'
+    let ip = testIp()
     await withWorker(healthy, async (calls) => {
-      // A signed-out visitor: the cap is enforced by the insert itself.
-      let visitor: string | null = null
-      let ip = testIp()
-      for (let n = 0; n < verifyLimits.anonymousPerHour; n++) {
-        let response = await postVerify(visitor, { url: `https://cap-${n}.someone.workers.dev`, ip })
-        assert.equal(response.status, 200)
-        visitor = sessionCookieFrom(response) ?? visitor
+      // Fresh sessions from one IP: each would be a new visitor id.
+      for (let n = 0; n < 30; n++) {
+        let response = await postVerify(null, { url: origin, ip })
+        assert.equal(response.status, 401)
+        assert.match((await response.json()).message, /Sign in to check your deploy/)
       }
-      let refused = await postVerify(visitor, { url: 'https://cap-x.someone.workers.dev', ip })
-      assert.equal(refused.status, 429)
-      assert.equal(calls.length, verifyLimits.anonymousPerHour, 'a refused check never calls out')
+      assert.equal(calls.length, 0)
+      assert.equal((await rows('origin = ?', origin)).length, 0)
+      // None of that touches a signed-in learner checking the same Worker.
+      let { cookie } = await signIn('verify-after-visitors@example.com')
+      assert.equal((await postVerify(cookie, { url: origin, ip })).status, 200)
+    })
+    let page = await (await fetchAs(null, lessonHref)).text()
+    assert.match(page, /Sign in to check your deploy/)
+  })
 
-      // One principal hammering someone else's Worker spends only its own
+  it('caps checks per user, per user per origin, and per origin (soft for newcomers, hard for all)', async () => {
+    await withWorker(healthy, async (calls) => {
+      // Per user, across origins.
+      let { cookie: busy } = await signIn('verify-busy@example.com')
+      for (let n = 0; n < verifyLimits.userPerHour; n++) {
+        assert.equal((await postVerify(busy, { url: `https://cap-${n}.someone.workers.dev` })).status, 200)
+      }
+      let before = calls.length
+      assert.equal((await postVerify(busy, { url: 'https://cap-x.someone.workers.dev' })).status, 429)
+      assert.equal(calls.length, before, 'a refused check never calls out')
+
+      // One user hammering someone else's Worker spends only its own
       // per-origin quota: the owner can still check (security review, 072).
       let target = 'https://victim.someone.workers.dev'
-      let attacker = (await signIn('verify-attacker@example.com')).cookie
-      for (let n = 0; n < verifyLimits.originPerOwnerHour; n++) {
+      let { cookie: attacker } = await signIn('verify-attacker@example.com')
+      for (let n = 0; n < verifyLimits.originPerUserHour; n++) {
         assert.equal((await postVerify(attacker, { url: target })).status, 200)
       }
       assert.equal((await postVerify(attacker, { url: target })).status, 429, 'the attacker’s per-origin cap')
-      let owner = (await signIn('verify-owner@example.com')).cookie
+      let { cookie: owner } = await signIn('verify-owner@example.com')
       assert.equal((await postVerify(owner, { url: target })).status, 200, 'the owner is not locked out')
 
-      // Many principals aimed at one Worker: past the distinct-owner cap a
-      // newcomer is refused, but an owner already checking stays in.
+      // Past the soft cap a newcomer waits, but the owner, already checking, stays in.
+      let filler = (await signIn('verify-filler@example.com')).user
       let now = Date.now()
-      let fill = Array.from({ length: verifyLimits.originOwnersPerHour }, (_, n) =>
-        testDb.d1
-          .prepare(
-            `insert into build_checks (id, user_id, visitor, course_id, lesson_slug, verify_id, origin, path, outcome, created_at)
-             values (?, null, ?, 'verify-course', 'ship-it', 'health', ?, '/health', 'pass', ?)`,
-          )
-          .bind(`fill-${n}`, `visitor-${n}`, target, now),
-      )
-      await testDb.d1.batch(fill)
-      let before = calls.length
-      let { cookie: newcomer } = await signIn('verify-cannon@example.com')
+      let fill = (from: number, to: number) =>
+        testDb.d1.batch(
+          Array.from({ length: to - from }, (_, n) =>
+            testDb.d1
+              .prepare(
+                `insert into build_checks (id, user_id, course_id, lesson_slug, verify_id, origin, path, outcome, created_at)
+                 values (?, ?, 'verify-course', 'ship-it', 'health', ?, '/health', 'pass', ?)`,
+              )
+              .bind(`fill-${from + n}`, filler.id, target, now),
+          ),
+        )
+      let used = verifyLimits.originPerUserHour + 1
+      await fill(used, verifyLimits.originSoftHour)
+      let { cookie: newcomer } = await signIn('verify-newcomer@example.com')
+      before = calls.length
       assert.equal((await postVerify(newcomer, { url: target })).status, 429)
-      assert.equal(calls.length, before, 'a refused check never calls out')
+      assert.equal(calls.length, before)
       assert.equal((await postVerify(owner, { url: target })).status, 200, 'an owner already checking stays in')
-    })
-  })
 
-  it('signed out: the check carries the visitor id and moves to the account at sign-in', async () => {
-    let origin = 'https://klippy-visitor.someone.workers.dev'
-    let cookie: string | null = null
-    await withWorker(healthy, async () => {
-      let response = await postVerify(null, { url: origin })
-      assert.equal(response.status, 200)
-      cookie = sessionCookieFrom(response)
+      // The hard cap bounds the calls for everyone.
+      await fill(verifyLimits.originSoftHour + 1, verifyLimits.originHardHour)
+      assert.equal((await postVerify(owner, { url: target })).status, 429, 'the hard cap holds')
     })
-    assert.ok(cookie, 'the visitor gets a session on the first check')
-    let [row] = await rows('origin = ? and user_id is null', origin)
-    assert.ok(row?.visitor, 'journalled with the visitor id')
-    assert.ok(row?.ip_hash, 'and a hashed IP for the per-IP limit')
-
-    let completed = await completeLesson(cookie, COURSE, LESSON)
-    assert.equal(completed.status, 303)
-    cookie = sessionCookieFrom(completed) ?? cookie
-    let { code } = await requestCode('verify-visitor@example.com')
-    let verified = await fetchAs(cookie, routes.auth.verify.action.href(), {
-      method: 'POST',
-      body: form({ email: 'verify-visitor@example.com', code }),
-    })
-    assert.equal(verified.status, 303)
-    let user = (await testDb.d1.prepare('select id from users where email = ?').bind('verify-visitor@example.com').first<{ id: string }>())!
-    assert.equal((await rows('user_id = ?', user.id)).length, 1, 'the check joined the account')
-    assert.equal((await findUserById(testDb, user.id))!.xp_total, 40, 'the saved lesson merged with its check')
   })
 
   it('without JS: the native form gets a 303 back to its place, and the page shows the verdict or the refusal', async () => {

@@ -279,10 +279,8 @@ export const buildChecks = table({
   name: 'build_checks',
   columns: {
     id: c.text(),
-    user_id: c.text().nullable(),
-    /** Session-held id of a signed-out visitor. */
-    visitor: c.text().nullable(),
-    ip_hash: c.text().nullable(),
+    /** Checks are signed-in only (decision 072). */
+    user_id: c.text(),
     course_id: c.text(),
     lesson_slug: c.text(),
     verify_id: c.text(),

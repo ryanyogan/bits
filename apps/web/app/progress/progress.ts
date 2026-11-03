@@ -8,7 +8,6 @@
 import {
   awardBadges,
   claimVisitorAsks,
-  claimVisitorBuildChecks,
   listPassedBuildChecks,
   listRightAsks,
   findUserById,
@@ -120,8 +119,8 @@ export async function completeLesson(
     owner && blocks.length ? listLessonRuns(db, owner, lesson) : Promise.resolve([]),
     owner && blocks.length ? listLessonVerdicts(db, owner, lesson) : Promise.resolve([]),
     asksOf(content).length ? journalledRightAsks(context, lesson) : Promise.resolve([]),
-    // A deploy check passes on a journalled passing call (/api/verify, decision 072).
-    owner && verifies.length ? listPassedBuildChecks(db, owner, lesson) : Promise.resolve([]),
+    // A deploy check passes on a journalled passing call (/api/verify, decision 072); signed-in only.
+    owner?.userId && verifies.length ? listPassedBuildChecks(db, owner.userId, lesson) : Promise.resolve([]),
   ])
   submission.exercises = journalledExercises(blocks, runs, verdicts, { offline: !modelConfigured(platform.env as ModelEnv) })
   for (let block of blocks) {
@@ -159,14 +158,13 @@ async function journalledRightAsks(context: ProgressContext, lesson: { courseId:
   return owner ? listRightAsks(getDatabase(context), owner, lesson) : []
 }
 
-/** At sign-in: the visitor's answers, verdicts and deploy checks move into the account, like their runs. */
+/** At sign-in: the visitor's answers and verdicts move into the account, like their runs. */
 async function claimAnswers(db: D1DataTableDatabase, session: Session, userId: string): Promise<void> {
   let visitor = session.get(VISITOR_KEY)
   if (typeof visitor === 'string') {
     await Promise.all([
       claimVisitorAsks(db, visitor, userId),
       claimVisitorVerdicts(db, visitor, userId),
-      claimVisitorBuildChecks(db, visitor, userId),
     ])
   }
 }

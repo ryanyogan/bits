@@ -180,6 +180,45 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await expectClean(page, 'composer after a run')
   })
 
+  it('deploy check (decision 072): signed out, unchecked, a refused URL, a failing check and a pass', async (t) => {
+    // The learner's Worker is a stub: the server runs in this process.
+    let real = globalThis.fetch
+    let healthy = false
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      let url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url)
+      if (!url.hostname.endsWith('.workers.dev')) return real(input, init)
+      return Response.json(healthy ? { ok: true, app: 'klippy' } : { ok: true })
+    }) as typeof fetch
+    try {
+      let page = await t.serve(await createTestServer(router.fetch))
+      await page.goto(lesson('verify-course', 'ship-it'))
+      await settled(page)
+      await expectClean(page, 'deploy check signed out')
+      await signInBrowser(page, uniqueEmail('verify'))
+      await page.goto(lesson('verify-course', 'ship-it'))
+      await settled(page)
+      await expectClean(page, 'deploy check unchecked')
+      let panel = page.locator('form#verify-health')
+      let field = panel.getByLabel('Your Worker’s URL')
+      await field.fill('https://example.com')
+      await panel.getByRole('button', { name: /Check/ }).click()
+      await panel.getByText('workers.dev only').waitFor()
+      await expectClean(page, 'deploy check refused URL')
+      await field.fill('https://klippy.a11y.workers.dev')
+      await panel.getByRole('button', { name: /Check/ }).click()
+      await panel.locator('[data-passed="false"]').waitFor()
+      await settled(page)
+      await expectClean(page, 'deploy check failing')
+      healthy = true
+      await panel.getByRole('button', { name: /Check/ }).click()
+      await panel.locator('[data-passed="true"]').waitFor()
+      await settled(page)
+      await expectClean(page, 'deploy check passed')
+    } finally {
+      globalThis.fetch = real
+    }
+  })
+
   it('shared field (decision 051): hosts focused, Type it typing, the phone outline open', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     await page.goto(lesson('what-is-an-llm', 'say-hi-to-claude'))

@@ -17,8 +17,6 @@ export const retention = {
   anonymousAsksMs: 7 * DAY,
   /** Signed-out coach verdicts and reveals: only the caps and the lesson save need them (decision 064). */
   anonymousVerdictsMs: 7 * DAY,
-  /** Signed-out build checks: only the hourly caps and the lesson save need them (decision 072). */
-  anonymousBuildChecksMs: 7 * DAY,
   /** An account's failed build checks: kept a month for the learner's export, then dropped (passing ones back the certificate). */
   failedBuildChecksMs: 30 * DAY,
   /** Daily mail counters (decision 039). */
@@ -76,8 +74,7 @@ export interface HousekeepingCounts {
  * - deletes signed-out answers to quick checks older than 7 days;
  * - signed-out coach verdicts older than 7 days (a run's verdict also
  *   goes with its run);
- * - and build checks (decision 072): signed-out ones older than 7 days, and
- *   an account's failed ones older than 30 (passing ones stay).
+ * - and failed build checks older than 30 days (decision 072; passing ones stay).
  */
 export async function deleteExpiredRows(db: D1DataTableDatabase, now: number): Promise<HousekeepingCounts> {
   let d1 = db.d1
@@ -104,10 +101,9 @@ export async function deleteExpiredRows(db: D1DataTableDatabase, now: number): P
       .bind(now - retention.anonymousVerdictsMs),
     d1
       .prepare(
-        `delete from build_checks
-         where (user_id is null and created_at < ?1) or (user_id is not null and outcome != 'pass' and created_at < ?2)`,
+        `delete from build_checks where outcome != 'pass' and created_at < ?`,
       )
-      .bind(now - retention.anonymousBuildChecksMs, now - retention.failedBuildChecksMs),
+      .bind(now - retention.failedBuildChecksMs),
   ])
   let changes = results.map((result) => result.meta.changes)
   return {

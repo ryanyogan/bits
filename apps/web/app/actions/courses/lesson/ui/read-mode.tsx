@@ -266,6 +266,7 @@ function Verify(handle: Handle<{ view: LessonView; block: VerifyBlock }>) {
           initialError={refused?.error}
           defaultUrl={refused?.url || verdict?.origin || view.verifies.origin}
           passed={view.verifies.passed.includes(block.id)}
+          signInHref={view.viewer ? undefined : view.href.login}
         />
       </section>
     )

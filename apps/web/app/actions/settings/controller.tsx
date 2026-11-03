@@ -4,6 +4,7 @@ import {
   deleteUserSessions,
   findUserByHandle,
   listAskAttempts,
+  listBuildChecks,
   listAttempts,
   listCoachVerdicts,
   listCompletedLessons,
@@ -61,13 +62,14 @@ export default createController(routes.settings, {
 
     async export(context) {
       let user = context.auth.identity
-      let [account, lessons, attempts, badges, answers, verdicts] = await Promise.all([
+      let [account, lessons, attempts, badges, answers, verdicts, builds] = await Promise.all([
         getAccountSettings(context.db, user, context.session.id),
         listCompletedLessons(context.db, user.id),
         listAttempts(context.db, user.id, 10_000),
         listUserBadges(context.db, user.id),
         listAskAttempts(context.db, user.id, 10_000),
         listCoachVerdicts(context.db, user.id, 10_000),
+        listBuildChecks(context.db, user.id, 10_000),
       ])
       let body = {
         format: 'bits-export',
@@ -134,6 +136,19 @@ export default createController(routes.settings, {
           passed: row.passed,
           criteria: row.criteria,
           hint: row.hint,
+          at: new Date(row.created_at).toISOString(),
+        })),
+        // Checks of your deployed Worker (decision 072): the origin, the path
+        // bits called, and how it went. The reply itself is never stored.
+        deployChecks: builds.map((row) => ({
+          course: row.course_id,
+          lesson: row.lesson_slug,
+          check: row.verify_id,
+          origin: row.origin,
+          path: row.path,
+          outcome: row.outcome,
+          status: row.status,
+          ms: row.duration_ms,
           at: new Date(row.created_at).toISOString(),
         })),
       }
