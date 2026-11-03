@@ -158,3 +158,220 @@ export const exercises: EvalExercise[] = [
     ],
   },
 ]
+
+// ── lane C2: give-your-model-tools, retrieval-without-tears, first-agent-loop,
+// ship-an-agent-to-the-edge. Sources are copied verbatim from the lessons. ──
+
+// first-agent-loop/09-checkpoint-weather-agent.md
+const c2FinalTurn = String.raw`:::prompt{id="final-turn" xp=50 coach}
+Give Claude a tool result and ask for the agent's final answer
+- goal "Play the agent's last turn: hand Claude a forecast as if a tool had just returned it, and get a short answer grounded only in that data"
+- placeholder "Tool result from get_forecast: [...]. Using only this data, should I bike to work tomorrow at 8? Answer in … sentences. If something's missing, say so."
+- draft "Should I bike to work tomorrow?"
+- check "Includes the forecast data" /rain|wind|\bhigh\b|°|forecast|\[/i
+- check "Asks a real question" /\?/
+- expect "Quotes numbers from the data" match /\d/
+- expect "Answers in a few sentences" sentences<=5
+- rubric "Uses only numbers from the tool result (rounding them is fine)" must evidence
+- rubric "Gives a clear recommendation for the question asked" must
+- rubric "Says what the data can't tell, such as conditions exactly at 8" should
+- hint "This is the observe step. What has the tool just returned? Is it in your prompt?"
+- hint "Without a rule, Claude may fill gaps from what it knows. Tell it what it may use."
+- hint "Paste the forecast, ask your question, set a sentence limit, and ask Claude to say if anything it needs is missing."
+- reference "Tool result from get_forecast:\n[{\"date\": \"Wed\", \"high_f\": 75.7, \"low_f\": 50.1, \"rain_pct\": 2, \"wind_mph\": 11}]\n\nUsing only this data, should I bike to work tomorrow at 8 a.m.? Answer in two or three sentences. If the data doesn't cover something you'd need, say so."
+- run temperature=[1.0]
+- example T=1.0 "Yes, bike. Tomorrow looks dry (2% chance of rain) with wind up to 11 mph. The low is 50°F, so wear a layer. The data doesn't say exactly what it'll be like at 8."
+- example T=1.0 "Biking looks fine: the chance of rain is only 2% and the wind tops out around 11 mph. I can't see hourly temperatures, so plan for the 50°F low in the morning."
+- example T=1.0 "Go for the bike. Dry (2% rain), light wind, high 76°F, low 50°F. The forecast is daily, so I can't promise conditions at 8 exactly."
+- success "That's the observe step: real data in, grounded answer out." next="Finish the course →"
+:::`
+
+// give-your-model-tools/01-why-tools.md
+const c2CantCheck = String.raw`:::prompt{id="cant-check" xp=20 coach}
+Ask Claude for live information, and let it say it can't check
+- goal "Ask Claude for something only live data could answer, and get an honest reply that it can't check, with no made-up numbers"
+- placeholder "What's the weather in … right now? If you can't check, say so."
+- draft "What's the weather in Lisbon right now?"
+- check "Asks for something live" /right now|today|current|currently|latest|this (morning|afternoon|evening|week)/i
+- expect "Says it can't check" match /can.t|cannot|unable|not able|don.t have|no access|no live|real-time|real time/i
+- rubric "Says plainly that it can't see live data" must evidence
+- rubric "Doesn't present a current reading as fact, such as today's temperature" must
+- rubric "Points to where the live answer can be found" should
+- hint "Claude's knowledge stops at its training. Is your question about something that changes by the minute?"
+- hint "Give Claude permission to say it doesn't know. Without it, a model may offer its best guess."
+- reference "What's the weather in Lisbon right now? If you can't check live data, say so plainly and don't guess."
+- run temperature=[1.0]
+- example T=1.0 "I can't check live weather, so I don't know what Lisbon is like right now. A weather app or website will have the current conditions."
+- example T=1.0 "I don't have access to real-time data, so I can't tell you Lisbon's weather right now. Late October there is usually mild, around 15–20°C, but check a forecast to be sure."
+- example T=1.0 "I'm not able to look that up: I have no internet access or live data here. Try a weather service for Lisbon's current conditions."
+- success "That's the gap a tool fills. Next, you'll describe one." next="Next: describing a tool →"
+:::`
+
+// retrieval-without-tears/09-checkpoint-ask-my-docs.md
+const c2AskMyDocs = String.raw`:::prompt{id="ask-my-docs" xp=60 coach}
+Write the instructions for a grounded, cited docs assistant
+- goal "Write the instructions for Orbit Bikes' docs assistant so its answer to the customer is grounded in the passages, cited, short, and honest about what the docs don't say"
+- placeholder "You are Orbit Bikes' docs assistant. Answer only from the passages… Cite… If they don't cover it… Keep it under… words."
+- draft "[1] warranty.md: E-bike batteries have a 2-year warranty from delivery, covering capacity below 70%. [2] warranty.md: Claims must be filed within 30 days of noticing the fault, with the order number and a photo of the battery label. [3] returns.md: You can return any bike within 30 days of delivery for a full refund, if it has under 50 km on the odometer. Customer question: My battery is 20 months old and now gets half the range. What do I need to send you, and can I get a loaner bike while it's fixed?"
+- check "Gives it a role" /you are|you're|act as|\brole\b|assistant/i
+- check "Asks for citations" /\bcite|citation|\bsources?\b|reference/i
+- check "Keeps the passages" /\[2\]/
+- expect "Cites the passages by number" cites 1-3
+- expect "Keeps it short" words<=120
+- rubric "Says what to send: the order number and a photo of the battery label" must evidence
+- rubric "Says the docs don't mention loaner bikes, without promising one" must evidence
+- rubric "Doesn't use the returns policy as if it applied to a warranty claim" should
+- rubric "Each claim cites the passage it comes from" should
+- hint "Start with who the assistant is and where its answers may come from. Is that in your instructions?"
+- hint "One part of the customer's question isn't in the docs. What should the assistant do then? Say so in the prompt."
+- hint "Give it a role, limit it to the passages, ask for [n] citations, say what to do when the docs are silent, and set a word limit."
+- reference "You are Orbit Bikes' docs assistant. Answer the customer using only the passages below, and put the passage number in brackets, like [1], after each claim. If the passages don't cover part of the question, say so plainly and don't promise anything. Keep it under 80 words.\n\n[1] warranty.md: E-bike batteries have a 2-year warranty from delivery, covering capacity below 70%.\n[2] warranty.md: Claims must be filed within 30 days of noticing the fault, with the order number and a photo of the battery label.\n[3] returns.md: You can return any bike within 30 days of delivery for a full refund, if it has under 50 km on the odometer.\n\nCustomer question: My battery is 20 months old and now gets half the range. What do I need to send you, and can I get a loaner bike while it's fixed?"
+- run temperature=[1.0]
+- example T=1.0 "Your battery is still under the 2-year warranty, and losing half its range suggests capacity below 70% [1]. Send your order number and a photo of the battery label within 30 days of noticing the fault [2]. The docs don't mention loaner bikes, so I can't promise one."
+- example T=1.0 "You're covered: batteries have a 2-year warranty for capacity below 70% [1]. To claim, send your order number and a photo of the battery label, within 30 days of spotting the problem [2]. I couldn't find anything about loaner bikes in our docs."
+- success "Grounded, cited, short, and honest about the gap. That's RAG without tears." next="Finish the course →"
+:::`
+
+// ship-an-agent-to-the-edge/05-limits-that-hold.md
+const c2OutOfSteps = String.raw`:::prompt{id="out-of-steps" xp=30 coach}
+Get Claude to write the message the agent sends when it runs out of steps
+- goal "Get a short, plain message for the user that says the agent stopped before finishing, what it found, and what they can do next"
+- placeholder "My weather agent stopped after 6 turns (MAX_TURNS) while still calling tools. It was answering: … It had found: … Write the message the user sees, in … sentences."
+- draft "Write an error message for when the agent stops."
+- check "Says the loop hit its limit" /\b6\b|\bsix\b|max_turns|max turns|turns|steps/i
+- check "Says who reads it" /user|customer|reader/i
+- expect "Short enough to read at a glance" sentences<=3
+- expect "Says it stopped" match /stop|ran out|couldn.t finish|didn.t finish|did not finish|limit|steps|turns/i
+- rubric "Says plainly that the agent didn't finish" must evidence
+- rubric "Doesn't present a partial result as the final answer" must
+- rubric "Gives the user a next step, such as asking a narrower question" should
+- rubric "Uses plain words, with no internal names like MAX_TURNS or tool_use" should
+- hint "Claude can't write a good message about a run it knows nothing about. What was the agent doing when it stopped?"
+- hint "Who reads this message, and what do they need to know: that it finished, or that it didn't?"
+- hint "Say the agent stopped after 6 turns, what it was answering and what it had found, then ask for two or three plain sentences for the user, with a next step."
+- reference "My weather agent stopped after 6 turns, its limit, while it was still calling tools. The user asked: \"Which of Paris, Rome or Madrid will be warmest on Saturday?\" It had found Paris (18°C) and Rome (24°C) but not Madrid yet.\n\nWrite the message the user sees. Say plainly that it didn't finish, share what it found, and suggest what they can do next. Two or three sentences, no technical terms."
+- run temperature=[1.0]
+- example T=1.0 "Sorry, I ran out of steps before I could check Madrid. So far: Paris looks like 18°C on Saturday and Rome 24°C. Ask me about Madrid on its own and I'll finish the comparison."
+- example T=1.0 "I couldn't finish this one: I stopped after checking Paris (18°C) and Rome (24°C), before Madrid. Try asking about Madrid by itself."
+- success "Honest about stopping, useful about what it found. That message is part of the limit." next="Next: logs you can query →"
+:::`
+
+const c2Forecast =
+  'Tool result from get_forecast: [{"date": "Wed", "high_f": 75.7, "low_f": 50.1, "rain_pct": 2, "wind_mph": 11}]. Using only this data, should I bike to work tomorrow at 8? Answer in two or three sentences.'
+
+const c2Docs =
+  "You are Orbit Bikes' docs assistant. Answer only from the passages and cite them like [1]. If they don't cover something, say so. Under 80 words. [1] warranty.md: E-bike batteries have a 2-year warranty from delivery, covering capacity below 70%. [2] warranty.md: Claims must be filed within 30 days of noticing the fault, with the order number and a photo of the battery label. [3] returns.md: You can return any bike within 30 days of delivery for a full refund, if it has under 50 km on the odometer. Customer question: My battery is 20 months old and now gets half the range. What do I need to send you, and can I get a loaner bike while it's fixed?"
+
+const c2Stopped =
+  'My weather agent stopped after 6 turns, its limit. The user asked which of Paris, Rome or Madrid will be warmest on Saturday. It found Paris 18°C and Rome 24°C, not Madrid. Write the message the user sees, in two or three plain sentences.'
+
+exercises.push(
+  {
+    kind: 'C2 agent final turn (evidence)',
+    source: c2FinalTurn,
+    cases: [
+      {
+        name: 'grounded, recommends, caveat',
+        prompt: c2Forecast,
+        reply:
+          "Yes, bike. The chance of rain is only 2% and the wind tops out at 11 mph. The low is 50°F, so bring a layer, and the forecast is daily, so I can't promise conditions at exactly 8.",
+        pass: true,
+      },
+      {
+        name: 'terse but grounded',
+        prompt: c2Forecast,
+        reply: 'Bike it: a 2% chance of rain and 11 mph wind is easy riding.',
+        pass: true,
+      },
+      {
+        name: 'invents hourly numbers',
+        prompt: c2Forecast,
+        reply: 'Yes, bike: at 8 a.m. it will be 54°F with a 4 mph breeze and clear skies.',
+        pass: false,
+      },
+      {
+        name: 'reads the data, no recommendation',
+        prompt: c2Forecast,
+        reply: 'The forecast shows a high of 75.7°F, a low of 50.1°F, a 2% chance of rain and wind up to 11 mph.',
+        pass: false,
+      },
+    ],
+  },
+  {
+    kind: 'C2 no live data (honesty)',
+    source: c2CantCheck,
+    cases: [
+      {
+        name: 'says it cannot check, points elsewhere',
+        prompt: "What's the weather in Lisbon right now? If you can't check, say so.",
+        reply: "I can't check live weather, so I don't know what Lisbon is like right now. A weather app or website will have the current conditions.",
+        pass: true,
+      },
+      {
+        name: 'says it cannot check, no pointer',
+        prompt: "What's the weather in Lisbon right now?",
+        reply: "I don't have access to real-time data, so I can't tell you Lisbon's weather right now.",
+        pass: true,
+      },
+      {
+        name: 'disclaims, then states a reading',
+        prompt: "What's the weather in Lisbon right now?",
+        reply: "I don't have live data, but Lisbon is currently about 19°C and sunny.",
+        pass: false,
+      },
+    ],
+  },
+  {
+    kind: 'C2 cited docs answer (two evidence)',
+    source: c2AskMyDocs,
+    cases: [
+      {
+        name: 'what to send, honest about loaners',
+        prompt: c2Docs,
+        reply:
+          "Your battery is still under the 2-year warranty, and half the range suggests capacity below 70% [1]. Send your order number and a photo of the battery label within 30 days of noticing the fault [2]. The docs don't mention loaner bikes, so I can't promise one.",
+        pass: true,
+      },
+      {
+        name: 'promises a loaner',
+        prompt: c2Docs,
+        reply:
+          "You're covered by the 2-year battery warranty [1]. Send your order number and a photo of the battery label [2], and we'll set you up with a loaner bike while it's repaired.",
+        pass: false,
+      },
+      {
+        name: 'never says what to send',
+        prompt: c2Docs,
+        reply:
+          "Your battery is under its 2-year warranty, which covers capacity below 70% [1]. The docs don't mention loaner bikes, so I can't promise one.",
+        pass: false,
+      },
+    ],
+  },
+  {
+    kind: 'C2 out of steps (honest stop)',
+    source: c2OutOfSteps,
+    cases: [
+      {
+        name: 'says it stopped, shares findings, next step',
+        prompt: c2Stopped,
+        reply:
+          "Sorry, I ran out of steps before I could check Madrid. So far, Paris looks like 18°C on Saturday and Rome 24°C. Ask me about Madrid on its own and I'll finish the comparison.",
+        pass: true,
+      },
+      {
+        name: 'partial result as the answer',
+        prompt: c2Stopped,
+        reply: "Rome will be the warmest on Saturday at 24°C, ahead of Paris at 18°C. I reached my step limit, but that's your answer.",
+        pass: false,
+      },
+      {
+        name: 'hides that it stopped',
+        prompt: c2Stopped,
+        reply: 'Rome looks warmest at 24°C, with Paris at 18°C. A few steps were skipped along the way.',
+        pass: false,
+      },
+    ],
+  },
+)
+// ── end lane C2 ──
