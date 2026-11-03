@@ -99,7 +99,7 @@ describe('catalog and course pages', () => {
       filterCourses({ q: 'RAG' }).results.map((c) => c.slug),
       ['retrieval-without-tears'],
     )
-    assert.equal(filterCourses({ q: 'agents' }).results.length, 2)
+    assert.equal(filterCourses({ q: 'agents' }).results.length, 3)
     assert.equal(filterCourses({ q: 'T°' }).results[0]?.slug, 'tokens-and-temperature')
   })
 
@@ -154,7 +154,7 @@ describe('catalog and course pages', () => {
 
   it('filters by track with the pill marked current', async () => {
     let { html } = await page(`${routes.courses.index.href()}?track=agents`)
-    assert.match(html, />2 courses</)
+    assert.match(html, />3 courses</)
     assert.ok(html.includes('href="/courses/first-agent-loop"'))
     // A filtered list is a search: no continue banner between it and the toolbar.
     assert.doesNotMatch(html, /Up next:/)

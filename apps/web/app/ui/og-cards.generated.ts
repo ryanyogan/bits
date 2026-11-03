@@ -18,4 +18,6 @@ export const ogCards: Record<string, string> = {
   'certificate-tokens-and-temperature': 'e980724847',
   'course-what-is-an-llm': '690dd2e876',
   'certificate-what-is-an-llm': 'e50c20c5d2',
+  'course-work-with-coding-agents': '250ca80489',
+  'certificate-work-with-coding-agents': '4aad3cd452',
 }
