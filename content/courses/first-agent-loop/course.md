@@ -2,7 +2,7 @@
 title: Your first agent loop
 track: agents
 level: intermediate
-order: 7
+order: 70
 summary: Plan, act, observe, repeat. Write the 30 lines of code every agent is built on.
 outcomes:
   - Explain the plan → act → observe loop in your own words.

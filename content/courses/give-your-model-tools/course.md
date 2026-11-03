@@ -2,7 +2,7 @@
 title: "Give your model tools"
 track: tools
 level: intermediate
-order: 5
+order: 60
 summary: "Describe a function, let Claude call it, feed back the result. Build a weather bot on real data."
 outcomes:
   - "Describe a tool with a name, a description and a JSON Schema that Claude uses correctly."

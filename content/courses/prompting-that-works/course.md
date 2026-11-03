@@ -2,7 +2,7 @@
 title: "Prompting that works"
 track: prompting
 level: beginner
-order: 3
+order: 30
 summary: "Clear asks, reasons, examples, tags, roles and formats. Write each prompt yourself, run it on Claude, and see what each change does."
 outcomes:
   - "Write prompts a brilliant new colleague could follow: clear, specific and with the why."
