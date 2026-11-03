@@ -45,7 +45,9 @@ export async function streamRun(
   }
   let source = response.headers.get('X-Run-Source')
   if (!response.ok || !response.body || (source !== 'live' && source !== 'example' && source !== 'fallback')) {
-    return { source: 'error', reason: response.status === 429 ? 'refused' : undefined, text: '', counted: false }
+    // 429: past a limit. `try-limit`: only the landing's own caps (the app's decision 074).
+    let reason = response.status === 429 ? (response.headers.get('X-Run-Reason') === 'try-limit' ? 'try-limit' : 'refused') : undefined
+    return { source: 'error', reason, text: '', counted: false }
   }
 
   let text = ''
@@ -80,6 +82,7 @@ export function runNote(result: RunResult): string | undefined {
   }
   if (result.source === 'error') {
     if (result.reason === 'interrupted') return 'The reply was cut off.'
+    if (result.reason === 'try-limit') return 'You’ve used the live runs on this page — showing the example output. The lesson has more.'
     if (result.reason === 'refused') return 'Too many runs — take a break, then try again. Showing the example output.'
     return 'Couldn’t reach the server — showing the example output.'
   }

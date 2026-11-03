@@ -132,6 +132,13 @@ export interface RewardEventDetail {
 
 export const REWARD_EVENT = 'bits:reward'
 
+/**
+ * Asks islands that passed in an earlier visit to re-send their silent
+ * reward (decision 067). A listener that sets up after an exercise already
+ * re-announced (islands hydrate in any order) fires this once it listens.
+ */
+export const REWARD_QUERY_EVENT = 'bits:reward-query'
+
 /** Fire a reward from any island. */
 export function announceReward(detail: RewardEventDetail) {
   window.dispatchEvent(new CustomEvent<RewardEventDetail>(REWARD_EVENT, { detail }))

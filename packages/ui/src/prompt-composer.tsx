@@ -9,7 +9,7 @@ import { runNote, streamRun, type RunEndpoint } from './lib/run-stream.ts'
 import { createFollower, scrollWindowStyle } from './lib/stable.tsx'
 import { focusOutline, FORCED_COLORS, forcedSelected } from './lib/states.ts'
 import { initialTemperature, TEMPERATURE_EVENT } from './odds-bars.tsx'
-import { announceReward, RewardToast, type RewardNext } from './reward-toast.tsx'
+import { announceReward, REWARD_QUERY_EVENT, RewardToast, type RewardNext } from './reward-toast.tsx'
 import { Tag } from './tag.tsx'
 import { toyHeaderStyle, toyPanelStyle } from './toy-panel.tsx'
 import { LearnerBubble, ModelOutput, TutorMessage } from './tutor.tsx'
@@ -285,7 +285,10 @@ export const PromptComposer = clientEntry(
       if (!handle.props.passed && reward && passedHere) {
         rewardedRun = runs[0]?.verdict?.passed ? runs[0].id : undefined
         let source = handle.props.optional ? ('ask' as const) : undefined
-        setTimeout(() => announceReward({ xp: reward.xp, message: reward.message, silent: true, source }), 0)
+        let again = () => announceReward({ xp: reward.xp, message: reward.message, silent: true, source })
+        setTimeout(again, 0)
+        // The "complete" key may hydrate after this: it asks, and we answer.
+        window.addEventListener(REWARD_QUERY_EVENT, again, { signal: handle.signal })
       }
       handle.update()
     })

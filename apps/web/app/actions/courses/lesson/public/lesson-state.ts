@@ -7,7 +7,7 @@
 // node, progress segment) can restyle with CSS alone (`:has()`), without
 // touching server-rendered DOM.
 import { GATE_EVENT } from '@bits/ui/lib/ask-client'
-import { REWARD_EVENT, type RewardEventDetail } from '@bits/ui/reward-toast'
+import { REWARD_EVENT, REWARD_QUERY_EVENT, type RewardEventDetail } from '@bits/ui/reward-toast'
 
 /** Matches the document once the open lesson's checks have passed. */
 export const PASSED_ROOT = ':root:has([data-lesson-passed])'
@@ -28,6 +28,9 @@ export function whenPassed(signal: AbortSignal, listener: () => void) {
     },
     { signal: controller.signal },
   )
+  // An exercise passed in an earlier visit may have re-announced before this
+  // island hydrated: ask it again.
+  window.dispatchEvent(new CustomEvent(REWARD_QUERY_EVENT))
 }
 
 /** Calls `listener` with each quick check's xp as it is answered right (decision 052). */

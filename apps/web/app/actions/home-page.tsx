@@ -1,4 +1,4 @@
-import type { Handle } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 import type { AppBarLink } from '@bits/ui/app-bar'
 import { ContinueBanner } from '@bits/ui/continue-banner'
@@ -54,7 +54,15 @@ const themeOptions: FooterThemeOption[] = [
  * `PageFrame`; every section and the footer are bands of that frame,
  * divided by full-bleed rules with `+` marks on the rails.
  */
-export function HomePage(handle: Handle<{ viewer: Viewer | null; next?: NextStep; progress?: boolean }>) {
+export function HomePage(
+  handle: Handle<{
+    viewer: Viewer | null
+    next?: NextStep
+    progress?: boolean
+    /** "Try it now" (decision 074), rendered by the action, which loads it lazily; fresh visitors only. */
+    tryIt?: RemixNode
+  }>,
+) {
   return () => {
     let { viewer, next } = handle.props
     let signedIn = viewer !== null
@@ -96,6 +104,7 @@ export function HomePage(handle: Handle<{ viewer: Viewer | null; next?: NextStep
                   />
                 </RuledSection>
               ) : null}
+              {next ? null : handle.props.tryIt}
               <HowItWorks />
               <ThePath />
               <Modes />

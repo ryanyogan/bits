@@ -43,6 +43,20 @@ export const runLimits = {
   dailyLive: 1000,
 }
 
+/**
+ * Runs from the landing's "Try it now" (decision 074). They are lesson 1's
+ * runs (same exercise, journal and owner caps), with two tighter caps on
+ * going live, so a crowd of first-time visitors can't spend the day's budget
+ * before the lessons get any. Past either, the landing gets a refusal that
+ * points at the lesson, never a canned reply graded as if live.
+ */
+export const tryLimits = {
+  /** The owner's runs in the last hour (from anywhere) below which a landing run goes live. */
+  perHour: 3,
+  /** Landing runs go live only while the day's live calls are under this share of the daily cap. */
+  dailyShare: 0.5,
+}
+
 const HOUR = 60 * 60 * 1000
 const DAY = 24 * HOUR
 
@@ -87,6 +101,8 @@ export interface RunRequest {
   prompt: string
   /** T × 100. */
   temperature: number
+  /** Sent by the landing's composer (decision 074): its tighter live caps apply. */
+  from?: 'landing'
 }
 
 /** The prompt exercise in the published lesson (decision 018), with its checks and examples. */
@@ -140,10 +156,14 @@ export async function startRun(context: AnyContext, input: RunRequest): Promise<
   })
   let example = () => pickExample(block, input.temperature)
   let live = runsLive(input.temperature)
+  let landing = input.from === 'landing'
 
   if (live) {
     let id = crypto.randomUUID()
-    if (await insertRunWithin(db, row(id, 'live', ''), windows, { ...caps, liveToday: dailyLiveCap() })) {
+    let liveCaps = landing
+      ? { ...caps, hour: Math.min(caps.hour, tryLimits.perHour), liveToday: tryLiveCap() }
+      : { ...caps, liveToday: dailyLiveCap() }
+    if (await insertRunWithin(db, row(id, 'live', ''), windows, liveCaps)) {
       return runLive(db, id, input, example)
     }
   }
@@ -153,6 +173,10 @@ export async function startRun(context: AnyContext, input: RunRequest): Promise<
   let counts = await countRuns(db, owner, ipHash, windows)
   let over = overLimit(owner, counts)
   if (over === 'refuse') return refused()
+  // Only the landing's own caps said no: a lesson run would still go live,
+  // so the landing says so instead of journalling a canned reply (whose
+  // reason the coach rebuilds from the lesson caps, decision 064).
+  if (landing && live && !over && counts.liveToday < dailyLiveCap()) return tryLimited()
   let reason: FallbackReason | undefined = over ?? (live ? (counts.liveToday >= dailyLiveCap() ? 'budget' : 'limit') : undefined)
   let source: 'example' | 'fallback' = reason ? 'fallback' : 'example'
   let output = example()
@@ -194,6 +218,18 @@ async function runLive(db: D1DataTableDatabase, id: string, input: RunRequest, e
 
 function refused(): Response {
   return jsonError('rate_limited', 429, { retryAfter: 3600 })
+}
+
+/** A landing run past the landing's caps (decision 074): not journalled; the lesson has more runs. */
+function tryLimited(): Response {
+  let response = jsonError('try_limit', 429, { retryAfter: 3600 })
+  response.headers.set('X-Run-Reason', 'try-limit')
+  return response
+}
+
+/** Live calls per UTC day below which a landing run may go live: a share of the daily cap. */
+export function tryLiveCap(): number {
+  return Math.floor(dailyLiveCap() * tryLimits.dailyShare)
 }
 
 /** The owner's hourly and daily caps; signed-out visitors also have a per-IP cap and no daily one. */
