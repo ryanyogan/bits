@@ -23,7 +23,7 @@ export default createController(routes.admin.authors, {
   middleware: [requireUser(), requireAdmin()],
   actions: {
     async index(context) {
-      return page(context, { notice: noticeFor(context.url.searchParams) })
+      return page(context, { notice: noticeFor(context.session.get(SAVED_KEY)) })
     },
 
     invite: {
@@ -46,7 +46,7 @@ export default createController(routes.admin.authors, {
           let { message, status } = inviteFailures[result.reason]
           return invalid(context, { section: 'invite', message, values }, status)
         }
-        return saved('invited')
+        return saved(context, 'invited')
       },
     },
 
@@ -58,7 +58,7 @@ export default createController(routes.admin.authors, {
           parsed.success &&
           (await revokeAuthorInvite(context.db, { id: parsed.value.invite, adminId: context.auth.identity.id, now: Date.now() }))
         if (!ok) return invalid(context, { section: 'invites', message: 'That invite is no longer open.' })
-        return saved('revoked')
+        return saved(context, 'revoked')
       },
     },
 
@@ -73,7 +73,7 @@ export default createController(routes.admin.authors, {
         }
         let ok = await demoteAuthor(context.db, { userId: parsed.value.user, from: parsed.value.from, adminId: admin.id, now: Date.now() })
         if (!ok) return invalid(context, { section: 'people', message: 'That person’s role has already changed.' })
-        return saved(parsed.value.from === 'admin' ? 'admin-removed' : 'author-removed')
+        return saved(context, parsed.value.from === 'admin' ? 'admin-removed' : 'author-removed')
       },
     },
 
@@ -94,7 +94,7 @@ export default createController(routes.admin.authors, {
           let message = intent === 'add' ? 'They’re already on that course, or aren’t an author.' : 'They’re not on that course any more.'
           return invalid(context, { section: 'courses', message, course })
         }
-        return saved(intent === 'add' ? 'course-added' : 'course-removed')
+        return saved(context, intent === 'add' ? 'course-added' : 'course-removed')
       },
     },
   },
@@ -107,7 +107,7 @@ const inviteFailures = {
   'rate-global': { status: 429, message: 'We’ve sent all the email we can for today. Try the invite again tomorrow.' },
 } as const
 
-type AdminContext =Pick<AppContext, 'db' | 'render' | 'url'> & { auth: { identity: User } }
+type AdminContext = Pick<AppContext, 'db' | 'render' | 'url'> & { auth: { identity: User } }
 
 async function page(context: AdminContext, extra: { notice?: AdminNotice; errors?: AdminErrors }, status = 200) {
   let user = context.auth.identity
@@ -137,26 +137,25 @@ const anchors: Record<string, AdminSection> = {
   'course-removed': 'courses',
 }
 
-function saved(what: string) {
-  let href = routes.admin.authors.index.href(undefined, { searchParams: { saved: what } })
-  return redirect(`${href}#${anchors[what] ?? 'invite'}`, 303)
+/** The session flash a write leaves for the page (decision 068), not a ?saved= query. */
+const SAVED_KEY = 'admin:saved'
+
+/** 303 to the section that changed; its notice shows there, once. */
+function saved(context: Pick<AppContext, 'session'>, what: string) {
+  context.session.flash(SAVED_KEY, what)
+  return redirect(`${routes.admin.authors.index.href()}#${anchors[what] ?? 'invite'}`, 303)
 }
 
-function noticeFor(params: URLSearchParams): AdminNotice | undefined {
-  switch (params.get('saved')) {
-    case 'invited':
-      return { tone: 'ok', text: 'Invite sent. It shows under open invites until it’s accepted or expires.' }
-    case 'revoked':
-      return { tone: 'ok', text: 'Invite withdrawn. Its link no longer works.' }
-    case 'admin-removed':
-      return { tone: 'ok', text: 'Admin role removed. They’re an author now.' }
-    case 'author-removed':
-      return { tone: 'ok', text: 'Author role removed, and they’re off every course.' }
-    case 'course-added':
-      return { tone: 'ok', text: 'Added to the course.' }
-    case 'course-removed':
-      return { tone: 'ok', text: 'Removed from the course.' }
-    default:
-      return undefined
-  }
+function noticeFor(saved: unknown): AdminNotice | undefined {
+  let section = typeof saved === 'string' ? anchors[saved] : undefined
+  if (!section) return undefined
+  let text = {
+    invited: 'Invite sent. It shows under open invites until it’s accepted or expires.',
+    revoked: 'Invite withdrawn. Its link no longer works.',
+    'admin-removed': 'Admin role removed. They’re an author now.',
+    'author-removed': 'Author role removed, and they’re off every course.',
+    'course-added': 'Added to the course.',
+    'course-removed': 'Removed from the course.',
+  }[saved as string]
+  return text ? { section, tone: 'ok', text } : undefined
 }

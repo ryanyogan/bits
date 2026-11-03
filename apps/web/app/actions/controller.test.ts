@@ -210,10 +210,10 @@ describe('router smoke test', () => {
     assert.match(await unknown.text(), /expired or had too many tries/)
   })
 
-  it('API and webhook endpoints answer 501', async () => {
+  it('unbuilt webhook endpoints answer 404, never a logged 5xx (decision 068)', async () => {
     for (let path of [routes.webhooks.github.href()]) {
       let response = await request(path, { method: 'POST' })
-      assert.equal(response.status, 501, path)
+      assert.equal(response.status, 404, path)
     }
   })
 

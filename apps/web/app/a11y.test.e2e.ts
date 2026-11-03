@@ -416,6 +416,8 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
   it('signed in: landing, courses, lesson, /me and /u/:handle', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     let user = await signInBrowser(page, uniqueEmail('me'))
+    // New accounts are private (decision 068): publish this one so /u/:handle renders.
+    await testDb.update(users, user.id, { is_public: true })
     for (let [label, href] of [
       ['landing (signed in)', routes.home.href()],
       ['courses (signed in)', routes.courses.index.href()],
@@ -430,7 +432,7 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
   })
 
   it('certificate', async (t) => {
-    let { cookie, user } = await signIn(uniqueEmail('cert'), { displayName: 'Cert Holder' })
+    let { cookie, user } = await signIn(uniqueEmail('cert'), { displayName: 'Cert Holder', isPublic: true })
     for (let lesson of plainCourse.lessons) await completeLesson(cookie, plainCourse.slug, lesson)
     let page = await t.serve(await createTestServer(router.fetch))
     await page.goto(routes.certificates.show.href({ handle: user.handle, course: plainCourse.slug }))
@@ -525,5 +527,10 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await page.goto(routes.admin.invite.index.href(undefined, { searchParams: { token } }))
     await settled(page)
     await expectClean(page, '/admin/invite')
+
+    // A cut-off link (no token): its own state, not "expired" (decision 068).
+    await page.goto(routes.admin.invite.index.href())
+    await page.getByText('This link isn’t complete.').waitFor()
+    await expectClean(page, '/admin/invite incomplete')
   })
 })

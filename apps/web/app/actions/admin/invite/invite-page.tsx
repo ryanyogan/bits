@@ -3,6 +3,7 @@ import { css } from 'remix/component'
 import { Keycap } from '@bits/ui/keycap'
 import { PageFrame } from '@bits/ui/page-frame'
 import { PendingSubmit } from '@bits/ui/pending-submit'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import type { Viewer } from '../../../auth/identity.ts'
 import { APP_NAME } from '../../../config.ts'
@@ -17,6 +18,8 @@ export type InvitePageProps =
   | { kind: 'wrong-account'; viewer: Viewer; invited: string }
   /** Unknown, expired, used or withdrawn. */
   | { kind: 'expired'; viewer: Viewer | null }
+  /** No token: the link was cut off on the way. */
+  | { kind: 'incomplete'; viewer: Viewer | null }
 
 /**
  * GET /admin/invite?token= (decision 037). Like the other emailed links, a
@@ -49,6 +52,10 @@ export function InvitePage(handle: Handle<InvitePageProps>) {
                 <input type="hidden" name="token" value={props.token} />
                 <PendingSubmit label="Accept the invite →" pendingLabel="Accepting…" block />
               </form>
+              {/* Nothing to decline: an unaccepted invite just expires in 7 days. */}
+              <a href={routes.home.href()} data-rmx-prefetch={prefetchFor(routes.home.href())} mix={notNowStyle}>
+                Not now
+              </a>
             </PageHead>
           ) : props.kind === 'wrong-account' ? (
             <PageHead
@@ -67,6 +74,18 @@ export function InvitePage(handle: Handle<InvitePageProps>) {
                   Sign out
                 </Keycap>
               </form>
+            </PageHead>
+          ) : props.kind === 'incomplete' ? (
+            <PageHead
+              label="Author invite"
+              title="This link isn’t complete."
+              lead="Part of it went missing on the way. Open the link from the invite email again, or copy the whole address into your browser."
+            >
+              <div mix={actionStyle}>
+                <Keycap href={routes.home.href()} variant="dark" block>
+                  Back to {APP_NAME}
+                </Keycap>
+              </div>
             </PageHead>
           ) : (
             <PageHead
@@ -91,7 +110,17 @@ const titles = {
   accept: 'Accept your author invite',
   'wrong-account': 'Invite for another account',
   expired: 'Invite expired',
+  incomplete: 'Invite link incomplete',
 } as const
 
 const actionStyle = css({ width: '100%', maxWidth: '360px', paddingTop: 'var(--space-3)' })
 const monoStyle = css({ fontFamily: 'var(--font-mono)', color: 'var(--text)', overflowWrap: 'anywhere' })
+const notNowStyle = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  minHeight: 'var(--touch-target)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-13)',
+  color: 'var(--muted)',
+  '&:hover': { color: 'var(--text)' },
+})

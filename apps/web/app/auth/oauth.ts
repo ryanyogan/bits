@@ -67,7 +67,6 @@ export function githubProfile(result: OAuthResult<GitHubAuthProfile, 'github'>):
     providerUserId: result.account.providerAccountId,
     email: result.profile.email?.toLowerCase() ?? null,
     name: result.profile.name ?? null,
-    username: result.profile.login,
   }
 }
 
@@ -79,6 +78,5 @@ export function googleProfile(result: OAuthResult<GoogleAuthProfile, 'google'>):
     providerUserId: result.account.providerAccountId,
     email: email && email_verified ? email.toLowerCase() : null,
     name: name ?? null,
-    username: email ? email.split('@')[0]! : null,
   }
 }

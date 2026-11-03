@@ -16,9 +16,17 @@ const icons: Record<MethodKind, IconName> = { email: 'mail', github: 'github', g
  * with icon, name, meta and its action. Remove/Disconnect confirm inline in a
  * `<details>`, so they work without JS.
  */
-export function MethodRow(handle: Handle<{ method: SignInMethod }>) {
+export interface MethodRowProps {
+  method: SignInMethod
+  /** The session needs a step-up first (decision 030): Connect is shown disabled. */
+  locked?: boolean
+  /** The id of the note that says how to unlock it. */
+  lockedHint?: string
+}
+
+export function MethodRow(handle: Handle<MethodRowProps>) {
   return () => {
-    let { method } = handle.props
+    let { method, locked, lockedHint } = handle.props
     let provider = method.kind === 'github' || method.kind === 'google' ? method.kind : null
     let labelId = `method-${method.id}`
 
@@ -46,7 +54,8 @@ export function MethodRow(handle: Handle<{ method: SignInMethod }>) {
                 { provider },
                 { searchParams: { link: '1', next: routes.settings.index.href() } },
               )}
-              aria-describedby={labelId}
+              disabled={locked}
+              aria-describedby={locked && lockedHint ? `${labelId} ${lockedHint}` : labelId}
             >
               Connect
             </Keycap>

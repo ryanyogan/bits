@@ -10,6 +10,7 @@ import { PageFrame } from '@bits/ui/page-frame'
 import { Panel } from '@bits/ui/panel'
 import { RuledSection } from '@bits/ui/ruled-section'
 import { inputStyle, TextField } from '@bits/ui/text-field'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import type { Viewer } from '../../../auth/identity.ts'
 import { APP_NAME } from '../../../config.ts'
@@ -20,6 +21,8 @@ import { PageHead } from '../../../ui/page-head.tsx'
 export type AdminSection = 'invite' | 'invites' | 'people' | 'courses'
 
 export interface AdminNotice {
+  /** The section that changed: the notice shows there (decision 068). */
+  section: AdminSection
   tone: CalloutTone
   text: string
 }
@@ -56,6 +59,8 @@ export function AdminAuthorsPage(handle: Handle<AdminAuthorsPageProps>) {
         </Callout>
       ) : null
     let chosen = new Set(errors?.section === 'invite' ? (errors.values?.courses ?? []) : [])
+    let noticeIn = (section: AdminSection) => (notice?.section === section ? notice : undefined)
+    let authorHref = routes.author.index.href()
 
     return (
       <Layout title="Authors" description={`Who writes ${APP_NAME} courses.`} viewer={viewer} currentPath={currentPath}>
@@ -64,16 +69,23 @@ export function AdminAuthorsPage(handle: Handle<AdminAuthorsPageProps>) {
             label="Admin"
             title="Authors"
             lead="Invite someone to write courses, and choose who works on which course. Invites go by email and only work for that address."
-          >
-            {/* Always rendered, so a notice that arrives with the page is in a live region (decision 031). */}
-            <div role="status" mix={noticeSlotStyle}>
-              {notice ? <Callout tone={notice.tone}>{notice.text}</Callout> : null}
-            </div>
-          </PageHead>
+            aside={
+              <a href={authorHref} data-rmx-prefetch={prefetchFor(authorHref)} mix={asideLinkStyle}>
+                ← Authoring
+              </a>
+            }
+          />
 
+          {/* Invites, 2-up; then people and courses, each full width (a
+              long course list no longer leaves a tall empty cell beside it). */}
           <RuledSection as="div" pad="none">
-          <CellGrid cols={2} colsMid={1} pad={false}>
-              <Section id="invite" title="Invite an author" description="They get a link for 7 days. Accepting makes them an author; an admin stays an admin.">
+            <CellGrid cols={2} colsMid={1} pad={false}>
+              <Section
+                id="invite"
+                title="Invite an author"
+                description="They get a link for 7 days. Accepting makes them an author; an admin stays an admin."
+                notice={noticeIn('invite')}
+              >
                 {/* Keyed by the newest invite: after a send the client navigation gives a blank form, not the old values. */}
                 <form
                   method="post"
@@ -90,6 +102,7 @@ export function AdminAuthorsPage(handle: Handle<AdminAuthorsPageProps>) {
                     mono
                     autoComplete="off"
                     inputMode="email"
+                    placeholder="someone@somewhere.dev"
                     maxLength={254}
                     required
                     value={errors?.section === 'invite' ? errors.values?.email : undefined}
@@ -116,7 +129,12 @@ export function AdminAuthorsPage(handle: Handle<AdminAuthorsPageProps>) {
                 </form>
               </Section>
 
-              <Section id="invites" title="Open invites" description="Waiting to be accepted. Withdrawing one stops its link working.">
+              <Section
+                id="invites"
+                title="Open invites"
+                description="Waiting to be accepted. Withdrawing one stops its link working."
+                notice={noticeIn('invites')}
+              >
                 {failed('invites')}
                 {overview.invites.length ? (
                   <ul mix={listStyle}>
@@ -130,8 +148,16 @@ export function AdminAuthorsPage(handle: Handle<AdminAuthorsPageProps>) {
                   <EmptyState title="No open invites." hint="Invites you send show here until they’re accepted." />
                 )}
               </Section>
+            </CellGrid>
+          </RuledSection>
 
-              <Section id="people" title="Authors and admins" description="Removing the author role also takes them off every course.">
+          <RuledSection as="div" pad="none">
+              <Section
+                id="people"
+                title="Authors and admins"
+                description="Removing the author role also takes them off every course."
+                notice={noticeIn('people')}
+              >
                 {failed('people')}
                 {overview.people.length ? (
                   <ul mix={listStyle}>
@@ -145,8 +171,15 @@ export function AdminAuthorsPage(handle: Handle<AdminAuthorsPageProps>) {
                   <EmptyState title="No authors yet." />
                 )}
               </Section>
+          </RuledSection>
 
-              <Section id="courses" title="Courses" description="Who can build and publish each course. Admins can manage every course anyway.">
+          <RuledSection as="div" pad="none">
+              <Section
+                id="courses"
+                title="Courses"
+                description="Who can build and publish each course. Admins can manage every course anyway."
+                notice={noticeIn('courses')}
+              >
                 {failed('courses')}
                 {overview.courses.length ? (
                   <ul mix={listStyle}>
@@ -160,7 +193,6 @@ export function AdminAuthorsPage(handle: Handle<AdminAuthorsPageProps>) {
                   <EmptyState title="No courses yet." hint="Courses appear here after their first upload." />
                 )}
               </Section>
-          </CellGrid>
           </RuledSection>
         </PageFrame>
       </Layout>
@@ -172,6 +204,7 @@ interface SectionProps {
   id: AdminSection
   title: string
   description: string
+  notice?: AdminNotice
   children?: RemixNode
 }
 
@@ -182,11 +215,16 @@ interface SectionProps {
  */
 function Section(handle: Handle<SectionProps>) {
   return () => {
-    let { id, title, description, children } = handle.props
+    let { id, title, description, notice, children } = handle.props
     return (
       <Panel id={id} title={title}>
         <div mix={sectionStyle}>
           <p mix={descriptionStyle}>{description}</p>
+          {/* Always rendered, so a notice that arrives with the page is in a
+              live region (decision 031), in the section that changed. */}
+          <div role="status" mix={noticeSlotStyle}>
+            {notice ? <Callout tone={notice.tone}>{notice.text}</Callout> : null}
+          </div>
           {children}
         </div>
       </Panel>
@@ -310,9 +348,19 @@ function CourseAuthors(handle: Handle<{ course: CourseAuthorList; people: Author
   }
 }
 
-const noticeSlotStyle = css({ width: '100%', '&:not(:empty)': { paddingTop: 'var(--space-2)' } })
-// Each section is a cell of a 2-up grid sharing hairlines (decision 047).
-const sectionStyle = css({ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-4_5)' })
+const noticeSlotStyle = css({ width: '100%', '&:empty': { position: 'absolute' } })
+// Each section is a cell sharing hairlines (decision 047).
+const sectionStyle = css({ position: 'relative', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-4_5)' })
+const asideLinkStyle = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  minHeight: 'var(--touch-target)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-13)',
+  color: 'var(--volt)',
+  textDecoration: 'none',
+  '&:hover': { color: 'var(--volt-link-hover)' },
+})
 const descriptionStyle = css({ margin: 0, fontSize: 'var(--fs-14)', lineHeight: 1.55, color: 'var(--muted)' })
 const formStyle = css({ display: 'flex', flexDirection: 'column', gap: 'var(--space-4_5)' })
 const fieldsetStyle = css({ margin: 0, padding: 0, border: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-2_5)', minWidth: 0 })
@@ -340,11 +388,17 @@ const rowStyle = css({
   gap: 'var(--space-3)',
   padding: 'var(--space-3) var(--space-4)',
 })
+// A course row: title | its authors | add, in columns from 900px; stacked below.
 const courseStyle = css({
-  display: 'flex',
-  flexDirection: 'column',
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr)',
   gap: 'var(--space-3)',
   padding: 'var(--space-4)',
+  '@media (min-width: 900px)': {
+    gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1.2fr)',
+    alignItems: 'start',
+    gap: 'var(--space-3) var(--space-6)',
+  },
 })
 const bodyStyle = css({ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' })
 // In the column-flex course card a flex-basis would become a height.

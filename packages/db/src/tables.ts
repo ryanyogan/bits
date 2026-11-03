@@ -60,6 +60,10 @@ export const users = table({
     /** YYYY-MM-DD in the user's timezone; null before any activity. */
     streak_last_day: c.text().nullable(),
     best_streak: c.integer(),
+    /**
+     * Public profile at /u/:handle. New accounts start private (decision 068):
+     * createUser() sets false; the SQL default of 1 is never used.
+     */
     is_public: c.boolean(),
     /** The lesson depth the learner picked (decision 053); null until they pick one. */
     lesson_depth: c.enum(lessonDepths).nullable(),

@@ -48,9 +48,15 @@ export async function findUserByHandle(db: Database, handle: string): Promise<Us
 export interface CreateUserInput {
   email: string
   displayName?: string
-  /** Defaults to one derived from the display name or email. Must be unique. */
+  /**
+   * Must be unique. Defaults to a neutral generated one (`learner_7f3k9q`),
+   * never one derived from the email or name (decision 068). Callers that
+   * need a free one ask `neutralHandle()`.
+   */
   handle?: string
   role?: UserRole
+  /** New profiles are private until the learner opts in (decision 068). */
+  isPublic?: boolean
   goals?: string[]
   timezone?: string
   emailVerifiedAt?: number | null
@@ -70,13 +76,15 @@ export async function createUser(db: Database, input: CreateUserInput): Promise<
       email,
       email_verified_at: input.emailVerifiedAt ?? null,
       display_name: displayName,
-      handle: normalizeHandle(input.handle ?? (displayName || email.split('@')[0]!)),
+      handle: normalizeHandle(input.handle ?? generatedHandle()),
       avatar: null,
       role: input.role ?? 'learner',
       goals: input.goals ?? [],
       timezone: input.timezone ?? 'UTC',
       xp_total: 0,
-      is_public: true,
+      // The column's SQL default is still 1 (migration 0001); every insert
+      // goes through here, so this is the default that counts (decision 068).
+      is_public: input.isPublic ?? false,
     },
     { returnRow: true },
   )
@@ -86,23 +94,25 @@ export async function createUser(db: Database, input: CreateUserInput): Promise<
 /** Handles that would read as official or collide with app words. */
 export const reservedHandles = new Set(['admin', 'bits', 'me', 'settings', 'author', 'support', 'help', 'api', 'root'])
 
+const handleAlphabet = 'abcdefghijkmnpqrstuvwxyz23456789'
+
 /**
- * Picks a free handle from a name or email: the normalized base if it is
- * free, otherwise the base plus a short random number.
+ * A neutral handle for a new account (decision 068): `learner_` and six
+ * random letters and digits (no 0/o or 1/l). It says nothing about the
+ * email, name or provider login; the learner can change it in Settings.
  */
-export async function availableHandle(db: Database, source: string): Promise<string> {
-  let base = normalizeHandle(source).slice(0, 27)
-  for (let attempt = 0; attempt < 6; attempt++) {
-    let candidate = attempt === 0 ? base : `${base}_${randomDigits(attempt < 3 ? 2 : 4)}`
-    if (reservedHandles.has(candidate)) continue
-    if (!(await findUserByHandle(db, candidate))) return candidate
-  }
-  return `${base}_${randomDigits(6)}`
+export function generatedHandle(): string {
+  let bytes = crypto.getRandomValues(new Uint8Array(6))
+  return `learner_${Array.from(bytes, (byte) => handleAlphabet[byte % handleAlphabet.length]).join('')}`
 }
 
-function randomDigits(length: number): string {
-  let bytes = crypto.getRandomValues(new Uint8Array(length))
-  return Array.from(bytes, (byte) => String(byte % 10)).join('')
+/** A free generated handle; 32^6 of them, so a retry is rare and a second one rarer. */
+export async function neutralHandle(db: Database): Promise<string> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    let candidate = generatedHandle()
+    if (!(await findUserByHandle(db, candidate))) return candidate
+  }
+  throw new Error('No free generated handle after 5 tries')
 }
 
 export async function markEmailVerified(db: Database, userId: string, at: number): Promise<User> {

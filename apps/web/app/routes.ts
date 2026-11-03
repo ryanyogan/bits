@@ -89,7 +89,6 @@ export const routes = route({
 
   author: route('/author', {
     index: get('/'), // actions/author/controller.tsx
-    repo: post('/repo'), // save the GitHub sync settings
     course: route('/:course', {
       index: get('/'), // actions/author/course/controller.tsx
       preview: get('/preview/:lesson'),
@@ -136,7 +135,8 @@ export const routes = route({
     video: get('/videos/:id.mp4'),
   }),
 
-  // Third-party callbacks: actions/webhooks/controller.tsx
+  // Third-party callbacks: actions/webhooks/controller.tsx. None is built
+  // yet, so each answers 404 (decision 068).
   webhooks: route('/webhooks', {
     github: post('/github'),
   }),

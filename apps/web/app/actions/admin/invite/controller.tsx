@@ -7,6 +7,7 @@ import { currentUser, getViewer, loginRedirect, toViewer } from '../../../auth/i
 import { rateLimit } from '../../../middleware/rate-limit.tsx'
 import { routes } from '../../../routes.ts'
 import { readText } from '../../login/schema.ts'
+import { AUTHOR_WELCOME_KEY } from '../../author/welcome.ts'
 import { InvitePage } from './invite-page.tsx'
 
 // The token is in the URL: keep it out of caches and Referer headers.
@@ -19,6 +20,10 @@ export default createController(routes.admin.invite, {
   actions: {
     async index(context) {
       let token = context.url.searchParams.get('token') ?? ''
+      // No token at all: a cut-off link, not an expired invite.
+      if (!token.trim()) {
+        return context.render(<InvitePage kind="incomplete" viewer={getViewer(context)} />, { status: 400, headers: pageHeaders })
+      }
       let invite = await peekAuthorInvite(context.db, token)
       if (!invite) return context.render(<InvitePage kind="expired" viewer={getViewer(context)} />, { status: 410, headers: pageHeaders })
       let user = currentUser(context)
@@ -53,6 +58,8 @@ export default createController(routes.admin.invite, {
         if (!(await acceptAuthorInviteLink(context.db, { token, user }))) {
           return context.render(<InvitePage kind="expired" viewer={toViewer(user)} />, { status: 410, headers: pageHeaders })
         }
+        // /author says so, once, and names the courses they joined (decision 068).
+        context.session.flash(AUTHOR_WELCOME_KEY, invite.course_titles)
         return redirect(routes.author.index.href(), 303)
       },
     },

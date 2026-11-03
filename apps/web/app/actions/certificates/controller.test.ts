@@ -30,7 +30,7 @@ describe('certificates and the badge toast', () => {
   after(() => disposePlatform())
 
   it('exists only once every lesson is finished, and never shows the email or journal', async () => {
-    let { cookie, user } = await signIn('cert-public@example.com', { displayName: 'Cert Holder' })
+    let { cookie, user } = await signIn('cert-public@example.com', { displayName: 'Cert Holder', isPublic: true })
     let href = routes.certificates.show.href({ handle: user.handle, course: COURSE })
 
     await finish(cookie, LESSONS.slice(0, -1))

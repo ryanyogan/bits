@@ -27,6 +27,10 @@ export type RateLimitTier =
   | 'RL_UPLOADS'
   /** Answers to quick checks (/api/ask): 30 a minute (decision 052). */
   | 'RL_ASKS'
+  /** Account changes (Settings profile, sign out everywhere, delete account): 10 a minute (decision 068). */
+  | 'RL_ACCOUNT'
+  /** Publishing or rolling back a course (each rewrites catalog/live.json): 10 a minute (decision 068). */
+  | 'RL_PUBLISH'
 
 /**
  * Keyed by the signed-in user, else by the client IP. The binding is

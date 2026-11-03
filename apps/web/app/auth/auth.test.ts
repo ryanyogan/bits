@@ -41,7 +41,9 @@ describe('auth', () => {
 
     let user = (await findUserByEmail(testDb, 'ada@example.com'))!
     assert.equal(user.display_name, 'Ada Lovelace')
-    assert.equal(user.handle, 'ada_lovelace')
+    // The name is kept, but the handle is neutral and the profile private (decision 068).
+    assert.match(user.handle, /^learner_[a-z2-9]{6}$/)
+    assert.equal(user.is_public, false)
     assert.deepEqual(user.goals, ['code', 'teach'])
     assert.equal(user.timezone, 'Europe/London')
     assert.ok(user.email_verified_at)
@@ -193,7 +195,8 @@ describe('auth', () => {
       method: 'POST',
       headers: { 'Sec-Fetch-Site': 'cross-site' },
     })
-    assert.equal(webhook.status, 501)
+    // Through CSRF protection; nothing is built there yet, so a 404 (decision 068).
+    assert.equal(webhook.status, 404)
   })
 
   it('OAuth: unconfigured providers send people back to /login; unknown ones 404', async () => {
@@ -208,7 +211,8 @@ describe('auth', () => {
   it('OAuth: connecting to a signed-in account needs a recent sign-in, at start and at the callback', async () => {
     let { cookie, user } = await signIn('connect@example.com')
     await ageSessions(user.id)
-    let reauth = '/settings?saved=reauth&for=connect#sign-in'
+    // To the one confirm box, under Email; the outcome is flashed (decision 068).
+    let reauth = '/settings#email'
     for (let provider of ['github', 'google']) {
       let start = await fetchAs(cookie, routes.auth.oauth.start.href({ provider }, { searchParams: { link: '1', next: '/settings' } }))
       assert.equal(start.headers.get('Location'), reauth, `${provider} start`)
@@ -218,8 +222,8 @@ describe('auth', () => {
     }
     assert.equal((await listIdentities(testDb, user.id)).length, 0)
     let page = await (await fetchAs(cookie, reauth)).text()
-    assert.match(page, /confirm it’s you first/)
-    assert.match(page, /To add a passkey or connect GitHub or Google, confirm it’s you first/)
+    assert.match(page, /confirm it’s you first, below/)
+    assert.match(page, /add a passkey or connect GitHub or Google, confirm it’s you first/)
 
     // A fresh session passes the gate (here the provider isn't configured);
     // signed out, OAuth is a sign-in, which step-up doesn't apply to.
@@ -234,29 +238,33 @@ describe('auth', () => {
     let { user: grace } = await signIn('grace@example.com')
     let linked = await userForOAuth(
       testDb,
-      { provider: 'github', providerUserId: 'gh-1', email: 'grace@example.com', name: 'Grace', username: 'grace' },
+      { provider: 'github', providerUserId: 'gh-1', email: 'grace@example.com', name: 'Grace' },
       null,
     )
     assert.ok(linked.ok && linked.user.id === grace.id && !linked.created)
 
     let again = await userForOAuth(
       testDb,
-      { provider: 'github', providerUserId: 'gh-1', email: null, name: null, username: null },
+      { provider: 'github', providerUserId: 'gh-1', email: null, name: null },
       null,
     )
     assert.ok(again.ok && again.user.id === grace.id, 'a known identity signs in without an email')
 
     let fresh = await userForOAuth(
       testDb,
-      { provider: 'google', providerUserId: 'g-9', email: 'new.person@example.com', name: 'New Person', username: 'new.person' },
+      { provider: 'google', providerUserId: 'g-9', email: 'new.person@example.com', name: 'New Person' },
       null,
     )
     assert.ok(fresh.ok && fresh.created)
-    assert.equal((await findUserById(testDb, fresh.ok ? fresh.user.id : ''))?.display_name, 'New Person')
+    let created = await findUserById(testDb, fresh.ok ? fresh.user.id : '')
+    assert.equal(created?.display_name, 'New Person')
+    // Private, with a neutral handle: not the name or the email local-part (decision 068).
+    assert.equal(created?.is_public, false)
+    assert.match(created?.handle ?? '', /^learner_[a-z2-9]{6}$/)
 
     let noEmail = await userForOAuth(
       testDb,
-      { provider: 'github', providerUserId: 'gh-2', email: null, name: null, username: 'x' },
+      { provider: 'github', providerUserId: 'gh-2', email: null, name: null },
       null,
     )
     assert.deepEqual(noEmail, { ok: false, reason: 'no-email' })
@@ -264,7 +272,7 @@ describe('auth', () => {
     let { user: other } = await signIn('other@example.com')
     let steal = await userForOAuth(
       testDb,
-      { provider: 'github', providerUserId: 'gh-1', email: null, name: null, username: null },
+      { provider: 'github', providerUserId: 'gh-1', email: null, name: null },
       other,
     )
     assert.deepEqual(steal, { ok: false, reason: 'taken' })

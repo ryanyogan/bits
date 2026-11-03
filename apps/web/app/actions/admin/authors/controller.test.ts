@@ -22,7 +22,8 @@ async function invite(email: string, courses: string[] = []): Promise<string> {
   let { cookie } = await admin()
   let response = await post(cookie, routes.admin.authors.invite.href(), { email, courses })
   assert.equal(response.status, 303)
-  assert.match(response.headers.get('Location')!, /saved=invited#invites$/)
+  // The outcome is flashed, not in the URL (decision 068).
+  assert.equal(response.headers.get('Location'), '/admin/authors#invites')
   let message = outbox.findLast((m) => m.to === email)!
   assert.match(message.subject, /invited to write courses/)
   return /\/admin\/invite\?token=([A-Za-z0-9_-]+)/.exec(message.text)![1]!
@@ -142,7 +143,10 @@ describe('/admin/authors and author invites', () => {
     assert.equal(accepted.headers.get('Location'), routes.author.index.href())
     assert.equal((await findUserById(testDb, user.id))!.role, 'author')
     assert.deepEqual(await courseAuthors(user.id), [COURSE])
-    assert.equal((await fetchAs(cookie, routes.author.index.href())).status, 200)
+    // /author welcomes them once, naming the course they joined (decision 068).
+    let welcome = await (await fetchAs(cookie, routes.author.index.href())).text()
+    assert.match(welcome, /You’re an author now, on [^<]*Temperature/i)
+    assert.doesNotMatch(await (await fetchAs(cookie, routes.author.index.href())).text(), /You’re an author now/)
 
     // Single use.
     assert.equal((await accept(cookie, token)).status, 410)
@@ -174,7 +178,9 @@ describe('/admin/authors and author invites', () => {
       .first<{ id: string }>()
     let revoked = await post(adminCookie, routes.admin.authors.revoke.href(), { invite: row!.id })
     assert.equal(revoked.status, 303)
-    assert.match(revoked.headers.get('Location')!, /saved=revoked#invites$/)
+    assert.equal(revoked.headers.get('Location'), '/admin/authors#invites')
+    let invitesSection = await (await fetchAs(adminCookie, routes.admin.authors.index.href())).text()
+    assert.match(invitesSection, /id="invites"[\s\S]*Invite withdrawn\. Its link no longer works\.[\s\S]*id="people"/)
     assert.equal((await accept(cookie, withdrawn)).status, 410)
     // Withdrawing it again is a 422 re-render.
     assert.equal((await post(adminCookie, routes.admin.authors.revoke.href(), { invite: row!.id })).status, 422)
@@ -185,6 +191,10 @@ describe('/admin/authors and author invites', () => {
     assert.equal((await accept(cookie, older)).status, 410)
 
     assert.equal((await fetchAs(cookie, inviteHref('made-up'))).status, 410)
+    // No token at all is a cut-off link, not an expired invite.
+    let incomplete = await fetchAs(cookie, routes.admin.invite.index.href())
+    assert.equal(incomplete.status, 400)
+    assert.match(await incomplete.text(), /This link isn’t complete\./)
     assert.equal((await fetchAs(cookie, inviteHref('A'.repeat(43)))).status, 410)
     assert.equal((await findUserById(testDb, user.id))!.role, 'learner')
 
@@ -203,7 +213,7 @@ describe('/admin/authors and author invites', () => {
     await testDb.d1.prepare('insert into course_authors (course_slug, user_id, created_at) values (?, ?, 1)').bind(COURSE, author.id).run()
     let removed = await post(cookie, routes.admin.authors.role.href(), { user: author.id, from: 'author' })
     assert.equal(removed.status, 303)
-    assert.match(removed.headers.get('Location')!, /saved=author-removed#people$/)
+    assert.equal(removed.headers.get('Location'), '/admin/authors#people')
     assert.equal((await findUserById(testDb, author.id))!.role, 'learner')
     assert.deepEqual(await courseAuthors(author.id), [])
     // Already done: a stale form re-renders.
@@ -221,7 +231,8 @@ describe('/admin/authors and author invites', () => {
 
     let added = await post(cookie, routes.admin.authors.course.href(), { intent: 'add', course: COURSE, user: author.id })
     assert.equal(added.status, 303)
-    assert.match(added.headers.get('Location')!, /saved=course-added#courses$/)
+    assert.equal(added.headers.get('Location'), '/admin/authors#courses')
+    assert.match(await (await fetchAs(cookie, routes.admin.authors.index.href())).text(), /Added to the course\./)
     assert.deepEqual(await courseAuthors(author.id), [COURSE])
 
     let refused = await post(cookie, routes.admin.authors.course.href(), { intent: 'add', course: COURSE, user: learner.id })

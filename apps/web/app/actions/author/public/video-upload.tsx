@@ -64,7 +64,10 @@ export const VideoUpload = clientEntry(
       start.append('course', handle.props.course)
       start.append('path', handle.props.path)
       start.append('size', String(file.size))
-      let response = await fetch(routes.api.authorVideoStart.href(), { method: 'POST', body: start }).catch(() => undefined)
+      let response = await fetch(routes.api.authorVideoStart.href(), { method: 'POST', body: start, signal: handle.signal }).catch(
+        () => undefined,
+      )
+      if (handle.signal.aborted) return
       if (!response?.ok) return fail(await errorText(response, 'The upload couldn’t start.'))
       let started = (await response.json()) as Started
 
@@ -76,16 +79,20 @@ export const VideoUpload = clientEntry(
         handle.update()
         if (done.has(n)) continue
         let blob = file.slice((n - 1) * started.partSize, n * started.partSize)
-        let ok = await putPart(routes.api.authorVideoPart.href({ id: started.id, part: String(n) }), blob)
+        let ok = await putPart(routes.api.authorVideoPart.href({ id: started.id, part: String(n) }), blob, handle.signal)
+        if (handle.signal.aborted) return
         if (!ok) return fail(`Part ${n} didn’t upload. Pick the same file again to resume.`)
         done.add(n)
       }
 
       let complete = new FormData()
       if (duration) complete.append('duration', String(Math.round(duration)))
-      response = await fetch(routes.api.authorVideoComplete.href({ id: started.id }), { method: 'POST', body: complete }).catch(
-        () => undefined,
-      )
+      response = await fetch(routes.api.authorVideoComplete.href({ id: started.id }), {
+        method: 'POST',
+        body: complete,
+        signal: handle.signal,
+      }).catch(() => undefined)
+      if (handle.signal.aborted) return
       if (!response?.ok) return fail(await errorText(response, 'The upload didn’t finish.'))
       phase = 'done'
       pct = 100
@@ -113,24 +120,25 @@ export const VideoUpload = clientEntry(
           ) : (
             <span mix={warnText}>! not uploaded</span>
           )}
-          <label for={id} class="sr-only">
-            {`Choose ${path}`}
-          </label>
-          <input
-            id={id}
-            type="file"
-            accept="video/mp4"
-            disabled={phase === 'uploading'}
-            mix={[
-              fileInput,
-              on('change', (event) => {
+          {/* The native picker, visually hidden; the label is the key (decision 068). */}
+          <label for={id} data-disabled={phase === 'uploading' ? '' : undefined} mix={pickStyle}>
+            {file ? 'Change' : 'Choose MP4'}
+            <span class="sr-only">{` for ${path}`}</span>
+            <input
+              id={id}
+              type="file"
+              accept="video/mp4"
+              class="sr-only"
+              disabled={phase === 'uploading'}
+              mix={on('change', (event) => {
                 file = event.currentTarget.files?.[0]
                 message = ''
                 if (phase === 'failed') phase = 'idle'
                 handle.update()
-              }),
-            ]}
-          />
+              })}
+            />
+          </label>
+          {file ? <span mix={chosenStyle}>{file.name}</span> : null}
           <Keycap
             variant="dark"
             size="sm"
@@ -149,12 +157,16 @@ export const VideoUpload = clientEntry(
   },
 )
 
-async function putPart(href: string, blob: Blob): Promise<boolean> {
+async function putPart(href: string, blob: Blob, signal: AbortSignal): Promise<boolean> {
   for (let attempt = 0; attempt < RETRIES; attempt++) {
     if (attempt) await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** attempt))
-    let response = await fetch(href, { method: 'PUT', body: blob, headers: { 'Content-Type': 'application/octet-stream' } }).catch(
-      () => undefined,
-    )
+    if (signal.aborted) return false
+    let response = await fetch(href, {
+      method: 'PUT',
+      body: blob,
+      headers: { 'Content-Type': 'application/octet-stream' },
+      signal,
+    }).catch(() => undefined)
     if (response?.ok) return true
     // A 4xx other than a rate limit won't get better by retrying.
     if (response && response.status < 500 && response.status !== 429) return false
@@ -197,19 +209,31 @@ const warnText = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)',
 const noteStyle = css({ flexBasis: '100%', fontSize: 'var(--fs-12)', color: 'var(--muted)', '&:empty': { position: 'absolute' } })
 const errorStyle = css({ flexBasis: '100%', fontSize: 'var(--fs-12)', color: 'var(--danger)' })
 const doneText = css({ fontSize: 'var(--fs-13)', color: 'var(--text-body)' })
-const fileInput = css({
-  maxWidth: '220px',
+// A ghost-mono key around the hidden file input: the focus ring follows the input.
+const pickStyle = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  minHeight: 'var(--touch-target)',
+  padding: '0 var(--space-3)',
+  border: 'var(--border-w) solid var(--line-control)',
+  background: 'transparent',
+  color: 'var(--text)',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',
-  color: 'var(--muted)',
-  '&::file-selector-button': {
-    minHeight: 'var(--touch-target)',
-    marginRight: 'var(--space-2)',
-    padding: '0 var(--space-3)',
-    border: 'var(--border-w) solid var(--line-control)',
-    background: 'transparent',
-    color: 'var(--text)',
-    font: 'inherit',
-    cursor: 'pointer',
-  },
+  cursor: 'pointer',
+  transition: 'background-color var(--duration-fast), border-color var(--duration-fast)',
+  '&:hover': { background: 'var(--fill-ghost-hover)', borderColor: 'var(--line-drop)' },
+  '&:has(input:focus-visible)': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset)' },
+  '&[data-disabled]': { cursor: 'not-allowed', color: 'var(--dim)' },
+  '@media (forced-colors: active)': { borderColor: 'ButtonText', color: 'ButtonText' },
+})
+const chosenStyle = css({
+  minWidth: 0,
+  maxWidth: '220px',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-12)',
+  color: 'var(--text-body)',
 })

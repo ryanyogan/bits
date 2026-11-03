@@ -61,7 +61,7 @@ export const PasskeyButton = clientEntry(
     })
 
     async function options(): Promise<PublicKeyCredentialRequestOptionsJSON> {
-      let response = await fetch(handle.props.optionsUrl, { method: 'POST' })
+      let response = await fetch(handle.props.optionsUrl, { method: 'POST', signal: handle.signal })
       if (!response.ok) throw new Error(String(response.status))
       return response.json()
     }

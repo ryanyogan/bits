@@ -11,15 +11,24 @@ import { PasskeyButton } from '../../login/public/passkey-button.tsx'
  * confirm it's them with a code to the current address (POST /settings/reauth
  * → /login/check) or a passkey (/login/passkey), and come back here.
  */
-export function ReauthBlock(handle: Handle<{ what: string; email: string }>) {
+export interface ReauthBlockProps {
+  /** The anchor the sign-in methods' note links to. */
+  id?: string
+  what: string
+  email: string
+  /** Offer "Use a passkey" only to an account that has one. */
+  passkey: boolean
+}
+
+export function ReauthBlock(handle: Handle<ReauthBlockProps>) {
   return () => {
-    let { what, email } = handle.props
+    let { id, what, email, passkey } = handle.props
     let next = routes.settings.index.href()
     return (
-      <div mix={blockStyle}>
+      <div id={id} mix={blockStyle}>
         <p mix={textStyle}>
-          To {what}, confirm it’s you first. We’ll email a code to <span mix={emailStyle}>{email}</span>, or use a
-          passkey.
+          To {what}, confirm it’s you first. We’ll email a code to <span mix={emailStyle}>{email}</span>
+          {passkey ? ', or use a passkey.' : '.'}
         </p>
         <div mix={actionsStyle}>
           <form method="post" action={routes.settings.reauth.href()}>
@@ -27,14 +36,16 @@ export function ReauthBlock(handle: Handle<{ what: string; email: string }>) {
               Email me a code
             </Keycap>
           </form>
-          <div mix={passkeyStyle}>
-            <PasskeyButton
-              optionsUrl={routes.api.passkey.href({ step: 'login-options' })}
-              action={routes.login.passkey.href()}
-              next={next}
-              autofill={false}
-            />
-          </div>
+          {passkey ? (
+            <div mix={passkeyStyle}>
+              <PasskeyButton
+                optionsUrl={routes.api.passkey.href({ step: 'login-options' })}
+                action={routes.login.passkey.href()}
+                next={next}
+                autofill={false}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     )
@@ -51,6 +62,7 @@ const blockStyle = css({
   border: 'var(--border-w) solid var(--line-cell)',
   boxShadow: 'inset var(--border-w-strong) 0 0 var(--ion-edge)',
   background: 'var(--well)',
+  scrollMarginTop: 'calc(var(--shell-h) + var(--space-4))',
 })
 
 const textStyle = css({ margin: 0, fontSize: 'var(--fs-15)', lineHeight: 1.55, color: 'var(--text-body)' })

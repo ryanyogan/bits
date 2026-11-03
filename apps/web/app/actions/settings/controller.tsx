@@ -33,11 +33,14 @@ import { emailFailures } from '../login/controller.tsx'
 import { issueField, readText, type FormIssue } from '../login/schema.ts'
 import { deviceLabel, getAccountSettings } from './data.ts'
 import { rememberTheme } from '../../progress/theme.ts'
+import { settingsRedirect, takeSettingsNotice, type SettingsNotice, type SettingsSection } from './notice.ts'
 import { appearanceForm, deleteForm, emailCodeForm, emailForm, methodsForm, passkeyNameForm, profileForm } from './schema.ts'
-import { SettingsPage, type SettingsErrors, type SettingsNotice, type SettingsSection } from './settings-page.tsx'
+import { SettingsPage, type SettingsErrors } from './settings-page.tsx'
 
 // Signed-in only (requireUser sends everyone else to /login?next=). Each form
-// posts to its own action and redirects back with ?saved= (PRG).
+// posts to its own action. A bad form re-renders 422 with its issues; a good
+// one redirects 303 to its section, the outcome in the session flash (PRG,
+// decision 068).
 export default createController(routes.settings, {
   middleware: [requireUser()],
   actions: {
@@ -48,7 +51,8 @@ export default createController(routes.settings, {
           viewer={toViewer(user)}
           account={await getAccountSettings(context.db, user, context.session.id)}
           recentAuth={recentlyAuthenticated(context)}
-          notice={noticeFor(context.url.searchParams)}
+          notice={takeSettingsNotice(context.session)}
+          host={context.url.host}
         />,
       )
     },
@@ -126,7 +130,9 @@ export default createController(routes.settings, {
       })
     },
 
-    async profile(context) {
+    profile: {
+      middleware: [rateLimit('RL_ACCOUNT')],
+      async handler(context) {
       let user = context.auth.identity
       let parsed = s.parseSafe(profileForm, context.formData)
       let fields: SettingsErrors['fields'] = {}
@@ -148,7 +154,8 @@ export default createController(routes.settings, {
         // Lost a race for the handle (unique index).
         return invalid(context, user, 'profile', { handle: 'That handle is taken.' }, ['name', 'handle', 'visibility'])
       }
-      return saved('profile')
+      return saved(context, 'profile')
+      },
     },
 
     // The theme (decision 062): system, dark or light, into users.theme.
@@ -156,9 +163,15 @@ export default createController(routes.settings, {
       middleware: [rateLimit('RL_WRITES')],
       async handler(context) {
         let parsed = s.parseSafe(appearanceForm, context.formData)
-        if (!parsed.success) return saved('appearance-error')
+        if (!parsed.success) {
+          return invalid(context, context.auth.identity, 'appearance', {}, [], 422, {
+            section: 'appearance',
+            tone: 'warning',
+            text: 'Pick System, Dark or Light.',
+          })
+        }
         await rememberTheme(context, parsed.value.theme)
-        return saved('appearance')
+        return saved(context, 'appearance')
       },
     },
 
@@ -171,11 +184,11 @@ export default createController(routes.settings, {
         let user = context.auth.identity
         if (readText(context.formData, 'intent') === 'cancel') {
           await cancelEmailChange(context.db, user.id)
-          return saved('email-cancelled')
+          return saved(context, 'email-cancelled')
         }
         // Moving the account's email is a takeover if the session is stolen
         // or left open: only a fresh sign-in may ask (decision 030).
-        if (!recentlyAuthenticated(context)) return saved('reauth', { for: 'email' })
+        if (!recentlyAuthenticated(context)) return saved(context, 'reauth')
         let parsed = s.parseSafe(emailForm, context.formData)
         if (!parsed.success) {
           return invalid(context, user, 'email', { email: 'Enter an email address like you@somewhere.dev.' }, ['email'])
@@ -203,7 +216,7 @@ export default createController(routes.settings, {
           let failure = emailFailures[result.reason]
           return invalid(context, user, 'email', { email: failure.text }, ['email'], failure.status)
         }
-        return saved('email-sent')
+        return saved(context, 'email-sent')
       },
     },
 
@@ -230,7 +243,7 @@ export default createController(routes.settings, {
           }[result.reason]
           return invalid(context, user, 'email', { code: text }, ['code'])
         }
-        return saved('email-changed')
+        return saved(context, 'email-changed')
       },
     },
 
@@ -242,40 +255,46 @@ export default createController(routes.settings, {
       async handler(context) {
         let user = context.auth.identity
         let parsed = s.parseSafe(methodsForm, context.formData)
-        if (!parsed.success) return saved('methods-error')
+        if (!parsed.success) return invalid(context, user, 'sign-in', {}, [], 422, methodsError)
         let { intent } = parsed.value
 
         if (intent === 'add-passkey') {
           let response = readText(context.formData, 'response')
           // Without JS the button still submits, with no response.
-          if (!response) return saved('passkey-needs-js')
-          if (!recentlyAuthenticated(context)) return saved('reauth', { for: 'passkey' })
+          if (!response) return saved(context, 'passkey-needs-js')
+          if (!recentlyAuthenticated(context)) return saved(context, 'reauth')
           let result = await registerPasskey(context.db, {
             user,
             rp: relyingParty(context.url, context.headers.get('Origin')),
             response,
             name: deviceLabel(context.headers.get('User-Agent')),
           })
-          if (result.ok) return saved('passkey-added')
-          return saved(result.reason === 'duplicate' ? 'passkey-duplicate' : result.reason === 'too-many' ? 'passkey-limit' : 'passkey-failed')
+          if (result.ok) return saved(context, 'passkey-added')
+          return saved(context, result.reason === 'duplicate' ? 'passkey-duplicate' : result.reason === 'too-many' ? 'passkey-limit' : 'passkey-failed')
         }
 
         if (intent === 'disconnect:github' || intent === 'disconnect:google') {
           let provider = intent === 'disconnect:github' ? ('github' as const) : ('google' as const)
           await unlinkIdentity(context.db, user.id, provider)
-          return saved('disconnected', { method: provider })
+          return saved(context, 'disconnected', { method: provider })
         }
 
         if (intent.startsWith('rename:')) {
           let name = s.parseSafe(passkeyNameForm, context.formData)
-          if (!name.success) return saved('passkey-name')
+          if (!name.success) {
+            return invalid(context, user, 'sign-in', {}, [], 422, {
+              section: 'sign-in',
+              tone: 'warning',
+              text: 'Give the passkey a name of up to 60 characters.',
+            })
+          }
           let renamed = await renamePasskey(context.db, user.id, intent.slice('rename:'.length), name.value.name)
-          return saved(renamed ? 'renamed' : 'methods-error')
+          return renamed ? saved(context, 'renamed') : invalid(context, user, 'sign-in', {}, [], 422, methodsError)
         }
 
         // remove:<credential id>; only the owner's rows match.
         let removed = await deletePasskey(context.db, user.id, intent.slice('remove:'.length))
-        return saved(removed ? 'removed' : 'methods-error')
+        return removed ? saved(context, 'removed') : invalid(context, user, 'sign-in', {}, [], 422, methodsError)
       },
     },
 
@@ -294,18 +313,23 @@ export default createController(routes.settings, {
           ip: context.headers.get('CF-Connecting-IP'),
           origin: context.url.origin,
         })
-        if (!result.ok) return saved('reauth-failed')
+        if (!result.ok) return saved(context, 'reauth-failed')
         return redirect(routes.login.check.index.href(undefined, { searchParams: { email: user.email, next } }), 303)
       },
     },
 
-    async sessions(context) {
-      await deleteUserSessions(context.db, context.auth.identity.id)
-      context.session.destroy()
-      return redirect(routes.login.index.href(undefined, { searchParams: { notice: 'signed-out-everywhere' } }), 303)
+    sessions: {
+      middleware: [rateLimit('RL_ACCOUNT')],
+      async handler(context) {
+        await deleteUserSessions(context.db, context.auth.identity.id)
+        context.session.destroy()
+        return redirect(routes.login.index.href(undefined, { searchParams: { notice: 'signed-out-everywhere' } }), 303)
+      },
     },
 
-    async deleteAccount(context) {
+    deleteAccount: {
+      middleware: [rateLimit('RL_ACCOUNT')],
+      async handler(context) {
       let user = context.auth.identity
       let parsed = s.parseSafe(deleteForm, context.formData)
       if (!parsed.success || parsed.value.confirm !== user.handle.toLowerCase()) {
@@ -316,11 +340,12 @@ export default createController(routes.settings, {
       await deleteUserAndInvites(context.db, user.id, user.email)
       context.session.destroy()
       return redirect(routes.home.href(), 303)
+      },
     },
   },
 })
 
-type SettingsContext = Pick<AppContext, 'db' | 'render' | 'formData' | 'session'>
+type SettingsContext = Pick<AppContext, 'db' | 'render' | 'formData' | 'session' | 'url'>
 
 async function invalid(
   context: SettingsContext,
@@ -329,6 +354,7 @@ async function invalid(
   fields: SettingsErrors['fields'],
   names: string[],
   status = 422,
+  notice?: SettingsNotice,
 ) {
   let values = Object.fromEntries(names.map((name) => [name, readText(context.formData, name)]))
   return context.render(
@@ -337,9 +363,18 @@ async function invalid(
       account={await getAccountSettings(context.db, user, context.session.id)}
       recentAuth={signedInRecently(context.session)}
       errors={{ section, fields, values }}
+      notice={notice}
+      host={context.url.host}
     />,
     { status },
   )
+}
+
+const methodsError: SettingsNotice = { section: 'sign-in', tone: 'warning', text: 'That didn’t work. Try again.' }
+
+/** 303 back to the section, the outcome flashed (decision 068). */
+function saved(context: Pick<AppContext, 'session'>, what: string, extra: { method?: string } = {}) {
+  return settingsRedirect(context.session, what, extra)
 }
 
 async function handleTaken(context: SettingsContext, handle: string, user: User): Promise<boolean> {
@@ -353,109 +388,3 @@ function fieldOf(issue: FormIssue): string | undefined {
   return typeof key === 'string' ? key : undefined
 }
 
-const anchors: Record<string, SettingsSection> = {
-  profile: 'profile',
-  appearance: 'appearance',
-  'appearance-error': 'appearance',
-  'email-sent': 'email',
-  'email-changed': 'email',
-  'email-cancelled': 'email',
-  'email-taken': 'email',
-  reauth: 'email',
-  'reauth-failed': 'email',
-  removed: 'sign-in',
-  renamed: 'sign-in',
-  'passkey-added': 'sign-in',
-  'passkey-failed': 'sign-in',
-  'passkey-duplicate': 'sign-in',
-  'passkey-limit': 'sign-in',
-  'passkey-name': 'sign-in',
-  disconnected: 'sign-in',
-  connected: 'sign-in',
-  'already-linked': 'sign-in',
-  'passkey-needs-js': 'sign-in',
-  'methods-error': 'sign-in',
-}
-
-function saved(what: string, extra: Record<string, string> = {}) {
-  let href = routes.settings.index.href(undefined, { searchParams: { saved: what, ...extra } })
-  let anchor = what === 'reauth' && extra.for === 'passkey' ? 'sign-in' : (anchors[what] ?? 'profile')
-  return redirect(`${href}#${anchor}`, 303)
-}
-
-const providerNames: Record<string, string> = { github: 'GitHub', google: 'Google' }
-
-/** The success (or follow-up) Callout for `?saved=` after a PRG redirect. */
-export function noticeFor(params: URLSearchParams): SettingsNotice | undefined {
-  let provider = providerNames[params.get('method') ?? ''] ?? 'Provider'
-  switch (params.get('saved')) {
-    case 'profile':
-      return { section: 'profile', tone: 'ok', text: 'Saved. Your profile is up to date.' }
-    case 'appearance':
-      return { section: 'appearance', tone: 'ok', text: 'Saved. Every page uses this theme now, on any device you sign in on.' }
-    case 'appearance-error':
-      return { section: 'appearance', tone: 'warning', text: 'Pick System, Dark or Light.' }
-    case 'email-sent':
-      return { section: 'email', tone: 'ok', text: 'Check your new inbox. Your email changes once you confirm it.' }
-    case 'email-changed':
-      return {
-        section: 'email',
-        tone: 'ok',
-        text: 'Email changed. Sign-in links go there now, and your other devices are signed out.',
-      }
-    case 'reauth':
-      return {
-        section: params.get('for') === 'email' ? 'email' : 'sign-in',
-        tone: 'warning',
-        text: 'For your safety, confirm it’s you first: we’ll email a code to your current address, or use a passkey.',
-      }
-    case 'reauth-failed':
-      return {
-        section: 'email',
-        tone: 'warning',
-        text: 'We couldn’t send the code just now (or sent too many). Try again in a few minutes.',
-      }
-    case 'email-taken':
-      return {
-        section: 'email',
-        tone: 'warning',
-        text: 'That address already has a Bits account, so your email hasn’t changed.',
-      }
-    case 'email-cancelled':
-      return { section: 'email', tone: 'ok', text: 'Cancelled. Your email hasn’t changed.' }
-    case 'removed':
-      return {
-        section: 'sign-in',
-        tone: 'ok',
-        text: 'Passkey removed. Your device may still offer it; you can delete it there too.',
-      }
-    case 'renamed':
-      return { section: 'sign-in', tone: 'ok', text: 'Passkey renamed.' }
-    case 'passkey-added':
-      return { section: 'sign-in', tone: 'ok', text: 'Passkey added. Use it next time you sign in.' }
-    case 'passkey-failed':
-      return { section: 'sign-in', tone: 'warning', text: 'Passkey wasn’t added. Try again.' }
-    case 'passkey-duplicate':
-      return { section: 'sign-in', tone: 'warning', text: 'That passkey is already on your account.' }
-    case 'passkey-limit':
-      return { section: 'sign-in', tone: 'warning', text: 'You have the most passkeys an account can hold. Remove one first.' }
-    case 'passkey-name':
-      return { section: 'sign-in', tone: 'warning', text: 'Give the passkey a name of up to 60 characters.' }
-    case 'disconnected':
-      return { section: 'sign-in', tone: 'ok', text: `${provider} disconnected.` }
-    case 'connected':
-      return { section: 'sign-in', tone: 'ok', text: `${provider} connected. You can sign in with it now.` }
-    case 'already-linked':
-      return {
-        section: 'sign-in',
-        tone: 'warning',
-        text: `That ${provider} account is already connected to a different Bits account.`,
-      }
-    case 'passkey-needs-js':
-      return { section: 'sign-in', tone: 'warning', text: 'Adding a passkey needs JavaScript. Turn it on and try again.' }
-    case 'methods-error':
-      return { section: 'sign-in', tone: 'warning', text: 'That didn’t work. Try again.' }
-    default:
-      return undefined
-  }
-}

@@ -1,12 +1,11 @@
-import { redirect } from 'remix/response/redirect'
 import { createController } from 'remix/router'
 
 import { canAuthor, requireUser, toViewer } from '../../auth/identity.ts'
 import { contentBucket } from '../../content/request.ts'
-import { getDatabase } from '../../middleware/database.ts'
 import { routes } from '../../routes.ts'
 import { ForbiddenPage } from '../../ui/not-found-page.tsx'
 import { AuthorPage } from './author-page.tsx'
+import { AUTHOR_WELCOME_KEY, authorWelcome } from './welcome.ts'
 import { getManagedCourses } from './data.ts'
 
 // Authoring home: authors see the courses they own, admins see every course.
@@ -25,17 +24,12 @@ export default createController(routes.author, {
       }
       return context.render(
         <AuthorPage
-          courses={await getManagedCourses(getDatabase(context), contentBucket(), user)}
+          courses={await getManagedCourses(context.db, contentBucket(), user)}
           viewer={viewer}
           currentPath={context.url.pathname}
-          repoSaved={context.url.searchParams.get('repo') === 'saved'}
+          welcome={authorWelcome(context.session.get(AUTHOR_WELCOME_KEY))}
         />,
       )
-    },
-    // Stub: saving sync settings lands with the GitHub webhook milestone.
-    repo(context) {
-      if (!canAuthor(context.auth.identity)) return new Response('Forbidden', { status: 403 })
-      return redirect(routes.author.index.href(undefined, { searchParams: { repo: 'saved' } }), 303)
     },
   },
 })
