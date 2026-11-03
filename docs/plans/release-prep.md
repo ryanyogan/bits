@@ -18,7 +18,13 @@ Done and live:
 Wave 2 content: LIVE. C1+C2 merged, then the W2-injection fix `abb6984` (grounding lines need source material
 quoted from the prompt; decision 064 §3.7). Full eval on master, 3 runs: 108/108, 107/108, 108/108 agreement; 0/20
 injections every run (~$0.01 a run). Deployed (Worker 760bbd11) and published: all 8 courses got new versions.
-Next: live QA of the converted lessons (lane QA-coach), then the follow-ups below.
+Live QA of the coached lessons is done (`release-audit/qa/QA-coach.md`): no P0, six P1s. The worst two are times like
+"9:40" losing their minutes in prose (directive parse), and keyword prompts passing with full XP once the hourly run
+limit returns an example reply. IN FLIGHT:
+- lane W2-fix (opus, port 44310): every QA finding. Owns compile/runs/composer/lesson UI.
+- lane C3 (fork, port 44311): content only. Strengthens the weak data checks and adds hands-on coached exercises to the
+  quiz-only lessons; say-hi-to-claude reference.
+Merge W2-fix first, then C3 (cases.ts: keep both blocks), run the eval 3 times, deploy, then `content upload --remote`.
 Eval command: `pnpm --filter @bits/web coach:eval --vars /home/ryan/code/bits/apps/web/.dev.vars` (absolute path, no `--`).
 Weak "the data is in the prompt" checks in real lessons (from the injection lane):
 - context-is-everything 03 (/30 days/), 04 (/lisbon/i), 06 (/4417|damaged/i);
