@@ -17,6 +17,14 @@ import { continueHref, nextStep } from './home/continue.ts'
 import { hasSessionProgress } from '../middleware/learner.tsx'
 import { NotFoundPage } from '../ui/not-found-page.tsx'
 
+const tryItModule = () => import('./home/try-it.tsx')
+
+async function tryItSection(context: Parameters<typeof getCatalog>[0]) {
+  let [{ loadTryIt, TryIt }, catalog] = await Promise.all([tryItModule(), getCatalog(context)])
+  let exercise = await loadTryIt(catalog)
+  return exercise ? <TryIt exercise={exercise} /> : undefined
+}
+
 export default createController(routes, {
   actions: {
     // Normally answered by serveAssets() in router.ts, before the session.
@@ -64,7 +72,11 @@ export default createController(routes, {
               nextStep(catalog, completed),
             )
           : undefined
-      return context.render(<HomePage viewer={viewer} next={next} progress={progress} />)
+      // A fresh visitor gets "Try it now" instead (decision 074): lesson 1's
+      // exercise, from the catalog (no D1). The composer loads here, not at
+      // isolate startup (decisions 026, 052).
+      let tryIt = progress ? undefined : await tryItSection(context)
+      return context.render(<HomePage viewer={viewer} next={next} progress={progress} tryIt={tryIt} />)
     },
     // The header's "Continue" key (decision 065): one link on every page, so
     // no page loads progress just to draw the bar. Signed out, lesson 1.
