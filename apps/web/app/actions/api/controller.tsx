@@ -11,10 +11,11 @@ import { routes } from '../../routes.ts'
 import { fieldNames } from '../courses/lesson/ui/exercise.ts'
 import { coachAttempt, revealReference } from '../../runs/coach.ts'
 import { jsonError, startRun } from '../../runs/run.ts'
+import { flashCheck } from '../../verify/session.ts'
 import { completeVideoUpload, startVideoUpload, uploadVideoPart } from '../../video/upload.ts'
 import { authorUpload } from './author-upload.ts'
 import { saveDraftsAction } from './drafts.ts'
-import { askForm, coachForm, runForm } from './schema.ts'
+import { askForm, coachForm, runForm, verifyForm } from './schema.ts'
 
 function noStoreJson(body: unknown) {
   return Response.json(body, { headers: { 'Cache-Control': 'no-store' } })
@@ -65,6 +66,28 @@ export default createController(routes.api, {
         if (wantsJson) return result.ok ? noStoreJson(result.verdict) : jsonError(result.error, result.status)
         if (!result.ok) return back()
         flashVerdict(context, { course, lesson, ask, verdict: result.verdict })
+        return back()
+      },
+    },
+    // A deploy check (decision 072): bits calls the block's path on the
+    // learner's workers.dev origin from the server and grades the reply.
+    // JSON for the island; a native form (no JS yet) gets a 303 back to the
+    // lesson, which shows the flashed verdict. The fetch code loads on use.
+    verify: {
+      middleware: [rateLimit('RL_VERIFY', () => jsonError('rate_limited', 429, { retryAfter: 60 }))],
+      async handler(context) {
+        let parsed = s.parseSafe(verifyForm, context.formData)
+        if (!parsed.success) {
+          return jsonError('invalid', 422, { issues: parsed.issues.map((issue) => issue.message) })
+        }
+        let { course, lesson, verify, url } = parsed.value
+        let wantsJson = (context.headers.get('Accept') ?? '').includes('application/json')
+        let back = () => redirect(`${routes.courses.lesson.index.href({ course, lesson })}#verify-${verify}`, 303)
+        let { verifyDeploy } = await import('../../verify/verify.ts')
+        let result = await verifyDeploy(context, { course, lesson, verify, url })
+        if (wantsJson) return result.ok ? noStoreJson(result.verdict) : jsonError(result.error, result.status, { message: result.message })
+        if (result.ok) flashCheck(context, course, lesson, { verify, verdict: result.verdict })
+        else if (result.status !== 404) flashCheck(context, course, lesson, { verify, error: result.message, url })
         return back()
       },
     },

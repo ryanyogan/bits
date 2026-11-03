@@ -97,6 +97,13 @@ describe('mail quota and housekeeping (decision 039)', () => {
            values (?, null, ?, 'v', 'c', 'l', 'e', 'reveal', ?)`,
         )
         .bind(id, userId, createdAt)
+    let build = (id: string, userId: string | null, outcome: string, createdAt: number) =>
+      d1
+        .prepare(
+          `insert into build_checks (id, user_id, visitor, course_id, lesson_slug, verify_id, origin, path, outcome, created_at)
+           values (?, ?, 'v', 'c', 'l', 'deploy', 'https://klippy.someone.workers.dev', '/health', ?, ?)`,
+        )
+        .bind(id, userId, outcome, createdAt)
     let video = (id: string, status: string, createdAt: number) =>
       d1
         .prepare(
@@ -132,6 +139,11 @@ describe('mail quota and housekeeping (decision 039)', () => {
       reveal('cv-anon-old', null, now - 8 * DAY),
       reveal('cv-anon-new', null, now - DAY),
       reveal('cv-user-old', user.id, now - 30 * DAY),
+      build('b-anon-old', null, 'pass', now - 8 * DAY),
+      build('b-anon-new', null, 'checks', now - DAY),
+      build('b-user-failed-old', user.id, 'timeout', now - 31 * DAY),
+      build('b-user-failed-new', user.id, 'checks', now - 29 * DAY),
+      build('b-user-passed-old', user.id, 'pass', now - 400 * DAY),
       video('v-stale', 'uploading', now - 8 * DAY),
       video('v-fresh', 'uploading', now - DAY),
       video('v-ready', 'ready', now - 30 * DAY),
@@ -160,6 +172,7 @@ describe('mail quota and housekeeping (decision 039)', () => {
       staleUploads: 1,
       anonymousAsks: 1,
       anonymousVerdicts: 1,
+      buildChecks: 2,
     })
 
     let ids = async (sql: string) => (await d1.prepare(sql).all<{ id: string }>()).results.map((row) => row.id).sort()
@@ -173,6 +186,7 @@ describe('mail quota and housekeeping (decision 039)', () => {
     assert.deepEqual(await ids('select id from exercise_attempts'), ['r-anon-new', 'r-user-old'])
     assert.deepEqual(await ids('select id from ask_attempts'), ['a-anon-new', 'a-user-old'])
     assert.deepEqual(await ids('select id from coach_verdicts'), ['cv-anon-new', 'cv-user-old'])
+    assert.deepEqual(await ids('select id from build_checks'), ['b-anon-new', 'b-user-failed-new', 'b-user-passed-old'])
     let videos = (await d1.prepare('select id, status, upload_id from videos order by id').all()).results
     assert.deepEqual(videos, [
       { id: 'v-fresh', status: 'uploading', upload_id: 'up-v-fresh' },

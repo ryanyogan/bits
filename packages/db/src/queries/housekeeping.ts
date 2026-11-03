@@ -17,6 +17,10 @@ export const retention = {
   anonymousAsksMs: 7 * DAY,
   /** Signed-out coach verdicts and reveals: only the caps and the lesson save need them (decision 064). */
   anonymousVerdictsMs: 7 * DAY,
+  /** Signed-out build checks: only the hourly caps and the lesson save need them (decision 072). */
+  anonymousBuildChecksMs: 7 * DAY,
+  /** An account's failed build checks: kept a month for the learner's export, then dropped (passing ones back the certificate). */
+  failedBuildChecksMs: 30 * DAY,
   /** Daily mail counters (decision 039). */
   mailQuotaDays: 30,
   /** Author invites stay 30 days past expiry, accepted or not, for the admin page (decision 037). */
@@ -55,6 +59,7 @@ export interface HousekeepingCounts {
   staleUploads: number
   anonymousAsks: number
   anonymousVerdicts: number
+  buildChecks: number
 }
 
 /**
@@ -69,8 +74,10 @@ export interface HousekeepingCounts {
  * - marks `uploading` videos older than R2's 7-day abort window `failed`
  *   (the row stays: its r2_key is never reused);
  * - deletes signed-out answers to quick checks older than 7 days;
- * - and signed-out coach verdicts older than 7 days (a run's verdict also
- *   goes with its run).
+ * - signed-out coach verdicts older than 7 days (a run's verdict also
+ *   goes with its run);
+ * - and build checks (decision 072): signed-out ones older than 7 days, and
+ *   an account's failed ones older than 30 (passing ones stay).
  */
 export async function deleteExpiredRows(db: D1DataTableDatabase, now: number): Promise<HousekeepingCounts> {
   let d1 = db.d1
@@ -95,6 +102,12 @@ export async function deleteExpiredRows(db: D1DataTableDatabase, now: number): P
     d1
       .prepare('delete from coach_verdicts where user_id is null and created_at < ?')
       .bind(now - retention.anonymousVerdictsMs),
+    d1
+      .prepare(
+        `delete from build_checks
+         where (user_id is null and created_at < ?1) or (user_id is not null and outcome != 'pass' and created_at < ?2)`,
+      )
+      .bind(now - retention.anonymousBuildChecksMs, now - retention.failedBuildChecksMs),
   ])
   let changes = results.map((result) => result.meta.changes)
   return {
@@ -107,5 +120,6 @@ export async function deleteExpiredRows(db: D1DataTableDatabase, now: number): P
     staleUploads: changes[6] ?? 0,
     anonymousAsks: changes[7] ?? 0,
     anonymousVerdicts: changes[8] ?? 0,
+    buildChecks: changes[9] ?? 0,
   }
 }

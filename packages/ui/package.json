@@ -13,6 +13,7 @@
     "./lib/field": "./src/lib/field.ts",
     "./lib/prefetch": "./src/lib/prefetch.ts",
     "./lib/states": "./src/lib/states.ts",
+    "./lib/verify-client": "./src/lib/verify-client.ts",
     "./*": "./src/*.tsx"
   },
   "scripts": {

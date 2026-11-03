@@ -44,3 +44,14 @@ export const coachForm = f.object({
   attempt: f.field(s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(64)))),
   reveal: f.field(s.optional(s.literal('1'))),
 })
+
+/**
+ * POST /api/verify (decision 072): the lesson, the verify block, and the
+ * learner's deployed URL (checked again by `learnerOrigin`).
+ */
+export const verifyForm = f.object({
+  course: f.field(slug),
+  lesson: f.field(slug),
+  verify: f.field(slug),
+  url: f.field(s.string().pipe(checks.maxLength(300))),
+})

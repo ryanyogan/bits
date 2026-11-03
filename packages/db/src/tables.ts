@@ -270,6 +270,35 @@ export const askAttempts = table({
 
 export type AskAttempt = TableRow<typeof askAttempts>
 
+/** How a build check ended (migration 0015, decision 072): `pass`, `pending` while the fetch runs, else why it failed. */
+export const buildOutcomes = ['pending', 'pass', 'checks', 'status', 'redirect', 'timeout', 'too-large', 'network'] as const
+export type BuildOutcome = (typeof buildOutcomes)[number]
+
+/** The build-check journal: each call bits made to a learner's deployed Worker (migration 0015, decision 072). */
+export const buildChecks = table({
+  name: 'build_checks',
+  columns: {
+    id: c.text(),
+    user_id: c.text().nullable(),
+    /** Session-held id of a signed-out visitor. */
+    visitor: c.text().nullable(),
+    ip_hash: c.text().nullable(),
+    course_id: c.text(),
+    lesson_slug: c.text(),
+    verify_id: c.text(),
+    /** `https://<name>.workers.dev`: scheme and host only. */
+    origin: c.text(),
+    /** The block's authored path. */
+    path: c.text(),
+    outcome: c.enum(buildOutcomes),
+    status: c.integer().nullable(),
+    duration_ms: c.integer(),
+    created_at: c.integer(),
+  },
+})
+
+export type BuildCheck = TableRow<typeof buildChecks>
+
 export const coachLayers = ['coach', 'reply', 'pattern', 'soft', 'pending', 'reveal'] as const
 export type CoachLayer = (typeof coachLayers)[number]
 

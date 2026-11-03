@@ -29,6 +29,8 @@ export type RateLimitTier =
   | 'RL_ASKS'
   /** Coach verdicts and strong-prompt reveals (/api/coach): 20 a minute (decision 064). */
   | 'RL_COACH'
+  /** Checks of a learner's deployed Worker (/api/verify): 10 a minute (decision 072; 2012/3012, as 2008 is RL_ACCOUNT's). */
+  | 'RL_VERIFY'
   /** Account changes (Settings profile, sign out everywhere, delete account): 10 a minute (decision 068). */
   | 'RL_ACCOUNT'
   /** Publishing or rolling back a course (each rewrites catalog/live.json): 10 a minute (decision 068). */
