@@ -88,7 +88,8 @@
     { "name": "RL_REPORTS", "namespace_id": "2004", "simple": { "limit": 30, "period": 60 } },
     { "name": "RL_DRAFTS", "namespace_id": "2005", "simple": { "limit": 60, "period": 60 } },
     { "name": "RL_UPLOADS", "namespace_id": "2006", "simple": { "limit": 120, "period": 60 } },
-    { "name": "RL_ASKS", "namespace_id": "2007", "simple": { "limit": 30, "period": 60 } }
+    { "name": "RL_ASKS", "namespace_id": "2007", "simple": { "limit": 30, "period": 60 } },
+    { "name": "RL_LOGOUT", "namespace_id": "2010", "simple": { "limit": 10, "period": 60 } }
   ],
 
   // Non-secret config. Secrets (SESSION_SECRET,
@@ -179,7 +180,8 @@
       { "name": "RL_REPORTS", "namespace_id": "3004", "simple": { "limit": 30, "period": 60 } },
       { "name": "RL_DRAFTS", "namespace_id": "3005", "simple": { "limit": 60, "period": 60 } },
       { "name": "RL_UPLOADS", "namespace_id": "3006", "simple": { "limit": 120, "period": 60 } },
-      { "name": "RL_ASKS", "namespace_id": "3007", "simple": { "limit": 30, "period": 60 } }
+      { "name": "RL_ASKS", "namespace_id": "3007", "simple": { "limit": 30, "period": 60 } },
+      { "name": "RL_LOGOUT", "namespace_id": "3010", "simple": { "limit": 10, "period": 60 } }
     ],
     // The preview database and bucket are created in ENAM too, so the same
     // hint keeps a Preview next to them.

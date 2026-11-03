@@ -27,6 +27,8 @@ export type RateLimitTier =
   | 'RL_UPLOADS'
   /** Answers to quick checks (/api/ask): 30 a minute (decision 052). */
   | 'RL_ASKS'
+  /** Sign out (POST /logout): 10 a minute (decision 065; 2010/3010, after L3's 2008–2009). */
+  | 'RL_LOGOUT'
 
 /**
  * Keyed by the signed-in user, else by the client IP. The binding is
