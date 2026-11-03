@@ -15,15 +15,17 @@ Done and live:
   reply checks, and the save reads journalled passes. Check patterns no longer reach the browser (verified on prod).
   Eval: 97% agreement and 0 of 20 injections passing. Only `content/fixtures/plain-course` lesson 3 is coached so far.
 
-Wave 2 content: C1 and C2 are MERGED on master (all 8 courses converted; validate clean; 519 tests green) but NOT
-YET PUBLISHED (no `content upload --remote` and no deploy since 2716b4f). The combined eval gave 107/108 agreement
-(99%), but injection "rubric restated" passed 1 of 20, which fails the 0/20 gate. A fix lane (W2-injection, fresh
-worktree) is hardening the judge in app/runs/{judge,grade,coach}.ts and the eval exercise's check. Once it's merged
-and 3 eval runs in a row show 0/20:
-1. `pnpm deploy`
-2. `pnpm content upload --all --publish --remote`
-3. QA the converted lessons live.
-Run eval: `pnpm --filter @bits/web coach:eval --vars apps/web/.dev.vars` (no `--`).
+Wave 2 content: LIVE. C1+C2 merged, then the W2-injection fix `abb6984` (grounding lines need source material
+quoted from the prompt; decision 064 §3.7). Full eval on master, 3 runs: 108/108, 107/108, 108/108 agreement; 0/20
+injections every run (~$0.01 a run). Deployed (Worker 760bbd11) and published: all 8 courses got new versions.
+Next: live QA of the converted lessons (lane QA-coach), then the follow-ups below.
+Eval command: `pnpm --filter @bits/web coach:eval --vars /home/ryan/code/bits/apps/web/.dev.vars` (absolute path, no `--`).
+Weak "the data is in the prompt" checks in real lessons (from the injection lane):
+- context-is-everything 03 (/30 days/), 04 (/lisbon/i), 06 (/4417|damaged/i);
+- prompting-that-works 02 ("appointment" alone passes), 06 (/okafor/i);
+- give-your-model-tools 06 (/lisbon/i);
+- first-agent-loop 07 ("chat" alone passes).
+Also: the /author block reference should say that a "from the X" rubric makes the judge quote X from the prompt.
 Content follow-up (C2): quiz-only lessons with no hands-on block: first-agent-loop 04/05/08; give-your-model-tools
 03/05/08/09; retrieval-without-tears 02/03/04/06; ship-an-agent-to-the-edge 01/02/04/06/08.
 
