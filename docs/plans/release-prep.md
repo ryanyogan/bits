@@ -18,20 +18,50 @@ Done and live:
 Wave 2 content: LIVE. C1+C2 merged, then the W2-injection fix `abb6984` (grounding lines need source material
 quoted from the prompt; decision 064 §3.7). Full eval on master, 3 runs: 108/108, 107/108, 108/108 agreement; 0/20
 injections every run (~$0.01 a run). Deployed (Worker 760bbd11) and published: all 8 courses got new versions.
-Live QA of the coached lessons is done (`release-audit/qa/QA-coach.md`): no P0, six P1s. The worst two are times like
-"9:40" losing their minutes in prose (directive parse), and keyword prompts passing with full XP once the hourly run
-limit returns an example reply. IN FLIGHT:
-- lane W2-fix (opus, port 44310): every QA finding. Owns compile/runs/composer/lesson UI.
-- lane C3 (fork, port 44311): content only. Strengthens the weak data checks and adds hands-on coached exercises to the
-  quiz-only lessons; say-hi-to-claude reference.
-Merge W2-fix first, then C3 (cases.ts: keep both blocks), run the eval 3 times, deploy, then `content upload --remote`.
-Eval command: `pnpm --filter @bits/web coach:eval --vars /home/ryan/code/bits/apps/web/.dev.vars` (absolute path, no `--`).
-Weak "the data is in the prompt" checks in real lessons (from the injection lane):
-- context-is-everything 03 (/30 days/), 04 (/lisbon/i), 06 (/4417|damaged/i);
-- prompting-that-works 02 ("appointment" alone passes), 06 (/okafor/i);
-- give-your-model-tools 06 (/lisbon/i);
-- first-agent-loop 07 ("chat" alone passes).
-Also: the /author block reference should say that a "from the X" rubric makes the judge quote X from the prompt.
+Live QA of the coached lessons is done (`release-audit/qa/QA-coach.md`, committed): no P0, six P1s + P2s.
+
+STOPPED at the owner's request (2026-11-02). Nothing below is merged; production is Worker 760bbd11 / master content.
+| Lane | Worktree (`.claude/worktrees/agent-<id>`) | State |
+|---|---|---|
+| W2-fix (opus, port 44310) | aac9d152102459435 | 4 commits + 3 uncommitted files, stopped mid-work |
+| C3 (fork, port 44311) | ae60717cb4b399441 | DONE: 7 commits, clean; eval 149/150, 0/20; tests green |
+
+W2-fix, done in commits:
+- 8e00bee: a colon in a line is text, never a directive (times like 9:40 kept).
+- 571bc8e: a run limit's saved example is never graded or passed; hints follow what failed.
+- 9660c38: the criteria fold to one line after a verdict; the coach turn lists only what isn't met.
+- 681d5ed: decision 064 amended; the composer stays put; CRLF drafts.
+
+W2-fix, still to do (resume a fresh opus agent in the SAME worktree; brief = the QA-coach.md findings plus these):
+- (a) Check the QA list for anything not yet covered:
+  - XP cost shown before "Show a strong prompt";
+  - success text once;
+  - explain "3 of 4";
+  - pre-coach saved lessons;
+  - the quick-check link;
+  - the reward label;
+  - the /author "from the X" note.
+- (b) `groundedLine()` misfires: "Keeps the id from the line" became a grounding line and failed correct replies.
+  - Make the trigger stricter, or add an explicit `grounded` rubric flag.
+  - Warn in the build when the heuristic fires.
+  - The agent had just started this.
+- (c) Build warning for an `evidence` rubric about an absence ("doesn't include", "leaves out").
+- (d) Check C3's rubric labels (read-only, branch above) for behaviour changes from (b).
+- (e) Run the eval 3 times (gate: ≥90% agreement and 0/20 every run), then a browser check and tests.
+
+Then:
+1. Merge W2-fix, then C3. Expect a conflict in cases.ts; keep every lane block. C3 also edited one line of
+   courses/controller.test.ts, which is fine.
+2. Run the eval 3 times on master.
+3. `pnpm deploy`, then `pnpm content upload --all --publish --remote`.
+4. Smoke-test and push.
+
+C3 summary:
+- Weak data checks strengthened across the courses.
+- 12 new or converted coached exercises.
+- say-hi draft and reference now differ meaningfully.
+- 8 lessons skipped as contrived: fal05, gymt05, gymt08, rwt03, ship02/04/08 (reasons in its report).
+
 Content follow-up (C2): quiz-only lessons with no hands-on block: first-agent-loop 04/05/08; give-your-model-tools
 03/05/08/09; retrieval-without-tears 02/03/04/06; ship-an-agent-to-the-edge 01/02/04/06/08.
 
