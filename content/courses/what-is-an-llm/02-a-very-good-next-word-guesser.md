@@ -109,14 +109,19 @@ computation behind each step is not that naive.
 Your turn. Ask Claude to finish a sentence with **just one word**, then run it
 a few times. Does the word change?
 
-:::prompt{id="finish-the-sentence" xp=40}
+:::prompt{id="finish-the-sentence" xp=40 coach}
 Ask Claude to finish a sentence with one word
 
+- goal "Give Claude the start of a sentence and get back exactly one word that finishes it"
 - placeholder "Finish this sentence with one word: …"
 - draft "Finish this sentence: The best thing about rainy days is"
-- check "Asks it to finish a sentence"  /finish|complete|continue|fill in|next word/i
-- check "Asks for one word"             /one word|1 word|single word|one-word/i
-- check "Gives it a sentence to finish" /[:…_]|\.\.\./
+- check "Gives it a sentence to finish" /finish|complete|continue|fill in|next word/i
+- check "Asks for one word"             /one word|1 word|single word|one-word|only the word/i
+- expect "Replies with one word" one-word
+- rubric "The word fits the end of your sentence" must
+- hint "Look at the reply: is it one word, or a word plus some chat? What could you add to rule out the chat?"
+- hint "Say it plainly: “Reply with one word only, nothing else.”"
+- reference "Finish this sentence with one word. Reply with that word only, nothing else.\n\nThe best thing about rainy days is"
 - run temperature=[1.0]
 - example T=1.0 "Puddles."
 - example T=1.0 "Coziness."
@@ -124,7 +129,6 @@ Ask Claude to finish a sentence with one word
 - example T=1.0 "Tea."
 - success "Same sentence, different words. Now you know where they come from." next="Next: words become tokens →"
 :::
-
 :::rabbithole
 - video "Transformers, the tech behind LLMs" by="3Blue1Brown" mins=27 url="https://www.youtube.com/watch?v=wjZofJX0v4M"
 - read "Next-token prediction" by="Matt Pocock (AI Hero)" url="https://www.aihero.dev/ai-coding-dictionary/next-token-prediction"

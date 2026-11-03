@@ -110,20 +110,26 @@ and the cached prefix's computation is reused rather than redone.
 Your turn. Write a sentence where a word like “it” could point two ways, and
 ask Claude what it refers to. Then swap one word and run it again.
 
-:::prompt{id="what-does-it-mean" xp=40}
+:::prompt{id="what-does-it-mean" xp=40 coach}
 Give Claude a sentence with a tricky “it”, then ask what “it” refers to
 
+- goal "Get Claude to say what a tricky “it” points to in your sentence, and why"
 - placeholder "The trophy didn't fit in the suitcase because it was too big. What does “it” refer to?"
 - draft "The trophy didn't fit in the suitcase because it was too big."
 - check "Has a word like “it”"        /\b(it|they|them|she|he|this)\b/i
 - check "Asks what it refers to"      /refers? to|stands? for|\bmeans?\b|points? to/i
+- expect "A short answer" sentences<=4
+- rubric "Names one thing from your sentence as what “it” refers to" must evidence
+- rubric "Says why, from the rest of the sentence" should
+- hint "Your sentence is there, but does Claude know what you want from it? What question is missing?"
+- hint "End with the question itself: “What does ‘it’ refer to, and why?”"
+- reference "The trophy didn't fit in the suitcase because it was too big. What does “it” refer to, and what in the sentence tells you?"
 - run temperature=[1.0]
 - example T=1.0 "“It” refers to the trophy. The trophy was too big to fit in the suitcase."
 - example T=1.0 "Here “it” means the trophy: it's the thing that was too big."
 - example T=1.0 "The trophy. Something too big is what stops it fitting, so “it” has to be the trophy, not the suitcase."
-- success "Change one word and the answer can flip. That's context at work." next="Next: what it can't do →"
+- success "Change one word and the answer can flip. Try “too small”. That's context at work." next="Next: what it can't do →"
 :::
-
 :::rabbithole
 - video "Attention in transformers, step-by-step" by="3Blue1Brown" mins=26 url="https://www.youtube.com/watch?v=eMlx5fFNoYc"
 :::

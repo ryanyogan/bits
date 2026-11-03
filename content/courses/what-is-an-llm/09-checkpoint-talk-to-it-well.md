@@ -107,22 +107,30 @@ an artefact you version, not an incantation.
 Checkpoint time. Write a prompt for something you actually need: an email, a
 plan, an explanation. Hit all four checks, then run it.
 
-:::prompt{id="talk-to-it-well" xp=60}
+:::prompt{id="talk-to-it-well" xp=60 coach}
 Write a prompt for a real task, with who it's for, why, a shape and room to ask
 
+- goal "Get a reply you could actually use: it fits the reader you named, in the shape you asked for"
 - placeholder "Write … for … because … Keep it under … If anything's unclear, ask me first."
 - draft "Write a welcome message for my running club."
 - check "Says who it's for"             /\bfor (a|an|my|our|the|new|people)\b|\bto (my|our)\b|audience|reader|beginner/i
 - check "Gives a reason or context"     /because|so that|\bgoal\b|\bcontext\b|I.m |\bI am\b|we.re|\bwe are\b/i
 - check "Sets a length or format"       /\bwords?\b|sentences?|bullet|\blist\b|paragraph|\bshort\b|\bunder\b|table|steps/i
 - check "Invites questions or doubt"    /not sure|don.t know|unsure|ask me|questions|clarif/i
+- rubric "The reply suits the reader you named" must
+- rubric "It follows the length or format you set" must
+- rubric "It uses the reason or context you gave" should
+- rubric "If something was unclear, it asks or says so instead of guessing" should
+- hint "Read the reply as the person it's for. Would they feel it was written for them?"
+- hint "Compare the reply's length with the limit you set. Did you give a number Claude can check itself against?"
+- hint "Name the reader, the reason, a size, and say “ask me if anything's unclear”."
+- reference "Write a welcome message for new members of my running club. Most are beginners and nervous about keeping up, so the message should make them feel they belong: our Saturday group runs slowly and nobody gets left behind. Keep it under 60 words, friendly and plain. If anything's unclear, ask me first."
 - run temperature=[1.0]
 - example T=1.0 "Welcome! Nobody gets left behind here. Our Saturday slow group runs at chatting pace, walk breaks included, so come as you are. See you Saturday!"
 - example T=1.0 "New to running? Perfect. Our Saturday slow group is built for beginners: easy pace, walk breaks welcome, no one left behind. We'd love to see you there."
 - example T=1.0 "Quick question first: do you want the Saturday start time and meeting spot included? Here's a draft without them: Welcome! Saturdays are slow and friendly, and everyone finishes together."
 - success "That's the course. You can talk to an LLM and you know what's going on inside it." next="Next: Tokens & temperature →"
 :::
-
 Finish this checkpoint and the course badge is yours. Two good next steps: **Tokens & temperature** goes
 deeper into tokens, odds and randomness, and **Prompting that works** turns
 these six habits into a toolkit.

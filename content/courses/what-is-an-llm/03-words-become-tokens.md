@@ -90,17 +90,28 @@ reverse this string, exact byte offsets) are the wrong shape for the model:
 do them in code and hand the model the result.
 :::
 
-:::quiz{id="strawberry" xp=20}
-A model miscounts the r's in “strawberry”. What's the most likely reason?
+Here's the fix in action. Claude works in chunks, but it can write the letters
+out one by one, and then each letter is its own token to count.
 
-- [ ] It has never seen the word before
-  Not quite. It has seen “strawberry” countless times. Seeing a word isn't the problem.
-- [x] It sees chunks of the word, not its letters
-  Right. The tokenizer hands it pieces like “straw” and “berry”, so it has to work out the spelling indirectly.
-- [ ] Counting is switched off to save tokens
-  Not quite. Nothing is switched off. The model just never gets the letters one by one.
+:::prompt{id="spell-it-out" xp=20 coach}
+Get Claude to count the r's in “strawberry” by spelling it out first
+
+- goal "Get the right count of r's in “strawberry”, with Claude spelling the word letter by letter before it counts"
+- placeholder "Spell “strawberry” …, then …"
+- draft "How many r's are in strawberry?"
+- check "Names the word"                 /strawberry/i
+- check "Asks it to spell the word out"  /spell|letter by letter|one letter|each letter|every letter|list the letters/i
+- expect "Gets the count right" match /\b3\b|\bthree\b/i
+- rubric "Spells the word out letter by letter before counting" must evidence
+- rubric "The count it gives is three" must evidence
+- hint "Your prompt asks for the answer straight away. What could Claude write first that would make each letter visible?"
+- hint "Ask for the letters one per line, then the count."
+- reference "Spell the word “strawberry” one letter per line. Then count how many of those letters are r, and give the total."
+- run temperature=[1.0]
+- example T=1.0 "s\nt\nr\na\nw\nb\ne\nr\nr\ny\n\nThat's 3 r's: one in “straw” and two in “berry”."
+- example T=1.0 "S-T-R-A-W-B-E-R-R-Y. The r's are letters 3, 8 and 9, so there are three."
+- success "Writing the letters out turned a spelling question into something the model can see. For real character work in your code, count in code." next="Next: where it learned →"
 :::
-
 That's enough tokens for now. The **Tokens & temperature** course goes deeper:
 counting them, weird splits, and how the odds turn into a choice.
 
