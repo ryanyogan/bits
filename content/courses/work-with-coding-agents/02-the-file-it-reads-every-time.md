@@ -109,8 +109,8 @@ Write a lean CLAUDE.md, then ask it how to run the tests
 - example T=1.0 "pnpm test runs the suite. (Not npm test: this project uses pnpm.)"
 - success "Short, specific, and every line changes what the agent does." next="Next: plan → build → review →"
 :::
-Now delete the pnpm line and ask again. Where does Claude's answer come
-from this time?
+Now delete the `pnpm test` line and ask again. What does Claude have to
+guess this time?
 
 :::rabbithole
 - read "How Claude remembers your project" by="Anthropic" url="https://code.claude.com/docs/en/memory"

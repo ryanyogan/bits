@@ -17,6 +17,9 @@ order: 1
 minutes: 7
 xp: 50
 module: The agent and you
+verified: 2026-11-03
+versions:
+  claude-code: "2.1.317"
 ---
 
 You've used Claude in a chat. A **coding agent** is Claude with hands: it

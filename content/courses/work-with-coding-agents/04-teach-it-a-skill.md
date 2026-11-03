@@ -5,6 +5,8 @@
 #   context, the body only when the skill is used; invoke with /skill-name; description and
 #   when_to_use truncated at 1,536 characters; /plugin marketplace add, /plugin install)
 #   https://code.claude.com/docs/en/skills
+#   (re-checked 2026-11-03: allowed-tools pre-approves tools for the invoking turn, it doesn't
+#   restrict; model applies for that turn; name is optional, defaults to the directory name)
 # - Cloudflare Agent setup docs, Claude Code + Cloudflare (/plugin marketplace add cloudflare/skills,
 #   /plugin install cloudflare@cloudflare: installs Cloudflare Skills and its MCP servers)
 #   https://developers.cloudflare.com/agent-setup/claude-code/
@@ -24,6 +26,9 @@ order: 4
 minutes: 8
 xp: 60
 module: Give it more to work with
+verified: 2026-11-03
+versions:
+  claude-code: "2.1.317"
 ---
 
 Your `CLAUDE.md` holds what the agent needs every session. But some know-how
@@ -45,9 +50,11 @@ Skills use progressive disclosure: each skill's `description` (plus
 optional `when_to_use`, together truncated at 1,536 characters in the
 listing) sits in context every session; the body, and any files it points
 to, load only when Claude invokes it. So the description is a routing rule:
-say what it does **and when to use it**. Frontmatter can also restrict
-tools (`allowed-tools`), pin a `model`, or turn off automatic use
-(`disable-model-invocation`). Invoke one directly with `/skill-name`.
+say what it does **and when to use it**. Frontmatter can also pre-approve
+tools for the turn that uses the skill (`allowed-tools`: it grants, it
+doesn't restrict), switch the `model` for that turn, or turn off automatic
+use so it only runs as `/name` (`disable-model-invocation`). `name` is
+optional and defaults to the folder name.
 :::
 
 ```
