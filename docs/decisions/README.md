@@ -74,3 +74,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 066 | [Course presentation: the syllabus first, one action per state](066-course-presentation.md) |
 | 068 | [Signed-in surfaces: private by default, honest authoring, notices where you are](068-signed-in-surfaces.md) |
 | 070 | [One primary action, one verb: Start free or Continue](070-one-primary-action.md) |
+| 071 | [Build-along courses: one Cloudflare personal agent, built from zero (proposed)](071-build-along-courses.md) |
