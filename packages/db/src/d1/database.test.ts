@@ -5,7 +5,7 @@ import { createTestD1 } from '../../test/d1.ts'
 import { createUser, findUserByEmail, findUserByHandle, findUserById } from '../queries/users.ts'
 import { sessions, users } from '../tables.ts'
 import { createD1Database, type D1DataTableDatabase } from './database.ts'
-import { D1UnsupportedError } from './driver.ts'
+import { D1UnsupportedError } from 'data-table-d1'
 
 describe('D1 data-table driver', () => {
   let db: D1DataTableDatabase

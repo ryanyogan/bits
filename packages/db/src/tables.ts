@@ -26,10 +26,12 @@ export type OAuthProvider = (typeof oauthProviders)[number]
 export const emailTokenPurposes = ['sign-in', 'email-change', 'email-revert'] as const
 export type EmailTokenPurpose = (typeof emailTokenPurposes)[number]
 
-// D1 stores booleans as 0/1 and JSON as text. The driver encodes on write;
-// these afterRead hooks decode on read so rows come back as their TS types.
+// D1 stores booleans as 0/1 and JSON as text. The driver (data-table-d1)
+// encodes on write and decodes boolean() and json() columns on read; these
+// afterRead hooks still run after it, so they accept decoded values too, and
+// keep the "a JSON column is always an array" rule.
 export function decodeJsonArray(value: unknown): unknown {
-  if (typeof value !== 'string') return value
+  if (typeof value !== 'string') return value == null || Array.isArray(value) ? value : []
   try {
     let parsed: unknown = JSON.parse(value)
     return Array.isArray(parsed) ? parsed : []
