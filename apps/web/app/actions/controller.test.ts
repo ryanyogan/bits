@@ -39,6 +39,22 @@ describe('router smoke test', () => {
     assert.match(html, /<h1[^>]*>That page isn't here\.<\/h1>/)
   })
 
+  it('any other method to an unknown URL gets the app-styled 404, not a bare 405', async () => {
+    let attempts: [string, RequestInit][] = [
+      ['/definitely/not/a/page', { method: 'POST', body: new FormData() }],
+      ['/definitely/not/a/page', { method: 'PUT' }],
+      ['/definitely/not/a/page', { method: 'DELETE' }],
+      // A URL that only has a GET route (a stale form action) falls through to the catch-all too.
+      [routes.courses.index.href(), { method: 'POST', body: new FormData() }],
+    ]
+    for (let [path, init] of attempts) {
+      let response = await request(path, init)
+      assert.equal(response.status, 404, `${init.method} ${path}`)
+      assert.equal(response.headers.get('Allow'), null, `${init.method} ${path}`)
+      assert.match(await response.text(), /<h1[^>]*>That page isn't here\.<\/h1>/, `${init.method} ${path}`)
+    }
+  })
+
   it('the catch-all does not shadow real routes or POST endpoints', async () => {
     assert.equal((await request(routes.health.href())).status, 200)
     // An empty POST reaches the run endpoint (422 invalid), not the 404 page.
@@ -219,5 +235,25 @@ describe('router smoke test', () => {
 
     let font = html.match(/<link data-rmx-key="[^"]+" rel="preload" as="font" type="font\/woff2" href="([^"]+)"/)![1]!
     assert.equal((await request(font)).status, 200)
+  })
+
+  it('serves assets before the session: no D1 read, no cookie, even signed in', async () => {
+    let { cookie } = await signIn('assets-viewer@example.com')
+    let html = await (await fetchAs(cookie, routes.home.href())).text()
+    let stylesheet = html.match(/<link data-rmx-key="[^"]+" rel="stylesheet" href="([^"]+tokens[^"]*)"/)![1]!
+    for (let method of ['GET', 'HEAD']) {
+      let response = await fetchAs(cookie, stylesheet, { method })
+      assert.equal(response.status, 200, method)
+      assert.equal(response.headers.get('Server-Timing'), null, `${method}: no D1`)
+      assert.equal(response.headers.get('Set-Cookie'), null, `${method}: no session`)
+      assert.equal(response.headers.get('X-Content-Type-Options'), 'nosniff', `${method}: security headers`)
+      let body = await response.text()
+      if (method === 'HEAD') assert.equal(body, '')
+      else assert.match(body, /--volt/)
+    }
+    let missing = await fetchAs(cookie, routes.assets.href({ path: 'no/such/file.css' }))
+    assert.equal(missing.status, 404)
+    assert.equal(missing.headers.get('Server-Timing'), null)
+    assert.equal(await missing.text(), 'Not Found')
   })
 })

@@ -2,8 +2,10 @@ import type { Middleware } from 'remix/router'
 
 import { platform } from '#platform'
 import type { PlatformCsp } from '../platform/types.ts'
+import { routes } from '../routes.ts'
 
 import { cspNonceContext, createNonce } from './csp-nonce.tsx'
+import { anyOf, pathPrefix, under } from './route-match.ts'
 import { WEB_ANALYTICS_CONNECT_SRC, webAnalyticsToken } from './web-analytics.tsx'
 
 // Response headers for every Worker response (decisions 020 and 027). Static
@@ -62,8 +64,12 @@ export function contentSecurityPolicy(
   ].join('; ')
 }
 
-/** Account and sign-in pages are never stored, not even by the browser. */
-const NO_STORE_PATHS = /^\/(?:settings|me|login|auth|logout)(?:\/|$)/
+/**
+ * Account and sign-in pages are never stored, not even by the browser: every
+ * URL under the settings, me, login, logout and auth route maps (`/settings`,
+ * `/me`, `/login`, `/logout`, `/auth`), 404s there included.
+ */
+const NO_STORE = anyOf(...[routes.settings, routes.me, routes.login, routes.logout, routes.auth].map((map) => under(pathPrefix(map))))
 
 /**
  * Sets the security headers, and on HTML the CSP and a Cache-Control default:
@@ -85,7 +91,7 @@ export function responseHeaders(): Middleware {
     if (html) {
       let header = platform.csp.reportOnly ? 'Content-Security-Policy-Report-Only' : 'Content-Security-Policy'
       set.push([header, contentSecurityPolicy(nonce)])
-      set.push(['Cache-Control', NO_STORE_PATHS.test(context.url.pathname) ? 'no-store' : 'private, no-cache'])
+      set.push(['Cache-Control', NO_STORE.test(context.url) ? 'no-store' : 'private, no-cache'])
     }
     let missing = set.filter(([name]) => !response.headers.has(name))
     if (!missing.length) return response

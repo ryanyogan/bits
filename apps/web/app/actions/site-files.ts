@@ -8,10 +8,15 @@ import { platform } from '#platform'
 
 import { isPreview } from '../auth/config.ts'
 import { getCatalog } from '../content/request.ts'
+import { pathPrefix } from '../middleware/route-match.ts'
 import { routes } from '../routes.ts'
 
-/** Paths crawlers have no business in: signed-in, write-only or author/admin areas. */
-const DISALLOW = ['/settings', '/me', '/auth', '/api', '/author', '/admin']
+/**
+ * Paths crawlers have no business in: signed-in, write-only or author/admin
+ * areas, as the route maps' prefixes (`/settings`, `/me`, `/auth`, `/api`,
+ * `/author`, `/admin`).
+ */
+const DISALLOW = [routes.settings, routes.me, routes.auth, routes.api, routes.author, routes.admin].map(pathPrefix)
 
 /** The origin sitemap URLs are built on: production's canonical one, else this request's. */
 function siteOrigin(url: URL): string {

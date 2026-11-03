@@ -1,6 +1,7 @@
 import { cop } from 'remix/middleware/cop'
 import { render } from 'remix/middleware/render'
 import { createRouter, type RouterContext } from 'remix/router'
+import { createMatcher } from 'remix/route-pattern/match'
 
 // `#platform` resolves to platform.node.ts on Node and platform.worker.ts on
 // Workers (package.json "imports" conditions).
@@ -36,6 +37,7 @@ import { loadAuth } from './auth/identity.ts'
 import { loadSession } from './auth/session.ts'
 import { profileReadOptions } from './actions/profile/data.ts'
 import { errorFields, log } from './log.ts'
+import { serveAssets } from './middleware/assets.ts'
 import { contentTiming } from './middleware/content-timing.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { scopedFormData } from './middleware/form-data.ts'
@@ -43,10 +45,17 @@ import { cspNonce } from './middleware/csp-nonce.tsx'
 import { responseHeaders } from './middleware/headers.ts'
 import { serveMedia } from './middleware/media.ts'
 import { serveRobots, serveSitemap } from './middleware/site-files.ts'
+import { anyOf, pathPrefix, under } from './middleware/route-match.ts'
 import { logServerErrors } from './middleware/server-errors.ts'
 import { theme } from './middleware/theme.tsx'
 import { webAnalytics } from './middleware/web-analytics.tsx'
 import { routes } from './routes.ts'
+
+// Which GETs bring extra rows with the session read, matched against the
+// route map, never hand-written paths (decisions 026, 029, 035).
+const coursePages = anyOf(under(pathPrefix(routes.courses)))
+const lessonPage = createMatcher(routes.courses.lesson.index.pattern)
+const mePage = createMatcher(routes.me.index.pattern)
 
 export const router = createRouter({
   middleware: [
@@ -61,6 +70,10 @@ export const router = createRouter({
     serveMedia(),
     // /robots.txt: public, the same for everyone, no D1 (decision 035).
     serveRobots(),
+    // /assets/*: compiled modules and stylesheets (Node) or a miss (Workers),
+    // never the session. In dev, each one reading it from a busy local D1
+    // failed and left pages unstyled.
+    serveAssets(),
     platform.middleware,
     // Rejects cross-origin POSTs (Sec-Fetch-Site, then Origin). Webhooks are
     // server-to-server and verify their own signatures. See decision 015.
@@ -76,15 +89,15 @@ export const router = createRouter({
     // lessons with the session, in one D1 round trip (decision 026).
     // A lesson page also brings the viewer's drafts in that lesson (decision 029).
     loadSession({
-      withCompleted: (context) => context.method === 'GET' && /^\/courses(?:\/|$)/.test(context.url.pathname),
+      withCompleted: (context) => context.method === 'GET' && coursePages.test(context.url),
       withDrafts: (context) => {
         if (context.method !== 'GET') return undefined
-        let match = /^\/courses\/([^/]+)\/([^/]+)\/?$/.exec(context.url.pathname)
-        return match ? { courseId: decodeURIComponent(match[1]!), lessonSlug: decodeURIComponent(match[2]!) } : undefined
+        let match = lessonPage.match(context.url)
+        return match ? { courseId: match.params.course, lessonSlug: match.params.lesson } : undefined
       },
       // /me's profile rows come along as well, so it is one round trip (decision 035).
       withProfile: (context) =>
-        context.method === 'GET' && /^\/me\/?$/.test(context.url.pathname) ? profileReadOptions() : undefined,
+        context.method === 'GET' && mePage.match(context.url) ? profileReadOptions() : undefined,
     }),
     // Form bodies, with limits per endpoint (middleware/form-data.ts): only the
     // course-folder upload takes files; over a limit is a 413.
