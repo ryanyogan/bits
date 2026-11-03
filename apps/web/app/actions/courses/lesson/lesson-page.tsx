@@ -13,7 +13,7 @@ import { routes } from '../../../routes.ts'
 import { ogImage } from '../../../ui/og.ts'
 import { Layout } from '../../../ui/layout.tsx'
 import { exercisesOf } from './content.ts'
-import { depthTabs, lessonAward, openAsks, type LessonView } from './lesson-view.ts'
+import { depthTabs, lessonAward, openAsks, openVerifies, type LessonView } from './lesson-view.ts'
 import { LessonComplete } from './public/lesson-complete.tsx'
 import { PASSED_ROOT } from './public/lesson-state.ts'
 import { LessonXp } from './public/lesson-xp.tsx'
@@ -40,7 +40,7 @@ export function LessonPage(handle: Handle<{ view: LessonView; issues?: string[];
     let award = lesson.state === 'done' ? 0 : lessonAward(view)
     // "Complete lesson" waits for the prompt exercises and the quick checks
     // not yet answered (decision 052; an ask with gate=false never waits).
-    let gated = exercisesOf(content).length > 0 || openAsks(view).length > 0
+    let gated = exercisesOf(content).length > 0 || openAsks(view).length > 0 || openVerifies(view).length > 0
     let progressLabel = `Lesson ${view.index + 1} of ${view.total}, ${done} complete`
     let depths = depthTabs(view)
     // The lesson's own length, as LMS lesson views show it (decision 067).
@@ -152,6 +152,7 @@ function LessonFooter(handle: Handle<{ view: LessonView; gated: boolean; issues?
             gated={gated}
             prompts={exercisesOf(view.content).length > 0}
             asks={asks}
+            verifies={openVerifies(view)}
             form={view.completeForm}
             issues={issues}
             passed={view.lesson.state === 'done'}

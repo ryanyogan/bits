@@ -14,10 +14,13 @@ import { StepsPlayer } from '@bits/ui/steps'
 import { OutputPanel } from '@bits/ui/terminal'
 import { TrainingScrubber } from '@bits/ui/training-scrubber'
 import { attachedBlock, LearnerBubble, TutorMessage } from '@bits/ui/tutor'
+import { VerifyPanel } from '@bits/ui/verify-panel'
 import { VideoPlayer } from '@bits/ui/video-player'
 
 import { draftKey } from '../../../../progress/draft-keys.ts'
-import { hasVideo, quizAsAsk, type AskBlock, type Block } from '../content.ts'
+import { routes } from '../../../../routes.ts'
+import { statusLabel } from '../../../../verify/path.ts'
+import { hasVideo, quizAsAsk, type AskBlock, type Block, type VerifyBlock } from '../content.ts'
 import type { LessonView } from '../lesson-view.ts'
 import { TokenizerToy } from '../public/tokenizer-toy.tsx'
 import { askProps, codeEditorProps, draftPersist, exerciseProps, runLines } from './exercise.ts'
@@ -148,6 +151,8 @@ function ReadBlock(handle: Handle<{ view: LessonView; block: Block; index: numbe
       case 'quiz':
         // Stored quizzes are upgraded to asks when read (upgradeLessonContent).
         return <Ask view={view} block={quizAsAsk(block)} />
+      case 'verify':
+        return <Verify view={view} block={block} />
       case 'tokenizer':
         return (
           <div mix={attachedBlock}>
@@ -225,6 +230,46 @@ function Ask(handle: Handle<{ view: LessonView; block: AskBlock }>) {
     return (
       <section aria-label="Quick check" mix={exerciseStyle}>
         <AskPanel {...askProps(view, block)} question={inlineNodes(block.question, true)} />
+      </section>
+    )
+  }
+}
+
+/**
+ * `:::verify` (decision 072): the learner pastes their deployed Worker's URL
+ * and bits checks it from the server. Works without JS: the panel is a
+ * native form to /api/verify, which redirects back here with the verdict.
+ */
+function Verify(handle: Handle<{ view: LessonView; block: VerifyBlock }>) {
+  return () => {
+    let { view, block } = handle.props
+    let flash = view.verifies.flash?.verify === block.id ? view.verifies.flash : undefined
+    let verdict = flash && 'verdict' in flash ? flash.verdict : undefined
+    let refused = flash && 'error' in flash ? flash : undefined
+    return (
+      <section aria-label="Deploy check" mix={exerciseStyle}>
+        <VerifyPanel
+          id={block.id}
+          goal={block.goal}
+          task={block.task || undefined}
+          path={block.path}
+          checks={[statusLabel(block.path), ...block.expects.map((check) => check.label)]}
+          xp={block.xp}
+          endpoint={
+            view.completeForm
+              ? {
+                  action: routes.api.verify.href(),
+                  fields: { course: view.course.slug, lesson: view.lesson.slug, verify: block.id },
+                  urlField: 'url',
+                }
+              : undefined
+          }
+          initial={verdict}
+          initialError={refused?.error}
+          defaultUrl={refused?.url || verdict?.origin || view.verifies.origin}
+          passed={view.verifies.passed.includes(block.id)}
+          signInHref={view.viewer ? undefined : view.href.login}
+        />
       </section>
     )
   }

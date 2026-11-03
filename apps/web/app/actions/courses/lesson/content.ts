@@ -226,6 +226,32 @@ export interface AskBlock {
   explain?: string
 }
 
+/**
+ * `:::verify` (decision 072): bits calls one path on the learner's deployed
+ * `https://<name>.workers.dev` Worker and runs `- expect` checks on the
+ * reply, on the server. It proves a deploy answers, not who wrote it. The
+ * checks' labels reach the browser; their patterns never do.
+ */
+export interface VerifyBlock {
+  type: 'verify'
+  id: string
+  xp: number
+  /** Gates "Complete lesson" (default true; `gate=false` makes it optional). */
+  gate: boolean
+  /** The path bits calls on the learner's origin, like `/health` (authored, never learner input). */
+  path: string
+  /** `- goal "…"`: what the deploy must do, shown above the field. */
+  goal: string
+  /** The block's text lines (what to paste, where to find it). */
+  task: string
+  /** `- expect "label" <check>`: deterministic checks on the reply body. */
+  expects: ReplyCheck[]
+  /** `- hint "…"`: shown when a check misses and no tied hint fits. */
+  hints?: string[]
+  /** `- hint for="label" "…"`: shown when that check is the first one missed. */
+  hintsFor?: { for: string; text: string }[]
+}
+
 /** `:::odds`: next-token probabilities with a temperature slider. */
 export interface OddsBlock {
   type: 'odds'
@@ -360,14 +386,25 @@ export function isLessonDepth(value: unknown): value is LessonDepth {
 /**
  * Every top-level block can be tagged with a depth: it came from a `:::new`
  * or `:::engineer` block and shows only at that depth. Untagged blocks are
- * shared. Graded and stateful blocks (prompt, ask, quiz, rabbithole) are
+ * shared. Graded and stateful blocks (prompt, ask, quiz, verify, rabbithole) are
  * always shared; the build refuses them inside a depth block.
  */
 interface DepthTag {
   depth?: LessonDepth
 }
 
-export type Block = (MarkdownBlock | PromptBlock | CodeBlock | AskBlock | QuizBlock | OddsBlock | TokenizerBlock | TerminalBlock | ToyBlock) &
+export type Block = (
+  | MarkdownBlock
+  | PromptBlock
+  | CodeBlock
+  | AskBlock
+  | QuizBlock
+  | VerifyBlock
+  | OddsBlock
+  | TokenizerBlock
+  | TerminalBlock
+  | ToyBlock
+) &
   DepthTag
 
 export interface LessonVideo {
@@ -445,6 +482,16 @@ export function asksOf(content: LessonContent): AskBlock[] {
 /** Asks that must be answered before "Complete lesson" opens. */
 export function gatingAsksOf(content: LessonContent): AskBlock[] {
   return asksOf(content).filter((ask) => ask.gate)
+}
+
+/** The lesson's deploy checks (decision 072). */
+export function verifiesOf(content: LessonContent): VerifyBlock[] {
+  return content.blocks.filter((block): block is VerifyBlock => block.type === 'verify')
+}
+
+/** Deploy checks that must pass before "Complete lesson" opens. */
+export function gatingVerifiesOf(content: LessonContent): VerifyBlock[] {
+  return verifiesOf(content).filter((block) => block.gate)
 }
 
 /** A stored `:::quiz` as the ask the build now makes of it: choices only. */

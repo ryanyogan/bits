@@ -70,7 +70,10 @@ if (isTest) {
   // And the course-metadata fixtures (decision 073): a coming-soon course,
   // and a build-along course with freshness dates, a desk lesson and a tag.
   let metadataDirs = ['soon-course', 'build-along'].map((name) => path.resolve(coursesDir, '../fixtures', name))
-  for (let dir of [...(await listCourseFolders()), plainCourseDir, ...metadataDirs]) {
+  // And the deploy-check fixture (decision 072): one lesson with :::verify
+  // blocks, which tests answer by stubbing fetch for the learner's Worker.
+  let verifyCourseDir = path.resolve(coursesDir, '../fixtures/verify-course')
+  for (let dir of [...(await listCourseFolders()), plainCourseDir, ...metadataDirs, verifyCourseDir]) {
     let result = await uploadCourseFolder(db, proxy.env.CONTENT, dir, { source: 'test', publish: true })
     if (!result.published) throw new Error(`${dir} didn't build: ${JSON.stringify(result.build.report)}`)
   }
@@ -99,7 +102,7 @@ export const platform: Platform = {
     // installs its own). Nor do they render the Web Analytics beacon unless a
     // test sets the token (app/middleware/web-analytics.test.ts).
     isTest
-      ? { ANTHROPIC_API_KEY: undefined, CF_AIG_TOKEN: undefined, RL_WRITES: undefined, RL_SIGNIN: undefined, RL_RUNS: undefined, RL_REPORTS: undefined, RL_DRAFTS: undefined, RL_UPLOADS: undefined, RL_ASKS: undefined, RL_ACCOUNT: undefined, RL_PUBLISH: undefined, RL_LOGOUT: undefined, RL_COACH: undefined, WEB_ANALYTICS_TOKEN: undefined }
+      ? { ANTHROPIC_API_KEY: undefined, CF_AIG_TOKEN: undefined, RL_WRITES: undefined, RL_SIGNIN: undefined, RL_RUNS: undefined, RL_REPORTS: undefined, RL_DRAFTS: undefined, RL_UPLOADS: undefined, RL_ASKS: undefined, RL_ACCOUNT: undefined, RL_PUBLISH: undefined, RL_LOGOUT: undefined, RL_COACH: undefined, RL_VERIFY: undefined, WEB_ANALYTICS_TOKEN: undefined }
       : {},
   ),
   assets,

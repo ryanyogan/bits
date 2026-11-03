@@ -11,6 +11,7 @@ import { loadDrafts } from '../../../progress/drafts.ts'
 import { completeLesson, loadCompleted } from '../../../progress/progress.ts'
 import { flashReward, rewardNotice, savedNotice, takeReward } from '../../../progress/reward.ts'
 import { routes } from '../../../routes.ts'
+import { lastOrigin, passedVerifies, takeCheck } from '../../../verify/session.ts'
 import { buildLessonView } from './lesson-view.ts'
 import { isComingSoon } from '../../../content/types.ts'
 import { StatusPage } from '../../../ui/not-found-page.tsx'
@@ -33,7 +34,9 @@ export default createController(routes.courses.lesson, {
       let viewer = getViewer(context)
       // Quick checks answered right, and a verdict flashed back to a native answer (decision 052).
       let asks = { passed: passedAsks(context, course, lesson), verdict: takeVerdict(context, course, lesson) }
-      let view = await buildLessonView(catalog, course, lesson, context.url, { viewer, completed, drafts, asks, depth })
+      // Deploy checks passed, a check flashed back to a native form, and the last origin (decision 072).
+      let verifies = { passed: passedVerifies(context, course, lesson), flash: takeCheck(context, course, lesson), origin: lastOrigin(context) }
+      let view = await buildLessonView(catalog, course, lesson, context.url, { viewer, completed, drafts, asks, verifies, depth })
       if (!view) {
         let soon = catalog.getCourse(course)
         if (soon && isComingSoon(soon)) {
@@ -93,6 +96,7 @@ export default createController(routes.courses.lesson, {
             completed,
             drafts,
             asks: { passed: passedAsks(context, course, lesson) },
+            verifies: { passed: passedVerifies(context, course, lesson), origin: lastOrigin(context) },
             depth,
           }))!
           let issues = [
@@ -104,6 +108,13 @@ export default createController(routes.courses.lesson, {
                   result.checked.unanswered.length === 1
                     ? 'Not saved: answer the quick check first.'
                     : `Not saved: answer the ${result.checked.unanswered.length} quick checks first.`,
+                ]
+              : []),
+            ...(result.checked.unverified.length
+              ? [
+                  result.checked.unverified.length === 1
+                    ? 'Not saved: check your deployed Worker first.'
+                    : `Not saved: pass the ${result.checked.unverified.length} deploy checks first.`,
                 ]
               : []),
           ]

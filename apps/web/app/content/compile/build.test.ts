@@ -571,10 +571,10 @@ describe('content build', () => {
       '06-ask.md:19 → reject lines look like: - reject "Not about memory" /never seen/i "It has seen it often. What does it get instead?"',
       '06-ask.md:20 → unknown ask line "- banana" (use accept, reject, choice, hint, explain or placeholder)',
       '06-ask.md:23 → :::ask has 2 right choices: add multiple to allow several',
-      '07-depth.md:13 → :::prompt can’t go inside :::new: prompts, quick checks and rabbit holes are shared by both depths, so progress never depends on depth; move it outside',
+      '07-depth.md:13 → :::prompt can’t go inside :::new: prompts, quick checks, deploy checks and rabbit holes are shared by both depths, so progress never depends on depth; move it outside',
       '07-depth.md:20 → :::new can’t go inside :::engineer: depth blocks don’t nest, so close :::engineer first',
       '07-depth.md:25 → :::new holds :::nexttoken, so it needs a longer fence: write ::::new … :::: around it',
-      '07-depth.md:36 → :::rabbithole can’t go inside :::engineer: prompts, quick checks and rabbit holes are shared by both depths, so progress never depends on depth; move it outside',
+      '07-depth.md:36 → :::rabbithole can’t go inside :::engineer: prompts, quick checks, deploy checks and rabbit holes are shared by both depths, so progress never depends on depth; move it outside',
       '08-steps.md:12 → steps lines are a label, then a caption: - "Read" "Everything so far, your prompt included."',
       '08-steps.md:13 → step label “A label that runs far too long” is 30 characters; keep it to 24',
       '08-steps.md:14 → step “Draw” needs a caption',
@@ -634,7 +634,7 @@ describe('content build', () => {
       '01-one.md': lesson('::::new\n:::quiz{id="q" xp=5}\nPick.\n- [x] A\n- [ ] B\n:::\n::::\n\n:::engineer\nE.\n:::'),
     })
     assert.deepEqual(errors(quiz), [
-      '01-one.md:9 → :::quiz can’t go inside :::new: prompts, quick checks and rabbit holes are shared by both depths, so progress never depends on depth; move it outside',
+      '01-one.md:9 → :::quiz can’t go inside :::new: prompts, quick checks, deploy checks and rabbit holes are shared by both depths, so progress never depends on depth; move it outside',
     ])
     let code = build({
       '01-one.md': lesson(
@@ -1092,5 +1092,78 @@ describe('content build', () => {
       let broken = buildWith(repo, { '01-one.md': lesson('Hi', front(`tag: "${bad}"`)) })
       assert.match(errors(broken).join('\n'), /^01-one\.md:6 → tag: Expected a git tag/, bad)
     }
+  })
+  // ---- :::verify (decision 072) ----
+  const verify = (lines: string[], attrs = 'id="deploy" path="/health"') =>
+    build({ '01-one.md': lesson([`:::verify{${attrs}}`, ...lines, ':::'].join('\n')) })
+  const goalAndExpect = ['- goal "Answers /health"', '- expect "Says ok" json keys=ok']
+
+  it('builds a deploy check: path, goal, expects, hints and gate (decision 072)', async () => {
+    let dir = path.join(coursesDir, '../fixtures/verify-course')
+    let result = buildCourse(await readCourseFolder(dir), { folder: 'verify-course' })
+    assert.equal(result.errors, 0)
+    let blocks = result.lessons!.get('ship-it')!.blocks.filter((block) => block.type === 'verify')
+    assert.deepEqual(
+      blocks.map((block) => block.type === 'verify' && [block.id, block.path, block.xp, block.gate]),
+      [
+        ['optional-root', '/', 0, false],
+        ['health', '/health', 30, true],
+      ],
+    )
+    let health = blocks[1]!
+    assert.ok(health.type === 'verify')
+    assert.equal(health.goal, 'Your Worker answers /health with JSON that says it\'s ok')
+    assert.equal(health.task, 'Paste the https://….workers.dev URL that wrangler deploy printed.')
+    assert.deepEqual(health.expects, [
+      { label: 'Says ok', kind: 'json', keys: ['ok', 'app'], types: { ok: 'boolean' } },
+      { label: 'Names the app', kind: 'match', patterns: [{ source: '"app"\\s?:\\s?"klippy"' }] },
+    ])
+    assert.deepEqual(health.hintsFor, [{ for: 'Names the app', text: 'Set app to "klippy" in the JSON your /health route returns.' }])
+    assert.equal(health.hints?.length, 1)
+    assert.equal(errors(verify(goalAndExpect, 'id="deploy" path="/api/klippy/status?full=1&v=2"')).length, 0)
+  })
+
+  it('rejects a deploy check without an id, a path, a goal or an expect', () => {
+    hasError(verify(goalAndExpect, 'path="/health"'), ':::verify needs an id')
+    hasError(verify(goalAndExpect, 'id="Deploy!" path="/health"'), 'should be lowercase letters, digits and dashes')
+    hasError(verify(goalAndExpect, 'id="deploy"'), ':::verify needs a path')
+    hasError(verify(['- expect "Says ok" json']), ':::verify needs a - goal')
+    hasError(verify(['- goal "Answers"']), ':::verify needs at least one - expect line')
+  })
+
+  it('rejects a path that could leave the learner’s origin or isn’t plain', () => {
+    for (let bad of ['health', '//evil.example/x', '/a/../b', '/a b', '/a#frag', '/a%2e', '/@evil', '/x\\y', `/${'a'.repeat(200)}`]) {
+      hasError(verify(goalAndExpect, `id="deploy" path="${bad}"`), 'isn’t one bits can call')
+    }
+  })
+
+  it('rejects expect lines a deploy check can’t run, and bad ones', () => {
+    hasError(verify(['- goal "g"', '- expect "Brief" prompt-shorter-than 40']), 'reads a prompt or a document')
+    hasError(verify(['- goal "g"', '- expect "Quotes" quotes doc']), 'reads a prompt or a document')
+    hasError(verify(['- goal "g"', '- expect "Short" lines<=3']), 'expect lines look like')
+    hasError(verify(['- goal "g"', '- expect "Slow" match /(a+)+/']), 'expect “Slow”: /(a+)+/')
+    let expects = Array.from({ length: 9 }, (_, n) => `- expect "E${n}" words<=${n + 1}`)
+    hasError(verify(['- goal "g"', ...expects]), ':::verify has 9 expect lines (at most 8)')
+  })
+
+  it('checks a deploy check’s goal, hints, xp, unknown lines, depth and id', () => {
+    hasError(verify(['- goal ""', '- expect "Says ok" json']), 'a goal is 1–240 characters')
+    hasError(verify([`- goal "${'g'.repeat(241)}"`, '- expect "Says ok" json']), 'a goal is 1–240 characters')
+    hasError(verify([...goalAndExpect, '- hint for="Nope" "Try again"']), 'hint for="Nope" names no expect line')
+    let hints = Array.from({ length: 6 }, (_, n) => `- hint "H${n}"`)
+    hasError(verify([...goalAndExpect, ...hints]), ':::verify has 6 hints (at most 5)')
+    hasError(verify([...goalAndExpect, '- hint nope']), 'hint lines look like')
+    hasError(verify(goalAndExpect, 'id="deploy" path="/health" xp=500'), 'xp=500 is out of range')
+    hasError(verify([...goalAndExpect, '- check "x" /x/']), 'unknown verify line "- check"')
+    let nested = build({
+      '01-one.md': lesson(['::::engineer', ':::verify{id="deploy" path="/health"}', ...goalAndExpect, ':::', '::::'].join('\n')),
+    })
+    hasError(nested, ':::verify can’t go inside :::engineer')
+    let twice = build({
+      '01-one.md': lesson(
+        [':::verify{id="deploy" path="/health"}', ...goalAndExpect, ':::', '', ':::verify{id="deploy" path="/"}', ...goalAndExpect, ':::'].join('\n'),
+      ),
+    })
+    hasError(twice, 'id "deploy" is already used')
   })
 })

@@ -8,6 +8,7 @@
 import {
   awardBadges,
   claimVisitorAsks,
+  listPassedBuildChecks,
   listRightAsks,
   findUserById,
   listCompletedLessons,
@@ -27,7 +28,7 @@ import { Session } from 'remix/session'
 
 import { platform } from '#platform'
 
-import { asksOf, exercisesOf, type AskBlock } from '../actions/courses/lesson/content.ts'
+import { asksOf, exercisesOf, verifiesOf, type AskBlock } from '../actions/courses/lesson/content.ts'
 import { currentUser } from '../auth/identity.ts'
 import { completedLoadedWith } from '../auth/session.ts'
 import type { Catalog } from '../content/catalog.ts'
@@ -64,8 +65,9 @@ function readAnonymous(session: Session | undefined): AnonymousProgress {
   let progress: AnonymousProgress = {}
   for (let [key, lesson] of Object.entries(value as Record<string, Partial<AnonymousLesson>>)) {
     if (typeof lesson?.at !== 'number' || !lesson.submission || typeof lesson.submission !== 'object') continue
-    let { prompts = {}, ran = {}, quizzes, asks, exercises } = lesson.submission
+    let { prompts = {}, ran = {}, quizzes, asks, exercises, verifies } = lesson.submission
     let submission: LessonSubmission = { prompts, ran }
+    if (verifies && typeof verifies === 'object') submission.verifies = verifies
     if (exercises && typeof exercises === 'object') submission.exercises = exercises
     if (asks && typeof asks === 'object') submission.asks = asks
     if (quizzes && typeof quizzes === 'object') submission.quizzes = quizzes
@@ -112,16 +114,20 @@ export async function completeLesson(
   let owner = runOwner(context)
   let db = getDatabase(context)
   let lesson = { courseId: courseSlug, lessonSlug }
-  let [runs, verdicts, rightAsks] = await Promise.all([
+  let verifies = verifiesOf(content)
+  let [runs, verdicts, rightAsks, passedBuilds] = await Promise.all([
     owner && blocks.length ? listLessonRuns(db, owner, lesson) : Promise.resolve([]),
     owner && blocks.length ? listLessonVerdicts(db, owner, lesson) : Promise.resolve([]),
     asksOf(content).length ? journalledRightAsks(context, lesson) : Promise.resolve([]),
+    // A deploy check passes on a journalled passing call (/api/verify, decision 072); signed-in only.
+    owner?.userId && verifies.length ? listPassedBuildChecks(db, owner.userId, lesson) : Promise.resolve([]),
   ])
   submission.exercises = journalledExercises(blocks, runs, verdicts, { offline: !modelConfigured(platform.env as ModelEnv) })
   for (let block of blocks) {
     submission.ran[block.id] = [...new Set(runs.filter((run) => run.exercise_id === block.id).map((run) => run.temperature))]
   }
   submission.asks = Object.fromEntries(asksOf(content).map((ask) => [ask.id, rightAsks.includes(ask.id)]))
+  submission.verifies = Object.fromEntries(verifies.map((block) => [block.id, passedBuilds.includes(block.id)]))
   let checked = checkLesson(courseSlug, lessonSlug, content, submission)
   if (!checked.ok) return { ok: false, checked }
 

@@ -47,9 +47,11 @@ import {
   type TerminalBlock,
   type TokenizerBlock,
   type TrainingBlock,
+  type VerifyBlock,
 } from '../../actions/courses/lesson/content.ts'
 import { approximateTokens } from '../../actions/courses/lesson/public/tokenizer-toy.tsx'
 import { temperatureLabel } from '../../actions/courses/lesson/ui/exercise.ts'
+import { isVerifyPath, MAX_VERIFY_PATH } from '../../verify/path.ts'
 import { clampXp, MAX_BLOCK_XP } from '../limits.ts'
 import type { LessonKind } from '../types.ts'
 import { LessonFrontmatter, parseClock, readFrontmatter } from './frontmatter.ts'
@@ -274,6 +276,7 @@ const BLOCK_NAMES = [
   'steps',
   'flow',
   'marbles',
+  'verify',
 ] as const
 
 /** Lesson-wide defaults for blocks (from the frontmatter). */
@@ -292,7 +295,7 @@ const DEPTH_NAMES = ['new', 'engineer'] as const satisfies readonly LessonDepth[
  * Blocks that stay shared by both depths: the graded and stateful ones, so
  * progress never depends on the depth a learner reads at.
  */
-const SHARED_ONLY: ReadonlySet<string> = new Set(['prompt', 'ask', 'quiz', 'rabbithole'])
+const SHARED_ONLY: ReadonlySet<string> = new Set(['prompt', 'ask', 'quiz', 'rabbithole', 'verify'])
 
 const isDepth = (name: string): name is LessonDepth => (DEPTH_NAMES as readonly string[]).includes(name)
 
@@ -431,7 +434,7 @@ function compileBlocks(
         }
         if (depth && SHARED_ONLY.has(node.name)) {
           report.error(
-            `:::${node.name} can’t go inside :::${depth}: prompts, quick checks and rabbit holes are shared by both depths, so progress never depends on depth; move it outside`,
+            `:::${node.name} can’t go inside :::${depth}: prompts, quick checks, deploy checks and rabbit holes are shared by both depths, so progress never depends on depth; move it outside`,
             line,
           )
           break
@@ -630,6 +633,8 @@ function compileDirective(
       return compileFlow(node, body, report, defaults)
     case 'marbles':
       return compileMarbles(node, body, report, defaults)
+    case 'verify':
+      return compileVerify(node, body, report)
   }
   return undefined
 }
@@ -1345,6 +1350,115 @@ function compileAsk(node: Directive, body: RawBody, report: FileReport, stats: C
   if (placeholder) block.placeholder = placeholder
   if (hint) block.hint = hint
   if (explain) block.explain = explain
+  return block
+}
+
+// ---- :::verify (decision 072) -------------------------------------------------
+
+/** Expect checks that read something a deploy check doesn't have (a prompt, a document). */
+const VERIFY_UNSUPPORTED = new Set<ReplyCheck['kind']>(['prompt-shorter-than', 'quotes'])
+
+/**
+ * `:::verify{id path xp gate}`: text lines (what to paste), then `- goal`,
+ * `- expect` (the prompt's reply checks, run on the reply body) and
+ * `- hint` / `- hint for="label"` lines, read from the raw source.
+ */
+function compileVerify(node: Directive, body: RawBody, report: FileReport): VerifyBlock | undefined {
+  let line = node.position?.start.line ?? 1
+  let attrs = attributes(node, ['id', 'path', 'xp', 'gate'], report)
+  let id = attrs.string('id')
+  if (!id) report.error(':::verify needs an id, like :::verify{id="deploy" path="/health" xp=30}', line)
+  else if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) report.error(`id "${id}" should be lowercase letters, digits and dashes`, line)
+  let path = attrs.string('path')
+  if (!path) report.error(':::verify needs a path to call on the learner’s Worker, like path="/health"', line)
+  else if (!isVerifyPath(path)) {
+    report.error(
+      `path "${path}" isn’t one bits can call: start with one /, then letters, digits, - . _ ~ and /, with an optional ?a=b query (at most ${MAX_VERIFY_PATH} characters, no ..)`,
+      line,
+    )
+  }
+
+  let task: string[] = []
+  let goal: string | undefined
+  let expects: ReplyCheck[] = []
+  let expectLines = 0
+  let hints: string[] = []
+  let hintsFor: { for: string; text: string; at: number }[] = []
+
+  body.lines.forEach((raw, i) => {
+    let at = body.first + i
+    let text = raw.trim()
+    if (!text) return
+    let item = /^[-*]\s+(\w+)\b\s*(.*)$/.exec(text)
+    if (!item) {
+      task.push(text)
+      return
+    }
+    let [, keyword, rest = ''] = item
+    switch (keyword) {
+      case 'expect': {
+        expectLines++
+        let parsed = parseExpect(rest)
+        if (typeof parsed === 'string') {
+          report.error(parsed, at)
+          return
+        }
+        if (VERIFY_UNSUPPORTED.has(parsed.kind)) {
+          report.error(`expect ${parsed.kind} reads a prompt or a document, which a deploy check doesn’t have: use json, words<=N, sentences<=N, one-word, oneof, tag, cites or match`, at)
+          return
+        }
+        let existing = parsed.kind === 'match' ? expects.find((check) => check.kind === 'match' && check.label === parsed.label) : undefined
+        if (existing?.kind === 'match' && parsed.kind === 'match') existing.patterns.push(...parsed.patterns)
+        else expects.push(parsed)
+        return
+      }
+      case 'goal':
+      case 'hint': {
+        let tied = keyword === 'hint' ? new RegExp(`^for=${QUOTED}\\s+${QUOTED}$`).exec(rest) : null
+        let match = tied ? [tied[0], tied[2]] : new RegExp(`^${QUOTED}$`).exec(rest)
+        if (!match) {
+          report.error(keyword === 'hint' ? 'hint lines look like: - hint "…" or - hint for="A check’s label" "…"' : 'goal lines look like: - goal "…"', at)
+          return
+        }
+        let value = unquote(match[1]!)
+        let max = keyword === 'goal' ? MAX_GOAL : MAX_HINT
+        if (!value.trim() || value.length > max) {
+          report.error(`a ${keyword} is 1–${max} characters`, at)
+          return
+        }
+        if (keyword === 'goal') goal = value
+        else if (tied) hintsFor.push({ for: unquote(tied[1]!), text: value, at })
+        else hints.push(value)
+        return
+      }
+      default:
+        report.error(`unknown verify line "- ${keyword}" (use goal, expect or hint)`, at)
+    }
+  })
+
+  if (!goal) report.error(':::verify needs a - goal "…" line: what the deployed Worker must do', line)
+  if (!expectLines) report.error(':::verify needs at least one - expect line to check the reply', line)
+  if (expectLines > MAX_EXPECTS) report.error(`:::verify has ${expectLines} expect lines (at most ${MAX_EXPECTS})`, line)
+  if (hints.length > MAX_HINTS) report.error(`:::verify has ${hints.length} hints (at most ${MAX_HINTS})`, line)
+  if (hintsFor.length > MAX_HINTS_FOR) report.error(`:::verify has ${hintsFor.length} hint for= lines (at most ${MAX_HINTS_FOR})`, hintsFor[MAX_HINTS_FOR]!.at)
+  let labels = new Set(expects.map((check) => check.label))
+  for (let hint of hintsFor) {
+    if (!labels.has(hint.for)) report.error(`hint for="${hint.for}" names no expect line of this block (labels must match exactly)`, hint.at)
+  }
+
+  if (!id || !path || !goal) return undefined
+  let block: VerifyBlock = {
+    type: 'verify',
+    id,
+    xp: blockXp(attrs.number('xp', 10)!, report, line),
+    gate: attrs.flag('gate', true),
+    path,
+    goal,
+    task: stripMarkdown(task.join(' ')),
+    expects,
+  }
+  if (hints.length) block.hints = hints
+  if (hintsFor.length) block.hintsFor = hintsFor.map((hint) => ({ for: hint.for, text: hint.text }))
   return block
 }
 

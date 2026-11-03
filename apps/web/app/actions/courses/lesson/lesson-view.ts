@@ -7,6 +7,7 @@ import type { Viewer } from '../../../auth/identity.ts'
 import type { Catalog } from '../../../content/catalog.ts'
 import type { SavedDraft } from '@bits/db'
 import type { AskVerdict } from '@bits/ui/lib/ask-client'
+import type { FlashedCheck } from '../../../verify/session.ts'
 import type { Completed, CourseDetail, LessonSummary } from '../../../content/types.ts'
 import { routes } from '../../../routes.ts'
 import {
@@ -15,6 +16,7 @@ import {
   depthsOf,
   exercisesOf,
   gatingAsksOf,
+  gatingVerifiesOf,
   isLessonDepth,
   type LessonContent,
   type LessonDepth,
@@ -50,6 +52,12 @@ export interface LessonView {
    * the session; the save reads the journal instead.
    */
   asks: LessonAsks
+  /**
+   * Deploy checks (decision 072) this browser passed, a check flashed back
+   * to a native (no-JS) form, and the origin it checked last. All from the
+   * session; the save reads the journal instead.
+   */
+  verifies: LessonVerifies
   /** The author draft preview. */
   draft?: { version: string; backHref: string }
   /** The "complete lesson" form (absent in the draft preview). */
@@ -71,9 +79,17 @@ export interface LessonAsks {
   verdict?: { ask: string; verdict: AskVerdict }
 }
 
+export interface LessonVerifies {
+  passed: string[]
+  flash?: FlashedCheck
+  origin?: string
+}
+
 export interface LessonViewOptions {
   /** Asks answered right and a flashed verdict (from the session; none in the draft preview). */
   asks?: LessonAsks
+  /** Deploy checks passed, a flashed check and the last origin (from the session; none in the draft preview). */
+  verifies?: LessonVerifies
   /** Render as the author's draft preview. */
   draft?: { version: string }
   /** The signed-in viewer, or null. */
@@ -131,6 +147,7 @@ export async function buildLessonView(
         ? { action: routes.api.drafts.href(), fields: { course: course.slug, lesson: lesson.slug } }
         : undefined,
     asks: (!preview && options.asks) || { passed: [] },
+    verifies: (!preview && options.verifies) || { passed: [] },
     draft: options.draft
       ? { version: options.draft.version, backHref: routes.author.course.index.href({ course: course.slug }) }
       : undefined,
@@ -182,4 +199,12 @@ export function openAsks(view: LessonView): string[] {
   return gatingAsksOf(view.content)
     .map((ask) => ask.id)
     .filter((id) => !view.asks.passed.includes(id) && !(view.asks.verdict?.ask === id && view.asks.verdict.verdict.correct))
+}
+
+/** Gating deploy checks this browser hasn't passed yet (decision 072): what "Complete lesson" still waits for. */
+export function openVerifies(view: LessonView): string[] {
+  let flash = view.verifies.flash
+  return gatingVerifiesOf(view.content)
+    .map((block) => block.id)
+    .filter((id) => !view.verifies.passed.includes(id) && !(flash?.verify === id && 'verdict' in flash && flash.verdict.passed))
 }

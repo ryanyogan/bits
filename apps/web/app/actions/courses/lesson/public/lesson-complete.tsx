@@ -12,6 +12,8 @@ export interface LessonCompleteProps {
   prompts?: boolean
   /** Ids of the quick checks still to answer (each `bits:gate` opens one). */
   asks?: string[]
+  /** Ids of the deploy checks still to pass (decision 072; each `bits:gate` opens one). */
+  verifies?: string[]
   /** Already completed (saved on the server). */
   passed: boolean
   /** Where finishing leads: the next lesson, or back to the course. */
@@ -68,7 +70,7 @@ export const LessonComplete = clientEntry(
     // each open quick check (its own `bits:gate`, sent once the server
     // journalled a right answer).
     let promptsDone = !handle.props.prompts
-    let remaining = new Set(handle.props.asks ?? [])
+    let remaining = new Set([...(handle.props.asks ?? []), ...(handle.props.verifies ?? [])])
     let settleGates = () => {
       if (passedNow || !promptsDone || remaining.size > 0) return
       passedNow = true
@@ -91,25 +93,34 @@ export const LessonComplete = clientEntry(
 
     return () => {
       let { gated, passed, href, label, upNext, form, issues, loginHref } = handle.props
-      // The open quick check is a link to it: it can sit far above the footer (QA, 2026-11-02).
-      let nextAsk = [...remaining][0]
-      let toAsk = (text: string) =>
-        nextAsk ? (
-          <a href={`#ask-${nextAsk}`} mix={[askLinkStyle, on('click', (event) => goToAsk(event, nextAsk))]}>
+      // The open quick check (or deploy check) is a link to it: it can sit far above the footer (QA, 2026-11-02).
+      let deploys = new Set(handle.props.verifies ?? [])
+      let nextGate = [...remaining][0]
+      let anchor = nextGate && (deploys.has(nextGate) ? `verify-${nextGate}` : `ask-${nextGate}`)
+      let toGate = (text: string) =>
+        anchor ? (
+          <a href={`#${anchor}`} mix={[askLinkStyle, on('click', (event) => goToAsk(event, anchor))]}>
             {text}
           </a>
         ) : (
           text
         )
+      let openDeploys = [...remaining].filter((id) => deploys.has(id)).length
+      let openAsks = remaining.size - openDeploys
+      let todo = [
+        openAsks ? (openAsks === 1 ? 'answer the quick check' : `answer the ${openAsks} quick checks`) : '',
+        openDeploys ? (openDeploys === 1 ? 'check your deploy' : `pass the ${openDeploys} deploy checks`) : '',
+      ]
+        .filter(Boolean)
+        .join(' and ')
+      let capital = todo.charAt(0).toUpperCase() + todo.slice(1)
       let hint =
         remaining.size === 0 ? (
           'Pass every check to finish'
         ) : promptsDone ? (
-          <>
-            {toAsk(remaining.size === 1 ? 'Answer the quick check' : `Answer the ${remaining.size} quick checks`)} to finish
-          </>
+          <>{toGate(capital)} to finish</>
         ) : (
-          <>Pass every check and {toAsk(remaining.size === 1 ? 'answer the quick check' : `answer the ${remaining.size} quick checks`)} to finish</>
+          <>Pass every check and {toGate(todo)} to finish</>
         )
       let open = passed || passedNow || !gated
       let hintId = `${handle.id}-hint`
@@ -188,9 +199,9 @@ export const LessonComplete = clientEntry(
   },
 )
 
-/** Scrolls the open quick check into view and puts focus in it, without a navigation. */
-function goToAsk(event: MouseEvent, id: string) {
-  let target = document.getElementById(`ask-${id}`)
+/** Scrolls the open quick check (or deploy check) into view and puts focus in it, without a navigation. */
+function goToAsk(event: MouseEvent, elementId: string) {
+  let target = document.getElementById(elementId)
   if (!target) return
   event.preventDefault()
   let reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches

@@ -43,6 +43,7 @@ import { PendingSubmit } from '@bits/ui/pending-submit'
 import { ProviderButton } from '@bits/ui/provider-button'
 import { QuizChoice } from '@bits/ui/quiz-choice'
 import { AskPanel } from '@bits/ui/ask-panel'
+import { VerifyPanel } from '@bits/ui/verify-panel'
 import { RabbitHole } from '@bits/ui/rabbit-hole'
 import { RewardRegion, RewardToast } from '@bits/ui/reward-toast'
 import { SearchField } from '@bits/ui/search-field'
@@ -801,6 +802,61 @@ export function Catalogue(handle: Handle) {
               />
             </div>
           </Specimen>
+          <Specimen caption="VerifyPanel (island, decision 072) — a deploy check: the learner pastes their https://….workers.dev URL and bits’ server makes one GET to the block’s path, then runs its checks on the reply (POST /api/verify, signed in only). Unchecked (preview: no endpoint) · signed out · failing · passed">
+            <div mix={column}>
+              <VerifyPanel id="sg-verify-open" goal={sgVerify.goal} task={sgVerify.task} path="/health" checks={sgVerify.checks} xp={30} />
+              <VerifyPanel
+                id="sg-verify-signed-out"
+                goal={sgVerify.goal}
+                path="/health"
+                checks={sgVerify.checks}
+                xp={30}
+                endpoint={{ action: '#', fields: {}, urlField: 'url' }}
+                signInHref="/login"
+              />
+              <VerifyPanel
+                id="sg-verify-failing"
+                goal={sgVerify.goal}
+                path="/health"
+                checks={sgVerify.checks}
+                xp={30}
+                defaultUrl="https://klippy.your-name.workers.dev"
+                initial={{
+                  passed: false,
+                  outcome: 'checks',
+                  origin: 'https://klippy.your-name.workers.dev',
+                  path: '/health',
+                  status: 200,
+                  ms: 142,
+                  checks: [
+                    { label: sgVerify.checks[0]!, met: true },
+                    { label: sgVerify.checks[1]!, met: true },
+                    { label: sgVerify.checks[2]!, met: false },
+                  ],
+                  hint: 'Set app to "klippy" in the JSON your /health route returns.',
+                }}
+              />
+              <VerifyPanel
+                id="sg-verify-passed"
+                goal={sgVerify.goal}
+                path="/health"
+                checks={sgVerify.checks}
+                xp={30}
+                passed
+                defaultUrl="https://klippy.your-name.workers.dev"
+                initial={{
+                  passed: true,
+                  outcome: 'pass',
+                  origin: 'https://klippy.your-name.workers.dev',
+                  path: '/health',
+                  status: 200,
+                  ms: 96,
+                  checks: sgVerify.checks.map((label) => ({ label, met: true })),
+                  hint: 'Your Worker is live and answers the way it should.',
+                }}
+              />
+            </div>
+          </Specimen>
         </div>
       </Section>
 
@@ -1386,3 +1442,9 @@ const pillScroller = css({
   '& > a': { flex: 'none' },
 })
 
+/** The deploy-check specimens' block (decision 072). */
+const sgVerify = {
+  goal: 'Your Worker answers /health with JSON that says it’s ok',
+  task: 'Paste the https://….workers.dev URL that wrangler deploy printed.',
+  checks: ['/health answers 200 OK', 'Says ok', 'Names the app'],
+}

@@ -13,6 +13,7 @@ import type { D1DataTableDatabase } from '../d1/database.ts'
 import type { D1PreparedStatement, D1Result } from '../d1/types.ts'
 import type { ExerciseAttempt, User } from '../tables.ts'
 import type { IdentityRow } from './auth.ts'
+import { passedBuildsStatement, type PassedBuild } from './builds.ts'
 import type { CompletedLesson } from './progress.ts'
 import { userFromRawRow } from './users.ts'
 
@@ -113,14 +114,18 @@ export async function readPublicProfile(
 
 /**
  * A user by handle with their completed lessons (newest first), in one
- * batch. For certificates, which check visibility themselves.
+ * batch. For certificates, which check visibility themselves. With
+ * `passedBuildsFor`, the same batch also brings the newest passing deploy
+ * check per verify block of that course (decision 072), for a public
+ * profile only (the certificate's proof link).
  */
 export async function readUserWithCompleted(
   db: D1DataTableDatabase,
   handle: string,
-): Promise<{ user: User; completed: CompletedLesson[] } | null> {
+  options: { passedBuildsFor?: string } = {},
+): Promise<{ user: User; completed: CompletedLesson[]; passedBuilds: PassedBuild[] } | null> {
   let key = handle.toLowerCase()
-  let [users, completed] = await db.batch([
+  let [users, completed, builds] = await db.batch([
     db.d1.prepare('select * from users where handle = ?1').bind(key),
     db.d1
       .prepare(
@@ -129,7 +134,14 @@ export async function readUserWithCompleted(
          order by completed_at desc`,
       )
       .bind(key),
+    ...(options.passedBuildsFor === undefined ? [] : [passedBuildsStatement(db, '(select id from users where handle = ?1 and is_public = 1)', key, options.passedBuildsFor)]),
   ])
   let row = users?.results[0]
-  return row ? { user: userFromRawRow(row), completed: (completed?.results ?? []) as unknown as CompletedLesson[] } : null
+  return row
+    ? {
+        user: userFromRawRow(row),
+        completed: (completed?.results ?? []) as unknown as CompletedLesson[],
+        passedBuilds: (builds?.results ?? []) as unknown as PassedBuild[],
+      }
+    : null
 }

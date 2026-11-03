@@ -1,6 +1,7 @@
 // Server-side lesson checks. Never trust the client's XP: when a lesson is
 // completed, the server reads which exercises passed and which asks were
-// answered right from its own journals (decisions 052, 064), then decides
+// answered right from its own journals (decisions 052, 064), and which
+// deploy checks passed from the build-check journal (decision 072), then decides
 // the awards. Form fields are never read for grading.
 import type { XpKind } from '@bits/db'
 import { checkPasses } from '@bits/ui/prompt-composer'
@@ -12,6 +13,7 @@ import {
   type AskBlock,
   type LessonContent,
   type QuizBlock,
+  type VerifyBlock,
 } from '../actions/courses/lesson/content.ts'
 import { offeredTemperatures, promptChecks } from '../actions/courses/lesson/ui/exercise.ts'
 import { isSafePattern } from '../content/compile/regex.ts'
@@ -44,6 +46,12 @@ export interface LessonSubmission {
   asks?: Record<string, boolean>
   /** Quiz id → picked option keys: only in progress saved before decision 052. */
   quizzes?: Record<string, string[]>
+  /**
+   * Verify block id → passed. Never read from the form: filled from the
+   * journal of deploy checks (`/api/verify`, decision 072). Absent in
+   * progress saved before verify blocks existed, which didn't wait for them.
+   */
+  verifies?: Record<string, boolean>
 }
 
 /**
@@ -76,6 +84,8 @@ export interface CheckedLesson {
   exercises: CheckedExercise[]
   /** Gating asks with no right answer in the journal. */
   unanswered: AskBlock[]
+  /** Gating verify blocks with no passing check in the journal (decision 072). */
+  unverified: VerifyBlock[]
   awards: Award[]
 }
 
@@ -98,7 +108,7 @@ export function quizCorrect(block: QuizBlock | AskBlock, picked: string[] | unde
 }
 
 /**
- * Each prompt's and ask's share of the lesson's xp, in lesson order: its
+ * Each prompt's, ask's and verify block's share of the lesson's xp, in lesson order: its
  * own xp, clamped so the blocks never add up past the lesson's (the rest is
  * the completion award). Shared by the save and by /api/ask, so a late
  * answer earns what it would have earned with the save.
@@ -110,7 +120,7 @@ export function blockShares(content: LessonContent): { lessonXp: number; shares:
   let shares = new Map<string, number>()
   let earmarked = 0
   for (let block of upgradeLessonContent(content).blocks) {
-    if (block.type !== 'prompt' && block.type !== 'ask') continue
+    if (block.type !== 'prompt' && block.type !== 'ask' && block.type !== 'verify') continue
     let xp = Math.min(clampXp(block.xp, MAX_BLOCK_XP), Math.max(0, lessonXp - earmarked))
     earmarked += xp
     shares.set(block.id, xp)
@@ -159,19 +169,33 @@ export function checkLesson(courseSlug: string, lessonSlug: string, stored: Less
   // Progress saved before asks existed didn't wait for its quizzes.
   let unanswered = submission.asks ? asks.filter((block) => block.gate && !answered(block)) : []
 
+  // A deploy check passes on a journalled passing call (decision 072).
+  let verified = (block: VerifyBlock) => submission.verifies?.[block.id] === true
+  let verifies = content.blocks.filter((block): block is VerifyBlock => block.type === 'verify')
+  let unverified = submission.verifies ? verifies.filter((block) => block.gate && !verified(block)) : []
+
   let { lessonXp, shares, earmarked } = blockShares(content)
   let awards: Award[] = []
   for (let block of content.blocks) {
-    if (block.type !== 'prompt' && block.type !== 'ask') continue
-    let passed = block.type === 'prompt' ? exercises.find((e) => e.exerciseId === block.id)?.passed : answered(block)
+    if (block.type !== 'prompt' && block.type !== 'ask' && block.type !== 'verify') continue
+    let passed =
+      block.type === 'prompt'
+        ? exercises.find((e) => e.exerciseId === block.id)?.passed
+        : block.type === 'ask'
+          ? answered(block)
+          : verified(block)
     let share = shares.get(block.id) ?? 0
     // A strong prompt shown before the pass earns half (decision 064).
     if (block.type === 'prompt' && submission.exercises?.[block.id]?.revealed) share = Math.floor(share / 2)
-    if (passed) awards.push({ kind: block.type === 'prompt' ? 'exercise' : 'quiz', ref: `${base}/${block.id}`, xp: share })
+    // A passing deploy check is ledgered as an exercise (the ledger's kinds are fixed; ids are unique per lesson).
+    if (passed) awards.push({ kind: block.type === 'ask' ? 'quiz' : 'exercise', ref: `${base}/${block.id}`, xp: share })
   }
   // An ungated exercise (`gate=false`) earns when passed but never holds the lesson back.
   let gating = new Set(exercisesOf(content).filter((block) => block.gate !== false).map((block) => block.id))
-  let ok = exercises.every((exercise) => exercise.passed || !gating.has(exercise.exerciseId)) && unanswered.length === 0
+  let ok =
+    exercises.every((exercise) => exercise.passed || !gating.has(exercise.exerciseId)) &&
+    unanswered.length === 0 &&
+    unverified.length === 0
   if (ok) awards.push({ kind: 'lesson', ref: base, xp: lessonXp - earmarked })
-  return { ok, exercises, unanswered, awards }
+  return { ok, exercises, unanswered, unverified, awards }
 }
