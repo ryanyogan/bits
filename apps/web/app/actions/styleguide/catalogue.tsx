@@ -62,7 +62,7 @@ import { LearnerBubble, ModelOutput, TutorAvatar, TutorMessage, attachedBlock } 
 import { VideoPlayer } from '@bits/ui/video-player'
 import { XpPill } from '@bits/ui/xp-pill'
 
-import { APP_NAME } from '../../config.ts'
+import { APP_NAME, APP_TITLE } from '../../config.ts'
 import { routes } from '../../routes.ts'
 import { PathCourseTag, type PathCourse } from '../home/the-path.tsx'
 import { FieldSpecimen } from './field-specimen.tsx'
@@ -146,7 +146,7 @@ export function Catalogue(handle: Handle) {
 
       <Section
         id="sg-bits"
-        title="Bits motif"
+        title={`${APP_TITLE} motif`}
         intro="Decision 058: one ornament, the bit cell, carried through the marks. A lit bit is a filled square, an unlit one a hairline frame, 8px with a 2px gap (--bit-cell, --bit-gap). It is the brand mark, the empty-state row, the status readout, the progress bars and the cover patterns. It never decorates prose."
       >
         <div mix={specimenGrid}>
@@ -371,7 +371,7 @@ export function Catalogue(handle: Handle) {
             <Footer
               brand={APP_NAME}
               homeHref="#sg-nav"
-              copyright="© 2026 Bits"
+              copyright={`© 2026 ${APP_TITLE}`}
               links={[
                 { href: '#sg-f1', label: 'Courses' },
                 { href: '#sg-f2', label: 'Write a course' },
@@ -458,7 +458,7 @@ export function Catalogue(handle: Handle) {
             </div>
           </Specimen>
           <Specimen caption="Pending submit (live) — any form submit marks its submitter aria-busy and drops a second POST until the navigation settles; PendingSubmit also swaps its label and makes the fields read-only">
-            <form method="get" action="/styleguide" mix={column}>
+            <form method="get" action={routes.styleguide.index.href()} mix={column}>
               <input type="hidden" name="demo" value="pending" />
               <TextField name="sg-pending-note" label="Note (read-only while pending)" value="Try me" compact />
               <PendingSubmit label="Submit (reloads this page)" pendingLabel="Submitting…" size="md" />
