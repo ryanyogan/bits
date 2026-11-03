@@ -202,18 +202,25 @@ describe('catalog and course pages', () => {
     assert.match(html, /<title>Tokens &amp; temperature · Bits<\/title>/)
     assert.equal(count(html, /<h1[\s>]/), 1)
     assert.match(html, /<nav aria-label="Breadcrumb"/)
-    assert.match(html, /By the end you(?:'|&#39;)ll be able to/)
-    assert.equal(count(html, /<h3[\s>]/), 3)
+    assert.match(html, /What you(?:'|&#39;)ll learn/)
     assert.equal(count(html, /— completed/), 5)
     assert.equal(count(html, /— in progress/), 1)
     assert.equal(count(html, /— not started/), 2)
     assert.match(html, /aria-current="step"/)
-    assert.match(html, /Resume lesson 6 →/)
-    assert.match(html, /Pick up here →/)
-    assert.match(html, /You stopped at the exercise/)
+    // One CTA for the state, naming the lesson it opens (decision 066).
+    assert.match(html, /Continue lesson 6 →/)
+    assert.doesNotMatch(html, /Pick up here/)
+    // The resume note names the current lesson's own exercise, not the course's.
+    assert.match(html, /In this lesson/)
+    // One progress indicator: the aside ring, not a second one on the art.
+    assert.equal(count(html, /percent complete"/), 1)
     assert.match(html, /aria-label="62 percent complete"/)
     assert.match(html, /5 of 8 lessons/)
-    assert.match(html, /badge \+ 320 neurons on finish/)
+    assert.match(html, /Plus 320 neurons and a certificate/)
+    // Plain-word lesson tags, no glyph key; the source is the GitHub folder.
+    assert.match(html, /Prompt exercise/)
+    assert.match(html, /href="https:\/\/github\.com\/ryanyogan\/bits\/tree\/master\/content\/courses\/tokens-and-temperature"/)
+    assert.doesNotMatch(html, /href="\/author\//)
     assert.match(html, /How you(?:'|&#39;)ll learn/)
     assert.match(html, /href="\/courses\/tokens-and-temperature\/what-is-a-token"/)
     // Lesson 1's video isn't uploaded, so it is text-only and there is no "watch the intro" key (decision 029).
@@ -225,9 +232,14 @@ describe('catalog and course pages', () => {
     assert.equal(count(html, /— not started/), 8)
     assert.equal(count(html, /— completed/), 0)
     assert.doesNotMatch(html, /aria-current="step"/)
-    assert.doesNotMatch(html, /Pick up here/)
-    assert.match(html, /Start lesson 1 →/)
-    assert.match(html, /aria-label="0 percent complete"/)
+    assert.match(html, /Start the course →/)
+    assert.match(html, /Lesson 1 · What is a token\? · \d+ min/)
+    // Nothing started: no empty ring, the reward instead, and a note that
+    // progress stays in this browser until you sign in.
+    assert.doesNotMatch(html, /percent complete"/)
+    assert.match(html, /On finishing/)
+    assert.match(html, /Your progress stays in this browser/)
+    assert.match(html, /href="\/login\?next=%2Fcourses%2Ftokens-and-temperature"/)
   })
 
   it('renders every catalog course', async () => {
@@ -238,9 +250,13 @@ describe('catalog and course pages', () => {
     }
   })
 
-  it('labels a finished course "Review the course"', async () => {
+  it('offers the certificate and the next course once a course is finished', async () => {
     let { html } = await page(routes.courses.course.index.href({ course: 'what-is-an-llm' }))
-    assert.match(html, /Review the course →/)
+    assert.match(html, /View your certificate →/)
+    assert.match(html, /href="\/u\/[^"/]+\/certificates\/what-is-an-llm"/)
+    assert.match(html, /Next course: [^<]+ →/)
+    assert.match(html, /Course finished/)
+    assert.doesNotMatch(html, /Continue lesson/)
   })
 
   it('returns a styled 404 for an unknown course', async () => {
