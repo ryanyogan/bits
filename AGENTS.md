@@ -121,7 +121,7 @@ apps/web/                 @bits/web: the Remix app and Worker
   app/config.ts           APP_NAME ("bits"), tagline, pageTitle(); the only place the name lives
   app/actions/            controllers: controller.tsx (root) and <area>/.../controller.tsx
   app/actions/**/public/  browser modules (clientEntry components, entry.ts)
-  app/ui/                 app-level shared UI: Layout, PlaceholderPage
+  app/ui/                 app-level shared UI: Layout, PageHead, StatusPage
   app/middleware/         database.ts puts the data-table db on context.db
   app/auth/               sessions, identity, email sign-in, OAuth, mailer (server-only)
   app/progress/           lesson checks, progress store + anonymous merge, badges, levels, days
@@ -158,9 +158,7 @@ content/fixtures/         deliberately broken folders for tests
    put a `remix/data-schema/form-data` schema in `schema.ts` next to the
    controller, re-render 422 with `parsed.issues` on failure, and redirect
    303 on success. See `app/actions/login/` for the pattern.
-6. Existing placeholder pages: replace `PlaceholderPage` in that area's
-   controller with the real page.
-7. Grid layout (decisions 047, 050): the page brings its own `<PageFrame>`
+6. Grid layout (decisions 047, 050): the page brings its own `<PageFrame>`
    as a top-level child of `Layout` (Layout detects it and gives `<main>`
    the framed style, so no `bleed` is needed). Inside it, start with
    `PageHead` (`app/ui/page-head.tsx`: strip, `<h1>`, lead) and lay the
@@ -232,6 +230,11 @@ the new page into the old DOM. Write for that:
   Cache-Control default (`private, no-cache`; `no-store` under `/settings`,
   `/me`, `/login`, `/auth` and `/logout`). Set your own Cache-Control on a
   response that needs another policy.
+- Middleware that picks requests by URL matches the route map, never a
+  hand-written regex or path: `createMatcher(routes.x.pattern)`, or
+  `under()` / `anyOf()` / `pathPrefix()` from `app/middleware/route-match.ts`.
+- Unknown URLs get the styled 404 for every method: `routes.notFound` is a
+  plain-string (any-method) catch-all, so a stale POST isn't a bare 405.
 - Files in `apps/web/public/` never reach the Worker; their Cache-Control
   comes from the `_headers` that `copyPublic()` in `scripts/build.ts` writes.
 - HTML gets a strict CSP (decision 027): `script-src 'nonce-…'
@@ -706,7 +709,8 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   so it never reads the session or D1 (decision 035). A public, immutable,
   non-HTML response that needs neither belongs there too, not after
   `loadSession`.
-  `/robots.txt` sits there; `/sitemap.xml` needs the catalog, so it is
+  `/robots.txt` and `/assets/*` (`serveAssets()`: Node's compiled
+  modules, a miss on Workers) sit there; `/sitemap.xml` needs the catalog, so it is
   answered right after `loadDatabase` (`app/middleware/site-files.ts`).
 - Builds link a lesson's `video:` path to the newest ready upload:
   callers pass `buildCourse(files, { videos: await loadVideoLinks(db) })`.
