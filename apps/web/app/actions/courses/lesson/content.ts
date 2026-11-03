@@ -142,6 +142,12 @@ export interface RubricLine {
   on: 'reply' | 'prompt'
   /** A `must` met only when the judge quotes the reply verbatim. */
   evidence: boolean
+  /**
+   * `grounded` / `grounded=false` (decision 064 §3.7): the answer must come
+   * from material in the learner's prompt, so the judge quotes that material.
+   * Absent: `groundedLine()`'s label heuristic decides (and the build warns).
+   */
+  grounded?: boolean
 }
 
 /** One file of a `:::code` group (adjacent blocks become editor tabs). */

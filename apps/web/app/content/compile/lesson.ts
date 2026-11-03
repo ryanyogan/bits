@@ -55,6 +55,7 @@ import type { LessonKind } from '../types.ts'
 import { LessonFrontmatter, parseClock, readFrontmatter } from './frontmatter.ts'
 import { highlight, isKnownLanguage, languageOf } from './highlight.ts'
 import { checkPattern } from './regex.ts'
+import { aboutAbsence, looksGrounded } from './rubric-labels.ts'
 import type { FileReport, SourceFile } from './report.ts'
 
 type ContainerDirective = Extract<RootContent, { type: 'containerDirective' }>
@@ -849,9 +850,12 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
         return
       }
       case 'rubric': {
-        let match = new RegExp(`^${QUOTED}\\s+(must|should)((?:\\s+(?:on=(?:reply|prompt)|evidence))*)\\s*$`).exec(rest)
+        let match = new RegExp(`^${QUOTED}\\s+(must|should)((?:\\s+(?:on=(?:reply|prompt)|evidence|grounded(?:=(?:true|false))?))*)\\s*$`).exec(rest)
         if (!match) {
-          report.error('rubric lines look like: - rubric "Answers for Tuesday, from the rota" must evidence (must or should; then on=prompt or evidence, optional)', at)
+          report.error(
+            'rubric lines look like: - rubric "Answers for Tuesday, from the rota" must evidence grounded (must or should; then on=prompt, evidence or grounded / grounded=false, optional)',
+            at,
+          )
           return
         }
         let [, label = '', level, flags = ''] = match
@@ -861,6 +865,8 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
           on: /on=prompt/.test(flags) ? 'prompt' : 'reply',
           evidence: /\bevidence\b/.test(flags),
         }
+        let grounded = /\bgrounded(?:=(true|false))?\b/.exec(flags)
+        if (grounded) line.grounded = grounded[1] !== 'false'
         if (!line.label.trim() || line.label.length > MAX_LABEL) {
           report.error(`rubric labels are 1–${MAX_LABEL} characters`, at)
           return
@@ -868,6 +874,23 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
         if (line.evidence && line.on === 'prompt') {
           report.error('evidence quotes the reply, so it can’t go with on=prompt: drop one', at)
           return
+        }
+        if (line.grounded && line.on === 'prompt') {
+          report.error('grounded checks the reply against the prompt’s material, so it can’t go with on=prompt: drop one', at)
+          return
+        }
+        // The judge's rules read these labels (decision 064 §3.7); say what the build inferred.
+        if (line.grounded === undefined && line.on === 'reply' && looksGrounded(line.label)) {
+          report.warning(
+            `rubric “${line.label}” reads as grounded in material from the prompt, so the judge must quote that material from the prompt: add grounded to confirm, or grounded=false if it isn’t`,
+            at,
+          )
+        }
+        if (line.evidence && aboutAbsence(line.label)) {
+          report.warning(
+            `rubric “${line.label}” is about something absent, but evidence needs a quote from the reply, and the judge can’t quote what isn’t there: drop evidence, or reword it as what the reply does`,
+            at,
+          )
         }
         rubric.push(line)
         rubricAt.push(at)

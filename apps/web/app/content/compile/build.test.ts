@@ -875,6 +875,58 @@ describe('content build', () => {
   it('rejects malformed rubric lines and evidence on the prompt', () => {
     hasError(coached(['- check "x" /x/', '- rubric "R" sometimes', '- hint "h"']), 'rubric lines look like')
     hasError(coached(['- check "x" /x/', '- rubric "R" must on=prompt evidence', '- hint "h"']), 'can’t go with on=prompt')
+    hasError(coached(['- check "x" /x/', '- rubric "R" must on=prompt grounded', '- hint "h"']), 'grounded checks the reply')
+    hasError(coached(['- check "x" /x/', '- rubric "R" must grounded=maybe', '- hint "h"']), 'rubric lines look like')
+  })
+
+  const warnings = (result: ReturnType<typeof build>) =>
+    result.report.filter((item) => item.level === 'warning').map((item) => item.text)
+  const rubricOf = (result: ReturnType<typeof build>) => {
+    let block = result.lessons?.get('one')?.blocks.find((b) => b.type === 'prompt')
+    return block?.type === 'prompt' ? block.rubric : undefined
+  }
+
+  it('grounded marks a grounding line; the build warns when only the label heuristic says so', () => {
+    // The flag decides, either way, with no warning.
+    let flagged = coached([
+      '- check "x" /x/',
+      '- rubric "Keeps the id from the line" must evidence grounded',
+      '- rubric "Answers for Tuesday, from the rota" must evidence grounded=false',
+      '- rubric "Every value matches the booking" must grounded=true',
+      '- hint "h"',
+    ])
+    assert.deepEqual(errors(flagged), [])
+    assert.deepEqual(warnings(flagged), [])
+    assert.deepEqual(
+      rubricOf(flagged)?.map((line) => line.grounded),
+      [true, false, true],
+    )
+    // Unflagged: the heuristic fires on a label about material from the prompt, and the build says so.
+    let inferred = coached(['- check "x" /x/', '- rubric "Answers for Tuesday, from the rota" must evidence', '- hint "h"'])
+    assert.deepEqual(errors(inferred), [])
+    assert.equal(rubricOf(inferred)?.[0]?.grounded, undefined)
+    assert.ok(warnings(inferred).some((text) => text.includes('reads as grounded') && text.includes('add grounded')))
+    // The misfires the content lane hit stay quiet: a line, a clinic, a negated clause.
+    for (let label of ['Keeps the id from the line', 'Reads like a reminder from the clinic', 'Sounds like a customer, not lines from the passage']) {
+      let quiet = coached(['- check "x" /x/', `- rubric "${label}" must`, '- hint "h"'])
+      assert.deepEqual(warnings(quiet), [], label)
+    }
+    // A prompt line is never grounded, so it never warns.
+    assert.deepEqual(warnings(coached(['- check "x" /x/', '- rubric "Pastes the rota from the wiki" must on=prompt', '- hint "h"'])), [])
+  })
+
+  it('warns when an evidence line is about something absent', () => {
+    for (let label of ['Adds no fields the email lacks', 'Leaves out the customer’s email', 'Invents none', 'Never mentions the price', 'Answers, without guessing a date']) {
+      let result = coached(['- check "x" /x/', `- rubric "${label}" must evidence`, '- hint "h"'])
+      assert.deepEqual(errors(result), [], label)
+      assert.ok(warnings(result).some((text) => text.includes('about something absent')), label)
+      // Without evidence there's nothing to quote, so it's fine.
+      assert.deepEqual(warnings(coached(['- check "x" /x/', `- rubric "${label}" must`, '- hint "h"'])), [], label)
+    }
+    // Said out loud in the reply, an absence is quotable.
+    for (let label of ['Says it doesn’t know', 'Says the passages don’t cover Canada', 'Offers a replacement, with no return needed']) {
+      assert.deepEqual(warnings(coached(['- check "x" /x/', `- rubric "${label}" must evidence`, '- hint "h"'])), [], label)
+    }
   })
 
   it('ties a hint to a criterion with for=, by its exact label', () => {

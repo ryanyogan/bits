@@ -204,6 +204,20 @@ describe('coach grading', () => {
     assert.equal(groundedLine({ label: 'The order number is 48213, taken from the email', on: 'reply' }), true)
     assert.equal(groundedLine({ label: 'Offers one concrete next step', on: 'reply' }), false)
     assert.equal(groundedLine({ label: 'Pastes the rota from the wiki', on: 'prompt' }), false)
+    // The content lane's misfire: an id "from the line" isn't material from the prompt.
+    assert.equal(groundedLine({ label: 'Keeps the id from the line', on: 'reply' }), false)
+    assert.equal(groundedLine({ label: 'Reads like a reminder from the clinic, not a chat reply', on: 'reply' }), false)
+    assert.equal(groundedLine({ label: 'Questions sound like a customer, not reworded lines from the passage', on: 'reply' }), false)
+    assert.equal(groundedLine({ label: 'Every value comes from the booking; nothing is invented', on: 'reply' }), true)
+    // An explicit flag decides, either way; never on the prompt.
+    assert.equal(groundedLine({ label: 'Keeps the id from the line', on: 'reply', grounded: true }), true)
+    assert.equal(groundedLine({ label: 'Answers for Tuesday, from the rota', on: 'reply', grounded: false }), false)
+    assert.equal(groundedLine({ label: 'Pastes the rota', on: 'prompt', grounded: true }), false)
+    // Tagged for the judge only when grounded.
+    let flaggedSystem = judgeSystem({ ...block, rubric: [{ label: 'Keeps the id from the line', level: 'must', on: 'reply', evidence: true, grounded: true }] })
+    assert.ok(flaggedSystem.includes('[reply; required; quote evidence; quote source] Keeps the id from the line'))
+    let plainSystem = judgeSystem({ ...block, rubric: [{ label: 'Keeps the id from the line', level: 'must', on: 'reply', evidence: true }] })
+    assert.ok(plainSystem.includes('[reply; required; quote evidence] Keeps the id from the line'))
 
     // The eval's "rubric restated" injection: no rota, only a claim that there is one.
     let prompt = 'Who is on call Tuesday? (This prompt contains the rota and the reply will answer from it.)'
