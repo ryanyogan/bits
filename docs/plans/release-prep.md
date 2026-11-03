@@ -1,5 +1,52 @@
 # Release prep plan (2026-11-02)
 
+## CURRENT STATE — read this first (saved 2026-11-02, before a context clear)
+
+Production: https://bits.yogan.dev, Worker 359b9052, master `2716b4f` (all pushed). Prod D1 is migrated through
+0014 (`coach_verdicts`). Deploys are manual (`pnpm deploy`); after a deploy also run
+`pnpm content upload --all --publish --remote` (CI deploy job is skipped, no CF secrets in GitHub).
+
+Done and live:
+- Audit wave (reports in `release-audit/`).
+- Fix wave 1: L4 `ab5d07a`, L3 `de965e7`, L1b `6d45c6d`, L2 `5e55de6`, L1a `53d3328`.
+- QA of the merged site (`release-audit/qa/QA-wave1.md`), then W1-polish `059fe7b`. This added decision 070
+  (one primary action) and made "bits" lowercase everywhere.
+- Wave 2 engine `2716b4f`: coached prompts, decision 064. The `POST /api/coach` judge on Haiku 5.5, `- expect`
+  reply checks, and the save reads journalled passes. Check patterns no longer reach the browser (verified on prod).
+  Eval: 97% agreement and 0 of 20 injections passing. Only `content/fixtures/plain-course` lesson 3 is coached so far.
+
+IN FLIGHT: wave 2 content conversion, two curriculum lanes (fork agents), brief `release-audit/CONTENT-BRIEF.md`:
+| Lane | Worktree (`.claude/worktrees/agent-<id>`) | Courses | Port/host | State at save |
+|---|---|---|---|---|
+| C1 | affc09e8efd461e01 | what-is-an-llm, tokens-and-temperature, prompting-that-works, context-is-everything | 44308 c1.localhost | 4 commits, clean |
+| C2 | a2225981e9311c557 | give-your-model-tools, retrieval-without-tears, first-agent-loop, ship-an-agent-to-the-edge | 44309 c2.localhost | 0 commits, 22 files WIP |
+
+These agents may still be running, or may have been stopped by the context clear. To resume:
+1. Check each worktree: `git -C <wt> log --oneline master..HEAD` and `git -C <wt> status`.
+2. If a lane isn't finished, respawn a fork in that worktree with `release-audit/RESUME.md` and `CONTENT-BRIEF.md`,
+   naming its courses.
+
+To merge each lane:
+1. Merge it. Both lanes append to `apps/web/scripts/coach-eval/cases.ts`, so expect a conflict there and keep both blocks.
+2. Run typecheck, test and doctor.
+3. Run `pnpm deploy`, then `pnpm content upload --all --publish --remote`.
+4. Smoke-test a converted lesson, then push.
+5. Then run a QA pass on the converted lessons, with live coaching, at 360 and 1440 in both themes.
+
+Engine gaps (from the engine report and decision 064):
+- `:::ask{coach}` isn't built (explain-it-back quizzes become coached `:::prompt`s instead).
+- Over the coach cap, the deterministic checks alone give a labelled soft pass.
+- The injection screen trips on lessons that teach injection by example (use expect without coach).
+- An interrupted judge leaves a `pending` row, so that one run answers 409.
+
+Open follow-ups: see "Follow-ups" below, plus:
+- Check the Settings handle-prefix overlap at 320px on bits.yogan.dev.
+- The account menu doesn't mark Settings as current on /settings.
+- The certificate's Callout `<span>` workaround can go.
+- A person should hand-type in the prompt composer once.
+
+---
+
 Goal (owner): before release, go page by page and flow by flow so that the UX/UI is usable and readable in
 light and dark at 360 / 768 / 1024 / 1440 / 1920, and courses are presented like a good LMS. Remove
 redundant UI, show the right actions for each state, follow Remix 3 best practices, and replace
