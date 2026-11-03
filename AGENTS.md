@@ -390,7 +390,8 @@ Rationale: `docs/decisions/010-component-library.md`.
 | TabPanels | tab-panels.tsx | label, items {name, label, panel}, defaultTab, flavour | island (@remix-run/ui tabs) |
 | ChoiceChip / Chip / SuggestionChip | chip.tsx | name, value, type, defaultChecked / selected / href, prefetch | static |
 | FilterPill | filter-pill.tsx | href, dot, count, selected, prefetch, variant pill/cell (`cell`: a full-height cell of a ruled toolbar row) | static |
-| Tag | tag.tsx | variant, color | static |
+| Tag | tag.tsx | variant (… `free`, `pro`, `soon` "Coming soon", `desk`), color | static |
+| DeskTag | desk-tag.tsx | mix ("Desk", plus the reason in `sr-only` text; decision 073) | static |
 | TextField | text-field.tsx | name, label, type, value, error, hint, mono, compact (every variant 16px, decision 051), enterKeyHint, autoCapitalize, spellCheck | static |
 | SearchField | search-field.tsx | action, name, value, label, shortcut, variant field/cell (`cell`: no box, fills its grid cell); built on the shared field mixins | static |
 | SearchShortcut | search-shortcut.tsx | target (input id; `/` and Cmd/Ctrl-K focus it) | island |
@@ -416,12 +417,12 @@ Rationale: `docs/decisions/010-component-library.md`.
 | XpPill / StreakPill / AvatarButton | xp-pill.tsx / streak-pill.tsx / avatar-button.tsx | neurons / days / initials, href, current, prefetch | static |
 | AccountMenu | account-menu.tsx | initials, name, handle, links, signOutAction (a POST form), currentPath, id (the signed-in avatar as a `popovertarget` button; a native popover sheet under the bar; decision 065) | island |
 | CourseCover / Sigil | course-cover.tsx | pattern (8 `coverPatterns`), tone volt/ion/synapse, sigil, variant card/banner/art/thumb | static |
-| CourseCard / WriteCourseCard | course-card.tsx | href, title, desc, level, lessons, mins, sigil, tone, pattern, formats, pct, prefetch, variant card/cell (`cell`: a whole-cell link in a `CellGrid`, built on `cellLinkStyle`) | static |
+| CourseCard / WriteCourseCard | course-card.tsx | href, title, desc, level, lessons, mins, sigil, tone, pattern, formats, pct, access free/pro/soon (`soon`: "Coming soon", no progress, counts dropped with no lessons; decision 073), prefetch, variant card/cell (`cell`: a whole-cell link in a `CellGrid`, built on `cellLinkStyle`) | static |
 | ContinueBanner | continue-banner.tsx | href, courseTitle, eyebrow, nextLesson, mins, pct, sigil, tone, pattern, prefetch, edge boxed/flush (`flush`: fills a ruled band rail to rail) | static |
 | ProgressBar / SegmentedProgress | progress-bar.tsx | pct, variant card/banner/art/row/level, color, label / segments | static |
 | ProgressRing | progress-ring.tsx | pct, size 96/132, color, caption, label | static |
 | LessonNode / LessonNodeRow | lesson-node.tsx | state done/current/next, size, n, passed / state, badge | static |
-| LessonBar / LessonRow | lesson-bar.tsx | backHref, context, title, titleAs, segments, depths (the "New to this / Engineer" tabs, the bar's one control from 1024px, only when the lesson has depth blocks; decisions 053, 055), neurons, xp, position shell/sticky/static (`shell` = AppBar `sub`; two-line title, 3px progress strip on phones) / depths, aside (the <1024px chrome row, `LESSON_NARROW`, where the lesson drops its sidebar; decision 067: the depth tabs, then `aside`, the outline disclosure), mix | static |
+| LessonBar / LessonRow | lesson-bar.tsx | backHref, context, title, titleAs, segments, depths (the "New to this / Engineer" tabs, the bar's one control from 1024px, only when the lesson has depth blocks; decisions 053, 055), desk (the Desk tag; from 1024px in the shell, `LessonRow` below; decision 073), neurons, xp, position shell/sticky/static (`shell` = AppBar `sub`; two-line title, 3px progress strip on phones) / depths, desk, aside (the <1024px chrome row, `LESSON_NARROW`, where the lesson drops its sidebar; decision 067: the depth tabs, then `aside`, the outline disclosure), mix | static |
 | TutorAvatar / TutorMessage / LearnerBubble / ModelOutput | tutor.tsx | size / variant, continued (same turn: no second avatar; phones never draw it; decision 067) / variant / temperature, tokens, state done/streaming/example/error, note | static |
 | CheckChip | check-chip.tsx | passed, compact | static |
 | TokenPill / TokenizerPanel | token-pill.tsx | text, id, index / tokens, illustrative | static |
@@ -676,11 +677,39 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   `MarkdownBlock.paragraphs` is `Prose[]`: `Array.isArray(part)` is a
   paragraph, else `heading`, `list` or `sample`. Valid and broken
   examples: `content/fixtures/prose/` and `content/fixtures/broken-prose/`.
+- Course and lesson metadata (decision 073), all frontmatter:
+  - Freshness: a lesson takes `verified: YYYY-MM-DD` (the day its code
+    really ran) and `versions:` (package → exact version, quoted, no
+    ranges). The lesson page shows them in one quiet line; the course
+    page shows the newest date. A lesson with code (`:::code`,
+    `:::terminal` or a ``` sample) and no date, or one older than 120
+    days, is a build warning. The build stays pure: callers pass
+    `freshness: { today: todayIso() }` in `BuildOptions` (no option, no
+    check). `pnpm content validate --max-age <days>` makes it an error;
+    `.github/workflows/freshness.yml` runs that weekly.
+  - `device: desk` (default `any`) puts a Desk tag on the syllabus row
+    and the lesson bar.
+  - Course `access: soon` lists a course before it opens: a
+    "Coming soon" card, the outline without lesson links and no Start
+    key. A soon course may be its course.md alone. Its lesson URLs 404
+    (`StatusPage`) because `Catalog.getLesson`/`lessonContent` refuse
+    them (only the author preview opens them). Iterate
+    `catalog.openCourses`, not `catalog.courses`, for anything a learner
+    can earn or be sent to (badges, sitemap, the next course).
+  - Course `order:` (a whole number, spaced by tens) sets the catalog
+    order. It's in the manifest, so a new order uploads a new version.
+  - Course `repo:` (an https GitHub repo URL) plus lesson `tag:` shows
+    "Start from `a-03`" (a `data-rmx-document` link to `<repo>/tree/<tag>`,
+    never prefetched) and the git commands in a copyable sample. A tag
+    without `repo:` is an error.
+  - The rules live in `compile/lesson-meta.ts`, not `compile/lesson.ts`.
 - Tests: the test platform uploads and publishes every folder in
   `content/courses/` at startup, so a broken course fails every test run.
   It also publishes `content/fixtures/plain-course/` (tests only): tests
   that need ungated lessons use it (`app/test/plain-course.ts`), never a
-  real course's lessons.
+  real course's lessons. It publishes `content/fixtures/soon-course/` and
+  `content/fixtures/build-along/` too (`app/test/metadata-courses.ts`) for
+  the decision 073 states.
 
 ## Live prompts (decision 019)
 
