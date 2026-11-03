@@ -33,9 +33,10 @@ misreads the job in step one, every search, edit and command after it builds
 on the mistake. A plan is cheap to read and cheap to change.
 
 The second half of the habit is to **say what you want done**, in plain
-verbs. Anthropic's guide warns that its latest models take your words
-literally. Ask "can you suggest some changes?" and you'll get suggestions.
-Write "change this function to…" and Claude will change it.
+verbs. Anthropic's guide says its latest models are trained to follow
+instructions precisely. Ask "can you suggest some changes?" and Claude will
+often give you suggestions instead of making them. Write "change this
+function to…" and it makes the change.
 
 :::compare{left="Can you suggest…" right="Change… / Plan only" illustrative}
 - prompt "Our blog moves from WordPress to a static site this week."
@@ -82,16 +83,16 @@ Ask for a short plan for the blog move, and a stop before any work
 - check "Asks for a plan or steps"         /plan|steps/i
 - check "Sets a limit"                     /\d|five|six|seven|short|brief/i
 - check "Says don't start yet"             /don.t start|do not start|don.t begin|not yet|before you start|wait for|until I|no changes|plan only|only the plan|don.t do/i
-- check "Asks for a check-in at the end"   /ask me|check with me|confirm|approve|go.ahead|my ok|question/i
+- check "Asks for a check-in at the end"   /ask(ing)? me|check(ing)? (in )?with me|confirm|approv|go.ahead|my ok|question|whether to (begin|start|go)/i
 - expect "A numbered list"                 match /1\.|1\)|step 1/i
 - expect "Short"                           words<=160
-- expect "Ends with a question"            match /\?/
+- expect "Asks you something"               match /\?/
 - rubric "Gives six steps or fewer, in a sensible order" must evidence
 - rubric "Ends by asking you to approve or change the plan" must evidence
 - rubric "Only plans: no finished code, config or migration commands in the reply" must
 - hint "Read the reply as the person who has to approve it. Could you say yes or no to it in ten seconds?"
 - hint "Say how many steps, and say what Claude should do after the plan: stop, and ask you."
-- hint for="Ends with a question" "Ask Claude to end with one question: should it start, or change something first?"
+- hint for="Asks you something" "Ask Claude to end with one question: should it start, or change something first?"
 - reference "We're moving our blog from WordPress to a static site, and every old post URL must keep working. Give me a plan only: a numbered list of at most six steps, one line each. Don't start any of the work yet. End by asking me whether to begin or change the plan."
 - run temperature=[1.0]
 - example T=1.0 "1. Export posts, pages and images from WordPress.\n2. Convert the posts to Markdown, keeping each slug.\n3. Pick a static site generator and build the site.\n4. Check every old URL against the new build.\n5. Add redirects for any that changed.\n6. Switch DNS once it all checks out.\n\nShall I start with step 1, or would you like to change the plan?"
