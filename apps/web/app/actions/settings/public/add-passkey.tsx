@@ -34,7 +34,7 @@ export const AddPasskey = clientEntry(import.meta.url, function AddPasskey(handl
     handle.update()
     try {
       if (!browserSupportsWebAuthn()) throw new Error('unsupported')
-      let response = await fetch(handle.props.optionsUrl, { method: 'POST' })
+      let response = await fetch(handle.props.optionsUrl, { method: 'POST', signal: handle.signal })
       if (response.status === 409) throw new Error('limit')
       if (!response.ok) throw new Error(String(response.status))
       let result = await startRegistration({ optionsJSON: await response.json() })
