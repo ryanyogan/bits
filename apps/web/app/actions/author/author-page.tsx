@@ -1,5 +1,6 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
+import { Callout } from '@bits/ui/callout'
 import { CourseCover } from '@bits/ui/course-cover'
 import { EmptyState } from '@bits/ui/empty-state'
 import { CellGrid, cellLinkStyle } from '@bits/ui/cell-grid'
@@ -21,6 +22,8 @@ export interface AuthorPageProps {
   courses: AuthorCourse[]
   viewer: Viewer | null
   currentPath: string
+  /** Once, right after accepting an author invite (decision 068). */
+  welcome?: string
 }
 
 /**
@@ -30,7 +33,7 @@ export interface AuthorPageProps {
  */
 export function AuthorPage(handle: Handle<AuthorPageProps>) {
   return () => {
-    let { courses, viewer, currentPath } = handle.props
+    let { courses, viewer, currentPath, welcome } = handle.props
     let returning = courses.length > 0
     let upload = (
       <RuledSection
@@ -68,7 +71,12 @@ export function AuthorPage(handle: Handle<AuthorPageProps>) {
                 it from the course's page.
               </span>
             }
-          />
+          >
+            {/* Always rendered, so the welcome that arrives with the page is in a live region (decision 031). */}
+            <div role="status" mix={welcomeSlotStyle}>
+              {welcome ? <Callout tone="ok">{welcome}</Callout> : null}
+            </div>
+          </PageHead>
 
           {returning ? null : upload}
 
@@ -166,3 +174,5 @@ const titleStyle = css({ fontSize: 'var(--fs-16)', fontWeight: 600 })
 const metaStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
 const tagsStyle = css({ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' })
 const arrowStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--volt)', marginLeft: 'var(--space-1)' })
+
+const welcomeSlotStyle = css({ width: '100%', '&:not(:empty)': { paddingTop: 'var(--space-2)' } })

@@ -5,6 +5,7 @@ import { contentBucket } from '../../content/request.ts'
 import { routes } from '../../routes.ts'
 import { ForbiddenPage } from '../../ui/not-found-page.tsx'
 import { AuthorPage } from './author-page.tsx'
+import { AUTHOR_WELCOME_KEY, authorWelcome } from './welcome.ts'
 import { getManagedCourses } from './data.ts'
 
 // Authoring home: authors see the courses they own, admins see every course.
@@ -26,6 +27,7 @@ export default createController(routes.author, {
           courses={await getManagedCourses(context.db, contentBucket(), user)}
           viewer={viewer}
           currentPath={context.url.pathname}
+          welcome={authorWelcome(context.session.get(AUTHOR_WELCOME_KEY))}
         />,
       )
     },
