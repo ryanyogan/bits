@@ -13,7 +13,8 @@ import {
   type Tone,
   type Track,
 } from '../types.ts'
-import { CourseFrontmatter, readFrontmatter } from './frontmatter.ts'
+import { CourseFrontmatter, parseGithubRepo, readFrontmatter } from './frontmatter.ts'
+import { applyLessonMeta, newestVerified, type FreshnessOptions } from './lesson-meta.ts'
 import { compileLesson, parseMarkdown, type CompiledLesson, type LinkedVideo } from './lesson.ts'
 import { Report, type ReportItem, type SourceFile } from './report.ts'
 
@@ -43,6 +44,12 @@ export interface BuildOptions {
    * path → where it plays. The build stays pure; callers look them up first.
    */
   videos?: (course: string, path: string) => LinkedVideo | undefined
+  /**
+   * Today's date and how old a code lesson's `verified:` may be (decision
+   * 073). Passed in so the build stays pure. Absent: no freshness check;
+   * without `today`, only a missing date is reported.
+   */
+  freshness?: FreshnessOptions
 }
 
 const TONES: Tone[] = ['volt', 'ion', 'synapse']
@@ -71,7 +78,10 @@ export function buildCourse(sourceFiles: SourceFile[], options: BuildOptions): C
   let lessonFiles = sourceFiles
     .filter((file) => /^[^/]+\.md$/i.test(file.path) && !/^(course|readme)\.md$/i.test(file.path))
     .sort((a, b) => a.path.localeCompare(b.path))
-  if (!lessonFiles.length) report.error('the course has no lessons: add 01-first-lesson.md next to course.md')
+  // A coming-soon course (decision 073) may be its course.md alone.
+  let soon = course?.meta?.access === 'soon'
+  if (!lessonFiles.length && !soon) report.error('the course has no lessons: add 01-first-lesson.md next to course.md')
+  let repo = course?.meta?.repo === undefined ? undefined : parseGithubRepo(course.meta.repo)
 
   let compiled: (CompiledLesson & { file: string })[] = []
   for (let file of lessonFiles) {
@@ -80,7 +90,10 @@ export function buildCourse(sourceFiles: SourceFile[], options: BuildOptions): C
       report: report.forFile(file.path),
       videos: options.videos && ((path) => options.videos!(slug, path)),
     })
-    if (lesson) compiled.push({ ...lesson, file: file.path })
+    if (lesson) {
+      applyLessonMeta(lesson, { repo, freshness: options.freshness, text: file.text ?? '', report: report.forFile(file.path) })
+      compiled.push({ ...lesson, file: file.path })
+    }
   }
 
   checkOrder(compiled, report)
@@ -97,6 +110,8 @@ export function buildCourse(sourceFiles: SourceFile[], options: BuildOptions): C
     let found = videos.filter((video) => video.found).length
     report.ok(`${found} of ${videos.length} video${videos.length === 1 ? '' : 's'} uploaded and ready`)
   }
+
+  if (soon) report.ok('coming soon: listed with its outline, and no lesson opens yet')
 
   let build: CourseBuild = {
     slug,
@@ -139,6 +154,10 @@ export function buildCourse(sourceFiles: SourceFile[], options: BuildOptions): C
       : [],
   )
   if (courseVideos.length) manifest.videos = courseVideos
+  let verified = newestVerified(all.map((lesson) => lesson.verified))
+  if (verified) manifest.verified = verified
+  if (repo) manifest.repo = repo
+  if (meta.order !== undefined) manifest.order = meta.order
   if (course.lead) manifest.lead = course.lead
   if (meta.intro) manifest.introLabel = meta.intro
   if (meta.exercise) manifest.exercise = meta.exercise
@@ -237,6 +256,8 @@ function groupModules(lessons: (CompiledLesson & { file: string })[], courseTitl
       kinds: lesson.kinds,
     }
     if (lesson.minsByDepth) info.minsByDepth = lesson.minsByDepth
+    if (lesson.meta.device === 'desk') info.device = 'desk'
+    if (lesson.meta.verified) info.verified = lesson.meta.verified
     current.lessons.push(info)
   }
   return modules

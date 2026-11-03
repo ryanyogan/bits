@@ -4,3 +4,4 @@
 export { buildCourse, type BuildOptions, type CourseBuild } from './course.ts'
 export type { LinkedVideo } from './lesson.ts'
 export { formatItem, type ReportItem, type SourceFile } from './report.ts'
+export { DEFAULT_MAX_AGE_DAYS, todayIso, type FreshnessOptions } from './lesson-meta.ts'

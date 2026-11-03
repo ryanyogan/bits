@@ -19,9 +19,16 @@ export type Level = (typeof levels)[number]
 /**
  * Who can take a course (decision 048). Every course is `free` today; `pro`
  * is the data shape for paid courses, shown as a tag and never gated yet.
+ * `soon` (decision 073) lists a course with its outline before it opens: no
+ * lesson URL resolves, and it never counts toward progress or badges.
  */
-export const courseAccess = ['free', 'pro'] as const
+export const courseAccess = ['free', 'pro', 'soon'] as const
 export type CourseAccess = (typeof courseAccess)[number]
+
+/** The course is listed but not open yet (decision 073). */
+export function isComingSoon(course: { access?: CourseAccess }): boolean {
+  return course.access === 'soon'
+}
 
 export const lessonKinds = ['chat', 'type', 'video', 'code', 'project'] as const
 export type LessonKind = (typeof lessonKinds)[number]
@@ -62,6 +69,10 @@ export interface LessonInfo {
   minsByDepth?: { new: number; engineer: number }
   xp: number
   kinds: LessonKind[]
+  /** Build steps that need a computer (frontmatter `device: desk`; decision 073). Absent: works on a phone. */
+  device?: 'desk'
+  /** The day the lesson's code was last verified, YYYY-MM-DD (decision 073). */
+  verified?: string
 }
 
 /** A lesson with the viewer's state: done, current (where to resume) or next. */
@@ -102,6 +113,17 @@ interface CourseExtras {
   updated?: string
   /** Lesson videos named in frontmatter, for the author page. */
   videos?: CourseVideo[]
+  /** The newest lesson `verified:` date, YYYY-MM-DD (decision 073). */
+  verified?: string
+  /** The build-along reference repo, `https://github.com/owner/repo` (decision 073). */
+  repo?: string
+  /**
+   * course.md `order` (decision 073). D1's `courses.sort` orders the catalog;
+   * it's in the manifest too so a new order changes the build's hash, and
+   * the next upload saves a version (which updates the sort) instead of
+   * skipping the course as unchanged (decision 036).
+   */
+  order?: number
 }
 
 /**
