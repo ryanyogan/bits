@@ -8,7 +8,7 @@ import { after, describe, it } from 'remix/test'
 import { disposePlatform } from '#platform'
 
 import { routes } from '../routes.ts'
-import { ageSessions, fetchAs, form, requestCode, signIn, testDb, testIp } from '../test/auth.ts'
+import { ageSessions, fetchAs, form, requestCode, settingsNotice, signIn, testDb, testIp } from '../test/auth.ts'
 import { createSoftAuthenticator } from '../test/webauthn.ts'
 import { outbox } from './mailer.ts'
 
@@ -21,7 +21,7 @@ const post = (fields: Record<string, string>) => ({
 async function askToChange(cookie: string, email: string) {
   let response = await fetchAs(cookie, routes.settings.email.href(), post({ email }))
   assert.equal(response.status, 303)
-  assert.match(response.headers.get('Location')!, /saved=email-sent#email$/)
+  assert.equal(response.headers.get('Location'), '/settings#email')
   let message = outbox.findLast((m) => m.to === email)!
   return {
     message,
@@ -56,7 +56,7 @@ describe('email change', () => {
 
     let ok = await fetchAs(cookie, routes.settings.emailConfirm.href(), post({ code: code! }))
     assert.equal(ok.status, 303)
-    assert.match(ok.headers.get('Location')!, /saved=email-changed#email$/)
+    assert.equal(ok.headers.get('Location'), '/settings#email')
     let moved = (await findUserById(testDb, user.id))!
     assert.equal(moved.email, 'moved@example.com')
     assert.ok(moved.email_verified_at)
@@ -68,9 +68,7 @@ describe('email change', () => {
     assert.ok(revertTokenFor('move-me@example.com'))
 
     // The confirming session stays; every other one is signed out, as the notice says.
-    let settings = await fetchAs(cookie, routes.settings.index.href() + '?saved=email-changed')
-    assert.equal(settings.status, 200)
-    let html = await settings.text()
+    let html = await settingsNotice(cookie, ok)
     assert.match(html, /your other devices are signed out/)
     assert.match(html, /signed in on 1 device\./)
     assert.equal((await fetchAs(laptop, routes.settings.index.href())).status, 303, 'other sessions are out')
@@ -84,12 +82,12 @@ describe('email change', () => {
     let { cookie, user } = await signIn('stale@example.com')
     await ageSessions(user.id)
     let page = await (await fetchAs(cookie, routes.settings.index.href())).text()
-    assert.match(page, /To change your email, confirm it’s you first/)
+    assert.match(page, /To change your email, add a passkey or connect GitHub or Google, confirm it’s you first/)
     assert.match(page, /action="\/settings\/reauth"/)
     assert.doesNotMatch(page, /Send confirmation link/)
 
     let refused = await fetchAs(cookie, routes.settings.email.href(), post({ email: 'stale-new@example.com' }))
-    assert.match(refused.headers.get('Location')!, /saved=reauth&for=email#email$/)
+    assert.match(await settingsNotice(cookie, refused), /confirm it’s you first, below/)
     assert.equal(outbox.findLast((m) => m.to === 'stale-new@example.com'), undefined, 'no mail to the new address')
 
     // Step-up by email: a sign-in code to the CURRENT address, back to settings.
@@ -133,7 +131,7 @@ describe('email change', () => {
     )
     let confirmed = await fetchAs(cookie, routes.auth.email.action.href(), post({ token: token! }))
     assert.equal(confirmed.status, 303)
-    assert.match(confirmed.headers.get('Location')!, /saved=email-changed/)
+    assert.match(await settingsNotice(cookie, confirmed), /Email changed\./)
     assert.equal((await findUserById(testDb, user.id))!.email, 'link-moved@example.com')
     assert.equal((await fetchAs(cookie, routes.settings.index.href())).status, 200, 'the confirming session stays')
     assert.equal((await fetchAs(phone, routes.settings.index.href())).status, 303, 'other sessions are out')

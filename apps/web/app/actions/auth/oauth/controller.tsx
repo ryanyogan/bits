@@ -7,17 +7,17 @@ import { githubProfile, githubProvider, googleProfile, googleProvider, isOAuthPr
 import { startUserSession, userForOAuth, type OAuthProfile } from '../../../auth/users.ts'
 import { routes } from '../../../routes.ts'
 import { safeNextPath } from '../../login/schema.ts'
+import { settingsRedirect, type FlashSession } from '../../settings/notice.ts'
 
 const toLogin = (error: string) => redirect(routes.login.index.href(undefined, { searchParams: { error } }), 303)
 
-const toSettings = (saved: string, provider: string) =>
-  redirect(`${routes.settings.index.href(undefined, { searchParams: { saved, method: provider } })}#sign-in`, 303)
+const toSettings = (context: { session: FlashSession }, saved: string, provider: string) =>
+  settingsRedirect(context.session, saved, { method: provider })
 
 // Signed in, OAuth links a new identity to the account: a new way in, as
 // strong as adding a passkey. A stale (maybe stolen) session must confirm
 // it's them first (decision 030, security review follow-up).
-const toReauth = () =>
-  redirect(`${routes.settings.index.href(undefined, { searchParams: { saved: 'reauth', for: 'connect' } })}#sign-in`, 303)
+const toReauth = (context: { session: FlashSession }) => settingsRedirect(context.session, 'reauth')
 
 /** True when this request would link an identity to a session that hasn't signed in recently. */
 const staleLink = (context: Parameters<typeof currentUser>[0]) => currentUser(context) != null && !recentlyAuthenticated(context)
@@ -29,7 +29,7 @@ export default createController(routes.auth.oauth, {
   actions: {
     start(context) {
       let name = context.params.provider
-      if (isOAuthProviderName(name) && staleLink(context)) return toReauth()
+      if (isOAuthProviderName(name) && staleLink(context)) return toReauth(context)
       let returnTo = safeNextPath(context.url.searchParams.get('next')) ?? null
       if (name === 'github') {
         let provider = githubProvider(context.url.origin)
@@ -47,7 +47,7 @@ export default createController(routes.auth.oauth, {
       if (!isOAuthProviderName(name)) return new Response('Unknown sign-in provider', { status: 404 })
       // Checked again here: the session may have gone stale since start, or
       // the start may have been skipped. Refuse before linking anything.
-      if (staleLink(context)) return toReauth()
+      if (staleLink(context)) return toReauth(context)
 
       let profile: OAuthProfile
       let returnTo: string | undefined
@@ -74,10 +74,10 @@ export default createController(routes.auth.oauth, {
       let signedIn = currentUser(context)
       let outcome = await userForOAuth(context.db, profile, signedIn)
       if (!outcome.ok) {
-        return outcome.reason === 'taken' ? toSettings('already-linked', name) : toLogin('oauth-no-email')
+        return outcome.reason === 'taken' ? toSettings(context, 'already-linked', name) : toLogin('oauth-no-email')
       }
       // Connecting from /settings: the session already belongs to this user.
-      if (signedIn) return toSettings('connected', name)
+      if (signedIn) return toSettings(context, 'connected', name)
 
       await startUserSession(context, outcome.user, name)
       return redirect(safeNextPath(returnTo) ?? routes.courses.index.href(), 303)

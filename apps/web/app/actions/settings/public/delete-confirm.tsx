@@ -57,8 +57,7 @@ export const DeleteConfirm = clientEntry(
           <TextField
             id="delete-confirm"
             name="confirm"
-            label="Type your handle to confirm"
-            placeholder={userHandle}
+            label={`Type ${userHandle} to confirm`}
             value={value}
             error={error}
             autoComplete="off"

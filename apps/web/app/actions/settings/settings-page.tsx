@@ -1,6 +1,6 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
-import { Callout, type CalloutTone } from '@bits/ui/callout'
+import { Callout } from '@bits/ui/callout'
 import { CodeInput } from '@bits/ui/code-input'
 import { MonoHeading } from '@bits/ui/eyebrow'
 import { Icon } from '@bits/ui/icon'
@@ -18,6 +18,7 @@ import type { Viewer } from '../../auth/identity.ts'
 import { routes } from '../../routes.ts'
 import { GeneratedAvatar } from '../profile/ui/generated-avatar.tsx'
 import type { AccountSettings } from './data.ts'
+import type { SettingsNotice, SettingsSection } from './notice.ts'
 import { AddPasskey } from './public/add-passkey.tsx'
 import { DeleteConfirm } from './public/delete-confirm.tsx'
 import { summaryStyle } from './ui/confirm-disclosure.tsx'
@@ -27,13 +28,7 @@ import { ReauthBlock } from './ui/reauth-block.tsx'
 import { Layout } from '../../ui/layout.tsx'
 import { PageHead } from '../../ui/page-head.tsx'
 
-export type SettingsSection = 'profile' | 'appearance' | 'email' | 'sign-in' | 'data' | 'sessions' | 'danger'
-
-export interface SettingsNotice {
-  section: SettingsSection
-  tone: CalloutTone
-  text: string
-}
+export type { SettingsNotice, SettingsSection } from './notice.ts'
 
 /** Field errors and submitted values for the one form that failed (422). */
 export interface SettingsErrors {
@@ -47,8 +42,11 @@ export interface SettingsPageProps {
   account: AccountSettings
   /** Signed in within the last 10 minutes: email change, new passkeys and connecting a provider need it (decision 030). */
   recentAuth: boolean
+  /** Shown inside its section (decision 068): from the session flash, or with a 422. */
   notice?: SettingsNotice
   errors?: SettingsErrors
+  /** This site's host, for the handle's URL prefix (`bits.yogan.dev/u/`). */
+  host: string
 }
 
 const outline: Array<{ id: SettingsSection; label: string }> = [
@@ -64,21 +62,36 @@ const outline: Array<{ id: SettingsSection; label: string }> = [
 /** `/settings` (docs/design/spec/pages/Settings.md). Every action is a plain POST form. */
 export function SettingsPage(handle: Handle<SettingsPageProps>) {
   return () => {
-    let { viewer, account, recentAuth, notice, errors } = handle.props
+    let { viewer, account, recentAuth, notice, errors, host } = handle.props
     let err = (section: SettingsSection, field: string) =>
       errors?.section === section ? errors.fields[field] : undefined
     let val = (section: SettingsSection, field: string, fallback: string) =>
       errors?.section === section ? (errors.values[field] ?? fallback) : fallback
-    let failed = (section: SettingsSection) =>
-      errors?.section === section ? (
+    let failed = (section: SettingsSection) => {
+      if (errors?.section !== section) return null
+      let count = Object.values(errors.fields).filter(Boolean).length
+      if (!count) return null
+      return (
         <Callout tone="danger" role="alert" compact>
-          Check the highlighted field.
+          {count === 1 ? 'Check the highlighted field.' : `Check the ${count} highlighted fields.`}
         </Callout>
-      ) : null
+      )
+    }
+    let noticeIn = (section: SettingsSection) => (notice?.section === section ? notice : undefined)
 
     let visibility = val('profile', 'visibility', viewer.isPublic ? 'public' : 'private')
     let profileHandle = viewer.handle
     let passkeyCount = account.methods.filter((m) => m.kind === 'passkey').length
+    // Step-up (decision 030): one confirm box, at the top of Email, covers
+    // the email change, new passkeys and connecting a provider.
+    let stepUp = recentAuth ? null : (
+      <ReauthBlock
+        id="confirm-it"
+        what="change your email, add a passkey or connect GitHub or Google"
+        email={viewer.email}
+        passkey={passkeyCount > 0}
+      />
+    )
     // The resolved theme, from the page's <ThemeScope> (decision 062).
     let theme = themePreference(handle)
 
@@ -90,16 +103,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
             title="Settings"
             titleId="settings-title"
             lead="Your sign-in, your profile, your data. Everything here is yours to change or take with you."
-          >
-            {/* Always rendered, so a notice that arrives with the page is in a live region (decision 031). */}
-            <div role="status" mix={noticeSlotStyle}>
-              {notice ? (
-                <Callout tone={notice.tone} title={noticeTitles[notice.section]}>
-                  {notice.text}
-                </Callout>
-              ) : null}
-            </div>
-          </PageHead>
+          />
 
           <RuledSection as="div" pad="none">
           <div mix={panesStyle}>
@@ -121,7 +125,12 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
             </aside>
             <div mix={columnStyle}>
               {/* 1. Profile */}
-              <Section id="profile" title="Profile" description="How you appear on bits. Your email is never shown.">
+              <Section
+                id="profile"
+                title="Profile"
+                description="How you appear on bits. Your email is never shown."
+                notice={noticeIn('profile')}
+              >
                 <div mix={identityStyle}>
                   <span mix={avatarStyle}>
                     <GeneratedAvatar seed={viewer.handle} name={viewer.name.split(' ')[0]!} />
@@ -146,7 +155,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                   <HandleField
                     name="handle"
                     label="Handle"
-                    prefix="bits.dev/u/"
+                    prefix={`${host}/u/`}
                     value={val('profile', 'handle', viewer.handle)}
                     error={err('profile', 'handle')}
                     hint="Letters, numbers, dashes and underscores. Changing it breaks old links."
@@ -163,8 +172,8 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                       value={visibility}
                     />
                     <p mix={noteStyle}>
-                      Public profiles show your name, level, stats, activity, courses and badges. Your email and
-                      prompt journal are never shown.
+                      Private until you choose Public. Public profiles show your name, level, stats, activity,
+                      courses and badges. Your email and prompt journal are never shown.
                     </p>
                     {viewer.isPublic ? (
                       <a href={routes.profile.index.href({ handle: profileHandle })} data-rmx-prefetch={prefetchFor(routes.profile.index.href({ handle: profileHandle }))} mix={monoLinkStyle}>
@@ -185,6 +194,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                 id="appearance"
                 title="Appearance"
                 description="Dark or light. System follows your device and switches with it."
+                notice={noticeIn('appearance')}
               >
                 <form method="post" action={routes.settings.appearance.href()} mix={formStyle}>
                   <Switch
@@ -206,7 +216,13 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
               </Section>
 
               {/* 3. Email */}
-              <Section id="email" title="Email" description="Where your sign-in links and codes go.">
+              <Section
+                id="email"
+                title="Email"
+                description="Where your sign-in links and codes go."
+                notice={noticeIn('email')}
+              >
+                {stepUp}
                 <KeyValueList
                   mix={centeredTermsStyle}
                   items={[
@@ -241,6 +257,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                         change, or type the 6-digit code from that email.
                       </p>
                     </div>
+                    <form method="post" action={routes.settings.email.href()} id="email-cancel" hidden />
                     <form method="post" action={routes.settings.emailConfirm.href()} mix={formStyle} noValidate>
                       <CodeInput
                         name="code"
@@ -253,12 +270,18 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                         <Keycap type="submit" mix={footerKeyStyle}>
                           Confirm new email
                         </Keycap>
+                        {/* Its own form (above): cancelling never sends the code field. */}
+                        <Keycap
+                          type="submit"
+                          variant="ghost-mono"
+                          form="email-cancel"
+                          name="intent"
+                          value="cancel"
+                          mix={footerKeyStyle}
+                        >
+                          Cancel the change
+                        </Keycap>
                       </div>
-                    </form>
-                    <form method="post" action={routes.settings.email.href()}>
-                      <Keycap type="submit" variant="ghost-mono" name="intent" value="cancel" mix={footerKeyStyle}>
-                        Cancel the change
-                      </Keycap>
                     </form>
                   </div>
                 ) : null}
@@ -287,16 +310,19 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                       </div>
                     </form>
                   </details>
-                ) : (
-                  <ReauthBlock what="change your email" email={viewer.email} />
-                )}
+                ) : null}
               </Section>
 
               {/* 4. Sign-in methods */}
-              <Section id="sign-in" title="Sign-in methods" description="Use any of these to get in. Keep at least one.">
+              <Section
+                id="sign-in"
+                title="Sign-in methods"
+                description="Use any of these to get in. Keep at least one."
+                notice={noticeIn('sign-in')}
+              >
                 <ul mix={methodListStyle}>
                   {account.methods.map((method) => (
-                    <MethodRow key={method.id} method={method} />
+                    <MethodRow key={method.id} method={method} locked={!recentAuth} lockedHint="sign-in-locked" />
                   ))}
                 </ul>
                 {recentAuth ? (
@@ -304,11 +330,21 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                     <AddPasskey optionsUrl={routes.api.passkey.href({ step: 'register-options' })} />
                   </form>
                 ) : (
-                  <ReauthBlock what="add a passkey or connect GitHub or Google" email={viewer.email} />
+                  <p id="sign-in-locked" mix={lockedNoteStyle}>
+                    To add a passkey or connect an account,{' '}
+                    <a href="#confirm-it" mix={inlineLinkStyle}>
+                      confirm it’s you
+                    </a>{' '}
+                    first (under Email).
+                  </p>
                 )}
                 <p mix={noteStyle}>
-                  {passkeyCount === 1 ? 'You have 1 passkey.' : `You have ${passkeyCount} passkeys.`} Email sign-in
-                  always works, so you can't lock yourself out.
+                  {passkeyCount === 0
+                    ? 'No passkeys yet.'
+                    : passkeyCount === 1
+                      ? 'You have 1 passkey.'
+                      : `You have ${passkeyCount} passkeys.`}{' '}
+                  Email sign-in always works, so you can't lock yourself out.
                 </p>
               </Section>
 
@@ -317,6 +353,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                 id="data"
                 title="Your data"
                 description="Download everything you've done here: progress, neurons, badges and every prompt in your journal, as one JSON file."
+                notice={noticeIn('data')}
               >
                 <div mix={footerStyle}>
                   <Keycap variant="dark" href={routes.settings.export.href()} download mix={footerKeyStyle}>
@@ -333,6 +370,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                 id="sessions"
                 title="Sessions"
                 description={account.sessions.length === 1 ? "You're signed in on 1 device." : `You're signed in on ${account.sessions.length} devices.`}
+                notice={noticeIn('sessions')}
               >
                 <KeyValueList
                   items={account.sessions.map((session) => ({
@@ -358,6 +396,7 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
                 id="danger"
                 title="Delete account"
                 danger
+                notice={noticeIn('danger')}
                 description={
                   <span mix={dangerCopyStyle}>
                     This permanently deletes your account, sign-in methods, sessions, progress, neurons, badges and
@@ -391,6 +430,7 @@ interface SectionProps {
   title: string
   description: RemixNode
   danger?: boolean
+  notice?: SettingsNotice
   children?: RemixNode
 }
 
@@ -401,7 +441,7 @@ interface SectionProps {
  */
 function Section(handle: Handle<SectionProps>) {
   return () => {
-    let { id, title, description, danger, children } = handle.props
+    let { id, title, description, danger, notice, children } = handle.props
     let headingId = `${id}-heading`
     return (
       <section aria-labelledby={headingId} mix={[sectionStyle, danger ? dangerSectionStyle : undefined]}>
@@ -411,7 +451,14 @@ function Section(handle: Handle<SectionProps>) {
           </MonoHeading>
           <p mix={descriptionStyle}>{description}</p>
         </div>
-        <div mix={sectionBodyStyle}>{children}</div>
+        <div mix={sectionBodyStyle}>
+          {/* Always rendered, so a notice that arrives with the page is in a
+              live region (decision 031), next to the controls it is about. */}
+          <div role="status" mix={noticeSlotStyle}>
+            {notice ? <Callout tone={notice.tone}>{notice.text}</Callout> : null}
+          </div>
+          {children}
+        </div>
       </section>
     )
   }
@@ -448,7 +495,8 @@ const pendingEmailStyle = css({ color: 'var(--text)', fontFamily: 'var(--font-mo
 
 
 // The outline in a side cell, the groups in the wide one, one hairline
-// between them; the outline goes under 900px (the groups are the page).
+// between them. Under 900px the outline is a jump row above the groups
+// (its links wrap; nothing scrolls sideways).
 const panesStyle = css({
   display: 'grid',
   gridTemplateColumns: '240px minmax(0, 1fr)',
@@ -469,7 +517,11 @@ const asideStyle = css({
   alignSelf: 'start',
   position: 'sticky',
   top: 'var(--shell-h)',
-  '@media (max-width: 899.98px)': { display: 'none' },
+  '@media (max-width: 899.98px)': {
+    position: 'static',
+    borderBottom: 'var(--border-w) solid var(--line-cell)',
+    '@media (forced-colors: active)': { borderColor: 'GrayText' },
+  },
 })
 
 
@@ -480,9 +532,22 @@ const outlineHeadingStyle = css({
   minHeight: 'var(--touch-target)',
   padding: '0 var(--space-6)',
   borderBottom: 'var(--border-w) solid var(--line-cell)',
+  '@media (max-width: 899.98px)': { padding: '0 var(--section-pad-x)' },
 })
 
-const outlineListStyle = css({ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column' })
+const outlineListStyle = css({
+  margin: 0,
+  padding: 0,
+  listStyle: 'none',
+  display: 'flex',
+  flexDirection: 'column',
+  '@media (max-width: 899.98px)': {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 'var(--space-1) var(--space-2)',
+    padding: 'var(--space-2) var(--section-pad-x)',
+  },
+})
 
 const outlineLinkStyle = css({
   display: 'flex',
@@ -496,6 +561,13 @@ const outlineLinkStyle = css({
   textDecoration: 'none',
   '&:hover': { background: 'var(--fill-hover)', color: 'var(--text)' },
   '&:focus-visible': { outline: 'var(--focus-outline)', outlineOffset: 'var(--focus-offset-inset)' },
+  '@media (max-width: 899.98px)': {
+    minHeight: 'var(--touch-target)',
+    padding: '0 var(--space-3)',
+    border: 'var(--border-w) solid var(--line-cell)',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--fs-13)',
+  },
   '@media (forced-colors: active)': { borderColor: 'GrayText', '&:hover': { textDecoration: 'underline' } },
 })
 
@@ -513,7 +585,7 @@ const sectionStyle = css({
   '@media (forced-colors: active)': { borderColor: 'GrayText' },
 })
 
-const sectionBodyStyle = css({ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-4_5)', maxWidth: '640px' })
+const sectionBodyStyle = css({ position: 'relative', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-4_5)', maxWidth: '640px' })
 
 // The danger row: a faint danger ground and a danger rule down its left
 // edge, inside the cell (decision 047: accents as signals).
@@ -600,14 +672,15 @@ const methodListStyle = css({
 
 const centeredTermsStyle = css({ '& dt': { alignSelf: 'center' } })
 
-const noticeTitles: Record<SettingsSection, string> = {
-  profile: 'Profile',
-  appearance: 'Appearance',
-  email: 'Email',
-  'sign-in': 'Sign-in methods',
-  data: 'Your data',
-  sessions: 'Sessions',
-  danger: 'Delete account',
-}
 
-const noticeSlotStyle = css({ width: '100%', '&:not(:empty)': { paddingTop: 'var(--space-2)' } })
+// Empty, the slot takes no room (the body's gap skips it).
+const noticeSlotStyle = css({ width: '100%', '&:empty': { position: 'absolute' } })
+
+const lockedNoteStyle = css({ margin: 0, fontSize: 'var(--fs-14)', lineHeight: 1.55, color: 'var(--text-body)' })
+
+const inlineLinkStyle = css({
+  color: 'var(--volt)',
+  textDecoration: 'underline',
+  textUnderlineOffset: '3px',
+  '&:hover': { color: 'var(--volt-link-hover)' },
+})

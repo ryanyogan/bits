@@ -7,10 +7,9 @@ import { currentUser } from '../../../auth/identity.ts'
 import { rateLimit } from '../../../middleware/rate-limit.tsx'
 import { routes } from '../../../routes.ts'
 import { readText } from '../../login/schema.ts'
+import { settingsRedirect } from '../../settings/notice.ts'
 import { EmailLinkPage } from './confirm-email-page.tsx'
 
-const settingsEmail = (saved: string) =>
-  redirect(`${routes.settings.index.href(undefined, { searchParams: { saved } })}#email`, 303)
 
 export const emailLinkExpired = () =>
   redirect(routes.login.index.href(undefined, { searchParams: { error: 'email-link-expired' } }), 303)
@@ -45,8 +44,8 @@ export default createController(routes.auth.email, {
           origin: context.url.origin,
           sessionId: context.session.id,
         })
-        if (!result.ok) return result.reason === 'taken' ? settingsEmail('email-taken') : emailLinkExpired()
-        return settingsEmail('email-changed')
+        if (!result.ok) return result.reason === 'taken' ? settingsRedirect(context.session, 'email-taken') : emailLinkExpired()
+        return settingsRedirect(context.session, 'email-changed')
       },
     },
   },

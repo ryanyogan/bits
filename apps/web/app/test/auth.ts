@@ -54,7 +54,14 @@ export function sessionCookieFrom(response: Response): string | null {
 /** Signs in (creating the user if needed) and returns its Cookie header value. */
 export async function signIn(
   email: string,
-  options: { role?: UserRole; displayName?: string } = {},
+  options: {
+    role?: UserRole
+    displayName?: string
+    /** New accounts get a generated handle (decision 068); set one to address the user by it. */
+    handle?: string
+    /** New accounts start private (decision 068); `true` publishes the profile. */
+    isPublic?: boolean
+  } = {},
 ): Promise<{ cookie: string; user: User }> {
   let { code } = await requestCode(email, options.displayName ? { mode: 'signup', displayName: options.displayName } : {})
   let response = await router.fetch(
@@ -66,10 +73,13 @@ export async function signIn(
   let cookie = sessionCookieFrom(response)
   if (response.status !== 303 || !cookie) throw new Error(`Code sign-in failed: ${response.status}`)
   let user = (await testDb.findOne(users, { where: { email } }))!
-  if (options.role && user.role !== options.role) {
-    await testDb.update(users, user.id, { role: options.role })
+  let changes = {
+    ...(options.role && user.role !== options.role ? { role: options.role } : {}),
+    ...(options.handle && user.handle !== options.handle ? { handle: options.handle } : {}),
+    ...(options.isPublic !== undefined && user.is_public !== options.isPublic ? { is_public: options.isPublic } : {}),
   }
-  return { cookie, user: { ...user, goals: user.goals as string[], role: options.role ?? user.role } }
+  if (Object.keys(changes).length) user = await testDb.update(users, user.id, changes)
+  return { cookie, user: { ...user, goals: user.goals as string[] } }
 }
 
 /**
@@ -81,6 +91,18 @@ export async function ageSessions(userId: string): Promise<void> {
     .prepare(`update sessions set data = json_set(data, '$[0].user.at', json_extract(data, '$[0].user.at') - 3600000) where user_id = ?`)
     .bind(userId)
     .run()
+}
+
+/**
+ * Follows a Settings write's 303 (`/settings#section`) and returns the page
+ * it lands on, which shows the flashed notice once (decision 068).
+ */
+export async function settingsNotice(cookie: string, response: Response): Promise<string> {
+  let location = response.headers.get('Location') ?? ''
+  if (response.status !== 303 || !location.startsWith('/settings#')) {
+    throw new Error(`Expected a 303 to /settings#…, got ${response.status} ${location}`)
+  }
+  return (await fetchAs(cookie, location)).text()
 }
 
 /** router.fetch with an optional session cookie. */

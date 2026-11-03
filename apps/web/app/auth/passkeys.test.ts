@@ -12,7 +12,7 @@ import { after, describe, it } from 'remix/test'
 import { disposePlatform } from '#platform'
 
 import { routes } from '../routes.ts'
-import { ageSessions, fetchAs, form, sessionCookieFrom, signIn, testDb } from '../test/auth.ts'
+import { ageSessions, fetchAs, form, sessionCookieFrom, signIn, testDb, settingsNotice } from '../test/auth.ts'
 import { createSoftAuthenticator, type SoftAuthenticator } from '../test/webauthn.ts'
 
 const post = (fields: Record<string, string>) => ({ method: 'POST', body: form(fields) })
@@ -72,7 +72,8 @@ describe('passkeys', () => {
       { ...post({ intent: 'add-passkey', response: JSON.stringify(registration) }), headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/141.0 Safari/537.36' } },
     )
     assert.equal(saved.status, 303)
-    assert.match(saved.headers.get('Location')!, /saved=passkey-added#sign-in$/)
+    assert.equal(saved.headers.get('Location'), '/settings#sign-in')
+    assert.match(await settingsNotice(cookie, saved), /Passkey added\./)
 
     let rows = await listPasskeys(testDb, user.id)
     assert.equal(rows.length, 1)
@@ -91,7 +92,7 @@ describe('passkeys', () => {
       routes.settings.methods.href(),
       post({ intent: 'add-passkey', response: JSON.stringify(registration) }),
     )
-    assert.match(replay.headers.get('Location')!, /saved=passkey-failed/)
+    assert.match(await settingsNotice(cookie, replay), /Passkey wasn’t added\./)
     // A second registration excludes the existing credential.
     let again = (await (await registerOptions(cookie)).json()) as PublicKeyCredentialCreationOptionsJSON
     assert.deepEqual(
@@ -117,10 +118,13 @@ describe('passkeys', () => {
       routes.settings.methods.href(),
       post({ intent: 'add-passkey', response: JSON.stringify(await second.register(options)) }),
     )
-    assert.match(late.headers.get('Location')!, /saved=reauth&for=passkey#sign-in$/)
+    assert.equal(late.headers.get('Location'), '/settings#email', 'to the one confirm box, under Email')
+    assert.match(await settingsNotice(cookie, late), /confirm it’s you first, below/)
     assert.equal((await listPasskeys(testDb, user.id)).length, 1)
     let page = await (await fetchAs(cookie, routes.settings.index.href())).text()
-    assert.match(page, /To add a passkey or connect GitHub or Google, confirm it’s you first/)
+    assert.match(page, /add a passkey or connect GitHub or Google, confirm it’s you first/)
+    // This account has a passkey, so the box offers it.
+    assert.match(page, /Use a passkey/)
 
     let stepUp = await passkeySignIn(await authenticator.authenticate(await loginOptions()), '/settings')
     let fresh = sessionCookieFrom(stepUp)!
@@ -138,16 +142,17 @@ describe('passkeys', () => {
         routes.settings.methods.href(),
         post({ intent: 'add-passkey', response: JSON.stringify(response) }),
       )
-      return saved.headers.get('Location')!
+      return settingsNotice(cookieFor, saved)
     }
-    assert.match(await attempt(cookie, { origin: 'https://evil.example' }), /saved=passkey-failed/)
-    assert.match(await attempt(cookie, { userVerified: false }), /saved=passkey-failed/)
+    let failed = /Passkey wasn’t added\./
+    assert.match(await attempt(cookie, { origin: 'https://evil.example' }), failed)
+    assert.match(await attempt(cookie, { userVerified: false }), failed)
     // A challenge issued to pk-bad can't register a passkey on someone else's account.
     let { cookie: other, user: otherUser } = await signIn('pk-other@example.com')
-    assert.match(await attempt(other, {}), /saved=passkey-failed/)
+    assert.match(await attempt(other, {}), failed)
     assert.equal((await listPasskeys(testDb, otherUser.id)).length, 0)
     let garbage = await fetchAs(cookie, routes.settings.methods.href(), post({ intent: 'add-passkey', response: '{nope' }))
-    assert.match(garbage.headers.get('Location')!, /saved=passkey-failed/)
+    assert.match(await settingsNotice(cookie, garbage), failed)
   })
 
   it('signs in with a passkey: rotates the session and follows next', async () => {
@@ -222,19 +227,22 @@ describe('passkeys', () => {
     let { cookie: intruder } = await signIn('pk-intruder@example.com')
 
     let renamed = await fetchAs(cookie, routes.settings.methods.href(), post({ intent: `rename:${id}`, name: '  Work laptop  ' }))
-    assert.match(renamed.headers.get('Location')!, /saved=renamed/)
+    assert.match(await settingsNotice(cookie, renamed), /Passkey renamed\./)
     assert.equal((await listPasskeys(testDb, user.id))[0]!.name, 'Work laptop')
     let blank = await fetchAs(cookie, routes.settings.methods.href(), post({ intent: `rename:${id}`, name: '   ' }))
-    assert.match(blank.headers.get('Location')!, /saved=passkey-name/)
+    assert.equal(blank.status, 422)
+    assert.match(await blank.text(), /Give the passkey a name/)
 
     let hijack = await fetchAs(intruder, routes.settings.methods.href(), post({ intent: `remove:${id}` }))
-    assert.match(hijack.headers.get('Location')!, /saved=methods-error/)
+    assert.equal(hijack.status, 422)
+    assert.match(await hijack.text(), /That didn’t work\. Try again\./)
     let rename = await fetchAs(intruder, routes.settings.methods.href(), post({ intent: `rename:${id}`, name: 'Mine' }))
-    assert.match(rename.headers.get('Location')!, /saved=methods-error/)
+    assert.equal(rename.status, 422)
+    await rename.text()
     assert.equal((await listPasskeys(testDb, user.id)).length, 1)
 
     let removed = await fetchAs(cookie, routes.settings.methods.href(), post({ intent: `remove:${id}` }))
-    assert.match(removed.headers.get('Location')!, /saved=removed/)
+    assert.match(await settingsNotice(cookie, removed), /Passkey removed\./)
     assert.equal((await listPasskeys(testDb, user.id)).length, 0)
 
     // A removed passkey no longer signs in.
