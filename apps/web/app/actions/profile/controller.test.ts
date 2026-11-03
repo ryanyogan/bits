@@ -1,5 +1,6 @@
 import * as assert from 'remix/assert'
 import { after, describe, it } from 'remix/test'
+import { users } from '@bits/db'
 
 import { disposePlatform, platform } from '#platform'
 
@@ -85,7 +86,8 @@ describe('/me and /u/:handle', () => {
     assert.equal(response.status, 200)
     let html = await response.text()
     assert.match(html, /<title>Jamie Park \(@jamie_park\) · Bits<\/title>/)
-    assert.match(html, /Share ↗/)
+    // A visitor has the link already: no Share, and no wall of locked badges.
+    assert.doesNotMatch(html, /Share ↗/)
     assert.doesNotMatch(html, /jamie@example\.com/)
     assert.doesNotMatch(html, /Prompt journal/)
     assert.doesNotMatch(html, /id="account-heading"/)
@@ -103,6 +105,19 @@ describe('/me and /u/:handle', () => {
     assert.equal(profile.status, 200)
     assert.match(profile.headers.get('Server-Timing') ?? '', /^db;dur=\d+;desc="7 queries, 1 round trips", catalog;dur=\d+;desc="memo"$/)
     await profile.text()
+  })
+
+  it('says so on /me when the profile is private, with no Share and no "All 0"', async () => {
+    let { cookie, user } = await signIn('private-me@example.com', { displayName: 'Private Me' })
+    await testDb.update(users, user.id, { is_public: false })
+    let html = await (await fetchAs(cookie, routes.me.index.href())).text()
+    assert.match(html, /Only you can see this page and your certificates/)
+    assert.match(html, /href="\/settings#profile"/)
+    assert.doesNotMatch(html, /Share ↗/)
+    // A new account has no prompts: an empty state, not "All 0 →".
+    assert.doesNotMatch(html, /All 0 →/)
+    assert.match(html, /No prompts yet\./)
+    assert.match(html, /href="\/settings#data"/)
   })
 
   for (let handle of ['private-sam', 'nobody-here']) {

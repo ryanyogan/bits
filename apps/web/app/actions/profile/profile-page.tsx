@@ -1,4 +1,4 @@
-import type { Handle } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 import { ActivityGrid } from '@bits/ui/activity-grid'
 import { CellGrid } from '@bits/ui/cell-grid'
@@ -34,6 +34,11 @@ export interface ProfilePageProps {
   viewer: Viewer | null
   currentPath: string
   title: string
+  /**
+   * /me only: a band above the identity (the "continue learning" card), so
+   * the dashboard opens on what to do next rather than on the profile.
+   */
+  lead?: RemixNode
 }
 
 /**
@@ -52,7 +57,7 @@ export interface ProfilePageProps {
  */
 export function ProfilePage(handle: Handle<ProfilePageProps>) {
   return () => {
-    let { profile, variant, tab = 'overview', shareUrl, viewer, currentPath, title } = handle.props
+    let { profile, variant, tab = 'overview', shareUrl, viewer, currentPath, title, lead } = handle.props
     let own = variant === 'own'
     let earned = profile.badges.filter((b) => b.earned).length
     let activeDays = profile.activity.filter((level) => level > 0).length
@@ -60,6 +65,15 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
     let settingsHref = routes.settings.index.href()
     let showJournal = own && tab === 'journal'
     let firstName = profile.name.split(' ')[0]!
+    let showPrivate = own && !profile.isPublic
+    // A visitor sees what was earned, not a wall of locked slots and zeros.
+    let badges = own ? profile.badges : profile.badges.filter((b) => b.earned)
+    let stats = [
+      { value: profile.neurons.toLocaleString('en-US'), label: 'neurons', color: 'var(--volt)', n: profile.neurons },
+      { value: String(profile.streak), label: `day streak · best ${profile.bestStreak}`, color: 'var(--ion)', n: Math.max(profile.streak, profile.bestStreak) },
+      { value: String(profile.lessonsFinished), label: 'lessons finished', color: 'var(--synapse)', n: profile.lessonsFinished },
+      { value: String(profile.promptsWritten), label: 'prompts written', color: 'var(--muted)', n: profile.promptsWritten },
+    ].filter((stat) => own || stat.n > 0)
 
     return (
       <Layout
@@ -70,7 +84,20 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
         bleed
       >
         <PageFrame>
-          <RuledSection aria-label="Profile" rule={false} pad="none">
+          {lead}
+          {showPrivate ? (
+            <RuledSection aria-label="Profile visibility" rule={Boolean(lead)} pad="tight">
+              <p mix={privateNote}>
+                <span mix={privateTag}>Private</span>
+                {'Only you can see this page and your certificates. '}
+                <a href={`${settingsHref}#profile`} data-rmx-prefetch={prefetchFor(settingsHref)} mix={privateLink}>
+                  Make your profile public
+                </a>
+                {' to share them.'}
+              </p>
+            </RuledSection>
+          ) : null}
+          <RuledSection aria-label="Profile" rule={Boolean(lead) && !showPrivate} pad="none">
             <div mix={splitStyle}>
               <div mix={identityCell}>
                 <GeneratedAvatar seed={profile.handle} name={firstName} />
@@ -102,26 +129,29 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
                     {profile.toNextLevel.toLocaleString('en-US')} neurons to level {profile.level + 1}
                   </p>
                 </div>
-                <div mix={actionsStyle}>
-                  {own ? (
+                {/* The owner shares their page, and only once it's public; a
+                  * visitor already has the link in their address bar. */}
+                {own ? (
+                  <div mix={actionsStyle}>
                     <Keycap variant="ghost-mono" href={settingsHref} mix={actionKey}>
                       Edit profile
                     </Keycap>
-                  ) : null}
-                  <ShareButton url={shareUrl} title={`${profile.name} on bits`} />
-                </div>
+                    {profile.isPublic ? <ShareButton url={shareUrl} title={`${profile.name} on bits`} /> : null}
+                  </div>
+                ) : null}
               </div>
             </div>
           </RuledSection>
 
-          <RuledSection aria-label="Stats" pad="none">
-            <CellGrid cols={4} colsMid={4} colsPhone={2} pad={false} mix={statsGrid}>
-              <StatTile value={profile.neurons.toLocaleString('en-US')} label="neurons" color="var(--volt)" />
-              <StatTile value={profile.streak} label={`day streak · best ${profile.bestStreak}`} color="var(--ion)" />
-              <StatTile value={profile.lessonsFinished} label="lessons finished" color="var(--synapse)" />
-              <StatTile value={profile.promptsWritten} label="prompts written" color="var(--muted)" />
-            </CellGrid>
-          </RuledSection>
+          {stats.length ? (
+            <RuledSection aria-label="Stats" pad="none">
+              <CellGrid cols={statCols(stats.length)} colsMid={statCols(stats.length)} colsPhone={stats.length === 1 ? 1 : 2} pad={false} mix={statsGrid}>
+                {stats.map((stat) => (
+                  <StatTile key={stat.label} value={stat.value} label={stat.label} color={stat.color} />
+                ))}
+              </CellGrid>
+            </RuledSection>
+          ) : null}
 
           <RuledSection as="div" pad="none">
             <div mix={splitStyle}>
@@ -176,7 +206,7 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
                         id="journal-heading"
                         title="Prompt journal"
                         aside={
-                          <a
+                          profile.journal.length === 0 ? undefined : <a
                             href={journalHref}
                             data-rmx-prefetch={prefetchFor(journalHref)}
                             mix={panelLinkStyle}
@@ -185,9 +215,16 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
                             All {profile.journal.length} →
                           </a>
                         }
-                        flush
+                        flush={profile.journal.length > 0}
                       >
-                        <JournalList entries={profile.journal.slice(0, RECENT_JOURNAL)} />
+                        {profile.journal.length ? (
+                          <JournalList entries={profile.journal.slice(0, RECENT_JOURNAL)} />
+                        ) : (
+                          <EmptyState
+                            title="No prompts yet."
+                            hint="Every prompt you run in a lesson lands here, with how it did."
+                          />
+                        )}
                       </Panel>
                     ) : null}
                   </>
@@ -195,12 +232,16 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
               </div>
 
               <aside aria-label={own ? 'Badges and account' : 'Badges'} mix={columnStyle}>
-                <Panel id="badges-heading" title="Badges" aside={`${earned} of ${profile.badges.length}`} flush>
-                  <CellGrid as="ul" cols={3} colsMid={4} colsPhone={3} pad={false} top={false} aria-labelledby="badges-heading">
-                    {profile.badges.map((badge) => (
-                      <BadgeTile key={badge.name} name={badge.name} glyph={badge.glyph} color={badge.color} locked={!badge.earned} />
-                    ))}
-                  </CellGrid>
+                <Panel id="badges-heading" title="Badges" aside={own ? `${earned} of ${profile.badges.length}` : `${earned} earned`} flush={badges.length > 0}>
+                  {badges.length ? (
+                    <CellGrid as="ul" cols={3} colsMid={4} colsPhone={3} pad={false} top={false} aria-labelledby="badges-heading">
+                      {badges.map((badge) => (
+                        <BadgeTile key={badge.name} name={badge.name} glyph={badge.glyph} color={badge.color} locked={!badge.earned} />
+                      ))}
+                    </CellGrid>
+                  ) : (
+                    <p mix={quietText}>No badges yet.</p>
+                  )}
                 </Panel>
 
                 {own ? (
@@ -213,7 +254,7 @@ export function ProfilePage(handle: Handle<ProfilePageProps>) {
                       ]}
                     />
                     <div mix={accountLinks}>
-                      <a href={`${settingsHref}#export`} data-rmx-prefetch={prefetchFor(`${settingsHref}#export`)} mix={accountLink}>
+                      <a href={`${settingsHref}#data`} data-rmx-prefetch={prefetchFor(`${settingsHref}#data`)} mix={accountLink}>
                         Download my data
                       </a>
                       <a href={settingsHref} data-rmx-prefetch={prefetchFor(settingsHref)} mix={[accountLink, quietLink]}>
@@ -240,6 +281,11 @@ function EmptyCourses() {
   return () => (
     <EmptyState title="No courses yet." action={<Keycap href={routes.courses.index.href()}>Browse courses →</Keycap>} />
   )
+}
+
+/** Stat cells fill one row: a visitor's view drops the zero ones. */
+function statCols(n: number): 1 | 2 | 3 | 4 {
+  return Math.min(4, Math.max(1, n)) as 1 | 2 | 3 | 4
 }
 
 const WIDE = '@media (min-width: 1024px)'
@@ -352,3 +398,25 @@ const signOutButton = css({
   textAlign: 'left',
   cursor: 'pointer',
 })
+
+const privateNote = css({
+  margin: 0,
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'baseline',
+  columnGap: 'var(--space-1)',
+  rowGap: 'var(--space-2)',
+  fontSize: 'var(--fs-15)',
+  lineHeight: 1.5,
+  color: 'var(--text-body)',
+})
+const privateTag = css({
+  marginRight: 'var(--space-2_5)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-12)',
+  textTransform: 'uppercase',
+  letterSpacing: 'var(--tracking-eyebrow-s)',
+  color: 'var(--ion)',
+})
+const privateLink = css({ color: 'var(--volt)' })
+const quietText = css({ margin: 0, fontSize: 'var(--fs-14)', color: 'var(--muted)' })

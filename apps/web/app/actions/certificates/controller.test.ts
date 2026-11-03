@@ -90,6 +90,9 @@ describe('certificates and the badge toast', () => {
     let own = await page(cookie, href)
     assert.equal(own.status, 200)
     assert.match(own.html, /Only you can see this\./)
+    // The owner's name goes to /me: /u/:handle is a 404 while it's private.
+    assert.match(own.html, /href="\/me"[^>]*>[^<]*<\/a> <span/)
+    assert.match(own.html, /href="\/settings#profile"/)
     assert.match(own.html, /name="robots" content="noindex"/)
     assert.doesNotMatch(own.html, /rel="canonical"/)
   })
