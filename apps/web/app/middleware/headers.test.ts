@@ -108,6 +108,29 @@ describe('response headers', () => {
     }
   })
 
+  it('no-store covers everything under those areas, matched from the route map, and nothing beside them', async () => {
+    let noStore = [
+      routes.login.check.index.href(),
+      '/settings/',
+      '/settings/no-such-page',
+      '/me/no-such-page',
+      '/auth/no-such-page',
+      '/login/no-such-page',
+      '/logout/no-such-page',
+    ]
+    for (let path of noStore) {
+      let response = await fetchAs(null, path)
+      assert.match(response.headers.get('Content-Type') ?? '', /text\/html/, path)
+      assert.equal(response.headers.get('Cache-Control'), 'no-store', path)
+      await response.text()
+    }
+    for (let path of ['/settingsx', '/mex', '/authors', '/loginx', routes.legal.terms.href()]) {
+      let response = await fetchAs(null, path)
+      assert.equal(response.headers.get('Cache-Control'), 'private, no-cache', path)
+      await response.text()
+    }
+  })
+
   it('keeps headers an action set, and adds no CSP or cache default to non-HTML', async () => {
     // The magic-link confirm page keeps its own no-referrer.
     let { token } = await requestCode('headers-link@example.com')

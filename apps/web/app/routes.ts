@@ -159,7 +159,9 @@ export const routes = route({
     show: get('/:card'),
   }),
 
-  // Catch-all GET for unknown pages: the least specific pattern, so every
-  // route above wins. Renders the app-styled 404 (root controller).
-  notFound: get('/*path'),
+  // Catch-all for unknown URLs, any method: the least specific pattern, so
+  // every route above wins. A plain string matches every method (guide 02), so
+  // a POST to a stale form action gets the app-styled 404 (root controller),
+  // not the router's bare 405 for a URL that only matched a GET.
+  notFound: '/*path',
 })

@@ -6,7 +6,7 @@
 // UNIQUE(user_id, kind, ref) and xp_total is recomputed from the ledger, so a
 // replayed completion or an anonymous merge never double-counts.
 import type { D1DataTableDatabase } from '../d1/database.ts'
-import type { ExerciseAttempt, XpKind } from '../tables.ts'
+import { userBadges, type ExerciseAttempt, type XpKind } from '../tables.ts'
 
 export interface AttemptInput {
   id: string
@@ -151,6 +151,12 @@ export async function awardBadges(db: D1DataTableDatabase, userId: string, badge
         .bind(userId, badgeId, now),
     ),
   )
+}
+
+/** Ids of every badge the user holds, in no particular order. */
+export async function listHeldBadgeIds(db: D1DataTableDatabase, userId: string): Promise<string[]> {
+  let rows = await db.findMany(userBadges, { where: { user_id: userId } })
+  return rows.map((row) => row.badge_id)
 }
 
 export async function listUserBadges(db: D1DataTableDatabase, userId: string) {

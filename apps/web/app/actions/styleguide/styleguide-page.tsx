@@ -2,6 +2,7 @@ import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 
 import type { Viewer } from '../../auth/identity.ts'
+import { APP_TITLE } from '../../config.ts'
 import { Layout } from '../../ui/layout.tsx'
 import { Catalogue } from './catalogue.tsx'
 import { SystemBoard } from './system.tsx'
@@ -15,7 +16,7 @@ export function StyleguidePage(handle: Handle<{ currentPath: string; viewer: Vie
   return () => (
     <Layout
       title="Design system"
-      description="The Bits design system: tokens and every shared component in all states."
+      description={`The ${APP_TITLE} design system: tokens and every shared component in all states.`}
       currentPath={handle.props.currentPath}
       viewer={handle.props.viewer}
       head={<meta name="robots" content="noindex" />}

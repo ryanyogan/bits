@@ -3,6 +3,7 @@ import { createController } from 'remix/router'
 import { platform } from '#platform'
 
 import { errorFields, log } from '../log.ts'
+import { assetResponse } from '../middleware/assets.ts'
 import { rateLimit } from '../middleware/rate-limit.tsx'
 import { routes } from '../routes.ts'
 import { getViewer } from '../auth/identity.ts'
@@ -13,13 +14,9 @@ import { NotFoundPage } from '../ui/not-found-page.tsx'
 
 export default createController(routes, {
   actions: {
-    // Node serves compiled assets on demand. On Workers, built assets are
-    // served by the platform before the Worker runs, so this only sees misses.
-    async assets(context) {
-      return (
-        (await platform.assets.fetch(context.request)) ??
-        new Response('Not Found', { status: 404 })
-      )
+    // Normally answered by serveAssets() in router.ts, before the session.
+    assets(context) {
+      return assetResponse(context.request)
     },
     // Liveness plus a D1 round trip, so a deploy check proves the binding.
     async health(context) {
@@ -53,6 +50,7 @@ export default createController(routes, {
     home(context) {
       return context.render(<HomePage viewer={getViewer(context)} />)
     },
+    // Any method (routes.ts): a POST to an unknown URL gets this page too.
     notFound(context) {
       return context.render(<NotFoundPage path={context.url.pathname} viewer={getViewer(context)} />, {
         status: 404,
