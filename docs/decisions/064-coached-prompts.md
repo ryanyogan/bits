@@ -41,12 +41,12 @@ and the lesson save share it:
 4. **The rubric** (`- rubric`) is graded by the judge (§3). This happens
    only for a `coach` block, and only when layers 1–3 already hold on a live
    reply. A deterministic miss never costs a model call: its verdict comes
-   back with the failing check's own note ("The reply has 3 sentences (2 at
-   most).") or the next authored hint.
+   back with a hint about the first criterion not met (§4, "Which hint").
 
 The verdict's `layer` says which layer decided it:
 
-- `pattern`: the reply was a saved example, so only the prompt checks and the run requirement graded it. This is labelled.
+- `pattern`: the reply was a saved example because no model is connected or Claude couldn't be reached (§5), so only the prompt checks and the run requirement graded it. This is labelled.
+- `limit` and `example` (amended 2026-11-02, never journalled): the reply was a saved example because of a run limit, or a temperature that never runs live. Nothing is graded (§5).
 - `reply`: the deterministic layers decided.
 - `coach`: the judge graded the rubric.
 - `soft`: the judge couldn't run (§5). The block passed on the deterministic layers, and this is labelled.
@@ -106,7 +106,10 @@ Lines:
   A rubric line needs `coach`. `evidence` reads the reply, so it can't be
   used with `on=prompt`.
 - `- hint "…"`, at most 5, ordered from general to specific. `coach` needs at
-  least one.
+  least one hint of either kind.
+- `- hint for="label" "…"` (amended 2026-11-02), at most 8: a hint for one
+  criterion, named by its exact check, run, expect or rubric label (the
+  build refuses a label the block doesn't have).
 - `- reference "…"` (at most 2000 characters) is a strong prompt. It stays on
   the server until the learner asks to see it (§4) or has passed.
 - `- document id "…"` (at most 4000 characters) is text that `quotes id`
@@ -212,17 +215,48 @@ The judge resists injection in depth:
   - one hint;
   - the offline or soft label when it applies.
   The goal strip takes the latest verdict's marks.
-- **Attempt line**: "Attempt N · hints get more specific".
+
+  Amended 2026-11-02 (QA of the live courses): the coach turn lists only
+  the criteria not met (the goal strip holds the full list), and its tally
+  says what it counts ("3 of 4 checks met · 2 more checked once these
+  pass"). "What good looks like" is a disclosure: open before the first
+  verdict, folded to one line with the tally after it, so the reply stays
+  in view at 360px. It says "From your last run" once the draft differs
+  from the prompt that verdict graded, and "Passed earlier · run it again
+  to see the coach" for a lesson saved before coaching. A `limit` or
+  `example` verdict reads "Not graded." and leaves the strip on the last
+  graded verdict.
+- **Which hint** (amended 2026-11-02; `missHint()` in `app/runs/coach-text.ts`):
+  always about the first criterion that decides and isn't met, never chosen
+  by the attempt number. In order: that check's own note; on a rubric miss,
+  the judge's hint (after `safeJudgeHint`); the author's `- hint for` that
+  criterion; on a rubric miss, the general hint for this attempt; else a
+  sentence naming the criterion ("Your prompt doesn't do this yet: “…”.").
+  General hints never answer a deterministic miss: they aren't tied to a
+  criterion, so they could be about one that already holds (the QA saw a
+  hint about touching meetings while "Asks it to reason first" failed).
+- **Attempt line**: "Attempt N".
 - **Escalation** (`coachLimits`):
-  - From the 3rd miss, "Stronger hint" reveals the next authored hint.
+  - From the 3rd miss, "Stronger hint" reveals a hint this exercise hasn't
+    shown in a coach turn: the author's hint for the first unmet criterion,
+    then, on a rubric miss, the general ladder from this attempt on
+    (`strongerHint()`). With none left, the button isn't shown.
   - From the 5th miss, "Show a strong prompt" reveals the reference as a
     LearnerBubble, with "Use this prompt" to put it in the field.
   - Both are buttons with `aria-expanded` over their panel.
   - `POST /api/coach` with `reveal=1` answers 403 before 5 misses. After 5,
     it records a `reveal` row and returns the reference.
-- **Pass**: the coach turn says what worked. The reward toast follows from
-  the server's xp, under the run that earned it, and is silent when the xp
-  is 0. The reference is then shown as a model answer.
+  - "Show a strong prompt" has a line beside it, tied with
+    `aria-describedby`, that states the cost before the click: "Passing
+    after you see it earns half the neurons."
+- **Pass** (amended 2026-11-02): the coach turn says "Passed." and, if a
+  `should` line is missing, names it ("One nice-to-have to try next time:
+  “…”."). The line comes from the verdict's criteria, never the judge's free
+  text, which once questioned criteria that were met. The success text
+  shows once: in the reward box under the run, or in the turn when there's
+  no reward box. The reward toast follows from the server's xp, under the
+  run that earned it, and is silent when the xp is 0. The reference is
+  then shown as a model answer.
 - **Announcements**: one polite status region, rendered empty, announces
   "Checking the reply…" and then the verdict ("1 of 2. …"). The streamed
   reply isn't announced token by token, and the runs list is no longer a
@@ -233,14 +267,35 @@ The judge resists injection in depth:
 
 ### 5. Honest degradation
 
-- **Not live** (no key, over a run limit, a preview, T≠1.0): the reply is a
-  saved example, so the verdict is `pattern`, labelled "Coach offline: this
-  reply is a saved example. Checked by pattern, not by the coach." The
-  prompt checks and the run requirement grade it, and expects show as not
-  checked. A coached block can still be passed and finished this way.
+- **Not live** (amended 2026-11-02). The QA found that past the signed-out
+  limit of 10 live runs an hour, any prompt matching the keywords passed
+  with full neurons, under a label ("Coach offline") that misstated the
+  cause. A canned row doesn't record its reason, so `whyNotLive()` in
+  `coach.ts` rebuilds it from the journal: the limits are counts of earlier
+  rows, taken at the run's own time. Later rows only add to the counts, so
+  a mistake can only call an outage a limit (no pass), never the reverse.
+  - **No model connected** (`modelConfigured()` false: local dev, tests, a
+    preview): `pattern`, labelled "No model is connected here, so this
+    reply is a saved example…". It can pass.
+  - **Claude couldn't be reached** (a model is connected and the owner was
+    under every limit, so the call itself failed): `pattern`, labelled
+    "Claude couldn't be reached…". It can pass with full neurons. This is
+    the one case the "no learner gets stuck" rule is for.
+  - **Over a run limit** (the owner's hour or day, the IP's hour, or the
+    shared daily budget): layer `limit`. Nothing is graded (every criterion
+    "not checked"), and nothing is journalled, so it is neither a pass nor
+    a miss. The hint says which limit and when a live run frees up ("…
+    within 23 min, or sign in for more"; the budget resets at 00:00 UTC).
+  - **A temperature that never runs live** (T≠1.0, with a model connected):
+    layer `example`, not graded or journalled either. It says to run at
+    T=1.0.
+  - The save (`journalledExercises`) counts a canned run on its own only
+    when no model is connected. Otherwise an outage's pass is the coach's
+    journalled `pattern` verdict, and a limit's is never written.
 - **Live, but the judge can't run** (over a coach cap, or the provider is
   down or times out): the verdict is `soft`. It passes on the deterministic
-  layers and is labelled "The coach didn't judge this reply…".
+  layers, and its note says which: "The coach's hourly limit for this
+  exercise is used up…" or "The coach couldn't be reached…".
 - **Previews** never call a model, for runs or the judge.
   `modelConfigured()` returns false when `APP_ENV=preview`, even if a
   gateway variable leaked into the config.
@@ -294,7 +349,9 @@ The judge resists injection in depth:
   the verdict shows the share, and the lesson save puts it into the session
   as before.
 - **Gating**: a prompt gates "Complete lesson" unless it says `gate=false`.
-  Offline, the pattern layer passes, so a gate never dead-ends the learner.
+  With no model, or in an outage, the pattern layer passes, so a gate never
+  dead-ends the learner; over a run limit it waits for the next live run.
+  The footer's "Answer the quick check" links to the open check.
 
 ### 8. The eval
 
@@ -360,6 +417,10 @@ before changing the model.
 - Authors write labels, rubrics and hints. The build forces a deterministic
   anchor and a hint, so a fooled judge alone can't pass a block.
 - Known edges:
+  - The signed-out run limit (10 live runs an hour) now stops grading, and
+    a coached exercise expects up to 5 misses, so two coached lessons can
+    use up the hour. The limit message offers sign-in (60 an hour). Raising
+    the limit is a cost call for the owner, not made here.
   - Over a coach cap, a live attempt whose deterministic layers hold gets a
     soft pass. A learner who burns the cap can pass on the anchors alone.
     That is accepted as the draft's honest degradation, and it is labelled.

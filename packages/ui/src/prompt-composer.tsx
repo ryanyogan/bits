@@ -338,6 +338,10 @@ export const PromptComposer = clientEntry(
       let verdict = result.verdict
       entry.coach = undefined
       entry.verdict = verdict
+      // The first verdict folds the criteria list above the runs: scroll by
+      // what it gave back, so the composer stays put (decision 025).
+      let folding = !latest && criteriaOpen === undefined
+      let before = folding ? composer?.getBoundingClientRect().top : undefined
       if (graded(verdict) || !latest) {
         latest = verdict
         latestPrompt = entry.prompt
@@ -364,6 +368,10 @@ export const PromptComposer = clientEntry(
         }
       }
       await handle.update()
+      if (before !== undefined && composer) {
+        let moved = composer.getBoundingClientRect().top - before
+        if (moved) window.scrollBy({ top: moved, behavior: 'instant' })
+      }
     }
 
     async function reveal() {
@@ -487,7 +495,8 @@ export const PromptComposer = clientEntry(
       let canReveal = Boolean(handle.props.coach && (latest?.canReveal || reference))
       // Saved before coaching (or in another browser): passed, with no verdict to show.
       let passedEarlier = passedAlready && !latest
-      let stale = Boolean(latest && hydrated && draft.trim() !== latestPrompt)
+      // A draft saved on the server comes back with CRLF line ends (form encoding).
+      let stale = Boolean(latest && hydrated && draft.replace(/\r\n?/g, '\n').trim() !== latestPrompt.replace(/\r\n?/g, '\n'))
       let open = criteriaOpen ?? (!latest && !passedEarlier)
       let status = passedEarlier
         ? 'Passed earlier · run it again to see the coach'
