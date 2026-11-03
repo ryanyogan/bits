@@ -1,6 +1,5 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
-import { Keycap } from '@bits/ui/keycap'
 import { LessonNode } from '@bits/ui/lesson-node'
 import { Panel } from '@bits/ui/panel'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
@@ -64,39 +63,24 @@ function SyllabusRow(handle: Handle<{ lesson: SyllabusLesson }>) {
               {`${lesson.n}. ${lesson.title}`}
               <span class="sr-only">{` — ${stateText[lesson.state]}`}</span>
             </span>
-            <span mix={kindsStyle}>
-              {lesson.kinds.map((kind) => (
-                <span key={kind} style={{ color: kindLabels[kind].color }}>
-                  <span aria-hidden="true">{`${kindLabels[kind].glyph} `}</span>
-                  {kindLabels[kind].label}
-                </span>
-              ))}
-            </span>
+            {lesson.tags.length ? (
+              <span mix={kindsStyle}>
+                {lesson.tags.map((kind) => (
+                  <span key={kind} style={{ color: kindLabels[kind].color }}>
+                    {kindLabels[kind].label}
+                  </span>
+                ))}
+              </span>
+            ) : null}
           </span>
-          <span mix={xpStyle}>
-            {`${lesson.mins} min · +${lesson.xp}`}
-            <span class="sr-only"> neurons</span>
-          </span>
+          <span mix={xpStyle}>{`${lesson.mins} min · +${lesson.xp} neurons`}</span>
         </a>
         {lesson.resume ? (
           <div mix={calloutStyle}>
             <p mix={calloutText}>
-              {lesson.resume.exercise ? (
-                <>
-                  You stopped at the exercise: <span mix={calloutEm}>{lesson.resume.exercise}</span>
-                </>
-              ) : (
-                <>
-                  You stopped partway through <span mix={calloutEm}>{lesson.title}</span>.
-                </>
-              )}
+              <span mix={calloutLabel}>In this lesson</span>
+              {lesson.resume.exercise}
             </p>
-            <div mix={calloutRow}>
-              <Keycap href={lesson.resume.href} mix={calloutKey}>
-                Pick up here →
-              </Keycap>
-              <span mix={savedStyle}>your draft prompt is saved</span>
-            </div>
           </div>
         ) : null}
       </li>
@@ -183,11 +167,13 @@ const titleStyle = css({
 })
 const kindsStyle = css({
   display: 'flex',
-  gap: 'var(--space-3)',
+  columnGap: 'var(--space-3)',
+  rowGap: 'var(--space-0_5)',
   flexWrap: 'wrap',
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--fs-12)',
   color: 'var(--muted)',
+  '& > * + *::before': { content: '"·"', marginRight: 'var(--space-3)', color: 'var(--dim)' },
 })
 const xpStyle = css({
   fontFamily: 'var(--font-mono)',
@@ -202,7 +188,7 @@ const calloutStyle = css({
   position: 'relative',
   zIndex: 2,
   margin: `var(--space-1_5) var(--section-pad-x) var(--space-4) calc(${SLOT_LEFT} + 40px + var(--space-4))`,
-  padding: 'var(--space-4_5)',
+  padding: 'var(--space-3_5) var(--space-4)',
   background: 'var(--surface)',
   border: 'var(--border-w) solid var(--line-cell)',
   boxShadow: 'inset 0 var(--border-w-strong) 0 var(--ion)',
@@ -211,8 +197,14 @@ const calloutStyle = css({
   gap: 'var(--space-3_5)',
   [MOBILE]: { marginLeft: SLOT_LEFT },
 })
-const calloutText = css({ margin: 0, fontSize: 'var(--fs-15)', lineHeight: 1.55, color: 'var(--text-body)' })
-const calloutEm = css({ color: 'var(--text)' })
-const calloutRow = css({ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', alignItems: 'center' })
-const calloutKey = css({ padding: '0 var(--space-4_5)', [MOBILE]: { flex: '1 1 100%' } })
-const savedStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--muted)' })
+const calloutText = css({
+  margin: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'var(--space-1_5)',
+  fontSize: 'var(--fs-15)',
+  lineHeight: 1.55,
+  color: 'var(--text-body)',
+  textWrap: 'pretty',
+})
+const calloutLabel = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--ion)' })

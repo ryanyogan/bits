@@ -10,6 +10,7 @@ import { Keycap } from '@bits/ui/keycap'
 import { PageFrame } from '@bits/ui/page-frame'
 import { RuledSection } from '@bits/ui/ruled-section'
 import { SearchField } from '@bits/ui/search-field'
+import { prefetchFor } from '@bits/ui/lib/prefetch'
 
 import type { Viewer } from '../../auth/identity.ts'
 import type { CourseSummary } from '../../content/types.ts'
@@ -38,6 +39,12 @@ export interface CatalogPageProps {
   results: CourseSummary[]
   counts: Record<TrackSlug | 'all', number>
   continueTarget?: ContinueTarget
+  /** "8 courses · about 7 hours in all", over the whole catalog. */
+  summary: string
+  /** A few real courses to offer when a search finds nothing. */
+  suggestions: CourseSummary[]
+  /** Authors and admins get the "write a course" cell; learners don't. */
+  canWrite: boolean
   courseHref(slug: string): string
 }
 
@@ -57,7 +64,7 @@ const SEARCH_ID = 'course-search'
  */
 export function CatalogPage(handle: Handle<CatalogPageProps>) {
   return () => {
-    let { viewer, query, results, counts, continueTarget, courseHref } = handle.props
+    let { viewer, query, results, counts, continueTarget, summary, suggestions, canWrite, courseHref } = handle.props
     let hidden: Record<string, string> = {}
     if (query.track) hidden.track = query.track
 
@@ -78,11 +85,10 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
             <RuledSection as="header" rule={false} pad="none" open>
               <div mix={titleBlock}>
                 <Eyebrow>All courses · free</Eyebrow>
-                <h1 mix={h1Style}>
-                  Pick your next
-                  <br />
-                  rabbit hole.
-                </h1>
+                <h1 mix={h1Style}>Pick your next rabbit hole.</h1>
+                <p mix={leadStyle}>
+                  {`${summary}. Short, hands-on lessons that start with Claude, in your browser.`}
+                </p>
               </div>
             </RuledSection>
 
@@ -152,40 +158,55 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
                 <div mix={emptyCell}>
                   <EmptyState
                     variant="bare"
-                    title={query.q ? `0 results for “${query.q}”` : '0 results'}
-                    hint="Try “agents”, “tokens” or clear the filter."
+                    title={query.q ? `No courses match “${query.q}”` : 'No courses here yet'}
+                    hint="Try a shorter word, or start with one of these."
                     action={
-                      <Keycap variant="ghost" size="sm" href={catalogHref({})}>
-                        Clear filters
-                      </Keycap>
+                      <div mix={emptyActions}>
+                        <ul aria-label="Suggested courses" mix={suggestList}>
+                          {suggestions.map((course) => (
+                            <li key={course.slug}>
+                              <a href={courseHref(course.slug)} data-rmx-prefetch={prefetchFor(courseHref(course.slug))} mix={suggestLink}>
+                                {`${course.title} →`}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                        <Keycap variant="ghost" size="sm" href={catalogHref({})}>
+                          Clear the search
+                        </Keycap>
+                      </div>
                     }
                   />
                 </div>
               ) : null}
-              <CellGrid as="ul" cols={3} fill="ink">
-                {results.map((course) => (
-                  <li key={course.slug} mix={cellStyle}>
-                    <CourseCard
-                      href={courseHref(course.slug)}
-                      title={course.title}
-                      desc={course.desc}
-                      track={course.track}
-                      level={course.level}
-                      lessons={course.lessons}
-                      mins={course.mins}
-                      sigil={course.sigil}
-                      tone={course.tone}
-                      pattern={course.pattern}
-                      formats={course.formats}
-                      pct={course.pct}
-                      variant="cell"
-                    />
-                  </li>
-                ))}
-                <li mix={cellStyle}>
-                  <WriteCourseCard href={routes.author.index.href()} variant="cell" />
-                </li>
-              </CellGrid>
+              {results.length > 0 ? (
+                <CellGrid as="ul" cols={3} fill="ink">
+                  {results.map((course) => (
+                    <li key={course.slug} mix={cellStyle}>
+                      <CourseCard
+                        href={courseHref(course.slug)}
+                        title={course.title}
+                        desc={course.desc}
+                        track={course.track}
+                        level={course.level}
+                        lessons={course.lessons}
+                        mins={course.mins}
+                        sigil={course.sigil}
+                        tone={course.tone}
+                        pattern={course.pattern}
+                        formats={course.formats}
+                        pct={course.pct}
+                        variant="cell"
+                      />
+                    </li>
+                  ))}
+                  {canWrite && results.length > 0 ? (
+                    <li mix={cellStyle}>
+                      <WriteCourseCard href={routes.author.index.href()} variant="cell" />
+                    </li>
+                  ) : null}
+                </CellGrid>
+              ) : null}
             </RuledSection>
           </PageFrame>
         </div>
@@ -196,6 +217,7 @@ export function CatalogPage(handle: Handle<CatalogPageProps>) {
 
 const PHONE = '@media (max-width: 480px)'
 const STACKED = '@media (max-width: 1023.98px)'
+const PHONE_GRID = '@media (max-width: 759.98px)'
 
 /**
  * Holds the page and its background layer (z-index -1 stays inside it).
@@ -209,15 +231,30 @@ const titleBlock = css({
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--space-3_5)',
-  padding: 'var(--space-20) var(--section-pad-x) var(--space-16)',
-  [PHONE]: { padding: 'var(--space-12) var(--section-pad-x) var(--space-10)' },
+  padding: 'var(--space-14) var(--section-pad-x) var(--space-12)',
+  [PHONE]: { padding: 'var(--space-10) var(--section-pad-x) var(--space-8)' },
+})
+// The lead ends before the graph's side of the band; on paper it sits on the
+// copy wash, since the scene shows through this open section (decision 063).
+const leadStyle = css({
+  margin: 0,
+  width: 'fit-content',
+  maxWidth: '44ch',
+  background: 'var(--copy-wash)',
+  fontSize: 'var(--fs-18)',
+  lineHeight: 1.55,
+  color: 'var(--text-lead)',
+  textWrap: 'pretty',
+  [PHONE]: { fontSize: 'var(--fs-16)' },
 })
 const h1Style = css({
   margin: 0,
   fontFamily: 'var(--font-display)',
   fontWeight: 800,
+  maxWidth: '14ch',
   fontSize: 'clamp(36px, 5vw, 64px)',
   lineHeight: 1,
+  textWrap: 'balance',
   letterSpacing: 'var(--tracking-tight)',
   // Inside the rails a phone column is ~300px: "rabbit hole." at 36px is the widest line.
   [PHONE]: { fontSize: 'var(--fs-32)' },
@@ -250,10 +287,35 @@ const pillRow = css({
     overflowX: 'auto',
     scrollSnapType: 'x proximity',
     scrollbarWidth: 'none',
-    '& > a': { flex: 'none', scrollSnapAlign: 'start' },
-    '& > a:last-child': { borderRight: 'var(--border-w) solid var(--line-cell)' },
+    '& > a': { flex: '1 0 auto', scrollSnapAlign: 'start' },
+  },
+  // Phones: no sideways scroller, where the selected track could sit out of
+  // view. "All" takes a row, the four tracks a 2 × 2 grid under it, every
+  // pill in view. Hairlines are the gaps over a line-coloured ground.
+  [PHONE_GRID]: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+    gap: 'var(--border-w)',
+    overflowX: 'visible',
+    background: 'var(--line-cell)',
+    maskImage: 'none',
+    animation: 'none',
+    '& > a, & > a:last-child': { borderRight: 0, background: 'var(--cell-fill)', justifyContent: 'center' },
+    '& > a:first-child': { gridColumn: '1 / -1' },
+    '& > a': { minHeight: 'var(--touch-target)' },
   },
 })
 
 const emptyCell = css({ borderTop: 'var(--border-w) solid var(--line-cell)', background: 'var(--cell-fill)' })
 const cellStyle = css({ display: 'flex' })
+const emptyActions = css({ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 'var(--space-5)' })
+const suggestList = css({
+  listStyle: 'none',
+  margin: 0,
+  padding: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'flex-start',
+  gap: 'var(--space-2_5)',
+})
+const suggestLink = css({ fontSize: 'var(--fs-16)', color: 'var(--text)', textUnderlineOffset: '0.2em' })

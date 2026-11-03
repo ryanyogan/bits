@@ -132,7 +132,7 @@ describe('scroll restoration', () => {
     await search.fill('token')
     await search.press('Enter')
     await page.waitForURL(/\?q=token/)
-    await page.getByText(/courses? · all free/).waitFor()
+    await page.getByText(/^(\d+ courses?|No matches)$/).waitFor()
     // Fewer results can make the page shorter than the old position: then
     // the browser clamps to the new bottom, but it never jumps to the top.
     let { now, max } = await page.evaluate(() => ({

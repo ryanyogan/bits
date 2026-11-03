@@ -51,9 +51,10 @@ export function ProgressRing(handle: Handle<ProgressRingProps>) {
         ) : null}
         <text
           x={half}
-          y={big ? 66 : 54}
+          y={big ? 66 : value >= 100 ? 53 : 54}
           text-anchor="middle"
-          mix={[valueText, big ? valueBig : valueSmall]}
+          // "100%" is a digit wider than the ring's hole at the usual size.
+          mix={[valueText, big ? valueBig : valueSmall, value >= 100 ? (big ? valueBigFull : valueSmallFull) : undefined]}
         >
           {`${value}%`}
         </text>
@@ -71,4 +72,6 @@ const ringStyle = css({ flex: 'none', display: 'block' })
 const valueText = css({ fontFamily: 'var(--font-display)', fontWeight: 700, fill: 'var(--text)' })
 const valueBig = css({ fontSize: '28px' })
 const valueSmall = css({ fontSize: '20px' })
+const valueBigFull = css({ fontSize: '24px' })
+const valueSmallFull = css({ fontSize: '16px' })
 const captionText = css({ fontFamily: 'var(--font-mono)', fontSize: '10px', fill: 'var(--muted)' })

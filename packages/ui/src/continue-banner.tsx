@@ -117,9 +117,10 @@ const nextTitle = css({ color: 'var(--text)' })
 const rowStyle = css({ display: 'flex', alignItems: 'center', gap: 'var(--space-3_5)', flexWrap: 'wrap' })
 const pctStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--ion)' })
 
-// Catalog.md responsive (360px): shorter art with a 64px sigil, and the
+// Stacked (under 760px) the art would sit above the words and push what
+// the page is for a screen down; it's decorative (the title names the
+// course), so the banner is text only there (decision 066). At 360px the
 // progress row wraps (bar full width, then % and the keycap pushed right).
-// The sigil reads its size from --fs-88, so the art overrides that token.
-const artNarrow = css({ '@media (max-width: 480px)': { minHeight: '140px', '--fs-88': '64px' } })
+const artNarrow = css({ '@media (max-width: 759.98px)': { display: 'none' } })
 const barNarrow = css({ '@media (max-width: 480px)': { flexBasis: '100%' } })
 const keyNarrow = css({ '@media (max-width: 480px)': { marginLeft: 'auto' } })

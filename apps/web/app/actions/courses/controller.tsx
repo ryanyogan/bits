@@ -1,10 +1,10 @@
 import { createController } from 'remix/router'
 
-import { getViewer } from '../../auth/identity.ts'
+import { canAuthor, getViewer } from '../../auth/identity.ts'
 import { getCatalog } from '../../content/request.ts'
 import { loadCompleted } from '../../progress/progress.ts'
 import { routes } from '../../routes.ts'
-import { filterCourses, parseCatalogQuery } from './catalog.ts'
+import { catalogSummary, filterCourses, parseCatalogQuery } from './catalog.ts'
 import { CatalogPage, type ContinueTarget } from './catalog-page.tsx'
 
 export default createController(routes.courses, {
@@ -15,10 +15,14 @@ export default createController(routes.courses, {
       // Progress is on the server for everyone: D1 when signed in, the
       // session when not (decision 016).
       let [catalog, completed] = await Promise.all([getCatalog(context), loadCompleted(context)])
-      let { results, counts } = filterCourses(query, catalog.listCourses(completed))
+      let all = catalog.listCourses(completed)
+      let { results, counts } = filterCourses(query, all)
+      let filtered = Boolean(query.track || query.q)
 
       let continueTarget: ContinueTarget | undefined
-      let resume = catalog.getContinue(completed)
+      // A filtered list is a search: the banner would sit between the
+      // toolbar's answer and the question.
+      let resume = filtered ? undefined : catalog.getContinue(completed)
       if (resume) {
         let { course, lesson, total } = resume
         continueTarget = {
@@ -42,6 +46,9 @@ export default createController(routes.courses, {
           results={results}
           counts={counts}
           continueTarget={continueTarget}
+          summary={catalogSummary(all)}
+          suggestions={results.length === 0 ? all.slice(0, 3) : []}
+          canWrite={viewer ? canAuthor(viewer) : false}
           courseHref={(slug) => routes.courses.course.index.href({ course: slug })}
         />,
       )

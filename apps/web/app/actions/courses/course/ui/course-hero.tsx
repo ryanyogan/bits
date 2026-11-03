@@ -1,15 +1,13 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
-import { CellGrid } from '@bits/ui/cell-grid'
 import { CourseCover } from '@bits/ui/course-cover'
 import { Icon } from '@bits/ui/icon'
 import { Keycap } from '@bits/ui/keycap'
-import { ProgressBar } from '@bits/ui/progress-bar'
 import { RuledSection } from '@bits/ui/ruled-section'
 import { Tag } from '@bits/ui/tag'
 import { prefetchFor } from '@bits/ui/lib/prefetch'
 
-import type { CourseView } from '../course-data.ts'
+import { formatMins, type CourseView } from '../course-data.ts'
 import { toneAlpha } from './tone.ts'
 
 export interface CourseHeroProps {
@@ -19,10 +17,13 @@ export interface CourseHeroProps {
 }
 
 /**
- * Course.md §2 on the squared grid (decision 047): the first band of the
- * page's `PageFrame`, two cells. The text cell has the breadcrumb, title,
- * lead, meta tags and CTAs; the art cell has the cover on the course's
- * faint tone stripes. Static.
+ * Course.md §2 on the squared grid (decision 047), made compact by decision
+ * 066 so the syllabus starts in the first screen: the text cell (breadcrumb,
+ * title, lead, facts, the one CTA for the viewer's state and the lesson it
+ * opens) and, from 1024px, the cover on the course's faint tone stripes.
+ * Below 1024px the cover is dropped: it's decorative, and on a phone it
+ * pushed the syllabus a screen down. Progress lives in the aside only.
+ * Static.
  */
 export function CourseHero(handle: Handle<CourseHeroProps>) {
   return () => {
@@ -30,7 +31,7 @@ export function CourseHero(handle: Handle<CourseHeroProps>) {
     let { course } = view
     return (
       <RuledSection aria-labelledby="course-title" rule={false} pad="none">
-        <CellGrid cols={2} pad={false} mix={gridStyle}>
+        <div mix={gridStyle}>
           <div mix={textCol}>
             <nav aria-label="Breadcrumb" mix={crumbStyle}>
               <a href={coursesHref} data-rmx-prefetch={prefetchFor(coursesHref)} mix={crumbLink}>
@@ -46,14 +47,19 @@ export function CourseHero(handle: Handle<CourseHeroProps>) {
             </h1>
             <p mix={leadStyle}>{view.lead}</p>
             <ul aria-label="About this course" mix={metaList}>
+              {view.state === 'finished' ? (
+                <li>
+                  <Tag variant="done">✓ Finished</Tag>
+                </li>
+              ) : null}
               <li>
                 <Tag variant="meta">{course.level}</Tag>
               </li>
               <li>
-                <Tag variant="meta">{`${course.lessons} lessons`}</Tag>
+                <Tag variant="meta">{`${view.total} lessons`}</Tag>
               </li>
               <li>
-                <Tag variant="meta">{`~${course.mins} min`}</Tag>
+                <Tag variant="meta">{formatMins(view.totalMins)}</Tag>
               </li>
               <li>
                 <Tag variant="meta-ion" mix={toneTag}>
@@ -62,48 +68,46 @@ export function CourseHero(handle: Handle<CourseHeroProps>) {
               </li>
             </ul>
             <div mix={actionsStyle}>
-              <Keycap size="lg" href={view.cta.href} mix={ctaStyle}>
-                {view.cta.label}
-              </Keycap>
-              {view.intro ? (
-                <Keycap variant="ghost-mono" size="lg" href={view.intro.href} mix={[ctaStyle, ghostStyle]}>
-                  <Icon name="play-inline" />
-                  {view.intro.label}
+              <div mix={ctaBlock}>
+                <Keycap size="lg" href={view.cta.href} mix={ctaStyle}>
+                  {view.cta.label}
+                </Keycap>
+                {view.cta.sub ? <p mix={ctaSub}>{view.cta.sub}</p> : null}
+              </div>
+              {view.secondary ? (
+                <Keycap variant="ghost-mono" size="lg" href={view.secondary.href} mix={[ctaStyle, ghostStyle]}>
+                  {view.secondary.icon ? <Icon name={view.secondary.icon} /> : null}
+                  {view.secondary.label}
                 </Keycap>
               ) : null}
             </div>
           </div>
-          <div mix={artCol}>
-            <CourseCover pattern={course.pattern} tone={course.tone} sigil={course.sigil} variant="art" mix={artStyle}>
-              {view.pct > 0 ? (
-                <span mix={chipStyle}>
-                  <ProgressBar pct={view.pct} variant="art" color="var(--tone)" />
-                  <span mix={chipText}>
-                    {`${view.done}/${view.total} · ${view.pct}%`}
-                    <span class="sr-only"> complete</span>
-                  </span>
-                </span>
-              ) : null}
-            </CourseCover>
+          <div aria-hidden="true" mix={artCol}>
+            <CourseCover pattern={course.pattern} tone={course.tone} sigil={course.sigil} variant="art" mix={artStyle} />
           </div>
-        </CellGrid>
+        </div>
       </RuledSection>
     )
   }
 }
 
 const MOBILE = '@media (max-width: 480px)'
+const STACKED = '@media (max-width: 1023.98px)'
 
-// The header's own rule is the app bar's: no line over the first row.
-const gridStyle = css({ '& > *': { borderTop: 0 } })
+// Text | art from 1024px (the art cell sized to the cover); text alone below.
+const gridStyle = css({
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
+  [STACKED]: { gridTemplateColumns: 'minmax(0, 1fr)' },
+})
 const textCol = css({
   minWidth: 0,
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'center',
-  gap: 'var(--space-5_5)',
-  padding: 'var(--space-16) var(--cell-pad)',
-  [MOBILE]: { padding: 'var(--space-10) var(--cell-pad)' },
+  gap: 'var(--space-5)',
+  padding: 'var(--space-12) var(--cell-pad)',
+  [MOBILE]: { gap: 'var(--space-4)', padding: 'var(--space-8) var(--cell-pad)' },
 })
 const crumbStyle = css({
   display: 'flex',
@@ -123,11 +127,11 @@ const crumbLink = css({
 const crumbTrack = css({ color: 'var(--tone)', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } })
 const h1Style = css({
   margin: 0,
-  maxWidth: '12ch',
+  maxWidth: '16ch',
   fontFamily: 'var(--font-display)',
   fontWeight: 800,
-  fontSize: 'clamp(40px, 4.8vw, 68px)',
-  lineHeight: 0.98,
+  fontSize: 'clamp(40px, 4.4vw, 60px)',
+  lineHeight: 1,
   letterSpacing: 'var(--tracking-display)',
   textWrap: 'balance',
   // A phone column inside the rails is ~280px: keep long words whole.
@@ -135,10 +139,11 @@ const h1Style = css({
 })
 const leadStyle = css({
   margin: 0,
-  maxWidth: '600px',
-  fontSize: 'var(--fs-19)',
+  maxWidth: '62ch',
+  fontSize: 'var(--fs-18)',
   lineHeight: 1.6,
   color: 'var(--text-lead)',
+  textWrap: 'pretty',
   [MOBILE]: { fontSize: 'var(--fs-17)' },
 })
 const metaList = css({
@@ -154,32 +159,36 @@ const actionsStyle = css({
   display: 'flex',
   gap: 'var(--space-3_5)',
   flexWrap: 'wrap',
+  alignItems: 'flex-start',
   paddingTop: 'var(--space-1_5)',
 })
+const ctaBlock = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'var(--space-2_5)',
+  minWidth: 0,
+  [MOBILE]: { flex: '1 1 100%' },
+})
+const ctaSub = css({
+  margin: 0,
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-13)',
+  lineHeight: 1.45,
+  color: 'var(--muted)',
+})
 const ctaStyle = css({ [MOBILE]: { flex: '1 1 100%' } })
-const ghostStyle = css({ gap: 'var(--space-2_5)', padding: '0 var(--space-5)', fontSize: 'var(--fs-15)' })
+const ghostStyle = css({ gap: 'var(--space-2_5)', padding: '0 var(--space-5)', fontSize: 'var(--fs-15)', maxWidth: '100%' })
 const artCol = css({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   minWidth: 0,
-  padding: 'var(--space-12) var(--cell-pad)',
+  padding: 'var(--space-10) var(--space-12)',
+  borderLeft: 'var(--border-w) solid var(--line-cell)',
   background: `repeating-linear-gradient(115deg, ${toneAlpha(0)} 0 22px, ${toneAlpha(6)} 22px 23px)`,
-  // Stacked: the art sits under the text, between hairlines.
-  '@media (max-width: 759.98px)': { padding: 'var(--space-8) var(--cell-pad)', borderTop: 'var(--border-w) solid var(--line-cell)' },
+  [STACKED]: { display: 'none' },
 })
-const artStyle = css({ [MOBILE]: { width: '100%', maxWidth: '240px' } })
-const chipStyle = css({
-  position: 'absolute',
-  left: 'var(--space-5)',
-  right: 'var(--space-5)',
-  bottom: 'var(--space-5)',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 'var(--space-3)',
-  padding: 'var(--space-3) var(--space-3_5)',
-  background: 'var(--ink-a86)',
-  border: 'var(--border-w) solid var(--line)',
-  [MOBILE]: { left: 'var(--space-3)', right: 'var(--space-3)', bottom: 'var(--space-3)' },
+const artStyle = css({
+  width: '280px',
+  '@media (min-width: 1280px)': { width: '320px' },
 })
-const chipText = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-13)', color: 'var(--tone)', whiteSpace: 'nowrap' })

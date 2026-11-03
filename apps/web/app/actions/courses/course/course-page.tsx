@@ -1,6 +1,5 @@
-import type { Handle } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
-import { CellGrid, type CellGridCols } from '@bits/ui/cell-grid'
 import { PageFrame } from '@bits/ui/page-frame'
 import { RuledSection } from '@bits/ui/ruled-section'
 
@@ -11,7 +10,7 @@ import { routes } from '../../../routes.ts'
 import { ogImage } from '../../../ui/og.ts'
 import { Layout } from '../../../ui/layout.tsx'
 import type { CourseView } from './course-data.ts'
-import { CourseAside } from './ui/course-aside.tsx'
+import { CourseLearn, CourseOutcomes, CourseProgress, CourseSource } from './ui/course-aside.tsx'
 import { CourseHero } from './ui/course-hero.tsx'
 import { Syllabus } from './ui/syllabus.tsx'
 import { toneStyles } from './ui/tone.ts'
@@ -27,9 +26,11 @@ export interface CoursePageProps {
 
 /**
  * `/courses/:course` (docs/design/spec/pages/Course.md), on the squared
- * grid (decision 047): one `PageFrame` in three bands. The hero (text |
- * art), the outcomes as a row of numbered cells, then the syllabus beside
- * the progress aside.
+ * grid (decision 047), laid out like an LMS course page (decision 066): a
+ * compact hero, then the syllabus in the first screen with the side panels
+ * beside it (progress, what you'll learn, how you'll learn, source), the
+ * two joined into one plate. Below 1024px the syllabus comes first and the
+ * panels stack under it.
  */
 export function CoursePage(handle: Handle<CoursePageProps>) {
   return () => {
@@ -49,23 +50,23 @@ export function CoursePage(handle: Handle<CoursePageProps>) {
         <PageFrame mix={toneStyles[course.tone]}>
           <CourseHero view={view} coursesHref={coursesHref} trackHref={trackHref} />
 
-          <RuledSection label="By the end you'll be able to" labelAs="h2" labelId="outcomes-heading" pad="none">
-            <CellGrid as="ol" cols={outcomeCols(course.outcomes.length)} top={false}>
-              {course.outcomes.map((outcome, index) => (
-                <li key={index} mix={outcomeCell}>
-                  <span aria-hidden="true" mix={outcomeN}>
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  {outcome}
-                </li>
-              ))}
-            </CellGrid>
-          </RuledSection>
-
-          <RuledSection as="div" pad="none">
+          <RuledSection as="div" pad="none" rule={false}>
             <div mix={bodyStyle}>
-              <Syllabus modules={view.modules} />
-              <CourseAside view={view} sourceHref={routes.author.course.index.href({ course: course.slug })} />
+              <Slot area="syl">
+                <Syllabus modules={view.modules} />
+              </Slot>
+              <Slot area="prog" side>
+                <CourseProgress view={view} />
+              </Slot>
+              <Slot area="out" side>
+                <CourseOutcomes outcomes={course.outcomes} />
+              </Slot>
+              <Slot area="how" side>
+                <CourseLearn view={view} />
+              </Slot>
+              <Slot area="src" side>
+                <CourseSource view={view} />
+              </Slot>
             </div>
           </RuledSection>
         </PageFrame>
@@ -74,34 +75,47 @@ export function CoursePage(handle: Handle<CoursePageProps>) {
   }
 }
 
-
-/** Four outcomes in one row of four; otherwise rows of three. */
-function outcomeCols(n: number): CellGridCols {
-  return n % 4 === 0 ? 4 : n <= 2 ? 2 : 3
+/** One grid item of the body: `side` items are the column beside the syllabus. */
+function Slot(handle: Handle<{ area: 'syl' | 'prog' | 'out' | 'how' | 'src'; side?: boolean; children?: RemixNode }>) {
+  return () => (
+    <div
+      data-area={handle.props.area}
+      data-side={handle.props.side ? '' : undefined}
+      mix={slotStyle}
+      style={{ gridArea: handle.props.area }}
+    >
+      {handle.props.children}
+    </div>
+  )
 }
 
-const outcomeCell = css({
-  fontSize: 'var(--fs-15)',
-  lineHeight: 1.5,
-  color: 'var(--text-body)',
-  textWrap: 'pretty',
-})
-const outcomeN = css({
-  display: 'block',
-  marginBottom: 'var(--space-3)',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--fs-12)',
-  color: 'var(--tone)',
-})
+const WIDE = '@media (min-width: 1024px)'
+const STACKED = '@media (max-width: 1023.98px)'
+const line = 'var(--border-w) solid var(--line-cell)'
 
-// The syllabus and the aside: two cells side by side from 1024px, with a
-// hairline between them; stacked below that.
+// Wide: the syllabus spans the rows of the side column, so it starts right
+// under the hero. Stacked: the syllabus first (the hero's CTA already says
+// where you are), then the panels.
 const bodyStyle = css({
   display: 'grid',
-  gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 380px)',
-  '& > :first-child': { borderRight: 'var(--border-w) solid var(--line-cell)' },
-  '@media (max-width: 1023.98px)': {
+  [WIDE]: {
+    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 380px)',
+    gridTemplateRows: 'auto auto auto 1fr',
+    gridTemplateAreas: '"syl prog" "syl out" "syl how" "syl src"',
+    '@media (min-width: 1440px)': { gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 420px)' },
+  },
+  [STACKED]: {
     gridTemplateColumns: 'minmax(0, 1fr)',
-    '& > :first-child': { borderRight: 0, borderBottom: 'var(--border-w) solid var(--line-cell)' },
+    gridTemplateAreas: '"syl" "prog" "out" "how" "src"',
+    // A hairline between stacked panels; the first one sits under the hero's rule.
+    '& > :not([data-area="syl"])': { borderTop: line },
+  },
+  '@media (forced-colors: active)': { '& > *': { borderColor: 'GrayText' } },
+})
+const slotStyle = css({
+  minWidth: 0,
+  [WIDE]: {
+    '&[data-side]': { borderLeft: line },
+    '&[data-side]:not([data-area="prog"])': { borderTop: line },
   },
 })

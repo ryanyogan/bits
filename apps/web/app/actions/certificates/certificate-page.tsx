@@ -42,7 +42,10 @@ export function CertificatePage(handle: Handle<CertificatePageProps>) {
     let { certificate, viewer, shareUrl, currentPath } = handle.props
     let { course, name, badge } = certificate
     let path = routes.certificates.show.href({ handle: certificate.handle, course: course.slug })
-    let profileHref = routes.profile.index.href({ handle: certificate.handle })
+    // A private profile is a 404 at /u/:handle, even to its owner (the only
+    // one who sees a private certificate): their own page is /me.
+    let profileHref = certificate.isPrivate ? routes.me.index.href() : routes.profile.index.href({ handle: certificate.handle })
+    let settingsProfileHref = `${routes.settings.index.href()}#profile`
     let finished = dateFormat.format(certificate.finishedAt)
     let lessons = course.modules.reduce((sum, m) => sum + m.lessons.length, 0)
     let title = `${name} finished ${course.title}`
@@ -67,11 +70,14 @@ export function CertificatePage(handle: Handle<CertificatePageProps>) {
           {certificate.isPrivate ? (
             <RuledSection as="div" rule={false} pad="tight" mix={noPrint}>
               <Callout tone="info" title="Only you can see this.">
-                Your profile is private, so this certificate is too. Make your profile public in{' '}
-                <a href={routes.settings.index.href()} data-rmx-prefetch={prefetchFor(routes.settings.index.href())}>
-                  Settings
-                </a>{' '}
-                to share it.
+                {/* One text run: the callout lays its children out as blocks. */}
+                <span>
+                  {'Your profile is private, so this certificate is too. '}
+                  <a href={settingsProfileHref} data-rmx-prefetch={prefetchFor(routes.settings.index.href())}>
+                    Make your profile public
+                  </a>
+                  {' to share it.'}
+                </span>
               </Callout>
             </RuledSection>
           ) : null}

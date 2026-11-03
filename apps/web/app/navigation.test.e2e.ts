@@ -312,7 +312,7 @@ describe('client navigation', () => {
     await search.fill('token')
     await search.press('Enter')
     await page.waitForURL(/\?q=token/)
-    await page.getByText(/courses? · all free/).waitFor()
+    await page.getByText(/^(\d+ courses?|No matches)$/).waitFor()
     assert.equal(await page.evaluate(() => document.activeElement?.id), 'course-search')
   })
 })
