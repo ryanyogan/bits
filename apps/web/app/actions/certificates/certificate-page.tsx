@@ -133,6 +133,20 @@ export function CertificatePage(handle: Handle<CertificatePageProps>) {
                   <dt>Badge</dt>
                   <dd>{badge.name}</dd>
                 </div>
+                {certificate.proof ? (
+                  <div>
+                    <dt>Deployed</dt>
+                    <dd>
+                      {/* Learner-supplied, checked as a workers.dev origin (decision 072). */}
+                      <a href={certificate.proof.origin} rel="nofollow ugc noopener noreferrer" data-rmx-document="" mix={proofLink}>
+                        {certificate.proof.origin.replace(/^https:\/\//, '')}
+                      </a>
+                      <span mix={proofNote}>
+                        {` · checked ${dateFormat.format(certificate.proof.checkedAt)}. bits called it and it answered; that doesn’t prove who wrote it.`}
+                      </span>
+                    </dd>
+                  </div>
+                ) : null}
               </dl>
             </article>
           </RuledSection>
@@ -174,6 +188,8 @@ const MOBILE = '@media (max-width: 480px)'
 const FORCED = '@media (forced-colors: active)'
 const line = 'var(--border-w) solid var(--line-cell)'
 
+const proofLink = css({ color: 'var(--text)', overflowWrap: 'anywhere', textDecoration: 'underline', textUnderlineOffset: '2px' })
+const proofNote = css({ color: 'var(--muted)' })
 const noPrint = css({ '@media print': { display: 'none' } })
 
 const certStyle = css({ position: 'relative', [FORCED]: { '& *': { borderColor: 'GrayText' } } })

@@ -30,15 +30,25 @@ export interface BuildCheckCaps {
   hour: number
   /** Signed out, per IP. */
   ipHour: number
-  /** Per target origin, everyone together. */
+  /** Per owner, per target origin. */
   originHour: number
+  /**
+   * Distinct owners per target origin. An owner who already checked this
+   * origin within the hour is always counted in, so nobody can spend another
+   * learner's quota: a flood only keeps out owners who arrive after it.
+   */
+  originOwnersHour: number
 }
 
 /**
- * Reserves a `pending` check only while the owner's checks in the last hour,
- * (signed out) the IP's, and everyone's against this origin stay under their
- * caps: one `INSERT … SELECT … WHERE` statement, so parallel requests can't
- * take the same last slot. Returns whether the row was written.
+ * Reserves a `pending` check only while, within the last hour, the owner's
+ * checks, (signed out) the IP's, and the owner's checks of this origin stay
+ * under their caps, and either the owner already checked this origin or
+ * fewer than `originOwnersHour` distinct owners have: one `INSERT … SELECT
+ * … WHERE` statement, so parallel requests can't take the same last slot.
+ * The origin caps count per owner, never everyone together, so checking
+ * someone else's Worker can't lock its owner out (security review, 072).
+ * Returns whether the row was written.
  */
 export async function reserveBuildCheck(db: D1DataTableDatabase, input: BuildCheckInput, caps: BuildCheckCaps): Promise<boolean> {
   let [column, bind] = ownerColumn(input.owner)
@@ -48,7 +58,11 @@ export async function reserveBuildCheck(db: D1DataTableDatabase, input: BuildChe
        select ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'pending', ?10
        where (select count(*) from build_checks where ${column} = ?11 and created_at >= ?12) < ?13
          and (?4 is null or (select count(*) from build_checks where ip_hash = ?4 and user_id is null and created_at >= ?12) < ?14)
-         and (select count(*) from build_checks where origin = ?8 and created_at >= ?12) < ?15`,
+         and (select count(*) from build_checks where origin = ?8 and ${column} = ?11 and created_at >= ?12) < ?15
+         and (
+           exists (select 1 from build_checks where origin = ?8 and ${column} = ?11 and created_at >= ?12)
+           or (select count(distinct coalesce(user_id, 'v:' || visitor)) from build_checks where origin = ?8 and created_at >= ?12) < ?16
+         )`,
     )
     .bind(
       input.id,
@@ -66,6 +80,7 @@ export async function reserveBuildCheck(db: D1DataTableDatabase, input: BuildChe
       caps.hour,
       caps.ipHour,
       caps.originHour,
+      caps.originOwnersHour,
     )
     .run()
   return result.meta.changes === 1

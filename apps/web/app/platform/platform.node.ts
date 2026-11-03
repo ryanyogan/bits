@@ -67,7 +67,10 @@ if (isTest) {
   // course with plain POSTs without depending on any real course's content.
   // Only tests publish it; dev, seed, CI and production never see it.
   let plainCourseDir = path.resolve(coursesDir, '../fixtures/plain-course')
-  for (let dir of [...(await listCourseFolders()), plainCourseDir]) {
+  // And the deploy-check fixture (decision 072): one lesson with :::verify
+  // blocks, which tests answer by stubbing fetch for the learner's Worker.
+  let verifyCourseDir = path.resolve(coursesDir, '../fixtures/verify-course')
+  for (let dir of [...(await listCourseFolders()), plainCourseDir, verifyCourseDir]) {
     let result = await uploadCourseFolder(db, proxy.env.CONTENT, dir, { source: 'test', publish: true })
     if (!result.published) throw new Error(`${dir} didn't build: ${JSON.stringify(result.build.report)}`)
   }

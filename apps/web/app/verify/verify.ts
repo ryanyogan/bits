@@ -29,8 +29,14 @@ export const verifyLimits = {
   anonymousPerHour: 10,
   /** Signed out, per IP: clearing cookies doesn't buy more checks. */
   anonymousPerIpHour: 30,
-  /** Everyone together, per target origin: bits is never a request cannon aimed at one Worker. */
-  originPerHour: 60,
+  /** Per owner, per target origin. */
+  originPerOwnerHour: 10,
+  /**
+   * Distinct owners checking one origin within an hour (owners who already
+   * checked it are always let in): with `originPerOwnerHour`, at most 200
+   * calls an hour reach any one Worker, so bits is never a request cannon.
+   */
+  originOwnersPerHour: 20,
 }
 
 const HOUR = 60 * 60 * 1000
@@ -71,7 +77,8 @@ export async function verifyDeploy(context: AnyContext, input: VerifyInput): Pro
       hourSince: now - HOUR,
       hour: owner.userId ? verifyLimits.userPerHour : verifyLimits.anonymousPerHour,
       ipHour: verifyLimits.anonymousPerIpHour,
-      originHour: verifyLimits.originPerHour,
+      originHour: verifyLimits.originPerOwnerHour,
+      originOwnersHour: verifyLimits.originOwnersPerHour,
     },
   )
   if (!reserved) {

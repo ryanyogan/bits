@@ -2,7 +2,9 @@
 // lesson_progress, never stored. It exists while the user has completed
 // every lesson of the live course, and is visible when their profile is
 // public (or to themselves). It carries only what the public profile shows.
-import { readUserWithCompleted, type D1DataTableDatabase, type User } from '@bits/db'
+import { listCoursePassedBuilds, readUserWithCompleted, type D1DataTableDatabase, type User } from '@bits/db'
+
+import { verifiesOf } from '../courses/lesson/content.ts'
 
 import type { Catalog } from '../../content/catalog.ts'
 import type { CourseDetail } from '../../content/types.ts'
@@ -18,6 +20,11 @@ export interface Certificate {
   badge: { name: string; glyph: string; color: string }
   /** The profile is private: only its owner is looking (nothing to share). */
   isPrivate: boolean
+  /**
+   * The course's final deploy check passed (decision 072): the origin it
+   * passed on. Public profiles only. It proves a Worker answered, not who wrote it.
+   */
+  proof?: { origin: string; checkedAt: number }
 }
 
 /**
@@ -45,6 +52,7 @@ export async function getCertificate(
   let times = lessons.map((lesson) => completed.get(`${course.slug}/${lesson.slug}`))
   if (lessons.length === 0 || times.some((at) => at === undefined)) return undefined
   let badge = badgeDefinitions(catalog).find((b) => b.id === `course:${course.slug}`)
+  let proof = user.is_public ? await finalDeploy(db, catalog, user.id, course.slug, lessons.map((lesson) => lesson.slug)) : undefined
   return {
     name: user.display_name || user.handle,
     handle: user.handle,
@@ -52,5 +60,30 @@ export async function getCertificate(
     finishedAt: Math.max(...(times as number[])),
     badge: { name: course.badge.name, glyph: course.badge.glyph, color: badge?.color ?? 'var(--volt)' },
     isPrivate: !user.is_public,
+    ...(proof ? { proof } : {}),
   }
+}
+
+/**
+ * Where the course's final `:::verify` block (the last one in course order)
+ * passed for this user, if it did. Reads lesson content only when the user
+ * has a passing check in the course at all, so most certificates cost nothing.
+ */
+async function finalDeploy(
+  db: D1DataTableDatabase,
+  catalog: Catalog,
+  userId: string,
+  courseSlug: string,
+  lessonSlugs: string[],
+): Promise<Certificate['proof']> {
+  let passed = await listCoursePassedBuilds(db, userId, courseSlug)
+  if (!passed.length) return undefined
+  for (let slug of [...lessonSlugs].reverse()) {
+    let content = await catalog.lessonContent(courseSlug, slug)
+    let last = content ? verifiesOf(content).at(-1) : undefined
+    if (!last) continue
+    let row = passed.find((p) => p.lesson_slug === slug && p.verify_id === last.id)
+    return row ? { origin: row.origin, checkedAt: row.created_at } : undefined
+  }
+  return undefined
 }
