@@ -103,7 +103,7 @@ arithmetic, so code checks it: your judge must say pass for A and fail for B.
 Write a judge that grades two replies, and agrees with the owner on both
 
 - goal "Get JSON with A as pass and B as fail, matching the owner's labels, with a note on why"
-- placeholder "You are a strict reviewer. Shop facts: … Reply A: … Reply B: … For each, does it stick to the facts? Reply with only JSON: {\"A\": \"pass\" | \"fail\", \"B\": …, \"notes\": …}"
+- placeholder "You are a strict reviewer. Shop facts: … Reply A: … Reply B: … For each, does it stick to the facts? Reply with only JSON: {\"notes\": …, \"A\": \"pass\" | \"fail\", \"B\": …}"
 - draft "Shop facts: A puncture repair costs £15. We're open Tuesday to Saturday, 9:00 to 18:00.\n\nCustomer asked: How much to fix a flat, and can I come Saturday?\n\nReply A: A puncture repair is £15, and yes, we're open Saturday from 9 to 6.\nReply B: Fixing a flat costs £10, and we're open Saturday until 8pm.\n\nAre these OK?"
 - check "Includes the shop's facts"   /£15|15 pounds/i
 - check "Includes both replies"       /reply a/i
@@ -115,11 +115,11 @@ Write a judge that grades two replies, and agrees with the owner on both
 - expect "Agrees with the owner on A: pass" match /"A"\s?:\s?"pass"/i
 - expect "Agrees with the owner on B: fail" match /"B"\s?:\s?"fail"/i
 - hint "Tell the judge what makes a reply fail: anything the facts contradict."
-- hint "Show the exact JSON shape: A and B each hold only the word pass or fail, and notes holds the reasons."
-- reference "You are a strict reviewer for a bike shop's support bot. For each reply, decide one thing: does it stick to the shop's facts? A reply fails if it states anything the facts contradict.\n\nShop facts: A puncture repair costs £15. We're open Tuesday to Saturday, 9:00 to 18:00.\n\nCustomer asked: How much to fix a flat, and can I come Saturday?\n\nReply A: A puncture repair is £15, and yes, we're open Saturday from 9 to 6.\nReply B: Fixing a flat costs £10, and we're open Saturday until 8pm.\n\nReply with only JSON: {\"A\": \"pass\" | \"fail\", \"B\": \"pass\" | \"fail\", \"notes\": \"one sentence per reply saying why\"}"
+- hint "Show the exact JSON shape: A and B each hold only the word pass or fail, and notes, first, holds the reasons."
+- reference "You are a strict reviewer for a bike shop's support bot. For each reply, decide one thing: does it stick to the shop's facts? A reply fails if it states anything the facts contradict.\n\nShop facts: A puncture repair costs £15. We're open Tuesday to Saturday, 9:00 to 18:00.\n\nCustomer asked: How much to fix a flat, and can I come Saturday?\n\nReply A: A puncture repair is £15, and yes, we're open Saturday from 9 to 6.\nReply B: Fixing a flat costs £10, and we're open Saturday until 8pm.\n\nReply with only JSON, notes first: {\"notes\": \"one sentence per reply saying why\", \"A\": \"pass\" | \"fail\", \"B\": \"pass\" | \"fail\"}"
 - run temperature=[1.0]
-- example T=1.0 "{\"A\": \"pass\", \"B\": \"fail\", \"notes\": \"A matches the price and hours. B says £10 instead of £15 and claims Saturday hours until 8pm, but the shop closes at 18:00.\"}"
-- example T=1.0 "{\"A\": \"pass\", \"B\": \"fail\", \"notes\": \"A is correct on both facts. B gets the price and the closing time wrong.\"}"
+- example T=1.0 "{\"notes\": \"A matches the price and hours. B says £10 instead of £15 and claims Saturday hours until 8pm, but the shop closes at 18:00.\", \"A\": \"pass\", \"B\": \"fail\"}"
+- example T=1.0 "{\"notes\": \"A is correct on both facts. B gets the price and the closing time wrong.\", \"A\": \"pass\", \"B\": \"fail\"}"
 - success "Two for two with the owner. A real judge needs a hundred or more labelled replies, but the check is exactly this one." next="Next: run them on every change →"
 :::
 

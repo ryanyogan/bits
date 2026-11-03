@@ -66,14 +66,15 @@ const isJson: Check = (reply) => {
 };
 
 const hasIntent = (want: string): Check => (reply) =>
-  JSON.parse(reply).intent === want;
+  isJson(reply) && JSON.parse(reply).intent === want;
 
 const underWords = (n: number): Check => (reply) =>
-  reply.split(/\s+/).length <= n;
+  reply.trim().split(/\s+/).length <= n;
 ```
 
 Notice `hasIntent` only works because the reply is JSON with an `intent`
-field. If the bot answered in a friendly paragraph, you'd need a model to
+field, and it checks `isJson` first so a prose reply fails instead of
+crashing the run. If the bot answered in a friendly paragraph, you'd need a model to
 read it. **Designing the output is half of designing the eval.**
 
 ---

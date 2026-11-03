@@ -3,7 +3,7 @@
 # - Anthropic, Define success criteria and build evaluations: LLM-based grading is fast, flexible
 #   and suits complex judgement, but test it for reliability before you scale it; detailed, clear
 #   rubrics; ask for a specific output (correct/incorrect, or a tag); let the grader reason before
-#   it scores
+#   it scores (2026-11-03 wording: use a grader with thinking on; the page also allows a 1-5 scale)
 #   https://platform.claude.com/docs/en/test-and-evaluate/develop-tests
 # - Anthropic, Demystifying evals for AI agents: model graders are flexible and handle nuance but
 #   are non-deterministic and need calibrating against people; give the judge a way out
@@ -42,8 +42,9 @@ gets vague.
 **Pass or fail, never 1 to 10.** Nobody can say what makes a 6 different from
 a 7. A yes or no forces you to decide what matters.
 
-**Ask for a reason.** A short critique that says **why** lets you check the
-judge's thinking, and tells you what to fix.
+**Ask for a reason, before the verdict.** A short critique that says **why**
+lets you check the judge's thinking, and tells you what to fix. Put it first
+in the reply, so the judge works out why before it decides.
 
 **Give it a way out.** If the judge can't tell, let it say "unknown" instead
 of guessing.
@@ -55,17 +56,21 @@ What the sources agree on:
 **Isolate criteria.** Anthropic recommends one judge per dimension rather than
 one call grading everything. Each verdict then means one thing.
 
-**Binary verdicts.** Husain's argument: Likert scales aren't calibrated
-between graders, nobody knows what separates a 3 from a 4, and the scores
-aren't actionable. Pass or fail forces the standard into the open.
+**Binary verdicts.** Anthropic's docs accept a 1–5 scale as long as the
+output is specific. Husain argues for pass or fail: Likert scales aren't
+calibrated between graders, nobody knows what separates a 3 from a 4, and
+the scores aren't actionable. This course goes with Husain, because a binary
+verdict forces the standard into the open.
 
 **Critique with the verdict.** Write the reason alongside the verdict. It
 shows you how the judge reasons, and good critiques later become few-shot
 examples in the judge prompt.
 
-**Reason, then decide, with an escape hatch.** Anthropic suggests letting the
-grader think before it scores, asking for a fixed output (a tag or a JSON
-field), and allowing "unknown" when the evidence isn't there.
+**Reason, then decide, with an escape hatch.** Anthropic recommends a grader
+with extended thinking on, so it reasons before it scores, plus a fixed
+output (a tag or a JSON field) and "unknown" when the evidence isn't there.
+Without thinking (as in this sandbox), get the same effect by putting the
+critique field before the verdict field: the model writes in order.
 
 **Give it the ground truth.** A judge checking facts needs the facts in its
 prompt. Without them it's grading against its own guesses.
@@ -90,7 +95,7 @@ reply sticks to the facts. Claude is the judge, and this reply should
 Write a judge that checks the bot's reply against the shop's facts
 
 - goal "Get a fail verdict, with a critique that names exactly what the reply got wrong"
-- placeholder "You are a strict reviewer. Here are the shop's facts … Here is the reply … Does it stick to the facts? Reply with only JSON: {\"verdict\": \"pass\" | \"fail\" | \"unknown\", \"critique\": …}"
+- placeholder "You are a strict reviewer. Here are the shop's facts … Here is the reply … Does it stick to the facts? Reply with only JSON: {\"critique\": …, \"verdict\": \"pass\" | \"fail\" | \"unknown\"}"
 - draft "Shop facts: Returns are accepted within 30 days, with a receipt.\n\nCustomer asked: Can I return a helmet I bought last month?\n\nBot replied: No problem! You can return anything within 60 days, no receipt needed.\n\nIs this reply OK?"
 - check "Includes the shop's facts"        /30 days/i
 - check "Includes the bot's reply"         /60 days/i
@@ -106,11 +111,11 @@ Write a judge that checks the bot's reply against the shop's facts
 - hint "Read your prompt as the judge. Does it say exactly what counts as a pass?"
 - hint for="The verdict is fail" "The reply says 60 days and the facts say 30. Does your prompt tell the judge to compare the reply with the facts?"
 - hint for="The prompt lets the judge answer unknown when it can't tell" "What should the judge say if the facts don't cover the question? Give it that option."
-- hint for="Parses as JSON with a verdict and a critique" "Show the judge the exact JSON shape, with verdict and critique as the only keys."
-- reference "You are a strict reviewer for a bike shop's support bot. Decide one thing: does the bot's reply stick to the shop's facts?\n\nShop facts: Returns are accepted within 30 days, with a receipt.\n\nCustomer asked: Can I return a helmet I bought last month?\n\nBot replied: No problem! You can return anything within 60 days, no receipt needed.\n\nA reply fails if it states anything the facts contradict. If the facts don't cover the question, the verdict is unknown. Think it through, then reply with only JSON: {\"verdict\": \"pass\" | \"fail\" | \"unknown\", \"critique\": \"one sentence naming what is right or wrong\"}"
+- hint for="Parses as JSON with a verdict and a critique" "Show the judge the exact JSON shape, with critique and verdict as the only keys, critique first."
+- reference "You are a strict reviewer for a bike shop's support bot. Decide one thing: does the bot's reply stick to the shop's facts?\n\nShop facts: Returns are accepted within 30 days, with a receipt.\n\nCustomer asked: Can I return a helmet I bought last month?\n\nBot replied: No problem! You can return anything within 60 days, no receipt needed.\n\nA reply fails if it states anything the facts contradict. If the facts don't cover the question, the verdict is unknown. Reply with only JSON, critique first so you reason before you decide: {\"critique\": \"one sentence naming what is right or wrong\", \"verdict\": \"pass\" | \"fail\" | \"unknown\"}"
 - run temperature=[1.0]
-- example T=1.0 "{\"verdict\": \"fail\", \"critique\": \"The reply promises returns within 60 days with no receipt, but the shop accepts returns within 30 days and needs a receipt.\"}"
-- example T=1.0 "{\"verdict\": \"fail\", \"critique\": \"It says 60 days and no receipt; the policy is 30 days with a receipt.\"}"
+- example T=1.0 "{\"critique\": \"The reply promises returns within 60 days with no receipt, but the shop accepts returns within 30 days and needs a receipt.\", \"verdict\": \"fail\"}"
+- example T=1.0 "{\"critique\": \"It says 60 days and no receipt; the policy is 30 days with a receipt.\", \"verdict\": \"fail\"}"
 - success "Your judge caught a made-up policy. Next: how do you know it would also pass a good reply?" next="Next: check your judge →"
 :::
 

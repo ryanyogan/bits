@@ -31,8 +31,8 @@ Quick recap of the course, as a checklist you can reuse:
 
 - **Test cases come from real failures**, with expectations you can check.
 - **Code grades first.** Ask for output code can read, like JSON.
-- **A judge answers one question, pass or fail, with a reason**, and can say
-  "unknown".
+- **A judge answers one question, pass or fail, with a reason first**, and
+  can say "unknown".
 - **Check the judge against a person's labels.** Count failures caught and
   good replies passed separately.
 - **Run the regression set on every change**, and test both sides of a fix.
@@ -75,7 +75,7 @@ Write a judge that applies that rule to all three. Two things grade you:
 Write a judge for meeting summaries that agrees with the owner on all three
 
 - goal "Get A pass, B fail and C fail, with notes that name what's wrong in B and in C"
-- placeholder "You are a strict reviewer of meeting summaries. A summary passes only if … Notes: … Summary A: … For each, reply with only JSON: {\"A\": \"pass\" | \"fail\", \"B\": …, \"C\": …, \"notes\": …}"
+- placeholder "You are a strict reviewer of meeting summaries. A summary passes only if … Notes: … Summary A: … For each, reply with only JSON: {\"notes\": …, \"A\": \"pass\" | \"fail\", \"B\": …, \"C\": …}"
 - draft "Meeting notes, 2 Nov: Priya will order the new tyre stock by Friday. Sam will fix the opening hours on the website. We talked about opening on Sundays and decided to wait until spring.\n\nSummary A: Priya orders tyre stock by Friday. Sam fixes the website's opening hours. Sunday opening is on hold until spring.\nSummary B: Tyre stock gets ordered by Friday. Sam fixes the website's opening hours. Sunday opening is on hold until spring.\nSummary C: Priya orders tyre stock by Friday. Sam fixes the website's opening hours. The shop will open on Sundays from next month.\n\nWhich summaries are good?"
 - check "Includes the meeting notes"       /decided to wait/i
 - check "Includes all three summaries"     /summary a/i
@@ -96,10 +96,10 @@ Write a judge for meeting summaries that agrees with the owner on all three
 - hint for="Agrees with the owner on B: fail" "B looks almost like A. What does A say about the tyre stock that B doesn't?"
 - hint for="Agrees with the owner on C: fail" "Compare C's last sentence with what the meeting decided about Sundays."
 - hint for="The prompt spells out the pass rule: owners on every action item, and only decisions actually made" "Write the owner's rule into the prompt, both halves of it, as the test for pass."
-- reference "You are a strict reviewer of meeting summaries. A summary passes only if (1) every action item names who owns it, and (2) it states only decisions the meeting actually made. If either is broken, it fails.\n\nMeeting notes, 2 Nov: Priya will order the new tyre stock by Friday. Sam will fix the opening hours on the website. We talked about opening on Sundays and decided to wait until spring.\n\nSummary A: Priya orders tyre stock by Friday. Sam fixes the website's opening hours. Sunday opening is on hold until spring.\nSummary B: Tyre stock gets ordered by Friday. Sam fixes the website's opening hours. Sunday opening is on hold until spring.\nSummary C: Priya orders tyre stock by Friday. Sam fixes the website's opening hours. The shop will open on Sundays from next month.\n\nCheck each summary against both rules, then reply with only JSON: {\"A\": \"pass\" | \"fail\", \"B\": \"pass\" | \"fail\", \"C\": \"pass\" | \"fail\", \"notes\": \"one sentence per summary saying why\"}"
+- reference "You are a strict reviewer of meeting summaries. A summary passes only if (1) every action item names who owns it, and (2) it states only decisions the meeting actually made. If either is broken, it fails.\n\nMeeting notes, 2 Nov: Priya will order the new tyre stock by Friday. Sam will fix the opening hours on the website. We talked about opening on Sundays and decided to wait until spring.\n\nSummary A: Priya orders tyre stock by Friday. Sam fixes the website's opening hours. Sunday opening is on hold until spring.\nSummary B: Tyre stock gets ordered by Friday. Sam fixes the website's opening hours. Sunday opening is on hold until spring.\nSummary C: Priya orders tyre stock by Friday. Sam fixes the website's opening hours. The shop will open on Sundays from next month.\n\nCheck each summary against both rules, then reply with only JSON, notes first: {\"notes\": \"one sentence per summary saying why\", \"A\": \"pass\" | \"fail\", \"B\": \"pass\" | \"fail\", \"C\": \"pass\" | \"fail\"}"
 - run temperature=[1.0]
-- example T=1.0 "{\"A\": \"pass\", \"B\": \"fail\", \"C\": \"fail\", \"notes\": \"A names both owners and the Sunday decision correctly. B doesn't say who orders the tyre stock. C says the shop will open on Sundays from next month, but the meeting decided to wait until spring.\"}"
-- example T=1.0 "{\"A\": \"pass\", \"B\": \"fail\", \"C\": \"fail\", \"notes\": \"A: correct. B: the tyre order has no owner (it should be Priya). C: invents a decision to open on Sundays next month; the meeting chose to wait.\"}"
+- example T=1.0 "{\"notes\": \"A names both owners and the Sunday decision correctly. B doesn't say who orders the tyre stock. C says the shop will open on Sundays from next month, but the meeting decided to wait until spring.\", \"A\": \"pass\", \"B\": \"fail\", \"C\": \"fail\"}"
+- example T=1.0 "{\"notes\": \"A: correct. B: the tyre order has no owner (it should be Priya). C: invents a decision to open on Sundays next month; the meeting chose to wait.\", \"A\": \"pass\", \"B\": \"fail\", \"C\": \"fail\"}"
 - success "Your judge agrees with the owner on all three, for the right reasons. That's the core of every eval suite." next="Back to courses →"
 :::
 
