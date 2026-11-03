@@ -122,15 +122,32 @@ many tokens it has left, so it can pace itself and wrap up. That helps it
 finish gracefully, but it's advice to the model. Your own limits are the
 ones that are guaranteed.
 
-:::quiz{id="read-the-log" xp=15}
-In the log above, why does "spent" grow faster each turn, even though each reply is short?
+Your turn. Copy the three log lines above and hand them to Claude: why does
+`spent` grow faster each turn when every reply is short, and what would
+you change to slow it down?
 
-- [x] Each turn re-sends the whole history as input, and the history keeps growing
-  Right. Turn 3 pays again for everything in turns 1 and 2. That's why long loops get expensive fast.
-- [ ] The model thinks harder on later turns
-  It might, but that's not the main effect. The steady climb is the history being sent again.
-- [ ] Tool definitions are only sent on later turns
-  Not quite. They go in with every request, from the first turn on.
+:::prompt{id="why-the-bill-climbs" xp=15 coach}
+Hand Claude the run log and ask why the bill climbs each turn
+- goal "Get Claude to explain from the log why the tokens spent climb faster each turn, and name one concrete way to slow it, in a short answer"
+- placeholder "My agent's log, one JSON line per turn: {\"run\":…,\"turn\":1,…,\"spent\":1350,…} … Why does spent grow faster each turn? What would cut it? Under … words."
+- draft "Why is my agent expensive?"
+- check "Pastes the log" /spent/
+- check "Pastes the log" /1350/
+- check "Pastes the log" /5100/
+- check "Asks why it grows" /why|what makes|explain|cause/i
+- expect "Keeps it short" words<=150
+- rubric "Says each turn re-sends the whole history as input, so input grows with every turn" must evidence
+- rubric "Names one concrete fix: a turn limit, a token budget, compacting the history or prompt caching" must evidence
+- rubric "Reads the numbers from the log rather than inventing new ones" should
+- hint "Claude can't see your log unless you paste it. Are the actual lines in your prompt?"
+- hint "Ask about the pattern, not the total: the gap between turns grows. What gets sent again on every request?"
+- hint "Paste all three lines, then ask: why does spent grow faster each turn when the replies are short, and what's one change that would slow it? Ask for under 100 words."
+- reference "My agent logs one JSON line per turn:\n{\"run\":\"3f9a1c2e\",\"turn\":1,\"stop\":\"tool_use\",\"calls\":[\"geocode\"],\"spent\":1350,\"ms\":1420}\n{\"run\":\"3f9a1c2e\",\"turn\":2,\"stop\":\"tool_use\",\"calls\":[\"get_forecast\"],\"spent\":3000,\"ms\":1610}\n{\"run\":\"3f9a1c2e\",\"turn\":3,\"stop\":\"end_turn\",\"calls\":[],\"spent\":5100,\"ms\":1980}\n\nspent is the total tokens so far. Each reply is short, so why does spent grow faster every turn? Name one change that would slow it down. Answer in under 100 words."
+- run temperature=[1.0]
+- example T=1.0 "Each request re-sends the whole conversation, so turn 3 pays again for turns 1 and 2: 1,350, then +1,650, then +2,100. The history grows, so every turn costs more. Cap the turns, or compact old tool results, to slow it."
+- example T=1.0 "The replies are short, but the input isn't: every turn sends the full history, which keeps growing. That's why the steps go 1,350 → 3,000 → 5,100. A turn limit, a token budget or prompt caching on the stable prefix would cut it."
+- example T=1.0 "Input is the history, sent again each turn, and it gets longer every time a tool result is added. Trim or summarise old results, or stop earlier with a turn limit."
+- success "In a loop, the history is the bill." next="Next: a weather agent →"
 :::
 
 :::rabbithole
