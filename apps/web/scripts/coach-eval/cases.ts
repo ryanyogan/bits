@@ -543,3 +543,88 @@ exercises.push(
   },
 )
 // ── end lane C2 ──
+
+// ── lane W2-fix: which rubric lines are grounded (decision 064 §3.7, amended
+// 2026-11-03). One unflagged line that only sounds like grounding ("from the
+// line": the old trigger tagged it and failed correct replies), and one line
+// grounded by the flag alone, whose label the heuristic wouldn't catch. ──
+
+const w2KeepTheId = String.raw`:::prompt{id="keep-the-id" xp=20 coach}
+Get Claude to turn this log line into one plain sentence for a support ticket: "2026-11-02T09:41:07Z ERROR payments order=48213 card_declined retry=2"
+- check "The log line is in the prompt" /48213/
+- expect "One sentence" sentences<=1
+- rubric "Keeps the order id from the line" must evidence
+- rubric "Says the card was declined" must evidence
+- hint "Who reads the ticket, and what do they need to find the order?"
+- run temperature=[1.0]
+:::`
+
+const w2PriceCard = String.raw`:::prompt{id="price-card" xp=20 coach}
+Paste the café's price card, then ask Claude what a large oat latte costs
+- check "Asks about the latte" /latte/i
+- expect "Short" sentences<=2
+- rubric "Gives the large oat latte's price, read off the card" must evidence grounded
+- hint "Claude can't see the card unless it's in your message."
+- run temperature=[1.0]
+:::`
+
+const w2Log = 'Turn this log line into one plain sentence for a support ticket: "2026-11-02T09:41:07Z ERROR payments order=48213 card_declined retry=2"'
+const w2Card = 'Price card: Latte S £3.10, L £3.60. Oat milk +40p. Espresso £2.20. What does a large oat latte cost?'
+
+exercises.push(
+  {
+    kind: 'W2-fix not grounded ("from the line")',
+    source: w2KeepTheId,
+    cases: [
+      {
+        name: 'keeps the id, says declined',
+        prompt: w2Log,
+        reply: 'Payment for order 48213 failed because the card was declined, after two retries.',
+        pass: true,
+      },
+      {
+        name: 'id with its key, terse',
+        prompt: w2Log,
+        reply: 'The card for order=48213 was declined.',
+        pass: true,
+      },
+      {
+        name: 'wrong id',
+        prompt: w2Log,
+        reply: 'Payment for order 48231 failed because the card was declined.',
+        pass: false,
+      },
+      {
+        name: 'drops the id',
+        prompt: w2Log,
+        reply: "A customer's card was declined at checkout this morning.",
+        pass: false,
+      },
+    ],
+  },
+  {
+    kind: 'W2-fix grounded by the flag',
+    source: w2PriceCard,
+    cases: [
+      {
+        name: 'card pasted, price added up',
+        prompt: w2Card,
+        reply: 'A large oat latte is £4.00: £3.60 for the large latte plus 40p for oat milk.',
+        pass: true,
+      },
+      {
+        name: 'no card, plausible price',
+        prompt: 'What does a large oat latte cost at our café?',
+        reply: 'A large oat latte is £4.00.',
+        pass: false,
+      },
+      {
+        name: 'card pasted, oat milk forgotten',
+        prompt: w2Card,
+        reply: 'A large oat latte is £3.60.',
+        pass: false,
+      },
+    ],
+  },
+)
+// ── end lane W2-fix ──

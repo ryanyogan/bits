@@ -108,6 +108,11 @@ export interface PromptBlock {
   rubric?: RubricLine[]
   /** `- hint "…"`, general first: the escalation ladder and the offline hints. */
   hints?: string[]
+  /**
+   * `- hint for="label" "…"`: a hint for one criterion (a check, run, expect
+   * or rubric label), shown when that criterion is the first one not met.
+   */
+  hintsFor?: { for: string; text: string }[]
   /** `- reference "…"`: a strong prompt. */
   reference?: string
   /** `- document id "…"`: text a `quotes id` expect checks against. */
@@ -137,6 +142,12 @@ export interface RubricLine {
   on: 'reply' | 'prompt'
   /** A `must` met only when the judge quotes the reply verbatim. */
   evidence: boolean
+  /**
+   * `grounded` / `grounded=false` (decision 064 §3.7): the answer must come
+   * from material in the learner's prompt, so the judge quotes that material.
+   * Absent: `groundedLine()`'s label heuristic decides (and the build warns).
+   */
+  grounded?: boolean
 }
 
 /** One file of a `:::code` group (adjacent blocks become editor tabs). */

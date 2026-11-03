@@ -666,6 +666,39 @@ describe('content build', () => {
     )
   })
 
+  it('keeps every colon in prose: times, timestamps and :name are text, never directives', () => {
+    let result = build({
+      '01-one.md': lesson(
+        [
+          'Meeting A runs **9:40 to\n10:25**, B runs 10:15 to 11:00, at 14:02:37.',
+          '',
+          '- Import from node:fs, ratio 3:2 and :unknown[label]{x=1} stay as written',
+          '',
+          ':::quiz{id="clock" xp=10}',
+          'Which comes first?',
+          '- [x] “Current time: 14:02:37”',
+          '- [ ] **12:30**',
+          ':::',
+        ].join('\n'),
+      ),
+    })
+    assert.deepEqual(errors(result), [])
+    let blocks = result.lessons?.get('one')?.blocks ?? []
+    assert.deepEqual(blocks[0], {
+      type: 'markdown',
+      paragraphs: [
+        ['Meeting A runs ', { strong: '9:40 to 10:25' }, ', B runs 10:15 to 11:00, at 14:02:37.'],
+        { list: 'bullet', items: [{ paragraphs: [['Import from node:fs, ratio 3:2 and :unknown[label]{x=1} stay as written']] }] },
+      ],
+    })
+    let quiz = blocks.find((block) => block.type === 'ask')
+    assert.ok(quiz?.type === 'ask')
+    assert.deepEqual(
+      quiz.choices.map((choice) => choice.label),
+      ['“Current time: 14:02:37”', '12:30'],
+    )
+  })
+
   it('builds quick checks: typed, picked, and a legacy quiz as an ask (decision 052)', async () => {
     let dir = path.join(coursesDir, '../fixtures/toys')
     let result = buildCourse(await readCourseFolder(dir), { folder: 'toys' })
@@ -842,6 +875,80 @@ describe('content build', () => {
   it('rejects malformed rubric lines and evidence on the prompt', () => {
     hasError(coached(['- check "x" /x/', '- rubric "R" sometimes', '- hint "h"']), 'rubric lines look like')
     hasError(coached(['- check "x" /x/', '- rubric "R" must on=prompt evidence', '- hint "h"']), 'can’t go with on=prompt')
+    hasError(coached(['- check "x" /x/', '- rubric "R" must on=prompt grounded', '- hint "h"']), 'grounded checks the reply')
+    hasError(coached(['- check "x" /x/', '- rubric "R" must grounded=maybe', '- hint "h"']), 'rubric lines look like')
+  })
+
+  const warnings = (result: ReturnType<typeof build>) =>
+    result.report.filter((item) => item.level === 'warning').map((item) => item.text)
+  const rubricOf = (result: ReturnType<typeof build>) => {
+    let block = result.lessons?.get('one')?.blocks.find((b) => b.type === 'prompt')
+    return block?.type === 'prompt' ? block.rubric : undefined
+  }
+
+  it('grounded marks a grounding line; the build warns when only the label heuristic says so', () => {
+    // The flag decides, either way, with no warning.
+    let flagged = coached([
+      '- check "x" /x/',
+      '- rubric "Keeps the id from the line" must evidence grounded',
+      '- rubric "Answers for Tuesday, from the rota" must evidence grounded=false',
+      '- rubric "Every value matches the booking" must grounded=true',
+      '- hint "h"',
+    ])
+    assert.deepEqual(errors(flagged), [])
+    assert.deepEqual(warnings(flagged), [])
+    assert.deepEqual(
+      rubricOf(flagged)?.map((line) => line.grounded),
+      [true, false, true],
+    )
+    // Unflagged: the heuristic fires on a label about material from the prompt, and the build says so.
+    let inferred = coached(['- check "x" /x/', '- rubric "Answers for Tuesday, from the rota" must evidence', '- hint "h"'])
+    assert.deepEqual(errors(inferred), [])
+    assert.equal(rubricOf(inferred)?.[0]?.grounded, undefined)
+    assert.ok(warnings(inferred).some((text) => text.includes('reads as grounded') && text.includes('add grounded')))
+    // The misfires the content lane hit stay quiet: a line, a clinic, a negated clause.
+    for (let label of ['Keeps the id from the line', 'Reads like a reminder from the clinic', 'Sounds like a customer, not lines from the passage']) {
+      let quiet = coached(['- check "x" /x/', `- rubric "${label}" must`, '- hint "h"'])
+      assert.deepEqual(warnings(quiet), [], label)
+    }
+    // A prompt line is never grounded, so it never warns.
+    assert.deepEqual(warnings(coached(['- check "x" /x/', '- rubric "Pastes the rota from the wiki" must on=prompt', '- hint "h"'])), [])
+  })
+
+  it('warns when an evidence line is about something absent', () => {
+    for (let label of ['Adds no fields the email lacks', 'Leaves out the customer’s email', 'Invents none', 'Never mentions the price', 'Answers, without guessing a date']) {
+      let result = coached(['- check "x" /x/', `- rubric "${label}" must evidence`, '- hint "h"'])
+      assert.deepEqual(errors(result), [], label)
+      assert.ok(warnings(result).some((text) => text.includes('about something absent')), label)
+      // Without evidence there's nothing to quote, so it's fine.
+      assert.deepEqual(warnings(coached(['- check "x" /x/', `- rubric "${label}" must`, '- hint "h"'])), [], label)
+    }
+    // Said out loud in the reply, an absence is quotable.
+    for (let label of ['Says it doesn’t know', 'Says the passages don’t cover Canada', 'Offers a replacement, with no return needed']) {
+      assert.deepEqual(warnings(coached(['- check "x" /x/', `- rubric "${label}" must evidence`, '- hint "h"'])), [], label)
+    }
+  })
+
+  it('ties a hint to a criterion with for=, by its exact label', () => {
+    let ok = coached([
+      '- check "Asks it to reason first" /think|reason/i',
+      '- rubric "Gets the overlap right" must',
+      '- hint "General first."',
+      '- hint for="Asks it to reason first" "Where does your prompt ask Claude to work it through?"',
+      '- hint for="Gets the overlap right" "Do touching meetings count?"',
+    ])
+    assert.deepEqual(errors(ok), [])
+    let block = ok.lessons?.get('one')?.blocks.find((b) => b.type === 'prompt')
+    assert.ok(block?.type === 'prompt')
+    assert.deepEqual(block.hints, ['General first.'])
+    assert.deepEqual(block.hintsFor, [
+      { for: 'Asks it to reason first', text: 'Where does your prompt ask Claude to work it through?' },
+      { for: 'Gets the overlap right', text: 'Do touching meetings count?' },
+    ])
+    // A tied hint alone satisfies coach's hint rule.
+    assert.deepEqual(errors(coached(['- check "x" /x/', '- rubric "R" must', '- hint for="R" "Try."'])), [])
+    hasError(coached(['- check "x" /x/', '- rubric "R" must', '- hint for="Nope" "Try."']), 'hint for="Nope" names no check')
+    hasError(coached(['- check "x" /x/', '- rubric "R" must', '- hint for=R "Try."']), 'hint lines look like')
   })
 
   it('checks documents: quotes needs one, ids are unique, text is capped', () => {

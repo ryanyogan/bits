@@ -25,6 +25,8 @@ import {
 import type { RequestContext } from 'remix/router'
 import { Session } from 'remix/session'
 
+import { platform } from '#platform'
+
 import { asksOf, exercisesOf, type AskBlock } from '../actions/courses/lesson/content.ts'
 import { currentUser } from '../auth/identity.ts'
 import { completedLoadedWith } from '../auth/session.ts'
@@ -34,6 +36,7 @@ import { loadCatalog } from '../content/store.ts'
 import type { Completed } from '../content/types.ts'
 import { getDatabase } from '../middleware/database.ts'
 import { journalledExercises } from '../runs/grade.ts'
+import { modelConfigured, type ModelEnv } from '../runs/model.ts'
 import { claimRuns, runOwner, VISITOR_KEY } from '../runs/run.ts'
 import { badgeDefinitions, earnedBadgeIds, type BadgeDefinition } from './badges.ts'
 import { checkLesson, type CheckedLesson, type LessonSubmission } from './check.ts'
@@ -114,7 +117,7 @@ export async function completeLesson(
     owner && blocks.length ? listLessonVerdicts(db, owner, lesson) : Promise.resolve([]),
     asksOf(content).length ? journalledRightAsks(context, lesson) : Promise.resolve([]),
   ])
-  submission.exercises = journalledExercises(blocks, runs, verdicts)
+  submission.exercises = journalledExercises(blocks, runs, verdicts, { offline: !modelConfigured(platform.env as ModelEnv) })
   for (let block of blocks) {
     submission.ran[block.id] = [...new Set(runs.filter((run) => run.exercise_id === block.id).map((run) => run.temperature))]
   }

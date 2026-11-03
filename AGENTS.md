@@ -603,8 +603,10 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
 - Coached prompts (decision 064): `:::prompt` takes `- expect` reply
   checks (`json`, `words<=N`, `sentences<=N`, `one-word`, `oneof`, `tag`,
   `cites`, `quotes doc-id`, `match /re/`, `prompt-shorter-than`), and with
-  `coach` a `- rubric "label" must|should [on=prompt] [evidence]` judged by
-  Claude, plus `- goal`, `- hint` (required with `coach`), `- reference`,
+  `coach` a `- rubric "label" must|should [on=prompt] [evidence] [grounded]`
+  judged by Claude (`grounded`: the judge quotes the pasted material from
+  the prompt; an unflagged "from the rota" label falls back to a heuristic
+  and the build warns, so flag it, or `grounded=false`), plus `- goal`, `- hint` (required with `coach`; `- hint for="label"` ties one to a criterion), `- reference`,
   `- document id "…"` and `gate=false`. Every prompt needs a `check` or an
   `expect`. The syntax and limits are in the decision and on `/author`;
   each build rule has a case in `compile/build.test.ts`.
@@ -708,8 +710,11 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   judge marks criteria; the server decides the pass. The call is reserved
   inside the `coach_verdicts` insert (`reserveJudgeCall`) against
   `coachLimits` and the shared daily live cap (judge calls count as live
-  calls). A refusal or unreadable verdict is a miss, never a pass; an
-  outage or a cap is a labelled soft pass; a canned reply grades by pattern.
+  calls). A refusal or unreadable verdict is a miss, never a pass; a
+  judge outage or the coach's cap is a labelled soft pass. A canned reply
+  grades by pattern only when no model is connected or Claude couldn't be
+  reached; over a run limit (or at a temperature that never runs live) it
+  isn't graded or journalled (`whyNotLive()`, `coach-text.ts`).
   Previews never call a model (`modelConfigured()`). Tests stub the gateway
   for both calls (`app/runs/coach.test.ts`). Before changing the judge's
   prompt or model, run `pnpm --filter @bits/web coach:eval --vars

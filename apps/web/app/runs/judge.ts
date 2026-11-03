@@ -6,6 +6,7 @@
 import type { VerdictCriterion } from '@bits/db'
 
 import type { PromptBlock, RubricLine } from '../actions/courses/lesson/content.ts'
+import { looksGrounded } from '../content/compile/rubric-labels.ts'
 import { normalizeText, quotesFrom } from './reply-checks.ts'
 
 export const MAX_EVIDENCE = 160
@@ -102,13 +103,12 @@ Answer only with the JSON object the schema describes.`
 
 /**
  * A rubric line about grounding: the answer comes "from the rota", is "taken
- * from the email", "based on the document". The judge must quote that
- * material from the prompt, and the server checks the quote is there.
+ * from the email". The judge must quote that material from the prompt, and
+ * the server checks the quote is there. An explicit `grounded` /
+ * `grounded=false` decides; otherwise the label heuristic does.
  */
-const GROUNDING = /\b(?:from|according to|based on|grounded in|drawn from|using only) (?:the|this|that|your|its|their|our|a|an) \w/i
-
-export function groundedLine(line: Pick<RubricLine, 'label' | 'on'>): boolean {
-  return line.on === 'reply' && GROUNDING.test(line.label)
+export function groundedLine(line: Pick<RubricLine, 'label' | 'on' | 'grounded'>): boolean {
+  return line.on === 'reply' && (line.grounded ?? looksGrounded(line.label))
 }
 
 /**

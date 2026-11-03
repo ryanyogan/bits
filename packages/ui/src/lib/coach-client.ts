@@ -27,10 +27,13 @@ export interface CoachVerdict {
   attempt: string
   /**
    * coach: the judge graded the rubric. reply: the reply checks decided.
-   * pattern: no live reply, prompt checks only. soft: the rubric wasn't
-   * judged (limit or outage), passed on the reply checks.
+   * pattern: no model connected, or Claude couldn't be reached: a saved
+   * example, prompt checks only. soft: the rubric wasn't judged (the coach's
+   * limit or an outage), passed on the reply checks. limit: over a run
+   * limit, a saved example that isn't graded (no pass, no miss). example: a
+   * temperature that never runs live, not graded either.
    */
-  layer: 'coach' | 'reply' | 'pattern' | 'soft'
+  layer: 'coach' | 'reply' | 'pattern' | 'soft' | 'limit' | 'example'
   passed: boolean
   criteria: CoachCriterion[]
   /** One sentence: the coach's question, or the next authored hint. */
@@ -53,6 +56,8 @@ export interface CoachVerdict {
   success?: string
   /** A strong prompt was shown before this pass: it earned half. */
   halved?: boolean
+  /** layer limit: when a live run is free again, at the latest (ms since epoch). */
+  resetsAt?: number
 }
 
 export type CoachResult =

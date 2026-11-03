@@ -55,13 +55,38 @@ import type { LessonKind } from '../types.ts'
 import { LessonFrontmatter, parseClock, readFrontmatter } from './frontmatter.ts'
 import { highlight, isKnownLanguage, languageOf } from './highlight.ts'
 import { checkPattern } from './regex.ts'
+import { aboutAbsence, looksGrounded } from './rubric-labels.ts'
 import type { FileReport, SourceFile } from './report.ts'
 
 type ContainerDirective = Extract<RootContent, { type: 'containerDirective' }>
 type LeafDirective = Extract<RootContent, { type: 'leafDirective' }>
 type Directive = ContainerDirective | LeafDirective
 
-const processor = unified().use(remarkParse).use(remarkFrontmatter, ['yaml']).use(remarkGfm).use(remarkDirective)
+const processor = unified()
+  .use(remarkParse)
+  .use(remarkFrontmatter, ['yaml'])
+  .use(remarkGfm)
+  .use(remarkDirective)
+  .use(blockDirectivesOnly)
+
+/**
+ * Lessons use `:::container` and `::leaf` blocks only. remark-directive also
+ * reads `:name` inside a line as a text directive, which turns every time,
+ * ratio and timestamp in prose ("9:40", "14:02:37", "node:fs") into a node
+ * whose text is lost. This drops the inline tokenizer (character code 58,
+ * `:`) from the extension it registered, so a colon in a line is always
+ * literal text. It must run after remarkDirective.
+ */
+function blockDirectivesOnly(this: { data(key: 'micromarkExtensions'): unknown }) {
+  let extensions = this.data('micromarkExtensions')
+  if (!Array.isArray(extensions)) return
+  for (let extension of extensions as { text?: Record<number, unknown> }[]) {
+    if (extension.text && 58 in extension.text) {
+      let { 58: _colon, ...rest } = extension.text
+      extension.text = rest
+    }
+  }
+}
 
 /** The markdown syntax tree of a file (no transforms run). */
 export function parseMarkdown(text: string): Root {
@@ -730,6 +755,7 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
   let rubric: RubricLine[] = []
   let rubricAt: number[] = []
   let hints: string[] = []
+  let hintsFor: { for: string; text: string; at: number }[] = []
   let reference: string | undefined
   let documents: Record<string, string> = {}
   let quoted: { id: string; at: number }[] = []
@@ -824,9 +850,12 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
         return
       }
       case 'rubric': {
-        let match = new RegExp(`^${QUOTED}\\s+(must|should)((?:\\s+(?:on=(?:reply|prompt)|evidence))*)\\s*$`).exec(rest)
+        let match = new RegExp(`^${QUOTED}\\s+(must|should)((?:\\s+(?:on=(?:reply|prompt)|evidence|grounded(?:=(?:true|false))?))*)\\s*$`).exec(rest)
         if (!match) {
-          report.error('rubric lines look like: - rubric "Answers for Tuesday, from the rota" must evidence (must or should; then on=prompt or evidence, optional)', at)
+          report.error(
+            'rubric lines look like: - rubric "Answers for Tuesday, from the rota" must evidence grounded (must or should; then on=prompt, evidence or grounded / grounded=false, optional)',
+            at,
+          )
           return
         }
         let [, label = '', level, flags = ''] = match
@@ -836,6 +865,8 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
           on: /on=prompt/.test(flags) ? 'prompt' : 'reply',
           evidence: /\bevidence\b/.test(flags),
         }
+        let grounded = /\bgrounded(?:=(true|false))?\b/.exec(flags)
+        if (grounded) line.grounded = grounded[1] !== 'false'
         if (!line.label.trim() || line.label.length > MAX_LABEL) {
           report.error(`rubric labels are 1–${MAX_LABEL} characters`, at)
           return
@@ -844,6 +875,23 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
           report.error('evidence quotes the reply, so it can’t go with on=prompt: drop one', at)
           return
         }
+        if (line.grounded && line.on === 'prompt') {
+          report.error('grounded checks the reply against the prompt’s material, so it can’t go with on=prompt: drop one', at)
+          return
+        }
+        // The judge's rules read these labels (decision 064 §3.7); say what the build inferred.
+        if (line.grounded === undefined && line.on === 'reply' && looksGrounded(line.label)) {
+          report.warning(
+            `rubric “${line.label}” reads as grounded in material from the prompt, so the judge must quote that material from the prompt: add grounded to confirm, or grounded=false if it isn’t`,
+            at,
+          )
+        }
+        if (line.evidence && aboutAbsence(line.label)) {
+          report.warning(
+            `rubric “${line.label}” is about something absent, but evidence needs a quote from the reply, and the judge can’t quote what isn’t there: drop evidence, or reword it as what the reply does`,
+            at,
+          )
+        }
         rubric.push(line)
         rubricAt.push(at)
         return
@@ -851,9 +899,16 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
       case 'goal':
       case 'hint':
       case 'reference': {
-        let match = new RegExp(`^${QUOTED}$`).exec(rest)
+        // A hint can name the criterion it helps with: - hint for="Label" "…".
+        let tied = keyword === 'hint' ? new RegExp(`^for=${QUOTED}\\s+${QUOTED}$`).exec(rest) : null
+        let match = tied ? [tied[0], tied[2]] : new RegExp(`^${QUOTED}$`).exec(rest)
         if (!match) {
-          report.error(`${keyword} lines look like: - ${keyword} "…"`, at)
+          report.error(
+            keyword === 'hint'
+              ? 'hint lines look like: - hint "…" or - hint for="A criterion’s label" "…"'
+              : `${keyword} lines look like: - ${keyword} "…"`,
+            at,
+          )
           return
         }
         let text = keyword === 'reference' ? unescapeText(match[1]!) : unquote(match[1]!)
@@ -864,6 +919,7 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
         }
         if (keyword === 'goal') goal = text
         else if (keyword === 'reference') reference = text
+        else if (tied) hintsFor.push({ for: unquote(tied[1]!), text, at })
         else hints.push(text)
         return
       }
@@ -892,8 +948,13 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
   if (rubric.length > MAX_RUBRIC) report.error(`:::prompt has ${rubric.length} rubric lines (at most ${MAX_RUBRIC})`, rubricAt[MAX_RUBRIC] ?? line)
   if (rubric.length && !coach) report.error('rubric lines need a judge: add coach to the block, like :::prompt{id="on-call" coach}', rubricAt[0] ?? line)
   if (coach && !rubric.length) report.error(':::prompt{coach} needs at least one - rubric line for the coach to judge', line)
-  if (coach && !hints.length) report.error(':::prompt{coach} needs at least one - hint (shown when the coach is offline)', line)
+  if (coach && !hints.length && !hintsFor.length) report.error(':::prompt{coach} needs at least one - hint (shown when the coach is offline)', line)
   if (hints.length > MAX_HINTS) report.error(`:::prompt has ${hints.length} hints (at most ${MAX_HINTS})`, line)
+  if (hintsFor.length > MAX_HINTS_FOR) report.error(`:::prompt has ${hintsFor.length} hint for= lines (at most ${MAX_HINTS_FOR})`, hintsFor[MAX_HINTS_FOR]!.at)
+  let labels = new Set([...checks.map((check) => check.label), ...(run ? [run.label] : []), ...expects.map((check) => check.label), ...rubric.map((l) => l.label)])
+  for (let hint of hintsFor) {
+    if (!labels.has(hint.for)) report.error(`hint for="${hint.for}" names no check, expect or rubric line of this prompt (labels must match exactly)`, hint.at)
+  }
   for (let ref of quoted) {
     if (documents[ref.id] === undefined) report.error(`quotes ${ref.id} names no document: add - document ${ref.id} "…"`, ref.at)
   }
@@ -934,6 +995,7 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
   if (expects.length) block.expects = expects
   if (rubric.length) block.rubric = rubric
   if (hints.length) block.hints = hints
+  if (hintsFor.length) block.hintsFor = hintsFor.map((hint) => ({ for: hint.for, text: hint.text }))
   if (reference) block.reference = reference
   if (Object.keys(documents).length) block.documents = documents
   return block
@@ -942,6 +1004,7 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
 const MAX_EXPECTS = 8
 const MAX_RUBRIC = 6
 const MAX_HINTS = 5
+const MAX_HINTS_FOR = 8
 const MAX_LABEL = 120
 const MAX_GOAL = 240
 const MAX_HINT = 240
@@ -1884,10 +1947,6 @@ function inline(nodes: PhrasingContent[], report: FileReport, line: number): Par
         if (problem && text) pushText(text)
         break
       }
-      case 'textDirective':
-        // `word:thing` in prose parses as a directive; put the text back.
-        pushText(`:${node.name}${node.children.length ? plainText(node.children) : ''}`)
-        break
       case 'html':
         report.error('raw HTML isn’t allowed in lessons', at)
         break
