@@ -270,6 +270,44 @@ export const askAttempts = table({
 
 export type AskAttempt = TableRow<typeof askAttempts>
 
+export const coachLayers = ['coach', 'reply', 'pattern', 'soft', 'pending', 'reveal'] as const
+export type CoachLayer = (typeof coachLayers)[number]
+
+/** Coach verdicts: one per graded prompt run, plus strong-prompt reveals (migration 0014, decision 064). */
+export const coachVerdicts = table({
+  name: 'coach_verdicts',
+  columns: {
+    id: c.text(),
+    /** The graded run; null for a reveal. */
+    attempt_id: c.text().nullable(),
+    user_id: c.text().nullable(),
+    visitor: c.text().nullable(),
+    ip_hash: c.text().nullable(),
+    course_id: c.text(),
+    lesson_slug: c.text(),
+    exercise_id: c.text(),
+    layer: c.enum(coachLayers),
+    passed: c.boolean(),
+    /** A judge call was made (counts against the daily live cap). */
+    judged: c.boolean(),
+    /** JSON: [{ label, kind, met }]. */
+    criteria: c.text(),
+    hint: c.text(),
+    model: c.text().nullable(),
+    input_tokens: c.integer(),
+    output_tokens: c.integer(),
+    created_at: c.integer(),
+  },
+  afterRead({ value }) {
+    let next = { ...value }
+    if ('passed' in next && next.passed != null) next.passed = decodeBoolean(next.passed) as boolean
+    if ('judged' in next && next.judged != null) next.judged = decodeBoolean(next.judged) as boolean
+    return { value: next }
+  },
+})
+
+export type CoachVerdictRow = TableRow<typeof coachVerdicts>
+
 export const xpKinds = ['exercise', 'quiz', 'lesson'] as const
 export type XpKind = (typeof xpKinds)[number]
 

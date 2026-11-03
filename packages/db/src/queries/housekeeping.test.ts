@@ -90,6 +90,13 @@ describe('mail quota and housekeeping (decision 039)', () => {
            values (?, ?, 'v', 'c', 'l', 'a', 'tokens', 1, ?)`,
         )
         .bind(id, userId, createdAt)
+    let reveal = (id: string, userId: string | null, createdAt: number) =>
+      d1
+        .prepare(
+          `insert into coach_verdicts (id, attempt_id, user_id, visitor, course_id, lesson_slug, exercise_id, layer, created_at)
+           values (?, null, ?, 'v', 'c', 'l', 'e', 'reveal', ?)`,
+        )
+        .bind(id, userId, createdAt)
     let video = (id: string, status: string, createdAt: number) =>
       d1
         .prepare(
@@ -122,6 +129,9 @@ describe('mail quota and housekeeping (decision 039)', () => {
       answer('a-anon-old', null, now - 8 * DAY),
       answer('a-anon-new', null, now - DAY),
       answer('a-user-old', user.id, now - 30 * DAY),
+      reveal('cv-anon-old', null, now - 8 * DAY),
+      reveal('cv-anon-new', null, now - DAY),
+      reveal('cv-user-old', user.id, now - 30 * DAY),
       video('v-stale', 'uploading', now - 8 * DAY),
       video('v-fresh', 'uploading', now - DAY),
       video('v-ready', 'ready', now - 30 * DAY),
@@ -149,6 +159,7 @@ describe('mail quota and housekeeping (decision 039)', () => {
       authorInvites: 2,
       staleUploads: 1,
       anonymousAsks: 1,
+      anonymousVerdicts: 1,
     })
 
     let ids = async (sql: string) => (await d1.prepare(sql).all<{ id: string }>()).results.map((row) => row.id).sort()
@@ -161,6 +172,7 @@ describe('mail quota and housekeeping (decision 039)', () => {
     assert.deepEqual(await ids('select challenge as id from webauthn_challenges'), ['c-live'])
     assert.deepEqual(await ids('select id from exercise_attempts'), ['r-anon-new', 'r-user-old'])
     assert.deepEqual(await ids('select id from ask_attempts'), ['a-anon-new', 'a-user-old'])
+    assert.deepEqual(await ids('select id from coach_verdicts'), ['cv-anon-new', 'cv-user-old'])
     let videos = (await d1.prepare('select id, status, upload_id from videos order by id').all()).results
     assert.deepEqual(videos, [
       { id: 'v-fresh', status: 'uploading', upload_id: 'up-v-fresh' },

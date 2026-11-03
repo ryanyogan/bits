@@ -69,6 +69,7 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 061 | [Lists, ``` samples and ### subheadings in lesson prose](061-lists-and-fences-in-lessons.md) |
 | 062 | [Light mode: a paper theme from the same tokens](062-light-mode.md) |
 | 063 | [Light mode depth: lifted surfaces on a deeper paper](063-light-mode-depth.md) |
+| 064 | [Coached prompts: Claude answers, a coach judges the reply, the learner iterates](064-coached-prompts.md) |
 | 065 | [Release shell: the bar, the footer, an honest landing, one sign-in](065-shell-landing-sign-in.md) |
 | 066 | [Course presentation: the syllabus first, one action per state](066-course-presentation.md) |
 | 068 | [Signed-in surfaces: private by default, honest authoring, notices where you are](068-signed-in-surfaces.md) |

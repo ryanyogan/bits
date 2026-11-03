@@ -32,7 +32,8 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null; analytics: b
             We keep what the app needs to work: your email, your progress and the prompts you write in lessons.
           </li>
           <li>
-            Prompts you run go to Anthropic's Claude so it can answer. Nothing else about you goes with them.
+            Prompts you run go to Anthropic's Claude so it can answer, and then, with Claude's reply, to Claude again so
+            the coach can grade them. Nothing else about you goes with them.
           </li>
           {analytics ? (
             <li>
@@ -66,6 +67,11 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null; analytics: b
             whether it was right, and the time. The server grades it; it is never sent to a model.
           </li>
           <li>
+            <strong>Coach verdicts:</strong> for each prompt run the coach grades, which checks it met, the hint you were
+            shown, whether it passed, the time and, when the coach model ran, its token counts. A note is also kept when
+            you ask to see an exercise's strong prompt.
+          </li>
+          <li>
             <strong>Sign-in methods:</strong> if you sign in with GitHub or Google, your account id there and the email
             they report. If you add a passkey, its public key and a name for it. We never see a password: there are
             none.
@@ -83,9 +89,9 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null; analytics: b
         <p>
           You can take lessons signed out. Your browser then gets the same session cookie, and the session holds your
           finished lessons, the lesson depth and theme you picked and a random visitor id. Prompts you run are journalled under that visitor id with a hash of
-          your IP address, which is how the hourly limits work. Quick-check answers are kept the same way. A daily
-          clean-up deletes signed-out runs and answers after 7 days.
-          If you sign in, your progress, recent runs and answers move into your account.
+          your IP address, which is how the hourly limits work. Quick-check answers and coach verdicts are kept the
+          same way. A daily clean-up deletes signed-out runs, answers and verdicts after 7 days.
+          If you sign in, your progress, recent runs, answers and verdicts move into your account.
         </p>
 
         <h2>Signing in by email</h2>
@@ -146,7 +152,9 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null; analytics: b
           </li>
           <li>
             <strong>Anthropic</strong> runs the model. When you press Run, the text of your prompt and a fixed
-            instruction from us go to Claude through Cloudflare's AI Gateway. Your name, email and account are not sent.
+            instruction from us go to Claude through Cloudflare's AI Gateway. For a coached exercise, your prompt and
+            Claude's reply then go to Claude once more, with the exercise's grading rules, so the coach can grade them.
+            Your name, email and account are not sent.
             Anthropic handles that data under its own{' '}
             <a href="https://www.anthropic.com/legal/privacy">privacy policy</a>.
           </li>
@@ -160,14 +168,16 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null; analytics: b
         <ul>
           <li>
             <strong>Export:</strong> Settings → Download my data gives you a JSON file with your account, sign-in
-            methods, progress, badges, every prompt in your journal and your quick-check answers.
+            methods, progress, badges, every prompt in your journal, your quick-check answers and the coach's
+            verdicts.
           </li>
           <li>
             <strong>Sign out everywhere</strong> ends every session at once.
           </li>
           <li>
             <strong>Delete account</strong> removes your account and everything tied to it straight away: sessions,
-            sign-in methods, passkeys, progress, badges, your prompt journal and your quick-check answers. Courses you
+            sign-in methods, passkeys, progress, badges, your prompt journal, your quick-check answers and the coach's
+            verdicts. Courses you
             published stay up but are
             no longer linked to you. Cloudflare's database keeps point-in-time recovery history for a limited time,
             after which deleted data is gone from backups too.

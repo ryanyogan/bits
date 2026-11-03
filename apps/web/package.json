@@ -21,6 +21,7 @@
     "db:seed:local": "wrangler d1 execute DB --local --file ../../packages/db/seed/local.sql && pnpm content:seed:local",
     "content": "node --import remix/node-tsx scripts/content.ts",
     "og": "NODE_ENV=test node --import remix/node-tsx scripts/og-images.ts",
+    "coach:eval": "node --import remix/node-tsx scripts/coach-eval.ts",
     "content:seed:local": "node --import remix/node-tsx scripts/content.ts upload --all --publish",
     "test": "NODE_ENV=test remix test",
     "typecheck": "tsc --noEmit",

@@ -742,4 +742,112 @@ describe('content build', () => {
     let compare = ok.lessons?.get('one')?.blocks.find((block) => block.type === 'compare')
     assert.deepEqual(compare?.type === 'compare' && compare.rows, [{ left: 'one "quoted"\nline', right: 'two' }])
   })
+
+  // ---- Coached prompts (decision 064) ----------------------------------
+
+  const coached = (lines: string[], attrs = 'coach') =>
+    build({ '01-one.md': lesson([`:::prompt{id="p" ${attrs}}`, 'Do it.', ...lines, ':::'].join('\n')) })
+  const hasError = (result: ReturnType<typeof build>, text: string) =>
+    assert.ok(
+      errors(result).some((item) => item.includes(text)),
+      `expected an error containing ${JSON.stringify(text)}, got ${JSON.stringify(errors(result))}`,
+    )
+
+  it('compiles a coached prompt: goal, expects, rubric, hints, reference and documents', () => {
+    let ok = coached([
+      '- goal "Get the on-call name for Tuesday"',
+      '- document rota "Mon: Sam. Tue: Priya. Wed: Jo."',
+      '- check "Names the day" /tuesday/i',
+      '- expect "Short" words<=40',
+      '- expect "JSON" json keys=name,day types=name:string',
+      '- expect "A label" oneof "billing|bug|other"',
+      '- expect "Cites" cites 1-3',
+      '- expect "Quotes the rota" quotes rota',
+      '- expect "A name" match /\\b(priya|sam)\\b/i',
+      '- expect "Brief prompt" prompt-shorter-than 400',
+      '- rubric "Answers from the rota" must evidence',
+      '- rubric "Asks for one name" should on=prompt',
+      '- hint "Paste the rota in."',
+      '- reference "Here is the rota:\\nTue: Priya."',
+    ])
+    assert.deepEqual(errors(ok), [])
+    let block = ok.lessons?.get('one')?.blocks.find((item) => item.type === 'prompt')
+    assert.ok(block?.type === 'prompt')
+    assert.equal(block.coach, true)
+    assert.equal(block.goal, 'Get the on-call name for Tuesday')
+    assert.deepEqual(block.documents, { rota: 'Mon: Sam. Tue: Priya. Wed: Jo.' })
+    assert.deepEqual(block.expects, [
+      { label: 'Short', kind: 'words', max: 40 },
+      { label: 'JSON', kind: 'json', keys: ['name', 'day'], types: { name: 'string' } },
+      { label: 'A label', kind: 'oneof', options: ['billing', 'bug', 'other'] },
+      { label: 'Cites', kind: 'cites', min: 1, max: 3 },
+      { label: 'Quotes the rota', kind: 'quotes', document: 'rota' },
+      { label: 'A name', kind: 'match', patterns: [{ source: '\\b(priya|sam)\\b', flags: 'i' }] },
+      { label: 'Brief prompt', kind: 'prompt-shorter-than', max: 400 },
+    ])
+    assert.deepEqual(block.rubric, [
+      { label: 'Answers from the rota', level: 'must', on: 'reply', evidence: true },
+      { label: 'Asks for one name', level: 'should', on: 'prompt', evidence: false },
+    ])
+    assert.deepEqual(block.hints, ['Paste the rota in.'])
+    assert.equal(block.reference, 'Here is the rota:\nTue: Priya.')
+  })
+
+  it('takes gate=false, and an exercise with only expect lines', () => {
+    let ok = coached(['- expect "Short" words<=10', '- expect "One" one-word', '- expect "Tag" tag answer', '- expect "Two" sentences<=2'], 'gate=false')
+    assert.deepEqual(errors(ok), [])
+    let block = ok.lessons?.get('one')?.blocks.find((item) => item.type === 'prompt')
+    assert.ok(block?.type === 'prompt')
+    assert.equal(block.gate, false)
+    assert.equal(block.checks.length, 0)
+    assert.deepEqual(
+      block.expects?.map((check) => check.kind),
+      ['words', 'one-word', 'tag', 'sentences'],
+    )
+  })
+
+  it('needs a deterministic check on every prompt', () => {
+    hasError(coached(['- rubric "Good" must', '- hint "Try."']), 'needs a - check or - expect line')
+  })
+
+  it('rejects malformed expect lines', () => {
+    hasError(coached(['- expect "Short" words<=0'], ''), 'words<=N takes a whole number')
+    hasError(coached(['- expect "Short" words<=9999'], ''), 'words<=N takes a whole number')
+    hasError(coached(['- expect "Short" lines<=3'], ''), 'expect lines look like')
+    hasError(coached(['- expect Short words<=3'], ''), 'expect lines look like')
+    hasError(coached(['- expect "" words<=3'], ''), 'expect labels are 1–120 characters')
+    hasError(coached(['- expect "Pick" oneof "only"'], ''), 'oneof lists two or more options')
+    hasError(coached(['- expect "Cites" cites 3-1'], ''), 'cites takes a passage range')
+    hasError(coached(['- expect "JSON" json types=a:date'], ''), 'use string, number, boolean, array or object')
+    hasError(coached(['- expect "Brief" prompt-shorter-than 0'], ''), 'prompt-shorter-than takes a character count')
+    // Reply patterns go through the same allowlist grammar as checks.
+    hasError(coached(['- expect "Slow" match /(a+)+/'], ''), 'expect “Slow”: /(a+)+/')
+  })
+
+  it('caps expect, rubric and hint lines', () => {
+    let expects = Array.from({ length: 9 }, (_, n) => `- expect "E${n}" words<=${n + 1}`)
+    hasError(coached(expects, ''), ':::prompt has 9 expect lines (at most 8)')
+    let rubric = Array.from({ length: 7 }, (_, n) => `- rubric "R${n}" should`)
+    hasError(coached(['- check "x" /x/', ...rubric, '- hint "h"']), ':::prompt has 7 rubric lines (at most 6)')
+    let hints = Array.from({ length: 6 }, (_, n) => `- hint "H${n}"`)
+    hasError(coached(['- check "x" /x/', '- rubric "R" must', ...hints]), ':::prompt has 6 hints (at most 5)')
+  })
+
+  it('rejects rubric lines without coach, and coach without a rubric or a hint', () => {
+    hasError(coached(['- check "x" /x/', '- rubric "R" must'], ''), 'rubric lines need a judge')
+    hasError(coached(['- check "x" /x/', '- hint "h"']), 'needs at least one - rubric line')
+    hasError(coached(['- check "x" /x/', '- rubric "R" must']), 'needs at least one - hint')
+  })
+
+  it('rejects malformed rubric lines and evidence on the prompt', () => {
+    hasError(coached(['- check "x" /x/', '- rubric "R" sometimes', '- hint "h"']), 'rubric lines look like')
+    hasError(coached(['- check "x" /x/', '- rubric "R" must on=prompt evidence', '- hint "h"']), 'can’t go with on=prompt')
+  })
+
+  it('checks documents: quotes needs one, ids are unique, text is capped', () => {
+    hasError(coached(['- expect "Quotes" quotes policy'], ''), 'quotes policy names no document')
+    hasError(coached(['- check "x" /x/', '- document a "one"', '- document a "two"'], ''), 'document "a" is defined twice')
+    hasError(coached(['- check "x" /x/', `- document a "${'x'.repeat(4001)}"`], ''), 'a document is at most 4000 characters')
+    hasError(coached(['- check "x" /x/', '- document "no id"'], ''), 'document lines look like')
+  })
 })

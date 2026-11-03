@@ -107,7 +107,7 @@ describe('/author and /author/:course', () => {
     assert.deepEqual(courses, [{ slug: 'broken-course', version: 1, errors: 4, warnings: 2, href: '/author/broken-course' }])
 
     let html = await (await request(courses[0]!.href)).text()
-    assert.match(html, /Error: <\/span>01-no-checks\.md:10 → :::prompt has no - check lines/)
+    assert.match(html, /Error: <\/span>01-no-checks\.md:10 → :::prompt needs a - check or - expect line/)
     assert.match(html, /Error: <\/span>02-duplicate-order\.md → duplicate order: 2/)
     assert.match(html, /aria-disabled="true"/)
     assert.match(html, /Fix 4 errors to publish/)

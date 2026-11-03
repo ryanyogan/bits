@@ -12,6 +12,9 @@ import {
   findUserById,
   listCompletedLessons,
   listHeldBadgeIds,
+  listLessonRuns,
+  listLessonVerdicts,
+  claimVisitorVerdicts,
   listPassedExercises,
   lessonCompletionStatements,
   recordLessonCompletion,
@@ -30,7 +33,8 @@ import { contentBucket, getCatalog } from '../content/request.ts'
 import { loadCatalog } from '../content/store.ts'
 import type { Completed } from '../content/types.ts'
 import { getDatabase } from '../middleware/database.ts'
-import { claimRuns, journalledTemperatures, runOwner, VISITOR_KEY } from '../runs/run.ts'
+import { journalledExercises } from '../runs/grade.ts'
+import { claimRuns, runOwner, VISITOR_KEY } from '../runs/run.ts'
 import { badgeDefinitions, earnedBadgeIds, type BadgeDefinition } from './badges.ts'
 import { checkLesson, type CheckedLesson, type LessonSubmission } from './check.ts'
 import { addDays, localDay } from './days.ts'
@@ -57,8 +61,9 @@ function readAnonymous(session: Session | undefined): AnonymousProgress {
   let progress: AnonymousProgress = {}
   for (let [key, lesson] of Object.entries(value as Record<string, Partial<AnonymousLesson>>)) {
     if (typeof lesson?.at !== 'number' || !lesson.submission || typeof lesson.submission !== 'object') continue
-    let { prompts = {}, ran = {}, quizzes, asks } = lesson.submission
+    let { prompts = {}, ran = {}, quizzes, asks, exercises } = lesson.submission
     let submission: LessonSubmission = { prompts, ran }
+    if (exercises && typeof exercises === 'object') submission.exercises = exercises
     if (asks && typeof asks === 'object') submission.asks = asks
     if (quizzes && typeof quizzes === 'object') submission.quizzes = quizzes
     progress[key] = { at: lesson.at, submission }
@@ -97,18 +102,22 @@ export async function completeLesson(
   let catalog = await getCatalog(context)
   let content = await catalog.lessonContent(courseSlug, lessonSlug)
   if (!content) return undefined
-  // "Ran at 0 and 1.0" counts journalled runs (/api/run), and an ask counts
-  // when the journal has a right answer (/api/ask); never form fields.
-  let [ran, rightAsks] = await Promise.all([
-    Promise.all(
-      exercisesOf(content).map(
-        async (block) =>
-          [block.id, await journalledTemperatures(context, { courseId: courseSlug, lessonSlug, exerciseId: block.id })] as const,
-      ),
-    ),
-    asksOf(content).length ? journalledRightAsks(context, { courseId: courseSlug, lessonSlug }) : Promise.resolve([]),
+  // An exercise passes on its journalled runs and coach verdicts (/api/run,
+  // /api/coach; decision 064), and an ask when the journal has a right
+  // answer (/api/ask); never form fields.
+  let blocks = exercisesOf(content)
+  let owner = runOwner(context)
+  let db = getDatabase(context)
+  let lesson = { courseId: courseSlug, lessonSlug }
+  let [runs, verdicts, rightAsks] = await Promise.all([
+    owner && blocks.length ? listLessonRuns(db, owner, lesson) : Promise.resolve([]),
+    owner && blocks.length ? listLessonVerdicts(db, owner, lesson) : Promise.resolve([]),
+    asksOf(content).length ? journalledRightAsks(context, lesson) : Promise.resolve([]),
   ])
-  for (let [id, temperatures] of ran) submission.ran[id] = temperatures
+  submission.exercises = journalledExercises(blocks, runs, verdicts)
+  for (let block of blocks) {
+    submission.ran[block.id] = [...new Set(runs.filter((run) => run.exercise_id === block.id).map((run) => run.temperature))]
+  }
   submission.asks = Object.fromEntries(asksOf(content).map((ask) => [ask.id, rightAsks.includes(ask.id)]))
   let checked = checkLesson(courseSlug, lessonSlug, content, submission)
   if (!checked.ok) return { ok: false, checked }
@@ -143,7 +152,7 @@ async function journalledRightAsks(context: ProgressContext, lesson: { courseId:
 /** At sign-in: the visitor's answers move into the account, like their runs. */
 async function claimAnswers(db: D1DataTableDatabase, session: Session, userId: string): Promise<void> {
   let visitor = session.get(VISITOR_KEY)
-  if (typeof visitor === 'string') await claimVisitorAsks(db, visitor, userId)
+  if (typeof visitor === 'string') await Promise.all([claimVisitorAsks(db, visitor, userId), claimVisitorVerdicts(db, visitor, userId)])
 }
 
 /**

@@ -7,7 +7,7 @@ import { routes } from '../../routes.ts'
 import { LegalPage } from './legal-page.tsx'
 
 /** When this text last changed. Update it with every edit (decision 028). */
-export const TERMS_UPDATED = '29 October 2026'
+export const TERMS_UPDATED = '2 November 2026'
 
 /** /terms: the deal, in plain words. */
 export function TermsPage(handle: Handle<{ viewer: Viewer | null }>) {
@@ -60,7 +60,7 @@ export function TermsPage(handle: Handle<{ viewer: Viewer | null }>) {
         <ul>
           <li>
             Your prompts and quick-check answers are yours. You let us store them, show them back to you, grade your
-            answers and send your prompts to the model to run.
+            answers and send your prompts to the model to run and, with the model's reply, to grade.
           </li>
           <li>
             If you publish a course, you keep the rights to it. You let us host it and show it to everyone for free, and

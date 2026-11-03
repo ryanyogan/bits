@@ -24,6 +24,8 @@ export interface ModelEnv {
   CF_AIG_TOKEN?: string
   AI_GATEWAY_ACCOUNT_ID?: string
   AI_GATEWAY_ID?: string
+  /** `preview` on a Workers Preview: no model calls at all. */
+  APP_ENV?: string
 }
 
 export const LIVE_MODEL = 'claude-haiku-5-5'
@@ -85,6 +87,9 @@ export interface RunModelInput {
  * (BYOK, production) or, locally, an Anthropic key.
  */
 export function modelConfigured(env: ModelEnv): boolean {
+  // A Workers Preview never calls a model, runs or the coach's judge, even
+  // if a gateway var leaked into its config (decision 064).
+  if (env.APP_ENV === 'preview') return false
   return Boolean(env.AI_GATEWAY_ACCOUNT_ID && env.AI_GATEWAY_ID && (env.CF_AIG_TOKEN || env.ANTHROPIC_API_KEY))
 }
 
@@ -192,6 +197,79 @@ export async function runModel({ prompt, temperature, signal, env }: RunModelInp
   })
 
   return { stream, model: LIVE_MODEL, usage }
+}
+
+// ---- The coach's judge (decision 064) -------------------------------------
+
+/** The judge: cheap, structured output, no thinking. */
+export const JUDGE_MODEL = 'claude-haiku-5-5'
+const JUDGE_MAX_TOKENS = 400
+const JUDGE_TIMEOUT_MS = 10_000
+
+export interface JudgeInput {
+  /** Stable per exercise (cached): the grader's rules, goal, rubric and hints. */
+  system: string
+  /** The learner's prompt and Claude's reply, escaped, as data. */
+  user: string
+  /** JSON schema of the verdict (structured outputs). */
+  schema: Record<string, unknown>
+  env: ModelEnv
+  signal?: AbortSignal
+}
+
+export interface JudgeResult {
+  /** The verdict JSON as text; empty on a refusal. */
+  text: string
+  /** `refusal` (Haiku 5.5 has no server-side fallback) or `max_tokens` mean no usable verdict. */
+  stopReason: string | null
+  model: string
+  usage: Usage
+}
+
+/**
+ * One judge call: a non-streamed Messages request with a JSON-schema output
+ * format, effort low, thinking off (allowed on Haiku 5.5 at effort high or
+ * below), no retries and a 10 s timeout. No sampling parameters: API
+ * version 2026-10-21 rejects them. Throws ModelError when the call can't be
+ * made or fails; the coach then says it's offline, never "fail".
+ */
+export async function judgeModel({ system, user, schema, env, signal }: JudgeInput): Promise<JudgeResult> {
+  if (!modelConfigured(env)) throw new ModelError('unconfigured')
+  let { Sdk, GatewayAnthropic } = await gatewayClientClass()
+  let client = new GatewayAnthropic({
+    apiKey: env.ANTHROPIC_API_KEY || null,
+    authToken: null,
+    baseURL: gatewayBaseUrl(env),
+    defaultHeaders: authHeaders(env),
+    maxRetries: 0,
+    timeout: JUDGE_TIMEOUT_MS,
+    fetch: (input, init) => globalThis.fetch(input, init),
+  })
+  let message
+  try {
+    message = await client.messages.create(
+      {
+        model: JUDGE_MODEL,
+        max_tokens: JUDGE_MAX_TOKENS,
+        // The rules, goal and rubric are the same for every attempt at an
+        // exercise: cache them (Haiku 5.5 caches prefixes of 512+ tokens).
+        system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
+        messages: [{ role: 'user', content: user }],
+        output_config: { effort: 'low', format: { type: 'json_schema', schema } },
+        thinking: { type: 'disabled' },
+      },
+      { signal },
+    )
+  } catch (error) {
+    throw toModelError(Sdk, error)
+  }
+  let text = message.content.map((block) => (block.type === 'text' ? block.text : '')).join('')
+  return {
+    text,
+    stopReason: message.stop_reason ?? null,
+    model: message.model ?? JUDGE_MODEL,
+    usage: { input: message.usage?.input_tokens ?? 0, output: message.usage?.output_tokens ?? 0 },
+  }
 }
 
 function toModelError(Anthropic: AnthropicSdk, error: unknown): ModelError {

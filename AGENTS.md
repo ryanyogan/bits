@@ -126,7 +126,7 @@ apps/web/                 @bits/web: the Remix app and Worker
   app/auth/               sessions, identity, email sign-in, OAuth, mailer (server-only)
   app/progress/           lesson checks, progress store + anonymous merge, badges, levels, days
   app/content/            published courses: compile/ (markdown → JSON), store.ts (R2 + D1), catalog.ts, request.ts
-  app/runs/               /api/run: model.ts (the only provider call), run.ts (limits, journal, fallback)
+  app/runs/               /api/run + /api/coach: model.ts (the only provider call), run.ts (limits, journal, fallback), coach.ts, grade.ts, judge.ts
   app/video/              lesson MP4s in R2: upload.ts (multipart via the Worker), serve.ts (/media, Range), link.ts (build lookup)
   app/test/auth.ts        test helpers: signIn, fetchAs, requestCode
   app/platform/           runtime seam: `#platform` → platform.node.ts | platform.worker.ts
@@ -440,7 +440,7 @@ Rationale: `docs/decisions/010-component-library.md`.
 | StepsPlayer | steps.tsx | title, steps {label, caption}, loop, illustrative (`:::steps`; a chain of 3–8 nodes, one lit, a bit row counting; nodes jump, Prev/Play/Next, plays once in view) | island (fallback: ordered list) |
 | FlowWindow | flow.tsx | title, capacity, unit, items {name, size}, illustrative (`:::flow`; items arrive into a window, the oldest fall out when full; `flowAt()` is the pure state) | island (fallback: arrivals table) |
 | MarblesTimeline | marbles.tsx | id, title, duration, unit, lanes {name, events {at, label}}, illustrative (`:::marbles`; lanes of timed events, a play head sweeps once, a slider scrubs) | island (fallback: events table) |
-| PromptComposer | prompt-composer.tsx | id, task, checks, temperatures (the radiogroup only when there's a choice), examples, reward (celebrates, never navigates: the lesson footer is the one save; decision 067), passed (the lesson is saved: opens passed), keepRuns, submit, run (/api/run); uncontrolled textarea that grows; the last run is kept in this browser for a revisit; runs fill a fixed window (`--run-log-height`) that follows the newest reply; compact (`--run-log-empty-height`) until the first run, which grows it once and scrolls so the composer stays put | island (Ctrl/⌘+Enter runs, Enter adds a line) |
+| PromptComposer | prompt-composer.tsx | id, task, goal, criteria (labels, kinds and levels only: patterns, rubrics and the reference stay on the server; decision 064), coached, optional (`gate=false`), temperatures (the radiogroup only when there's a choice), examples, reward (celebrates, never navigates: the lesson footer is the one save; decision 067), passed (the lesson is saved: opens passed), keepRuns, run (/api/run), coach (/api/coach: each counted run is graded there, then a coach turn under the reply: ✓/✗ per criterion and one hint; "Stronger hint" from the 3rd miss, "Show a strong prompt" from the 5th); one polite status region announces verdicts; the "Ctrl+↵ runs" hint shows only with a hardware keyboard (`(hover: hover) and (pointer: fine)`); uncontrolled textarea that grows; the last run is kept in this browser for a revisit; runs fill a fixed window (`--run-log-height`) that follows the newest reply; compact (`--run-log-empty-height`) until the first run, which grows it once and scrolls so the composer stays put | island (Ctrl/⌘+Enter runs, Enter adds a line) |
 | CodeEditor | code-editor.tsx | files, highlight, focusLine, typeMode, persist, flush (no outer border inside a ruled cell) | island (@remix-run/ui tabs) |
 | CodeSample | code-sample.tsx | lines (build-highlighted), language, copy (a ``` fence in lesson prose: language strip, sideways-scrolling `<pre>` region; decision 061) | static (Copy is the island) |
 | CopyButton | copy-button.tsx | text, label (Copy → Copied ✓, disabled until hydrated, status region) | island |
@@ -555,9 +555,11 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   `await loadCompleted(context)`, to `catalog.getCourse`, `listCourses`,
   `getLesson` or `getContinue` to get states and pct.
 - Saving is the native form `POST /courses/:course/:lesson/complete`.
-  Exercises join it via `form=` hidden fields (`fieldNames` in
-  `lesson/ui/exercise.ts`). The server re-runs the checks
-  (`progress/check.ts`). Never read XP from the client.
+  It reads passes from the journal, never form fields: prompt exercises
+  from `exercise_attempts` + `coach_verdicts` (`journalledExercises()` in
+  `app/runs/grade.ts`, decision 064), quick checks from `ask_attempts`
+  (decision 052); `progress/check.ts` does the arithmetic. Never read XP
+  from the client.
 - Signed in, progress goes to D1 in one batch (`recordLessonCompletion`).
   Signed out, it goes to the session (`progress` key), and
   `startUserSession` merges it at sign-in.
@@ -598,6 +600,14 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   plays once when 60% of it is on screen, never under reduced motion, and
   keeps its size while it plays (the stack + `Ghost` rule of decision
   023). They take `illustrative` and may sit inside a depth block.
+- Coached prompts (decision 064): `:::prompt` takes `- expect` reply
+  checks (`json`, `words<=N`, `sentences<=N`, `one-word`, `oneof`, `tag`,
+  `cites`, `quotes doc-id`, `match /re/`, `prompt-shorter-than`), and with
+  `coach` a `- rubric "label" must|should [on=prompt] [evidence]` judged by
+  Claude, plus `- goal`, `- hint` (required with `coach`), `- reference`,
+  `- document id "…"` and `gate=false`. Every prompt needs a `check` or an
+  `expect`. The syntax and limits are in the decision and on `/author`;
+  each build rule has a case in `compile/build.test.ts`.
 - Quick checks (decision 052): `:::ask` (and `:::quiz`, which builds into
   one) is graded only by `POST /api/ask` and journalled in `ask_attempts`;
   the save reads right answers from the journal, never form fields, and
@@ -690,6 +700,20 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
   signed-out runs carry the session's `visitor` id and move to the user
   at sign-in. Limits live in `runLimits`; the daily live cap is the
   `RUN_DAILY_LIVE_CAP` var.
+- The coach (decision 064): `POST /api/coach` (course, lesson, exercise,
+  attempt = the run's `X-Run-Id`; or `reveal=1`) grades a journalled run in
+  `app/runs/coach.ts`: deterministic layers first (`grade.ts`,
+  `reply-checks.ts`), then, only for a `coach` block whose layers hold on a
+  live reply, the judge (`judge.ts` + `judgeModel()` in `model.ts`). The
+  judge marks criteria; the server decides the pass. The call is reserved
+  inside the `coach_verdicts` insert (`reserveJudgeCall`) against
+  `coachLimits` and the shared daily live cap (judge calls count as live
+  calls). A refusal or unreadable verdict is a miss, never a pass; an
+  outage or a cap is a labelled soft pass; a canned reply grades by pattern.
+  Previews never call a model (`modelConfigured()`). Tests stub the gateway
+  for both calls (`app/runs/coach.test.ts`). Before changing the judge's
+  prompt or model, run `pnpm --filter @bits/web coach:eval --vars
+  <.dev.vars>` (live; agreement and a 20-prompt injection set).
 - "Ran at 0 and 1.0" is checked against journalled runs, never form
   fields. Tests: `runAt(cookie, exercise, [0, 100])` or
   `runPrompt(cookie, input)` from `app/test/auth.ts`. Without

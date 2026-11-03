@@ -451,11 +451,16 @@ describe('layout stability', () => {
     (await renderToString(node)).replace(/^<head>.*?<\/head>/s, '')
 
   it('PromptComposer renders its fixed runs window and the hint line before any run', async () => {
-    let html = await renderToString(<PromptComposer id="p" task="Say hi" checks={[{ label: 'Says hi', patterns: [{ source: 'hi' }] }]} />)
+    let html = await renderToString(
+      <PromptComposer id="p" task="Say hi" goal="Get a greeting back" criteria={[{ label: 'Says hi', kind: 'check' }]} />,
+    )
     assert.match(html, /<section[^>]*aria-label="Your runs"[^>]*tabindex="0"[^>]*data-empty=""/)
-    // The runs list is the live region, mounted before any run: replies and
-    // the reward toast (inside the run that earned it) are announced from it.
-    assert.match(html, /<ol aria-live="polite"/)
+    // The goal strip lists labels only, unchecked (decision 064).
+    assert.match(html, /Get a greeting back/)
+    assert.match(html, /Says hi<\/span><span[^>]*>not checked yet/)
+    // One polite status region, rendered empty, announces verdicts (not the streamed reply).
+    assert.match(html, /<p role="status" aria-live="polite" class="sr-only"><\/p>/)
+    assert.doesNotMatch(html, /<ol aria-live/)
     // The no-JS note holds the line the keyboard hint takes once hydrated.
     assert.match(html, /Turn on JavaScript to run prompts\./)
   })

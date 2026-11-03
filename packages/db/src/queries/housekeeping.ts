@@ -15,6 +15,8 @@ export const retention = {
   anonymousRunsMs: 7 * DAY,
   /** Signed-out answers to quick checks: only the hourly limit and the lesson save need them (decision 052). */
   anonymousAsksMs: 7 * DAY,
+  /** Signed-out coach verdicts and reveals: only the caps and the lesson save need them (decision 064). */
+  anonymousVerdictsMs: 7 * DAY,
   /** Daily mail counters (decision 039). */
   mailQuotaDays: 30,
   /** Author invites stay 30 days past expiry, accepted or not, for the admin page (decision 037). */
@@ -52,6 +54,7 @@ export interface HousekeepingCounts {
   authorInvites: number
   staleUploads: number
   anonymousAsks: number
+  anonymousVerdicts: number
 }
 
 /**
@@ -65,7 +68,9 @@ export interface HousekeepingCounts {
  * - author invites 30 days after they expired, accepted or not;
  * - marks `uploading` videos older than R2's 7-day abort window `failed`
  *   (the row stays: its r2_key is never reused);
- * - and deletes signed-out answers to quick checks older than 7 days.
+ * - deletes signed-out answers to quick checks older than 7 days;
+ * - and signed-out coach verdicts older than 7 days (a run's verdict also
+ *   goes with its run).
  */
 export async function deleteExpiredRows(db: D1DataTableDatabase, now: number): Promise<HousekeepingCounts> {
   let d1 = db.d1
@@ -87,6 +92,9 @@ export async function deleteExpiredRows(db: D1DataTableDatabase, now: number): P
       )
       .bind(now, now - retention.staleUploadMs),
     d1.prepare('delete from ask_attempts where user_id is null and created_at < ?').bind(now - retention.anonymousAsksMs),
+    d1
+      .prepare('delete from coach_verdicts where user_id is null and created_at < ?')
+      .bind(now - retention.anonymousVerdictsMs),
   ])
   let changes = results.map((result) => result.meta.changes)
   return {
@@ -98,5 +106,6 @@ export async function deleteExpiredRows(db: D1DataTableDatabase, now: number): P
     authorInvites: changes[5] ?? 0,
     staleUploads: changes[6] ?? 0,
     anonymousAsks: changes[7] ?? 0,
+    anonymousVerdicts: changes[8] ?? 0,
   }
 }

@@ -1104,7 +1104,7 @@ export function Catalogue(handle: Handle) {
             <LearnerBubble variant="plain">Same token every time?</LearnerBubble>
           </div>
         </Specimen>
-        <Specimen caption="PromptComposer (island) — type, Enter runs, Shift+Enter newline; passes when all checks pass">
+        <Specimen caption="PromptComposer (island) — Ctrl/⌘+Enter runs, Enter adds a line; the goal strip lists labels only, and on a lesson /api/coach grades each run (decision 064). Here, with no server, the criteria stay unchecked">
           <div mix={chatColumn}>
             <TutorMessage>
               <p>Your turn: get the model to write a short tagline for a café on the moon, at temperature 0 and at 1.0.</p>
@@ -1113,17 +1113,13 @@ export function Catalogue(handle: Handle) {
               <PromptComposer
                 id="sg-composer"
                 task="Write the prompt yourself — no pasting the answer"
-                checks={[
-                  { label: 'Asks for a tagline', patterns: [{ source: 'tagline|slogan', flags: 'i' }] },
-                  {
-                    label: 'Coffee + moon',
-                    patterns: [
-                      { source: 'coffee|caf[eé]', flags: 'i' },
-                      { source: 'moon|lunar', flags: 'i' },
-                    ],
-                  },
-                  { label: 'Sets a length limit', patterns: [{ source: '\\bwords?\\b|\\bshort\\b|\\bunder\\b|\\bmax', flags: 'i' }] },
-                  { label: 'Ran at 0 and 1.0', ranAt: [0, 100] },
+                goal="A tagline for a café on the moon, short enough for a sign"
+                coached
+                criteria={[
+                  { label: 'Asks for a tagline', kind: 'check' },
+                  { label: 'Ran at 0 and 1.0', kind: 'run' },
+                  { label: 'Under 10 words', kind: 'expect' },
+                  { label: 'Reads like a tagline, not a sentence about one', kind: 'rubric', level: 'must' },
                 ]}
                 examples={{
                   '0': ['Brew among the stars, every morning.'],

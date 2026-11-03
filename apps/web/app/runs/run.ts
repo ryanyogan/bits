@@ -157,14 +157,15 @@ export async function startRun(context: AnyContext, input: RunRequest): Promise<
   let source: 'example' | 'fallback' = reason ? 'fallback' : 'example'
   let output = example()
   let refuseAt = runLimits.refuseAfter
-  let written = await insertRunWithin(db, row(crypto.randomUUID(), source, output), windows, {
+  let cannedId = crypto.randomUUID()
+  let written = await insertRunWithin(db, row(cannedId, source, output), windows, {
     hour: caps.hour * refuseAt,
     day: caps.day * refuseAt,
     ipHour: caps.ipHour * refuseAt,
     liveToday: null,
   })
   if (!written) return refused()
-  return textResponse(output, source, reason)
+  return textResponse(output, source, reason, undefined, cannedId)
 }
 
 /** Calls the model for a reserved live row, then streams and journals the reply. */
@@ -181,14 +182,14 @@ async function runLive(db: D1DataTableDatabase, id: string, input: RunRequest, e
     if (reason !== 'unconfigured') {
       log('warn', 'Model run fell back', { reason })
     }
-    return textResponse(output, 'fallback', reason)
+    return textResponse(output, 'fallback', reason, undefined, id)
   }
   let model = run.model
   let finish = async (output: string) => {
     let usage = await run.usage
     await finishRun(db, id, { output, model, inputTokens: usage.input, outputTokens: usage.output })
   }
-  return textResponse(journalled(run.stream, finish, () => abort.abort()), 'live', undefined, model)
+  return textResponse(journalled(run.stream, finish, () => abort.abort()), 'live', undefined, model, id)
 }
 
 function refused(): Response {
@@ -218,7 +219,8 @@ function overLimit(owner: RunOwner, counts: RunCounts): 'limit' | 'refuse' | nul
   return null
 }
 
-function dailyLiveCap(): number {
+/** Live model calls (runs and coach judge calls) per UTC day for everyone. */
+export function dailyLiveCap(): number {
   let raw = platform.env.RUN_DAILY_LIVE_CAP
   let value = raw ? Number(raw) : NaN
   return Number.isInteger(value) && value >= 0 ? value : runLimits.dailyLive
@@ -242,6 +244,8 @@ function textResponse(
   source: 'live' | 'example' | 'fallback',
   reason?: FallbackReason,
   model?: string,
+  /** The journal row: the composer sends it to /api/coach once the stream ends (decision 064). */
+  runId?: string,
 ): Response {
   let headers = new Headers({
     'Content-Type': 'text/plain; charset=utf-8',
@@ -251,6 +255,7 @@ function textResponse(
   })
   if (reason) headers.set('X-Run-Reason', reason)
   if (model) headers.set('X-Run-Model', model)
+  if (runId) headers.set('X-Run-Id', runId)
   return new Response(body, { headers })
 }
 

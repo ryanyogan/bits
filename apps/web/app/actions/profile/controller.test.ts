@@ -22,6 +22,7 @@ async function getSignedIn(path: string) {
     let { cookie } = await signIn('jamie@example.com', { displayName: 'Jamie Park', handle: 'jamie_park', isPublic: true })
     let exercise = { course: 'tokens-and-temperature', lesson: 'temperature', exercise: 'moon-tagline', prompt: prompt(4) }
     await runAt(cookie, exercise, [0, 100])
+    // The save records the journalled prompt that passed, never a posted one (decision 064).
     for (let n = 5; n <= 8; n++) {
       await completeLesson(cookie, 'tokens-and-temperature', 'temperature', { 'prompt.moon-tagline': prompt(n) })
     }
@@ -64,7 +65,8 @@ describe('/me and /u/:handle', () => {
     let badges = badgeDefinitions(await loadCatalog(testDb, platform.env.CONTENT)).length
     assert.match(html, new RegExp(`>Badges</h2><div[^>]*>1 of ${badges}<`))
     assert.match(html, /Loop Closer — locked/)
-    assert.match(html, /Write a tagline for a coffee shop on the moon, under 8 words\./)
+    assert.match(html, /Write a tagline for a coffee shop on the moon, under 4 words\./)
+    assert.doesNotMatch(html, /under 8 words/)
     assert.match(html, /Tokens &amp; temperature · L6/)
     assert.match(html, /✓ passed 4\/4 checks/)
     // Sign out is a POST form, not a link.

@@ -41,15 +41,15 @@ describe('OddsBars', () => {
 })
 
 describe('PromptComposer', () => {
-  it('evaluates live checks; Enter adds a line and Ctrl+Enter runs (decision 067)', async (t) => {
+  it('never ticks while typing; Enter adds a line and Ctrl+Enter runs (decisions 064, 067)', async (t) => {
     try {
-      for (let k of ['draft', 'ran', 'last-run']) window.localStorage.removeItem(`bits:${k}:t-composer`)
+      for (let k of ['draft', 'ran', 'last-run', 'passed']) window.localStorage.removeItem(`bits:${k}:t-composer`)
     } catch {}
     let { $, $$, act, cleanup } = render(
       <PromptComposer
         id="t-composer"
         task="Write it"
-        checks={[{ label: 'Asks for a tagline', patterns: [{ source: 'tagline', flags: 'i' }] }]}
+        criteria={[{ label: 'Asks for a tagline', kind: 'check' }]}
         examples={{ '0': ['Brew among the stars.'], '70': ['Brew among the stars.'] }}
       />,
     )
@@ -58,15 +58,16 @@ describe('PromptComposer', () => {
 
     let textarea = $('textarea')
     assert.ok(textarea instanceof HTMLTextAreaElement)
-    assert.equal($('li[data-passed]')?.getAttribute('data-passed'), 'false')
+    let state = () => $('[aria-label="Goal"] li')?.getAttribute('data-met')
+    assert.equal(state(), 'unknown')
 
     await act(() => {
       textarea.value = 'Write a tagline'
       textarea.dispatchEvent(new Event('input', { bubbles: true }))
     })
-    // Input renders are coalesced to one per task.
     await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
-    assert.equal($('li[data-passed]')?.getAttribute('data-passed'), 'true')
+    // No patterns in the browser, so nothing ticks as you type.
+    assert.equal(state(), 'unknown')
 
     for (let shiftKey of [false, true]) {
       let newline = new KeyboardEvent('keydown', { key: 'Enter', shiftKey, bubbles: true, cancelable: true })
@@ -83,43 +84,103 @@ describe('PromptComposer', () => {
     assert.match($('[aria-label="Your runs"]')?.textContent ?? '', /Brew among the stars/)
   })
 
-  it('keeps the reward under the run that earned it, so later runs land below it', async (t) => {
+  it('grades each run on the server, shows the coach turn and keeps the reward under the run that earned it', async (t) => {
     try {
-      for (let k of ['draft', 'ran', 'last-run']) window.localStorage.removeItem(`bits:${k}:t-reward`)
+      for (let k of ['draft', 'ran', 'last-run', 'passed']) window.localStorage.removeItem(`bits:${k}:t-coach`)
     } catch {}
+    let realFetch = window.fetch
+    let calls: string[] = []
+    let runs = 0
+    window.fetch = async (input, init) => {
+      let url = String(input)
+      let body = init?.body as FormData
+      calls.push(url)
+      if (url === '/api/run') {
+        runs++
+        return new Response(runs === 1 ? 'Sure.' : 'Moonbrew.', { headers: { 'X-Run-Source': 'live', 'X-Run-Id': `run-${runs}` } })
+      }
+      let attempt = body.get('attempt')
+      let passed = attempt === 'run-2'
+      return Response.json({
+        attempt,
+        layer: 'coach',
+        passed,
+        criteria: [
+          { label: 'Asks for a tagline', kind: 'check', met: true },
+          { label: 'One short line', kind: 'rubric', level: 'must', met: passed },
+        ],
+        hint: passed ? 'That reads like a tagline.' : 'What would make Claude answer with just the line?',
+        misses: 1,
+        canReveal: false,
+        xp: passed ? 30 : 0,
+        saved: true,
+        success: passed ? 'Nice.' : undefined,
+      })
+    }
+    t.after(() => (window.fetch = realFetch))
     let { $, $$, act, cleanup } = render(
       <PromptComposer
-        id="t-reward"
+        id="t-coach"
         task="Write it"
         defaultDraft="Write a tagline"
-        checks={[{ label: 'Asks for a tagline', patterns: [{ source: 'tagline', flags: 'i' }] }]}
-        examples={{ '0': ['Brew among the stars.'] }}
-        reward={{ xp: 30, message: 'Nice.', next: { href: '#next', label: 'Next: a lesson with a long title →' } }}
+        coached
+        criteria={[
+          { label: 'Asks for a tagline', kind: 'check' },
+          { label: 'One short line', kind: 'rubric', level: 'must' },
+        ]}
+        temperatures={[{ value: 100, label: '1.0' }]}
+        reward={{ xp: 30, message: 'Nice.' }}
+        run={{ action: '/api/run', fields: { course: 'c', lesson: 'l', exercise: 'e' } }}
+        coach={{ action: '/api/coach', fields: { course: 'c', lesson: 'l', exercise: 'e' } }}
       />,
     )
     t.after(cleanup)
     await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
     let runOnce = async () => {
       await act(() => ($('form') as HTMLFormElement).requestSubmit())
-      await act(() => new Promise((resolve) => setTimeout(resolve, 600)))
+      await act(() => new Promise((resolve) => setTimeout(resolve, 80)))
     }
     await runOnce()
-    await runOnce()
+    let log = () => $$('[aria-label="Your runs"] ol > li')
+    assert.match(log()[0]!.textContent ?? '', /1 of 2\..*What would make Claude answer/)
+    assert.match(log()[0]!.textContent ?? '', /One short line.*not yet/)
+    assert.match($('[role="status"]')?.textContent ?? '', /1 of 2/)
+    assert.match($('[aria-label="Goal"]')?.textContent ?? '', /Attempt|One short line/)
+    assert.equal($$('[aria-label="Goal"] li')[1]?.getAttribute('data-met'), 'no')
 
-    let runs = $$('[aria-label="Your runs"] ol > li')
-    assert.equal(runs.length, 2)
-    assert.match(runs[0]!.textContent ?? '', /\+30 neurons/)
-    assert.doesNotMatch(runs[1]!.textContent ?? '', /neurons/)
+    await runOnce()
+    await runOnce()
+    let entries = log()
+    assert.equal(entries.length, 3)
+    assert.match(entries[1]!.textContent ?? '', /Passed\./)
+    assert.match(entries[1]!.textContent ?? '', /\+30 neurons/)
+    assert.doesNotMatch(entries[2]!.textContent ?? '', /neurons/)
+    assert.deepEqual(calls.filter((url) => url === '/api/coach').length, 3)
   })
 
-  it('streams a server run, labels canned output, and only then ticks the run check', async (t) => {
+  it('labels canned output and ticks the run check only from the server verdict', async (t) => {
     try {
-      for (let k of ['draft', 'ran', 'last-run']) window.localStorage.removeItem(`bits:${k}:t-live`)
+      for (let k of ['draft', 'ran', 'last-run', 'passed']) window.localStorage.removeItem(`bits:${k}:t-live`)
     } catch {}
     let realFetch = window.fetch
     let sent: FormData[] = []
-    window.fetch = async (_input, init) => {
+    window.fetch = async (input, init) => {
       let body = init?.body as FormData
+      if (String(input) === '/api/coach') {
+        let second = body.get('attempt') === 'r2'
+        return Response.json({
+          attempt: body.get('attempt'),
+          layer: second ? 'reply' : 'pattern',
+          passed: second,
+          criteria: [{ label: 'Ran at 0 and 1.0', kind: 'run', met: second }],
+          hint: second ? 'Same prompt, different answers.' : 'Now run it at 1.0.',
+          note: second ? undefined : 'Coach offline: this reply is a saved example. Checked by pattern, not by the coach.',
+          misses: 1,
+          canReveal: false,
+          xp: 0,
+          saved: false,
+        })
+      }
       sent.push(body)
       if (body.get('temperature') === '100') {
         let stream = new ReadableStream<Uint8Array>({
@@ -129,9 +190,9 @@ describe('PromptComposer', () => {
             controller.close()
           },
         })
-        return new Response(stream, { headers: { 'X-Run-Source': 'live' } })
+        return new Response(stream, { headers: { 'X-Run-Source': 'live', 'X-Run-Id': 'r2' } })
       }
-      return new Response('Brewed beyond gravity.', { headers: { 'X-Run-Source': 'fallback', 'X-Run-Reason': 'limit' } })
+      return new Response('Brewed beyond gravity.', { headers: { 'X-Run-Source': 'fallback', 'X-Run-Reason': 'limit', 'X-Run-Id': 'r1' } })
     }
     t.after(() => (window.fetch = realFetch))
     let { $, $$, act, cleanup } = render(
@@ -139,17 +200,19 @@ describe('PromptComposer', () => {
         id="t-live"
         task="Write it"
         defaultDraft="Write a tagline"
-        checks={[{ label: 'Ran at 0 and 1.0', ranAt: [0, 100] }]}
+        criteria={[{ label: 'Ran at 0 and 1.0', kind: 'run' }]}
         temperatures={[
           { value: 0, label: '0' },
           { value: 100, label: '1.0' },
         ]}
         run={{ action: '/api/run', fields: { course: 'c', lesson: 'l', exercise: 'e' } }}
+        coach={{ action: '/api/coach', fields: { course: 'c', lesson: 'l', exercise: 'e' } }}
       />,
     )
     t.after(cleanup)
     await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
-    let settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 50)))
+    let settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 80)))
+    let state = () => $('[aria-label="Goal"] li')?.getAttribute('data-met')
 
     await act(() => ($('form') as HTMLFormElement).requestSubmit())
     await settle()
@@ -158,7 +221,8 @@ describe('PromptComposer', () => {
     let runs = () => $('[aria-label="Your runs"]')?.textContent ?? ''
     assert.match(runs(), /Brewed beyond gravity/)
     assert.match(runs(), /hourly run limit/)
-    assert.equal($('li[data-passed]')?.getAttribute('data-passed'), 'false')
+    assert.match(runs(), /Checked by pattern, not by the coach/)
+    assert.equal(state(), 'no')
 
     let hot = $$('input[name="temperature"]')[1] as HTMLInputElement
     await act(() => {
@@ -169,7 +233,7 @@ describe('PromptComposer', () => {
     await settle()
     assert.match(runs(), /Lunar lattes\./)
     assert.match(runs(), /model · T=1\.0/)
-    assert.equal($('li[data-passed]')?.getAttribute('data-passed'), 'true')
+    assert.equal(state(), 'yes')
   })
 })
 

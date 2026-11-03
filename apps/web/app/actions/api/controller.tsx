@@ -9,11 +9,12 @@ import { answerAsk } from '../../progress/answers.ts'
 import { flashVerdict } from '../../progress/ask-session.ts'
 import { routes } from '../../routes.ts'
 import { fieldNames } from '../courses/lesson/ui/exercise.ts'
+import { coachAttempt, revealReference } from '../../runs/coach.ts'
 import { jsonError, startRun } from '../../runs/run.ts'
 import { completeVideoUpload, startVideoUpload, uploadVideoPart } from '../../video/upload.ts'
 import { authorUpload } from './author-upload.ts'
 import { saveDraftsAction } from './drafts.ts'
-import { askForm, runForm } from './schema.ts'
+import { askForm, coachForm, runForm } from './schema.ts'
 
 function noStoreJson(body: unknown) {
   return Response.json(body, { headers: { 'Cache-Control': 'no-store' } })
@@ -65,6 +66,26 @@ export default createController(routes.api, {
         if (!result.ok) return back()
         flashVerdict(context, { course, lesson, ask, verdict: result.verdict })
         return back()
+      },
+    },
+    // The coach (decision 064): grades a journalled run (cheapest layer
+    // first, the judge only for a coached block), or reveals the strong
+    // prompt after enough misses. JSON for the PromptComposer.
+    coach: {
+      middleware: [rateLimit('RL_COACH', () => jsonError('rate_limited', 429, { retryAfter: 60 }))],
+      async handler(context) {
+        let parsed = s.parseSafe(coachForm, context.formData)
+        if (!parsed.success) {
+          return jsonError('invalid', 422, { issues: parsed.issues.map((issue) => issue.message) })
+        }
+        let { course, lesson, exercise, attempt, reveal } = parsed.value
+        if (reveal) {
+          let result = await revealReference(context, { course, lesson, exercise })
+          return result.ok ? noStoreJson({ reference: result.reference }) : jsonError(result.error, result.status)
+        }
+        if (!attempt) return jsonError('invalid', 422, { issues: ['attempt is required'] })
+        let result = await coachAttempt(context, { course, lesson, exercise, attempt })
+        return result.ok ? noStoreJson(result.verdict) : jsonError(result.error, result.status)
       },
     },
     // WebAuthn options (decision 030). The browser's answer comes back as a

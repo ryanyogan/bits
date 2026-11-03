@@ -120,6 +120,8 @@ export const routes = route({
     // An answer to a quick check (`:::ask`, decision 052): JSON for the
     // islands, a 303 back to the lesson for a native form.
     ask: post('/ask'),
+    // Grades a journalled prompt run, or reveals the strong prompt (decision 064). JSON only.
+    coach: post('/coach'),
     drafts: post('/drafts'), // a signed-in learner's lesson drafts and watch position (decision 029)
     passkey: post('/passkey/:step'),
     authorUpload: post('/author/upload'),
