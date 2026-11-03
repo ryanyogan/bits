@@ -1,8 +1,8 @@
 import type { Handle } from 'remix/component'
 import { clientEntry, css, on, ref } from 'remix/component'
 
-import { CheckChip, checkListStyle } from './check-chip.tsx'
 import { Keycap } from './keycap.tsx'
+import { requestReference, requestVerdict, type CoachCriterion, type CoachEndpoint, type CoachVerdict } from './lib/coach-client.ts'
 import { readDraft, writeDraft, type DraftPersist } from './lib/drafts.ts'
 import { fieldFrameStyle, fieldGlyphStyle, fieldGlyphTopStyle, fieldInputStyle, fieldMultiStyle } from './lib/field.ts'
 import { runNote, streamRun, type RunEndpoint } from './lib/run-stream.ts'
@@ -12,7 +12,7 @@ import { initialTemperature, TEMPERATURE_EVENT } from './odds-bars.tsx'
 import { announceReward, RewardToast, type RewardNext } from './reward-toast.tsx'
 import { Tag } from './tag.tsx'
 import { toyHeaderStyle, toyPanelStyle } from './toy-panel.tsx'
-import { LearnerBubble, ModelOutput } from './tutor.tsx'
+import { LearnerBubble, ModelOutput, TutorMessage } from './tutor.tsx'
 
 /** A regex as plain data, so it can cross the island boundary. */
 export interface PatternSource {
@@ -58,14 +58,30 @@ export interface TemperatureOption {
   label: string
 }
 
+/** A criterion's label as the browser sees it: never its pattern or rubric text beyond the label (decision 064). */
+export interface ComposerCriterion {
+  label: string
+  kind: CoachCriterion['kind']
+  level?: 'must' | 'should'
+}
+
+export type { CoachEndpoint }
+
 export interface PromptComposerProps {
   /** Unique per lesson exercise; keys the saved draft and the field ids. */
   id: string
   task: string
+  /** The exercise's goal, shown above the runs (decision 064). */
+  goal?: string
   placeholder?: string
   /** Starting draft (rendered with JS off; a saved draft replaces it). */
   defaultDraft?: string
-  checks: PromptCheck[]
+  /** "What good looks like": the labels only. The server grades them (`coach`). */
+  criteria: ComposerCriterion[]
+  /** A coach judges the reply (the block has rubric lines). */
+  coached?: boolean
+  /** Passing is optional (`gate=false`): the reward adds neurons but doesn't open the lesson's gate. */
+  optional?: boolean
   temperatures?: TemperatureOption[]
   /** Canned outputs per temperature value, cycled per run (example output, no model). */
   examples?: Record<string, string[]>
@@ -84,13 +100,17 @@ export interface PromptComposerProps {
   keepRuns?: number
   /** Style-guide only: render the focused composer look. */
   forceFocus?: boolean
-  /** Also submit the draft with another form (see SubmitFields). */
-  submit?: SubmitFields
   /**
    * Run through the server (`/api/run`): a streamed live reply or the
    * server's canned output, journalled. Without it, runs show `examples`.
    */
   run?: RunEndpoint
+  /**
+   * Grade each run on the server (`/api/coach`, decision 064): the verdict
+   * per criterion, one hint, escalation and the reward. Without it (the
+   * draft preview, the styleguide) the criteria stay "not checked".
+   */
+  coach?: CoachEndpoint
   /**
    * Where the draft is kept: localStorage under `persist.id`, plus the server
    * when signed in (`lib/drafts.ts`). Defaults to localStorage under `id`.
@@ -106,6 +126,10 @@ interface Run {
   state: 'streaming' | 'done' | 'example' | 'error'
   note?: string
   tokens: number
+  /** The coach's verdict on this run, once it arrives. */
+  verdict?: CoachVerdict
+  /** checking: waiting for /api/coach. unchecked: the coach couldn't grade it. */
+  coach?: 'checking' | 'unchecked'
 }
 
 /** The last counted run, kept in this browser so a revisit shows it (decision 067). */
@@ -115,10 +139,12 @@ interface SavedRun {
   temperature: TemperatureOption
   state: Run['state']
   at: number
+  verdict?: CoachVerdict
 }
 
 const ranKey = (id: string) => `bits:ran:${id}`
 const lastRunKey = (id: string) => `bits:last-run:${id}`
+const passedKey = (id: string) => `bits:passed:${id}`
 
 function readJson<T>(key: string): T | undefined {
   try {
@@ -206,7 +232,6 @@ export const PromptComposer = clientEntry(
     let rewardedRun: number | undefined
     let runCount = 0
     let textarea: HTMLTextAreaElement | undefined
-    let mirror: HTMLInputElement | undefined
     let composer: HTMLFormElement | undefined
     let follower = createFollower()
     let mac = false
@@ -228,7 +253,6 @@ export const PromptComposer = clientEntry(
     handle.queueTask(() => {
       draft = readDraft(persist()) ?? handle.props.defaultDraft ?? ''
       if (textarea && textarea.value !== draft) textarea.value = draft
-      if (mirror) mirror.value = draft
       mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)
       for (let t of readJson<unknown[]>(ranKey(storeId())) ?? []) if (typeof t === 'number') ranAt.add(t)
       let last = readJson<SavedRun>(lastRunKey(storeId()))
@@ -243,17 +267,21 @@ export const PromptComposer = clientEntry(
             state: last.state === 'error' || last.state === 'example' ? last.state : 'done',
             note: `Your last run · ${at}`,
             tokens: draftTokens(last.output),
+            ...(last.verdict && typeof last.verdict === 'object' && Array.isArray(last.verdict.criteria) ? { verdict: last.verdict } : {}),
           },
         ]
+        latest = runs[0]!.verdict
       }
+      passedHere = readJson<boolean>(passedKey(storeId())) === true
       hydrated = true
       // A passed exercise opens the lesson's gate again on a revisit, with no
       // second toast or neurons (the server decides those on save). After the
       // other islands' setup, so the "complete" key is listening.
       let reward = handle.props.reward
-      if (!handle.props.passed && reward && allPassed()) {
-        rewardedRun = runs[0]?.id
-        setTimeout(() => announceReward({ xp: reward.xp, message: reward.message, silent: true }), 0)
+      if (!handle.props.passed && reward && passedHere) {
+        rewardedRun = runs[0]?.verdict?.passed ? runs[0].id : undefined
+        let source = handle.props.optional ? ('ask' as const) : undefined
+        setTimeout(() => announceReward({ xp: reward.xp, message: reward.message, silent: true, source }), 0)
       }
       handle.update()
     })
@@ -262,24 +290,109 @@ export const PromptComposer = clientEntry(
       writeDraft(persist(), draft)
     }
 
-    /** Run checks a saved lesson already met count as met. */
-    function metRuns(): Set<number> {
-      if (!handle.props.passed) return ranAt
-      let all = new Set(ranAt)
-      for (let check of handle.props.checks) for (let t of check.ranAt ?? []) all.add(t)
-      return all
+    // The newest verdict drives the goal strip and the escalation (decision 064).
+    let latest: CoachVerdict | undefined
+    // Passed in an earlier visit (this browser); the server re-checks on save.
+    let passedHere = false
+    // What the polite live region says: "Reply ready, checking…", then the verdict.
+    let announcement = ''
+    let strongerOpen = false
+    let referenceOpen = false
+    let reference: string | undefined
+    let revealing = false
+    let coachAbort: AbortController | undefined
+    handle.signal.addEventListener('abort', () => coachAbort?.abort())
+
+    function summary(verdict: CoachVerdict): string {
+      let graded = verdict.criteria.filter((criterion) => criterion.met !== null && criterion.level !== 'should')
+      let met = graded.filter((criterion) => criterion.met).length
+      return verdict.passed ? 'Passed.' : `${met} of ${graded.length}.`
     }
 
-    function allPassed() {
-      return handle.props.checks.every((check) => checkPasses(check, draft, metRuns()))
+    /** Grades a counted run on the server, then rewards a first pass. */
+    async function check(entry: Run, runId: string) {
+      let endpoint = handle.props.coach
+      if (!endpoint) return
+      entry.coach = 'checking'
+      announcement = 'Reply ready, checking…'
+      await handle.update()
+      coachAbort?.abort()
+      let controller = (coachAbort = new AbortController())
+      let result
+      try {
+        result = await requestVerdict(endpoint, runId, { signal: controller.signal })
+      } catch {
+        return
+      }
+      if (handle.signal.aborted) return
+      if (!result.ok) {
+        entry.coach = 'unchecked'
+        announcement = result.reason === 'limit' ? 'Too many checks for now. Try again in a minute.' : 'The coach couldn’t check this run. Run it again.'
+        await handle.update()
+        return
+      }
+      let verdict = result.verdict
+      entry.coach = undefined
+      entry.verdict = verdict
+      latest = verdict
+      if (verdict.reference) reference = verdict.reference
+      announcement = `${summary(verdict)} ${verdict.hint}`
+      writeJson(lastRunKey(storeId()), {
+        prompt: entry.prompt,
+        output: entry.output,
+        temperature: entry.temperature,
+        state: entry.state,
+        at: Date.now(),
+        verdict,
+      } satisfies SavedRun)
+      let reward = handle.props.reward
+      if (verdict.passed) {
+        passedHere = true
+        writeJson(passedKey(storeId()), true)
+        if (reward && rewardedRun === undefined) {
+          rewardedRun = entry.id
+          rewardXp = verdict.xp
+          let source = handle.props.optional ? ('ask' as const) : undefined
+          announceReward({ xp: verdict.xp, message: verdict.success ?? reward.message, source, silent: verdict.xp === 0 })
+        }
+      }
+      await handle.update()
     }
+
+    async function reveal() {
+      let endpoint = handle.props.coach
+      if (!endpoint || revealing) return
+      if (reference) {
+        referenceOpen = !referenceOpen
+        handle.update()
+        return
+      }
+      revealing = true
+      handle.update()
+      reference = await requestReference(endpoint)
+      revealing = false
+      referenceOpen = Boolean(reference)
+      if (!handle.signal.aborted) handle.update()
+    }
+
+    function useReference() {
+      if (!reference || !textarea) return
+      textarea.value = reference
+      draft = reference
+      saveDraft()
+      textarea.focus()
+      handle.update()
+    }
+
+    // The neurons the rewarding verdict earned (0 for a repeat pass).
+    let rewardXp = 0
 
     // The run in flight; running again aborts it (and the server stops the model).
     let inflight: AbortController | undefined
     handle.signal.addEventListener('abort', () => inflight?.abort())
 
     /** Server run: streams into the entry; canned output if the server can't answer. */
-    async function serverRun(endpoint: RunEndpoint, entry: Run): Promise<boolean> {
+    async function serverRun(endpoint: RunEndpoint, entry: Run): Promise<{ counted: boolean; runId?: string }> {
       inflight?.abort()
       let controller = (inflight = new AbortController())
       let result
@@ -295,14 +408,14 @@ export const PromptComposer = clientEntry(
         // Aborted by a rerun (or removal): keep what arrived.
         entry.state = 'done'
         entry.note = 'Stopped: you ran it again.'
-        return false
+        return { counted: false }
       } finally {
         if (inflight === controller) inflight = undefined
       }
       entry.output = result.text || cannedOutput(handle.props.examples, entry.temperature.value, entry.id)
       entry.state = result.source === 'live' ? 'done' : result.source === 'error' ? 'error' : 'example'
       entry.note = runNote(result)
-      return result.counted
+      return { counted: result.counted, runId: result.counted && result.source !== 'error' ? result.runId : undefined }
     }
 
     async function run() {
@@ -324,8 +437,9 @@ export const PromptComposer = clientEntry(
         if (grown > 0) window.scrollBy({ top: grown, behavior: 'instant' })
       }
       let counted: boolean
+      let runId: string | undefined
       if (endpoint) {
-        counted = await serverRun(endpoint, entry)
+        ;({ counted, runId } = await serverRun(endpoint, entry))
       } else {
         await new Promise((resolve) => setTimeout(resolve, 450))
         // Only removal cancels a run: other updates (picking a temperature,
@@ -352,19 +466,18 @@ export const PromptComposer = clientEntry(
         at: Date.now(),
       } satisfies SavedRun)
       window.dispatchEvent(new CustomEvent('bits:run', { detail: { prompt, temperature: entry.temperature.value } }))
-      let reward = handle.props.reward
-      if (reward && rewardedRun === undefined && allPassed()) {
-        rewardedRun = id
-        announceReward({ xp: reward.xp, message: reward.message })
-      }
       await handle.update()
       textarea?.focus()
+      if (runId) await check(entry, runId)
     }
 
     return () => {
-      let { id, task, placeholder = 'Write a tagline for…', checks, temperatures = DEFAULT_TEMPS, reward, forceFocus } = handle.props
+      let { id, task, goal, placeholder = 'Write a tagline for…', criteria, temperatures = DEFAULT_TEMPS, reward, forceFocus } = handle.props
       let empty = draft.trim() === ''
-      let met = metRuns()
+      let passedAlready = handle.props.passed || passedHere
+      let misses = latest?.misses ?? 0
+      let stronger = latest && !latest.passed ? latest.stronger : undefined
+      let canReveal = Boolean(handle.props.coach && (latest?.canReveal || reference))
       let runKeys = mac ? '⌘↵' : 'Ctrl+↵'
       let fieldId = `${id}-prompt`
       let tokens = draftTokens(draft)
@@ -378,6 +491,32 @@ export const PromptComposer = clientEntry(
               {task}
             </label>
           </div>
+          <section aria-label="Goal" mix={goalStyle}>
+            {goal ? (
+              <p mix={goalTextStyle}>
+                <span mix={goalLabelStyle}>Goal</span> {goal}
+              </p>
+            ) : null}
+            <p id={`${id}-criteria-label`} mix={goalLabelStyle}>
+              What good looks like{handle.props.coached ? ' · the coach checks the reply' : ''}
+            </p>
+            <ul id={`${id}-checks`} aria-labelledby={`${id}-criteria-label`} mix={criteriaStyle}>
+              {criteria.map((criterion, index) => {
+                let met = criterionState(criterion, index, latest, passedAlready)
+                return (
+                  <li key={`${criterion.kind}:${criterion.label}`} data-met={met} mix={criterionStyle}>
+                    <span aria-hidden="true" mix={glyphStyle}>
+                      {met === 'yes' ? '✓' : met === 'no' ? '✗' : '·'}
+                    </span>
+                    <span>{criterion.label}</span>
+                    <span mix={stateTextStyle}>
+                      {met === 'yes' ? 'met' : met === 'no' ? 'not yet' : criterion.level === 'should' ? 'nice to have' : 'not checked yet'}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
           <section
             aria-label="Your runs"
             tabIndex={0}
@@ -386,10 +525,10 @@ export const PromptComposer = clientEntry(
           >
             {runs.length ? null : (
               <p mix={emptyStyle}>
-                {handle.props.passed ? '✓ You passed this exercise. Run it again any time.' : 'Run your prompt and the replies land here.'}
+                {passedAlready ? '✓ You passed this exercise. Run it again any time.' : 'Run your prompt and the replies land here.'}
               </p>
             )}
-            <ol aria-live="polite" mix={runsStyle}>
+            <ol mix={runsStyle}>
               {runs.map((entry) => (
                 <li key={entry.id} mix={runStyle}>
                   <LearnerBubble>
@@ -410,8 +549,25 @@ export const PromptComposer = clientEntry(
                   >
                     {entry.output}
                   </ModelOutput>
-                  {entry.id === rewardedRun && reward ? (
-                    <RewardToast xp={reward.xp} message={reward.message} note={reward.note} next={reward.next} animate />
+                  {entry.coach === 'checking' ? (
+                    <TutorMessage variant="preview" continued mix={coachTurnStyle}>
+                      <p mix={coachNoteStyle}>Checking the reply…</p>
+                    </TutorMessage>
+                  ) : entry.coach === 'unchecked' ? (
+                    <TutorMessage variant="preview" continued mix={coachTurnStyle}>
+                      <p mix={coachNoteStyle}>The coach couldn’t check this run. Run it again.</p>
+                    </TutorMessage>
+                  ) : entry.verdict ? (
+                    <CoachTurn verdict={entry.verdict} />
+                  ) : null}
+                  {entry.id === rewardedRun && reward && (rewardXp > 0 || !entry.verdict) ? (
+                    <RewardToast
+                      xp={entry.verdict ? rewardXp : reward.xp}
+                      message={entry.verdict?.success ?? reward.message}
+                      note={entry.verdict?.halved ? 'Half the neurons: you saw the strong prompt first.' : reward.note}
+                      next={reward.next}
+                      animate
+                    />
                   ) : null}
                 </li>
               ))}
@@ -448,7 +604,6 @@ export const PromptComposer = clientEntry(
                   ref((node) => (textarea = node)),
                   on('input', (event) => {
                     draft = event.currentTarget.value
-                    if (mirror) mirror.value = draft
                     saveDraft()
                     queueRender()
                   }),
@@ -461,13 +616,58 @@ export const PromptComposer = clientEntry(
                 ]}
               />
             </div>
-            <ul id={`${id}-checks`} aria-label="Checks" mix={checkListStyle}>
-              {checks.map((check) => (
-                <CheckChip key={check.label} passed={hydrated && checkPasses(check, draft, met)}>
-                  {check.label}
-                </CheckChip>
-              ))}
-            </ul>
+            {misses > 0 && !latest?.passed ? (
+              <p mix={attemptStyle}>Attempt {misses + 1} · hints get more specific</p>
+            ) : null}
+            {stronger || canReveal ? (
+              <div mix={escalationStyle}>
+                {stronger ? (
+                  <button
+                    type="button"
+                    aria-expanded={strongerOpen ? 'true' : 'false'}
+                    aria-controls={`${id}-stronger`}
+                    mix={[escalateKeyStyle, on('click', () => {
+                        strongerOpen = !strongerOpen
+                        handle.update()
+                      })]}
+                  >
+                    Stronger hint
+                  </button>
+                ) : null}
+                {canReveal ? (
+                  <button
+                    type="button"
+                    aria-expanded={referenceOpen ? 'true' : 'false'}
+                    aria-controls={`${id}-reference`}
+                    aria-busy={revealing ? 'true' : undefined}
+                    mix={[escalateKeyStyle, on('click', () => void reveal())]}
+                  >
+                    Show a strong prompt
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+            {stronger ? (
+              <p id={`${id}-stronger`} hidden={!strongerOpen} mix={panelStyle}>
+                {stronger}
+              </p>
+            ) : null}
+            {canReveal ? (
+              <div id={`${id}-reference`} hidden={!referenceOpen || !reference} mix={panelStyle}>
+                <p mix={coachNoteStyle}>
+                  {latest?.passed
+                    ? 'A strong prompt, to compare with yours.'
+                    : 'A strong prompt. Passing after seeing it earns half the neurons.'}
+                </p>
+                <LearnerBubble mix={referenceBubbleStyle}>
+                  <span class="sr-only">Example prompt: </span>
+                  {reference ?? ''}
+                </LearnerBubble>
+                <button type="button" mix={[escalateKeyStyle, on('click', useReference)]}>
+                  Use this prompt
+                </button>
+              </div>
+            ) : null}
             <div mix={footerStyle}>
               {temperatures.length > 1 ? (
               <fieldset mix={tempsStyle}>
@@ -506,26 +706,144 @@ export const PromptComposer = clientEntry(
               </Keycap>
             </div>
             <p id={`${id}-hint`} mix={hintStyle}>
-              {hydrated
-                ? `${runKeys} runs · Enter adds a line${temperatures.length === 1 ? ` · runs at T=${temperatures[0]!.label}` : ''}`
-                : 'Turn on JavaScript to run prompts.'}
+              {hydrated ? (
+                <>
+                  {/* The keys only where there's a keyboard: touch has the Run key. */}
+                  <span mix={keyboardOnlyStyle}>
+                    {runKeys} runs · Enter adds a line{temperatures.length === 1 ? ' · ' : ''}
+                  </span>
+                  {temperatures.length === 1 ? `runs at T=${temperatures[0]!.label}` : null}
+                </>
+              ) : (
+                'Turn on JavaScript to run prompts.'
+              )}
             </p>
-            {handle.props.submit ? (
-              // Uncontrolled like the textarea: the input handler keeps it current.
-              <input
-                type="hidden"
-                form={handle.props.submit.form}
-                name={handle.props.submit.prompt}
-                defaultValue={draft}
-                mix={ref((node) => (mirror = node))}
-              />
-            ) : null}
           </form>
+          {/* Rendered empty, so the first verdict is announced (decision 031). */}
+          <p role="status" aria-live="polite" class="sr-only">
+            {announcement}
+          </p>
         </div>
       )
     }
   },
 )
+
+/** A criterion's state in the goal strip: from the newest verdict, else "not checked yet". */
+function criterionState(criterion: ComposerCriterion, index: number, verdict: CoachVerdict | undefined, passed: boolean): 'yes' | 'no' | 'unknown' {
+  if (!verdict) return passed && criterion.kind !== 'rubric' ? 'yes' : 'unknown'
+  let match = verdict.criteria[index]
+  let met = match && match.label === criterion.label ? match.met : verdict.criteria.find((c) => c.label === criterion.label)?.met
+  return met === true ? 'yes' : met === false ? 'no' : 'unknown'
+}
+
+/** The coach's turn under a reply (decision 064): the tally, one hint, then each criterion as ✓ / ✗ / not checked. */
+function CoachTurn(handle: Handle<{ verdict: CoachVerdict }>) {
+  return () => {
+    let { verdict } = handle.props
+    let graded = verdict.criteria.filter((criterion) => criterion.met !== null && criterion.level !== 'should')
+    let met = graded.filter((criterion) => criterion.met).length
+    return (
+      <TutorMessage variant="preview" continued mix={coachTurnStyle}>
+        <p>
+          <strong>{verdict.passed ? 'Passed.' : `${met} of ${graded.length}.`}</strong> {verdict.hint}
+        </p>
+        <ul mix={turnListStyle}>
+          {verdict.criteria.map((criterion) => (
+            <li key={`${criterion.kind}:${criterion.label}`} data-met={criterion.met === null ? 'unknown' : criterion.met ? 'yes' : 'no'} mix={criterionStyle}>
+              <span aria-hidden="true" mix={glyphStyle}>
+                {criterion.met === true ? '✓' : criterion.met === false ? '✗' : '·'}
+              </span>
+              <span>
+                {criterion.label}
+                {criterion.met === false && criterion.note ? <span mix={stateTextStyle}> {criterion.note}</span> : null}
+              </span>
+              <span mix={stateTextStyle}>
+                {criterion.met === true
+                  ? 'met'
+                  : criterion.met === false
+                    ? criterion.level === 'should'
+                      ? 'not yet (nice to have)'
+                      : 'not yet'
+                    : verdict.layer === 'soft'
+                      ? 'not checked (coach limit)'
+                      : 'not checked'}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {verdict.note ? <p mix={coachNoteStyle}>{verdict.note}</p> : null}
+      </TutorMessage>
+    )
+  }
+}
+
+// The goal strip: the goal, then the criteria labels. Its size never changes:
+// only the state words do (decision 023).
+const goalStyle = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'var(--space-2)',
+  padding: 'var(--space-3) var(--space-4)',
+  borderBottom: 'var(--border-w) solid var(--line-cell)',
+  '@media (max-width: 480px)': { paddingInline: 'var(--space-3)' },
+})
+const goalTextStyle = css({ margin: 0, fontSize: 'var(--fs-14)', color: 'var(--text)' })
+const goalLabelStyle = css({
+  margin: 0,
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-12)',
+  color: 'var(--dim)',
+  marginRight: 'var(--space-2)',
+})
+const criteriaStyle = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' })
+const criterionStyle = css({
+  display: 'grid',
+  gridTemplateColumns: '1.25em 1fr auto',
+  gap: 'var(--space-2)',
+  alignItems: 'baseline',
+  fontSize: 'var(--fs-13)',
+  color: 'var(--text-quiet)',
+  '&[data-met="yes"] > span:first-child': { color: 'var(--ok)' },
+  '&[data-met="no"] > span:first-child': { color: 'var(--danger)' },
+})
+const glyphStyle = css({ fontFamily: 'var(--font-mono)', textAlign: 'center', color: 'var(--dim)' })
+const stateTextStyle = css({ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--dim)' })
+const coachTurnStyle = css({ '& p': { margin: 0 }, '& > div': { display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' } })
+const coachNoteStyle = css({ margin: 0, fontSize: 'var(--fs-13)', color: 'var(--muted)' })
+const turnListStyle = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' })
+const attemptStyle = css({ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--dim)' })
+const escalationStyle = css({ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' })
+const escalateKeyStyle = css({
+  minHeight: 'var(--touch-target)',
+  padding: '0 var(--space-3)',
+  border: 'var(--border-w) solid var(--line-control)',
+  background: 'transparent',
+  color: 'var(--text)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 'var(--fs-13)',
+  cursor: 'pointer',
+  '&:hover': { background: 'var(--fill-hover)' },
+  '&:focus-visible': focusOutline,
+  '&[aria-expanded="true"]': { borderColor: 'var(--ion)', background: 'var(--ion-a16)' },
+  [FORCED_COLORS]: { '&[aria-expanded="true"]': forcedSelected },
+})
+const panelStyle = css({
+  margin: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'flex-start',
+  gap: 'var(--space-2)',
+  padding: 'var(--space-3)',
+  border: 'var(--border-w) solid var(--line-hair)',
+  fontSize: 'var(--fs-14)',
+  color: 'var(--text)',
+  '&[hidden]': { display: 'none' },
+})
+const referenceBubbleStyle = css({ alignSelf: 'stretch', maxWidth: 'none', whiteSpace: 'pre-wrap' })
+// The run keys mean nothing on a touch screen (QA, 2026-11-02): only a
+// device with a fine pointer that hovers (a hardware keyboard, in practice) shows them.
+const keyboardOnlyStyle = css({ display: 'none', '@media (hover: hover) and (pointer: fine)': { display: 'inline' } })
 
 // One ruled panel (decision 047): the task strip, the runs window and the
 // composer, stacked and split by hairlines, so the exercise reads as one block.

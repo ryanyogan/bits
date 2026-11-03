@@ -4,7 +4,7 @@
 import type { CodeFile } from '@bits/ui/code-editor'
 import type { AskEndpoint } from '@bits/ui/lib/ask-client'
 import type { DraftPersist } from '@bits/ui/lib/drafts'
-import type { PromptCheck, RunEndpoint, SubmitFields, TemperatureOption } from '@bits/ui/prompt-composer'
+import type { CoachEndpoint, ComposerCriterion, PromptCheck, RunEndpoint, TemperatureOption } from '@bits/ui/prompt-composer'
 import type { TerminalPart } from '@bits/ui/terminal'
 
 import { draftKey } from '../../../../progress/draft-keys.ts'
@@ -16,8 +16,9 @@ export function temperatureLabel(t: number): string {
   return t === 0 ? '0' : t.toFixed(1)
 }
 
-/** Field names of the lesson's "complete" form (read by app/progress/check.ts). */
+/** Field names posted by the lesson's islands. */
 export const fieldNames = {
+  /** No longer posted or read (decision 064): the save reads passes from the journal. */
   prompt: (exerciseId: string) => `prompt.${exerciseId}`,
   /** An ask's answer, posted to /api/ask (never read by the save: the journal says which were right). */
   ask: (askId: string) => `answer.${askId}`,
@@ -29,16 +30,20 @@ const hundredths = (t: number) => Math.round(t * 100)
 export interface ExerciseProps {
   id: string
   task: string
+  goal?: string
   placeholder?: string
   defaultDraft?: string
-  checks: PromptCheck[]
+  /** Labels only: patterns, rubrics and the reference stay on the server (decision 064). */
+  criteria: ComposerCriterion[]
+  coached?: boolean
+  optional?: boolean
   temperatures: TemperatureOption[]
   examples: Record<string, string[]>
   reward: { xp: number; message: string; note?: string }
   /** The lesson is saved as complete: the exercise opens passed. */
   passed: boolean
-  submit?: SubmitFields
   run?: RunEndpoint
+  coach?: CoachEndpoint
   persist: DraftPersist
 }
 
@@ -55,7 +60,7 @@ export function draftPersist(view: LessonView, key: string, localId = `${view.ke
   return persist
 }
 
-/** The exercise's checks, as the composer runs them and the server re-runs them. */
+/** The exercise's prompt checks and run requirement, as the server runs them (never sent to the browser). */
 export function promptChecks(block: PromptBlock): PromptCheck[] {
   let checks: PromptCheck[] = block.checks.map((check) => ({ label: check.label, patterns: check.patterns }))
   if (block.run) checks.push({ label: block.run.label, ranAt: block.run.temperatures.map(hundredths) })
@@ -67,8 +72,16 @@ export function offeredTemperatures(block: PromptBlock): number[] {
   return block.temperatures.map(hundredths)
 }
 
+/** What the browser may know of an exercise's criteria: labels, kinds and levels (decision 064). */
+export function criteriaLabels(block: PromptBlock): ComposerCriterion[] {
+  let criteria: ComposerCriterion[] = block.checks.map((check) => ({ label: check.label, kind: 'check' }))
+  if (block.run) criteria.push({ label: block.run.label, kind: 'run' })
+  for (let check of block.expects ?? []) criteria.push({ label: check.label, kind: 'expect' })
+  for (let line of block.rubric ?? []) criteria.push({ label: line.label, kind: 'rubric', level: line.level })
+  return criteria
+}
+
 export function exerciseProps(view: LessonView, block: PromptBlock): ExerciseProps {
-  let checks = promptChecks(block)
   let examples: Record<string, string[]> = {}
   for (let example of block.examples) (examples[String(hundredths(example.temperature))] ??= []).push(example.text)
   // The reward celebrates; it never navigates. The lesson has one
@@ -81,25 +94,27 @@ export function exerciseProps(view: LessonView, block: PromptBlock): ExercisePro
       : undefined
   // Keyed by course + lesson (+ exercise), so every mode shares the draft.
   let id = `${view.key}/${block.id}`
-  return {
+  let fields = { course: view.course.slug, lesson: view.lesson.slug, exercise: block.id }
+  let props: ExerciseProps = {
     id,
     persist: draftPersist(view, draftKey.prompt(block.id), id),
     task: block.task,
     placeholder: block.placeholder,
     defaultDraft: block.draft,
-    checks,
+    criteria: criteriaLabels(block),
     temperatures: block.temperatures.map((t) => ({ value: hundredths(t), label: temperatureLabel(t) })),
     examples,
     reward: { xp: block.xp, message: block.success.message, note },
     passed: view.lesson.state === 'done',
-    submit: view.completeForm
-      ? { form: view.completeForm.id, prompt: fieldNames.prompt(block.id) }
-      : undefined,
-    // Runs go through /api/run (live or canned, journalled); the draft preview runs canned in the browser.
-    run: view.completeForm
-      ? { action: routes.api.run.href(), fields: { course: view.course.slug, lesson: view.lesson.slug, exercise: block.id } }
-      : undefined,
+    // Runs go through /api/run (live or canned, journalled) and each is
+    // graded by /api/coach; the draft preview runs canned in the browser.
+    run: view.completeForm ? { action: routes.api.run.href(), fields } : undefined,
+    coach: view.completeForm ? { action: routes.api.coach.href(), fields } : undefined,
   }
+  if (block.goal) props.goal = block.goal
+  if (block.coach) props.coached = true
+  if (block.gate === false) props.optional = true
+  return props
 }
 
 /**

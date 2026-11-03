@@ -18,6 +18,8 @@ export interface RunResult {
   text: string
   /** The server journalled this run, so it counts toward the run checks. */
   counted: boolean
+  /** The journal row (X-Run-Id): what /api/coach grades (decision 064). */
+  runId?: string
 }
 
 /**
@@ -60,7 +62,10 @@ export async function streamRun(
     // Cut off mid-reply: keep what arrived; the run was journalled.
     return { source: 'error', reason: 'interrupted', text, counted: true }
   }
-  return { source, reason: response.headers.get('X-Run-Reason') ?? undefined, text, counted: true }
+  let result: RunResult = { source, reason: response.headers.get('X-Run-Reason') ?? undefined, text, counted: true }
+  let runId = response.headers.get('X-Run-Id')
+  if (runId) result.runId = runId
+  return result
 }
 
 /** The one-line note shown above a reply that isn't a complete live run. */
