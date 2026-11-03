@@ -39,7 +39,7 @@ simple:
 - Claude asks **one question at a time**, so you can think about each one.
 - For each question, Claude **recommends an answer**, so you can often just
   say "yes" and keep moving.
-- It works through the decisions **until you share an understanding**, and
+- It keeps going **until the two of you agree on every decision**, and
   only then writes the plan, spec or code.
 
 :::compare{left="Build it" right="Interview first" illustrative}
@@ -87,10 +87,10 @@ Turn the prompt around: have Claude interview you about the birthday bot
 - check "Says wait before building"          /before (you|writing|building|any)|don.t (write|build|start)|wait|until (we|I)|not yet/i
 - expect "Asks a question"                   match /\?/
 - expect "Short"                             words<=90
-- rubric "Asks exactly one question, about a real decision for the bot" must evidence
+- rubric "Asks about one real decision for the bot (a “does that work?” on the same decision still counts as one)" must evidence
 - rubric "Recommends an answer to that question" must evidence
 - rubric "Only asks: no plan, spec or code in the reply" must
-- hint "Count the questions in the reply. Is it one, and could you answer it in a sentence?"
+- hint "Count the decisions the reply asks about. Is it one, and could you answer it in a sentence?"
 - hint "Say “one question at a time” and “recommend an answer for each”, and tell Claude not to write anything until you're done."
 - hint for="Only asks: no plan, spec or code in the reply" "Claude jumped ahead. Add: don't write a plan or any code until I say we're done."
 - reference "I want to build a bot that reminds my team about birthdays. Before you write any plan or code, interview me about it. Ask one question at a time, and for each question give your recommended answer so I can just say yes. Keep going until we agree on every decision; then I'll ask for the plan."
