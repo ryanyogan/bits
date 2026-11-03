@@ -1,12 +1,12 @@
 // Turning a verified sign-in into a user and a session.
 import {
-  availableHandle,
   createUser,
   findIdentity,
   findUserByEmail,
   findUserById,
   linkIdentity,
   markEmailVerified,
+  neutralHandle,
   normalizeEmail,
   type D1DataTableDatabase,
   type OAuthProvider,
@@ -56,7 +56,7 @@ export async function userForVerifiedEmail(
 
 async function createVerifiedUser(
   db: D1DataTableDatabase,
-  input: { email: string; displayName?: string; handleHint?: string; signup: SignupDetails | null },
+  input: { email: string; displayName?: string; signup: SignupDetails | null },
 ): Promise<{ user: User; created: boolean }> {
   let email = normalizeEmail(input.email)
   let displayName = input.displayName?.trim().slice(0, 60) ?? ''
@@ -64,7 +64,11 @@ async function createVerifiedUser(
     let user = await createUser(db, {
       email,
       displayName,
-      handle: await availableHandle(db, input.handleHint || displayName || email.split('@')[0]!),
+      // Private and with a neutral handle until the learner says otherwise in
+      // Settings: signing in to learn publishes nothing (decision 068). Not
+      // the email local-part, the name or the provider login.
+      handle: await neutralHandle(db),
+      isPublic: false,
       goals: input.signup?.goals ?? [],
       timezone: validTimezone(input.signup?.timezone),
       emailVerifiedAt: Date.now(),
@@ -83,9 +87,8 @@ export type OAuthProfile = {
   providerUserId: string
   /** Only a provider-verified email; null otherwise. */
   email: string | null
+  /** The provider's display name, for display_name only (never the handle; decision 068). */
   name: string | null
-  /** e.g. the GitHub login, used as the handle hint for new users. */
-  username: string | null
 }
 
 export type OAuthUserResult =
@@ -131,7 +134,6 @@ export async function userForOAuth(
     : await createVerifiedUser(db, {
         email: profile.email,
         displayName: profile.name ?? undefined,
-        handleHint: profile.username ?? undefined,
         signup: null,
       })
   await link(user)

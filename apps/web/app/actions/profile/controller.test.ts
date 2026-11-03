@@ -18,7 +18,7 @@ const prompt = (n: number) => `Write a tagline for a coffee shop on the moon, un
 let jamie: Promise<string> | undefined
 async function getSignedIn(path: string) {
   jamie ??= (async () => {
-    let { cookie } = await signIn('jamie@example.com', { displayName: 'Jamie Park' })
+    let { cookie } = await signIn('jamie@example.com', { displayName: 'Jamie Park', handle: 'jamie_park', isPublic: true })
     let exercise = { course: 'tokens-and-temperature', lesson: 'temperature', exercise: 'moon-tagline', prompt: prompt(4) }
     await runAt(cookie, exercise, [0, 100])
     for (let n = 5; n <= 8; n++) {

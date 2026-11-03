@@ -7,7 +7,7 @@ import { routes } from '../../routes.ts'
 import { LegalPage } from './legal-page.tsx'
 
 /** When this text last changed. Update it with every edit (decision 028). */
-export const PRIVACY_UPDATED = '31 October 2026'
+export const PRIVACY_UPDATED = '2 November 2026'
 
 /**
  * /privacy: what the app stores, who else sees it, and how long it stays.
@@ -128,9 +128,13 @@ export function PrivacyPage(handle: Handle<{ viewer: Viewer | null; analytics: b
 
         <h2>Your public profile</h2>
         <p>
-          Profiles are public by default at <code>/u/your-handle</code>: your name, handle, stats, courses, badges and
-          activity heatmap. Certificates for finished courses are public with it. Your email and your prompt journal are
-          never shown. You can make your profile (and certificates) private in <a href={settings} data-rmx-prefetch={prefetchFor(settings)}>Settings</a>.
+          New accounts are private. Each starts with a made-up handle (like <code>learner_7f3k9q</code>), not one taken
+          from your email or name, and nothing about you is shown to anyone else until you choose to make your profile
+          public in <a href={settings} data-rmx-prefetch={prefetchFor(settings)}>Settings</a>, where you can also change
+          the handle. A public profile at <code>/u/your-handle</code> shows your name, handle, stats, courses, badges and
+          activity heatmap, and certificates for finished courses are public with it. Your email and your prompt journal
+          are never shown. Accounts made before 2 November 2026 started public and keep the setting they have; you can
+          make yours private at any time.
         </p>
 
         <h2>Who else handles your data</h2>

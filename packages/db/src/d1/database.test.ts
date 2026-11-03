@@ -30,16 +30,17 @@ describe('D1 data-table driver', () => {
     })
 
     assert.equal(user.email, 'ada@example.com')
-    assert.equal(user.handle, 'ada_lovelace')
+    // A neutral handle and a private profile, whatever the name (decision 068).
+    assert.match(user.handle, /^learner_[a-z2-9]{6}$/)
     assert.deepEqual(user.goals, ['agents', 'prompting'])
-    assert.equal(user.is_public, true)
+    assert.equal(user.is_public, false)
     assert.equal(user.role, 'learner')
     assert.equal(typeof user.created_at, 'number')
 
     let byId = await findUserById(db, user.id)
     assert.deepEqual(byId, user)
     assert.equal((await findUserByEmail(db, 'ADA@example.com'))?.id, user.id)
-    assert.equal((await findUserByHandle(db, 'Ada_Lovelace'))?.id, user.id)
+    assert.equal((await findUserByHandle(db, user.handle.toUpperCase()))?.id, user.id)
   })
 
   it('enforces unique email', async () => {
@@ -58,8 +59,8 @@ describe('D1 data-table driver', () => {
       user_agent: null,
     })
 
-    let updated = await db.update(users, user.id, { is_public: false, xp_total: 40 })
-    assert.equal(updated.is_public, false)
+    let updated = await db.update(users, user.id, { is_public: true, xp_total: 40 })
+    assert.equal(updated.is_public, true)
     assert.equal(updated.xp_total, 40)
     assert.equal(await db.count(sessions, { where: { user_id: user.id } }), 1)
 
