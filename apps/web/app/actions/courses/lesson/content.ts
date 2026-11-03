@@ -91,6 +91,52 @@ export interface PromptBlock {
   examples: { temperature: number; text: string }[]
   /** Reward copy when every check passes. */
   success: { message: string; nextLabel?: string }
+  /**
+   * Coached prompts (decision 064). Everything below stays on the server:
+   * the browser gets labels only (`exerciseProps`), and the reference only
+   * when the learner asks for it or has passed.
+   */
+  /** `coach`: a judge model grades the `rubric` lines on a live reply. */
+  coach?: boolean
+  /** `gate=false`: passing is optional; "Complete lesson" doesn't wait for it. */
+  gate?: boolean
+  /** `- goal "…"`: shown above the composer as the Goal. */
+  goal?: string
+  /** `- expect "label" <check>`: deterministic checks on the live reply. */
+  expects?: ReplyCheck[]
+  /** `- rubric "label" must|should [on=prompt] [evidence]`. */
+  rubric?: RubricLine[]
+  /** `- hint "…"`, general first: the escalation ladder and the offline hints. */
+  hints?: string[]
+  /** `- reference "…"`: a strong prompt. */
+  reference?: string
+  /** `- document id "…"`: text a `quotes id` expect checks against. */
+  documents?: Record<string, string>
+}
+
+/** `- expect` checks (decision 064), run on a live reply by `app/runs/reply-checks.ts`. */
+export type ReplyCheck = { label: string } & (
+  | { kind: 'json'; keys?: string[]; types?: Record<string, 'string' | 'number' | 'boolean' | 'array' | 'object'> }
+  | { kind: 'words'; max: number }
+  | { kind: 'sentences'; max: number }
+  | { kind: 'one-word' }
+  | { kind: 'oneof'; options: string[] }
+  | { kind: 'tag'; name: string }
+  | { kind: 'cites'; min: number; max: number }
+  | { kind: 'quotes'; document: string }
+  | { kind: 'match'; patterns: { source: string; flags?: string }[] }
+  /** On the prompt, not the reply: at most `max` characters. */
+  | { kind: 'prompt-shorter-than'; max: number }
+)
+
+export interface RubricLine {
+  label: string
+  /** must: decides the pass. should: advice, shown but never failing. */
+  level: 'must' | 'should'
+  /** What the judge reads for this line. */
+  on: 'reply' | 'prompt'
+  /** A `must` met only when the judge quotes the reply verbatim. */
+  evidence: boolean
 }
 
 /** One file of a `:::code` group (adjacent blocks become editor tabs). */

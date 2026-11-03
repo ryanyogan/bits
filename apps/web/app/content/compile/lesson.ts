@@ -39,6 +39,8 @@ import {
   type ProseList,
   type ProseListItem,
   type PromptBlock,
+  type ReplyCheck,
+  type RubricLine,
   type QuizBlock,
   type RabbitHoleBlock,
   type StepsBlock,
@@ -706,7 +708,7 @@ const unquote = (text: string) => text.replace(/\\(.)/g, '$1')
 
 function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats: CompiledLesson['stats']): PromptBlock | undefined {
   let line = node.position?.start.line ?? 1
-  let attrs = attributes(node, ['id', 'xp', 'model', 'temperature', 'temperatures'], report)
+  let attrs = attributes(node, ['id', 'xp', 'model', 'temperature', 'temperatures', 'coach', 'gate'], report)
   let id = attrs.string('id')
   if (!id) report.error(':::prompt needs an id, like :::prompt{id="moon-tagline" xp=40}', line)
   else if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) report.error(`id "${id}" should be lowercase letters, digits and dashes`, line)
@@ -720,6 +722,17 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
   let draft: string | undefined
   let placeholder: string | undefined
   let success: PromptBlock['success'] = { message: 'Every check passes. Nice work.' }
+  // Coached prompts (decision 064).
+  let coach = attrs.flag('coach')
+  let goal: string | undefined
+  let expects: ReplyCheck[] = []
+  let expectLines = 0
+  let rubric: RubricLine[] = []
+  let rubricAt: number[] = []
+  let hints: string[] = []
+  let reference: string | undefined
+  let documents: Record<string, string> = {}
+  let quoted: { id: string; at: number }[] = []
 
   body.lines.forEach((raw, i) => {
     let at = body.first + i
@@ -797,12 +810,93 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
         if (match[2]) success.nextLabel = unquote(match[2])
         return
       }
+      case 'expect': {
+        expectLines++
+        let parsed = parseExpect(rest)
+        if (typeof parsed === 'string') {
+          report.error(parsed, at)
+          return
+        }
+        if (parsed.kind === 'quotes') quoted.push({ id: parsed.document, at })
+        let existing = parsed.kind === 'match' ? expects.find((check) => check.kind === 'match' && check.label === parsed.label) : undefined
+        if (existing?.kind === 'match' && parsed.kind === 'match') existing.patterns.push(...parsed.patterns)
+        else expects.push(parsed)
+        return
+      }
+      case 'rubric': {
+        let match = new RegExp(`^${QUOTED}\\s+(must|should)((?:\\s+(?:on=(?:reply|prompt)|evidence))*)\\s*$`).exec(rest)
+        if (!match) {
+          report.error('rubric lines look like: - rubric "Answers for Tuesday, from the rota" must evidence (must or should; then on=prompt or evidence, optional)', at)
+          return
+        }
+        let [, label = '', level, flags = ''] = match
+        let line: RubricLine = {
+          label: unquote(label),
+          level: level as RubricLine['level'],
+          on: /on=prompt/.test(flags) ? 'prompt' : 'reply',
+          evidence: /\bevidence\b/.test(flags),
+        }
+        if (!line.label.trim() || line.label.length > MAX_LABEL) {
+          report.error(`rubric labels are 1–${MAX_LABEL} characters`, at)
+          return
+        }
+        if (line.evidence && line.on === 'prompt') {
+          report.error('evidence quotes the reply, so it can’t go with on=prompt: drop one', at)
+          return
+        }
+        rubric.push(line)
+        rubricAt.push(at)
+        return
+      }
+      case 'goal':
+      case 'hint':
+      case 'reference': {
+        let match = new RegExp(`^${QUOTED}$`).exec(rest)
+        if (!match) {
+          report.error(`${keyword} lines look like: - ${keyword} "…"`, at)
+          return
+        }
+        let text = keyword === 'reference' ? unescapeText(match[1]!) : unquote(match[1]!)
+        let max = keyword === 'reference' ? MAX_REFERENCE : keyword === 'goal' ? MAX_GOAL : MAX_HINT
+        if (!text.trim() || text.length > max) {
+          report.error(`a ${keyword} is 1–${max} characters`, at)
+          return
+        }
+        if (keyword === 'goal') goal = text
+        else if (keyword === 'reference') reference = text
+        else hints.push(text)
+        return
+      }
+      case 'document': {
+        let match = new RegExp(`^([a-z0-9][a-z0-9-]*)\\s+${QUOTED}$`).exec(rest)
+        if (!match) {
+          report.error('document lines look like: - document policy "Refunds within 30 days…" (an id, then the text)', at)
+          return
+        }
+        let text = unescapeText(match[2]!)
+        if (documents[match[1]!] !== undefined) report.error(`document "${match[1]}" is defined twice`, at)
+        else if (text.length > MAX_DOCUMENT) report.error(`a document is at most ${MAX_DOCUMENT} characters`, at)
+        else documents[match[1]!] = text
+        return
+      }
       default:
-        report.error(`unknown prompt line "- ${keyword}" (use check, run, example, draft, placeholder or success)`, at)
+        report.error(
+          `unknown prompt line "- ${keyword}" (use check, run, example, draft, placeholder, success, goal, expect, rubric, hint, reference or document)`,
+          at,
+        )
     }
   })
 
-  if (!checkLines) report.error(':::prompt has no - check lines', line)
+  if (!checkLines && !expectLines) report.error(':::prompt needs a - check or - expect line (every exercise needs a deterministic check)', line)
+  if (expectLines > MAX_EXPECTS) report.error(`:::prompt has ${expectLines} expect lines (at most ${MAX_EXPECTS})`, line)
+  if (rubric.length > MAX_RUBRIC) report.error(`:::prompt has ${rubric.length} rubric lines (at most ${MAX_RUBRIC})`, rubricAt[MAX_RUBRIC] ?? line)
+  if (rubric.length && !coach) report.error('rubric lines need a judge: add coach to the block, like :::prompt{id="on-call" coach}', rubricAt[0] ?? line)
+  if (coach && !rubric.length) report.error(':::prompt{coach} needs at least one - rubric line for the coach to judge', line)
+  if (coach && !hints.length) report.error(':::prompt{coach} needs at least one - hint (shown when the coach is offline)', line)
+  if (hints.length > MAX_HINTS) report.error(`:::prompt has ${hints.length} hints (at most ${MAX_HINTS})`, line)
+  for (let ref of quoted) {
+    if (documents[ref.id] === undefined) report.error(`quotes ${ref.id} names no document: add - document ${ref.id} "…"`, ref.at)
+  }
   let taskText = stripMarkdown(task.join(' '))
   if (!taskText) report.error(':::prompt needs the task text (what the learner should write)', line)
 
@@ -834,7 +928,91 @@ function compilePrompt(node: Directive, body: RawBody, report: FileReport, stats
   if (placeholder) block.placeholder = placeholder
   if (draft) block.draft = draft
   if (run) block.run = run
+  if (coach) block.coach = true
+  if (!attrs.flag('gate', true)) block.gate = false
+  if (goal) block.goal = goal
+  if (expects.length) block.expects = expects
+  if (rubric.length) block.rubric = rubric
+  if (hints.length) block.hints = hints
+  if (reference) block.reference = reference
+  if (Object.keys(documents).length) block.documents = documents
   return block
+}
+
+const MAX_EXPECTS = 8
+const MAX_RUBRIC = 6
+const MAX_HINTS = 5
+const MAX_LABEL = 120
+const MAX_GOAL = 240
+const MAX_HINT = 240
+const MAX_REFERENCE = 2000
+const MAX_DOCUMENT = 4000
+const MAX_COUNT = 400
+const JSON_TYPES = new Set(['string', 'number', 'boolean', 'array', 'object'])
+
+/**
+ * One `- expect "label" <check>` line (decision 064), or the problem with it.
+ * The checks run on the live reply on the server (app/runs/reply-checks.ts).
+ */
+function parseExpect(rest: string): ReplyCheck | string {
+  let head = new RegExp(`^${QUOTED}\\s+(.+)$`).exec(rest)
+  let usage =
+    'expect lines look like: - expect "Short" words<=40 (or json [keys=a,b] [types=a:number], sentences<=N, one-word, oneof "a|b", tag name, cites 1-3, quotes doc-id, match /re/i, prompt-shorter-than N)'
+  if (!head) return usage
+  let label = unquote(head[1]!)
+  if (!label.trim() || label.length > MAX_LABEL) return `expect labels are 1–${MAX_LABEL} characters`
+  let spec = head[2]!.trim()
+  let count = (n: string) => {
+    let value = Number(n)
+    return Number.isInteger(value) && value >= 1 && value <= MAX_COUNT ? value : undefined
+  }
+  let m: RegExpExecArray | null
+  if ((m = /^json(?:\s+keys=([\w-]+(?:,[\w-]+)*))?(?:\s+types=([\w-]+:\w+(?:,[\w-]+:\w+)*))?$/.exec(spec))) {
+    let check: ReplyCheck = { label, kind: 'json' }
+    if (m[1]) check.keys = m[1].split(',')
+    if (m[2]) {
+      let types: NonNullable<typeof check.types> = {}
+      for (let pair of m[2].split(',')) {
+        let [key, type] = pair.split(':') as [string, string]
+        if (!JSON_TYPES.has(type)) return `types=${key}:${type}: use string, number, boolean, array or object`
+        types[key] = type as 'string' | 'number' | 'boolean' | 'array' | 'object'
+      }
+      check.types = types
+    }
+    return check
+  }
+  if ((m = /^(words|sentences)\s*<=\s*(\d+)$/.exec(spec))) {
+    let max = count(m[2]!)
+    return max ? { label, kind: m[1] as 'words' | 'sentences', max } : `${m[1]}<=N takes a whole number from 1 to ${MAX_COUNT}`
+  }
+  if (spec === 'one-word') return { label, kind: 'one-word' }
+  if ((m = new RegExp(`^oneof\\s+${QUOTED}$`).exec(spec))) {
+    let options = unquote(m[1]!)
+      .split('|')
+      .map((option) => option.trim())
+      .filter(Boolean)
+    return options.length >= 2 ? { label, kind: 'oneof', options } : 'oneof lists two or more options: oneof "billing|bug|other"'
+  }
+  if ((m = /^tag\s+([a-z][\w-]*)$/i.exec(spec))) return { label, kind: 'tag', name: m[1]! }
+  if ((m = /^cites\s+(\d+)\s*-\s*(\d+)$/.exec(spec))) {
+    let min = count(m[1]!)
+    let max = count(m[2]!)
+    return min && max && min <= max ? { label, kind: 'cites', min, max } : 'cites takes a passage range, like cites 1-3'
+  }
+  if ((m = /^quotes\s+([a-z0-9][a-z0-9-]*)$/.exec(spec))) return { label, kind: 'quotes', document: m[1]! }
+  if ((m = /^prompt-shorter-than\s+(\d+)$/.exec(spec))) {
+    let max = Number(m[1])
+    return Number.isInteger(max) && max >= 1 && max <= 4000
+      ? { label, kind: 'prompt-shorter-than', max }
+      : 'prompt-shorter-than takes a character count from 1 to 4000'
+  }
+  if ((m = /^match\s+\/(.*)\/([a-z]*)$/.exec(spec))) {
+    let [, source = '', flags = ''] = m
+    let problem = checkPattern(source, flags)
+    if (problem) return `expect “${label}”: /${source}/ ${problem}`
+    return { label, kind: 'match', patterns: [flags ? { source, flags } : { source }] }
+  }
+  return usage
 }
 
 function validTemperature(t: number) {
