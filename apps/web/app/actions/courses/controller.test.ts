@@ -16,7 +16,7 @@ let catalog: Catalog
 let courses: readonly CourseManifest[] = []
 // A passing answer for each gated block of What is an LLM (prompts also need a run at T=1.0).
 const LLM_LESSONS: { lesson: string; prompt?: [id: string, text: string]; quiz?: [id: string, key: string] }[] = [
-  { lesson: 'say-hi-to-claude', prompt: ['say-hi', 'Hi Claude, what are you? Explain in one sentence.'] },
+  { lesson: 'say-hi-to-claude', prompt: ['say-hi', 'Hi Claude! In two short sentences: what are you, and what is one thing you cannot do?'] },
   { lesson: 'a-very-good-next-word-guesser', prompt: ['finish-the-sentence', 'Finish this sentence with one word: The sky is ...'] },
   { lesson: 'words-become-tokens', prompt: ['spell-it-out', 'Spell strawberry letter by letter, then count the r letters.'] },
   { lesson: 'where-it-learned-pretraining', quiz: ['what-pretraining-practises', 'a'] },
