@@ -103,7 +103,7 @@ Give Claude a role, an audience and a tone, then ask your question
 - check "Sets a tone"          /patient|friendly|playful|blunt|\bplain\b|simple|jargon|encouraging|warm|casual|gentle|\bclear\b|\bfun\b|tone/i
 - check "Asks the question"    /\bapi\b/i
 - rubric "Explains what an API is, correctly" must
-- rubric "Pitched at the audience you named (their words, their examples)" must
+- rubric "Pitched at the audience you named, in words and comparisons they would know" must
 - rubric "Sounds like the role and tone you set" should
 - hint "Would the person you named understand every word of the reply? Which one would lose them?"
 - hint "Make the audience concrete: “a 10-year-old”, “my manager who doesn't code”."

@@ -99,9 +99,9 @@ Write the review step: the draft in tags, your criteria, problems in <review> ta
 - hint "Give two or three plain criteria, like “no jargon” and “says how to turn it on”."
 - reference "<draft>We are thrilled to announce that, leveraging our cutting-edge theming infrastructure, we have shipped a paradigm-shifting dark mode experience that synergistically reduces ocular strain across every surface of the platform for all stakeholders.</draft>\n\nCheck the draft against these criteria: plain words with no jargon, under 30 words, says how a user turns it on. List the problems in <review> tags. Don't rewrite it."
 - run temperature=[1.0]
-- example T=1.0 "<review>1. Jargon: leveraging, paradigm-shifting, synergistically, stakeholders. 2. Never says when it ships. 3. Doesn't say how to turn it on.</review>"
-- example T=1.0 "<review>Too much jargon (cutting-edge theming infrastructure, synergistically). Missing the launch date. Says nothing users can act on.</review>"
-- example T=1.0 "<review>Problems: no date; jargon in nearly every phrase; one long sentence that's hard to read.</review>"
+- example T=1.0 "<review>1. Jargon: leveraging, paradigm-shifting, synergistically, stakeholders. 2. 33 words, over the 30-word limit. 3. Doesn't say how to turn it on.</review>"
+- example T=1.0 "<review>Too much jargon (cutting-edge theming infrastructure, synergistically). Runs to 33 words, over the limit. Never says how a user turns dark mode on.</review>"
+- example T=1.0 "<review>Problems: jargon in nearly every phrase; 33 words, so over 30; nothing tells users how to turn it on.</review>"
 - success "That's the middle link of a chain. Feed this review back in, and the refine step knows exactly what to fix." next="Next: test your prompt →"
 :::
 Want to finish the chain by hand? Copy Claude's review, then write a third

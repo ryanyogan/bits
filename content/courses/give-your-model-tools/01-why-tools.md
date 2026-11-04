@@ -89,6 +89,7 @@ Ask Claude for live information, and let it say it can't check
 - rubric "Says plainly that it can't see live data" must evidence
 - rubric "Doesn't present a current reading as fact, such as today's temperature" must
 - rubric "Points to where the live answer can be found" should
+- rubric "The prompt gives Claude permission to say it can't check, instead of guessing" must on=prompt
 - hint "Claude's knowledge stops at its training. Is your question about something that changes by the minute?"
 - hint "Give Claude permission to say it doesn't know. Without it, a model may offer its best guess."
 - reference "What's the weather in Lisbon right now? If you can't check live data, say so plainly and don't guess."
