@@ -99,13 +99,20 @@ export async function upsertChunks(env: Env, rows: ChunkRow[]) {
 }
 :::
 
-- `embed` sends up to 100 texts in one Workers AI call.
+- `embed` sends a batch of texts in one Workers AI call. A source has at most 50 chunks, so that is one call per source.
 - Each vector's id is `chunk-<D1 id>`, so a match leads back to its row.
 - `metadata.owner` is the wall between people. Every search will filter
   on it.
 - `upsert`, not `insert`: a retried step overwrites instead of failing.
 
 ### 4. A step in the Workflow
+
+Import the new helper and type at the top of `workflow.ts`, under the
+other imports:
+
+:::code{file="apps/agent/src/ingest/workflow.ts" lang="ts" tag="e-04" label="apps/agent/src/ingest/workflow.ts"}
+import { type ChunkRow, upsertChunks } from '../retrieval/vectors';
+:::
 
 After `'chunk'`, read the chunks back and embed them, with retries:
 

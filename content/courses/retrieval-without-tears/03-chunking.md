@@ -3,7 +3,7 @@
 # - Workers AI, @cf/baai/bge-base-en-v1.5 (max 512 input tokens)
 #   https://developers.cloudflare.com/workers-ai/models/bge-base-en-v1.5/
 # - Anthropic, Introducing Contextual Retrieval (chunks lose their context; small chunks, a few hundred tokens)
-#   https://www.anthropic.com/engineering/contextual-retrieval
+#   https://www.anthropic.com/research/contextual-retrieval
 # - Cloudflare D1, batch() (statements run in one transaction)
 #   https://developers.cloudflare.com/d1/worker-api/d1-database/#batch
 # - Klippy e-02 → e-03, recorded output docs/outputs/e-03.txt (2026-11-03).
@@ -62,6 +62,7 @@ export function chunk(markdown: string): string[] {
 	}
 	if (current) chunks.push(current);
 	return chunks;
+}
 :::
 
 - Split on blank lines to get paragraphs. A paragraph longer than 1,200
@@ -112,10 +113,30 @@ The cap, 50 chunks, keeps one huge page from running up the bill later.
 
 ### 4. A step in the Workflow
 
-In `workflow.ts`, keep the text in `body` (a fetched link replaces it with
-the page), then add the step before `'ready'`:
+In `workflow.ts`, import the two new functions. The imports now read
+(`chunk` and `saveChunks` are new):
 
-:::code{file="apps/agent/src/ingest/workflow.ts" lang="ts" tag="e-03" highlight="2" label="apps/agent/src/ingest/workflow.ts"}
+:::code{file="apps/agent/src/ingest/workflow.ts" lang="ts" tag="e-03" label="apps/agent/src/ingest/workflow.ts"}
+import { chunk } from './chunk';
+import { readLinkAsMarkdown } from './read';
+import { saveChunks } from './sources';
+:::
+
+Then keep the text in `body` (a fetched link replaces it with the page),
+and add the step before `'ready'`. The `try` block becomes:
+
+:::code{file="apps/agent/src/ingest/workflow.ts" lang="ts" tag="e-03" highlight="12-13" label="apps/agent/src/ingest/workflow.ts"}
+		try {
+			// A link is fetched and turned into Markdown. A note or a file already has its text.
+			let body = source.body ?? '';
+			if (source.kind === 'link' && source.url) {
+				// Websites fail now and then: try 3 more times, waiting 5 s, then 10 s, then 20 s.
+				const page = await step.do('fetch', { retries: { limit: 3, delay: '5 seconds', backoff: 'exponential' }, timeout: '1 minute' }, () =>
+					readLinkAsMarkdown(this.env, source.url!),
+				);
+				await step.do('store', () => db.update(sources, sourceId, { title: page.title.slice(0, 200), body: page.body }));
+				body = page.body;
+			}
 			// Cut the text into chunks and save them, each with its source and position.
 			const count = await step.do('chunk', () => saveChunks(this.env.DB, source, chunk(body)));
 			await step.do('ready', () => db.update(sources, sourceId, { status: 'ready' }));
@@ -132,6 +153,9 @@ Markdown:
 :::terminal{cmd="curl -s -X POST -H &quot;Authorization: Bearer $T&quot; -F &quot;file=@docs/ui-brief.md;type=text/markdown&quot; http://localhost:8801/agents/klippy/me/file"}
 {"id":3,"title":"ui-brief.md","status":"queued"}
 :::
+
+Then count its chunks. We had `wrangler` on our PATH; if you don't, run
+the same command as `pnpm exec wrangler …` in `apps/agent`:
 
 :::terminal{cmd="wrangler d1 execute DB --local --json --command &quot;SELECT s.id, s.title, s.status, count(c.id) AS chunks, max(length(c.text)) AS longest, min(length(c.text)) AS shortest FROM sources s LEFT JOIN chunks c ON c.source_id = s.id WHERE s.title = 'ui-brief.md' GROUP BY s.id&quot;"}
 {"id":3,"title":"ui-brief.md","status":"ready",[volt]"chunks":10[text],"longest":1004,"shortest":108}
@@ -176,6 +200,6 @@ Your code matches tag `e-03`
 ([changes from e-02](https://github.com/ryanyogan/klippy/compare/e-02...e-03)).
 
 :::rabbithole
-- read "Introducing Contextual Retrieval" by="Anthropic" url="https://www.anthropic.com/engineering/contextual-retrieval"
+- read "Introducing Contextual Retrieval" by="Anthropic" url="https://www.anthropic.com/research/contextual-retrieval"
 - read "bge-base-en-v1.5" by="Cloudflare Workers AI" url="https://developers.cloudflare.com/workers-ai/models/bge-base-en-v1.5/"
 :::
