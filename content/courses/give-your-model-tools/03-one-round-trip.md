@@ -60,6 +60,10 @@ happen.
 (Older examples use `onStepFinish`. In `ai` 7 that's a deprecated alias of
 `onStepEnd`.)
 
+This log prints what was asked and answered, which is handy while you learn.
+In "Ship an agent to the edge" (tag f-04), Klippy's logs keep only the shape
+of each step (tool names, tokens, time), never the content.
+
 ### 2. Watch it
 
 Ask about the weather again, then look at the terminal running `pnpm dev`.

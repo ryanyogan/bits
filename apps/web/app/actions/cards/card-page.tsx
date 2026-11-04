@@ -8,7 +8,7 @@ import { HexBadge } from '@bits/ui/hex-badge'
 import { platform } from '#platform'
 
 import { APP_NAME, APP_TAGLINE, APP_TITLE } from '../../config.ts'
-import type { CourseDetail } from '../../content/types.ts'
+import { isComingSoon, type CourseDetail } from '../../content/types.ts'
 
 export type CardContent =
   | { kind: 'home' }
@@ -105,7 +105,9 @@ function CourseText(handle: Handle<{ card: Exclude<CardContent, { kind: 'home' }
         <p mix={leadStyle}>
           {certificate
             ? `Every lesson finished on ${APP_TITLE}.`
-            : `${course.lessons} lessons · ~${course.mins} min · free on ${APP_TITLE}`}
+            : isComingSoon(course)
+              ? `Coming soon · free on ${APP_TITLE}`
+              : `${course.lessons} lessons · ~${course.mins} min · free on ${APP_TITLE}`}
         </p>
       </div>
     )
