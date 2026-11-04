@@ -16,7 +16,7 @@ function count(html: string, pattern: RegExp) {
 }
 
 let temperature = { course: 'tokens-and-temperature', lesson: 'temperature' }
-let theLoop = { course: 'first-agent-loop', lesson: 'the-loop' }
+let theLoop = { course: 'first-agent-loop', lesson: 'write-the-loop-by-hand' }
 
 function lessonHref(params: { course: string; lesson: string }, query = '') {
   return routes.courses.lesson.index.href(params) + query
@@ -84,7 +84,7 @@ describe('lesson page and author preview', () => {
     for (let mode of ['terminal', 'watch', 'read', 'nonsense']) {
       let { status, html } = await page(lessonHref(theLoop, `?mode=${mode}`))
       assert.equal(status, 200)
-      assert.match(html, /aria-label="Code editor"|agent\.ts/)
+      assert.match(html, /aria-label="Code editor"|loop\.ts/)
       assert.match(html, /<main id="main"/)
     }
     let watch = await page(lessonHref(temperature, '?mode=watch'))
@@ -95,8 +95,8 @@ describe('lesson page and author preview', () => {
   it('renders a code lesson in the one view: the editor and its Run output inline', async () => {
     let { status, html } = await page(lessonHref(theLoop))
     assert.equal(status, 200)
-    assert.match(html, /agent\.ts/)
-    assert.match(html, /npx tsx agent\.ts/)
+    assert.match(html, /loop\.ts/)
+    assert.match(html, /pnpm loop/)
   })
 
   it('gates "lesson complete" until the checks pass', async () => {

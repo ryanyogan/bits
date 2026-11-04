@@ -3,11 +3,14 @@ title: Your first agent loop
 track: agents
 level: intermediate
 order: 70
-summary: Plan, act, observe, repeat. Write the 30 lines of code every agent is built on.
+repo: https://github.com/ryanyogan/klippy
+summary: "Turn Klippy into an agent: one per person, a chat in your terminal, a memory, approvals and reminders."
 outcomes:
-  - Explain the plan → act → observe loop in your own words.
-  - Write a working tool-calling loop in about 30 lines.
-  - Debug a loop that never ends, and put limits and logs on it.
+  - Write the tool-calling loop by hand once, and know what stopWhen does for you.
+  - Give each person their own agent, with its own stored chat, on a Durable Object.
+  - Talk to it from your terminal over one WebSocket, with replies that stream.
+  - Add long-term memory, approvals before writes, and limits that stop runaway loops.
+  - Let it act unasked, on a schedule, without giving those turns any tools.
 cover:
   pattern: rays
   sigil: loop
@@ -16,12 +19,11 @@ badge:
   id: first-agent-loop
   name: Loop Closer
   glyph: ↻
-authors:
-  - Dev Arora
-intro: Watch the 2-minute intro
-exercise: finish the loop so it feeds each tool result back to the model until it stops asking.
+exercise: write the message a reminder sends to the model, so it speaks and does nothing else.
 ---
 
-Plan, act, observe, repeat. You'll write the thirty lines of code every agent
-is built on, give it many tools, learn to stop a loop that never ends, and
-finish with a weather agent you can chat with.
+Plan, act, observe, repeat. Starting from the Klippy you gave tools in
+Give your model tools, you'll write the loop by hand once, then make Klippy
+a real agent: one per person, a chat in your terminal, a memory that
+outlives the chat, approvals before it writes, limits that stop a runaway
+loop, and reminders it sends on its own. Then ship it for bits to check.

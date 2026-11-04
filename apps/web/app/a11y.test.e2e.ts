@@ -130,7 +130,7 @@ const publicPages: Array<{ name: string; href: string; ready?: (page: Page) => P
   { name: 'lesson read: compare', href: lesson('tokens-and-temperature', 'greedy-vs-sampled') },
   { name: 'lesson read: tokenizer + quiz', href: lesson('tokens-and-temperature', 'what-is-a-token') },
   { name: 'lesson read: video + odds', href: lesson('tokens-and-temperature', 'temperature') },
-  { name: 'lesson read: code', href: lesson('first-agent-loop', 'the-loop') },
+  { name: 'lesson read: code', href: lesson('first-agent-loop', 'write-the-loop-by-hand') },
   { name: 'lesson read: composer', href: lesson('what-is-an-llm', 'say-hi-to-claude') },
   // Course metadata (decision 073): a coming-soon course and its lesson 404,
   // and a build-along lesson with the freshness line, the Desk tag and the start-from-tag sample.
@@ -233,7 +233,7 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     await page.getByRole('textbox').first().focus()
     await expectClean(page, 'composer field focused')
 
-    await page.goto(lesson('first-agent-loop', 'the-loop'))
+    await page.goto(lesson('first-agent-loop', 'write-the-loop-by-hand'))
     await settled(page)
     await page.getByRole('button', { name: /Type it/ }).first().click()
     await page.keyboard.type('import Anth')
@@ -408,14 +408,14 @@ describe('accessibility (axe, 360 and 1440, dark and light)', () => {
     // Measured on body: html clips sideways overflow and reserves the
     // scrollbar gutter (decision 049), so the root's own widths never show it.
     let overflow = () => page.evaluate(() => document.body.scrollWidth - document.body.clientWidth)
-    for (let href of [lesson('first-agent-loop', 'the-loop'), lesson('tokens-and-temperature', 'temperature')]) {
+    for (let href of [lesson('first-agent-loop', 'write-the-loop-by-hand'), lesson('tokens-and-temperature', 'temperature')]) {
       await page.goto(href)
       await settled(page)
       assert.equal(await overflow(), 0, `${href}: no sideways page scroll`)
     }
 
     // Type mode: a long typed line scrolls inside the editor, not the page.
-    await page.goto(lesson('first-agent-loop', 'the-loop'))
+    await page.goto(lesson('first-agent-loop', 'write-the-loop-by-hand'))
     await settled(page)
     await page.getByRole('button', { name: /Type it/ }).first().click()
     await page.getByRole('textbox', { name: /^Type / }).fill(`import Anthropic from "@anthropic-ai/sdk"\n\n${'x'.repeat(200)}`)
