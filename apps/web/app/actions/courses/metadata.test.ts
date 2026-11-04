@@ -80,6 +80,7 @@ describe('course metadata (decision 073)', () => {
       'your-first-worker',
       'give-your-model-tools',
       'first-agent-loop',
+      'build-the-front-end-with-agents',
       'retrieval-without-tears',
       'ship-an-agent-to-the-edge',
     ]
