@@ -8,8 +8,12 @@
 #   https://developers.cloudflare.com/ai-gateway/observability/custom-metadata/
 # - Cloudflare AI Gateway, Spend limits (cost budgets that block requests once spent, scoped by model,
 #   provider or custom metadata, split by value; Settings > Spend limits; over budget = 429 before
-#   the provider is called; changelog 2026-06-05)
+#   the provider is called; changelog 2026-06-05). Rechecked 2026-11-03 (maxAge 0): BYOK and Unified
+#   Billing "for models with known pricing"; cost "recorded after completion, so a burst of concurrent
+#   requests can briefly exceed the limit"; "Cost tracking is a best-effort estimation".
 #   https://developers.cloudflare.com/ai-gateway/features/spend-limits/
+# - Cloudflare Billing changelog: usage is processed once a day, so budget alerts fire the day after
+#   https://developers.cloudflare.com/changelog/product/billing/
 # - agents 0.33.0, installed docs/models.md "Options" (createAI: metadata, cacheKey, cacheTtl)
 # - Klippy f-01 → f-02, recorded output docs/outputs/f-02.txt (2026-11-03). Every probe answer came
 #   from the Workers AI fallback (@cf/zai-org/glm-4.7-flash): there's no Anthropic key on the recording
@@ -73,8 +77,33 @@ A chat turn says whose Klippy is talking (`gh-<id>` from the web app):
 			model: model(this.env, { route: 'chat', user: this.name }), // labelled with whose Klippy it is, in the gateway's logs
 :::
 
-`/ask` passes `route: 'ask'`, the note tidier `route: 'note'`, and the
-ingest step that writes context `route: 'context'`.
+For that to compile, `model()` takes the `Call` (with `/ask`'s as the
+default), and the ingest step's `contextModel()` labels itself:
+
+:::code{file="apps/agent/src/model.ts" lang="ts" tag="f-02" label="apps/agent/src/model.ts"}
+export function model(env: Env, call: Call = { route: 'ask' }) {
+	const ai = gateway(env, call);
+...
+export function contextModel(env: Env) {
+	const ai = gateway(env, { route: 'context' });
+:::
+
+`ask()` takes a `Call` too and passes it on, so the check below can label
+(and cache) its probe:
+
+:::code{file="apps/agent/src/ask.ts" lang="ts" tag="f-02" label="apps/agent/src/ask.ts"}
+import { model, type Call } from './model';
+...
+export async function ask(env: Env, question: string, tools: ToolSet = allTools(env, question), call: Call = { route: 'ask' }) {
+	const { text, providerMetadata } = await generateText({
+		model: model(env, call),
+:::
+
+And the note tidier says what it is:
+
+:::code{file="apps/agent/src/note.ts" lang="ts" tag="f-02" label="apps/agent/src/note.ts"}
+		model: model(env, { route: 'note' }),
+:::
 
 ### 2. Caching needs a key
 
@@ -137,8 +166,11 @@ then **Settings → Spend limits.** A rule is a dollar budget over a time
 window. Before each request, the gateway checks every rule, and once one is
 spent it answers 429 instead of calling the provider. Add one for the whole
 gateway, and one by the `user` metadata, split by value, so each Klippy
-gets its own budget. Budget alerts under Billing also email you, but they
-fire the next day, so they're no brake. We haven't set limits on
+gets its own budget. Know its limits, from Cloudflare's docs: a request's
+cost is recorded after it completes, so a burst of requests at once can go
+briefly over. Cost is a best-effort estimate from token counts. And only
+models with known pricing count. Budget alerts under Billing also email
+you, but they fire the next day, so they're no brake. We haven't set limits on
 the recording account. Do it before you deploy.
 
 :::quiz{id="gateway-cache" xp=20}

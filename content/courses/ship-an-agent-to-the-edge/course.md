@@ -8,7 +8,7 @@ summary: "Put Klippy into production: no side door, a gateway that labels and ca
 outcomes:
   - "Close the agent's public address (workers.dev and preview URLs) so the only way in is your signed-in web app."
   - "Label every model call for AI Gateway, and cache only what's the same for everyone, by key."
-  - "Stop bursts with per-user rate limits, and cap spending with an exact daily token budget that charges before each call."
+  - "Stop bursts with per-user rate limits, and cap spending with a daily token budget that charges before each call."
   - "Log each turn's shape as one JSON line, never its content, and query it."
   - "Prove with a test that a model which obeys a planted instruction still can't write or send data out."
   - "Deploy from CI in the right order, and preview pull requests without touching your data."

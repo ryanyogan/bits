@@ -35,11 +35,36 @@ nothing a user wrote in it.
 Lesson 3 charged a turn in `onFinish`, which never runs for a turn that's
 cancelled or fails. The simple fix is to charge each step when it ends.
 That still loses the step that's cancelled, and a one-step turn is all one
-step. So we cancel every reply just before it ends, and the budget still
-sees nothing.
+step. So a client that cancels every reply just before it ends would still
+spend tokens the budget never sees.
 
 The fix is **reserve and settle**: charge an estimate before each model
-call, then correct it to the real count when the call reports. First the
+call, then correct it to the real count when the call reports. First a
+rough count in `budget.ts`:
+
+:::code{file="apps/agent/src/budget.ts" lang="ts" tag="f-04" label="apps/agent/src/budget.ts"}
+// A rough count for text the model hasn't seen yet: about 4 characters a token in English.
+export function estimateTokens(text: string) {
+	return Math.ceil(text.length / 4);
+}
+:::
+
+In `agent.ts`, import it with the log helpers from step 2, and give the
+reply cap a name, since the estimate needs it too:
+
+:::code{file="apps/agent/src/agent.ts" lang="ts" tag="f-04" label="apps/agent/src/agent.ts"}
+import { dailyBudget, estimateTokens, spend, tokensToday } from './budget';
+...
+import { logRefused, logTurn } from './log';
+...
+// The cap on each step's reply (see /ask): a hard limit on what one model call can write.
+const MAX_OUTPUT = 300;
+:::
+
+The estimate needs the system prompt and the messages before
+`streamText` is called, so move them out of it, into `const system = [...]`
+and `const messages = await convertToModelMessages(...)`. Then pass
+`system`, `messages` and `maxOutputTokens: MAX_OUTPUT` back in. Now the
 estimate, from what the call sends plus the reply cap:
 
 :::code{file="apps/agent/src/agent.ts" lang="ts" tag="f-04" highlight="2" label="apps/agent/src/agent.ts"}
@@ -105,7 +130,21 @@ ended, which tools by name, how many failed, tokens, which model, how long.
 No message text, no tool inputs or outputs (they hold notes and pages), no
 URLs, no tokens. The Klippy's name is the only id. `logTurn` runs from
 `onFinish` and `onAbort` (in step 1's code), and `logRefused` runs before
-each refusal: too long, rate limit, budget.
+each refusal: too long, rate limit, budget. `started` is set at the top of
+the turn:
+
+:::code{file="apps/agent/src/agent.ts" lang="ts" tag="f-04" label="apps/agent/src/agent.ts"}
+		const started = Date.now();
+...
+		if (question.length > MAX_QUESTION) {
+			logRefused(this.name, 'too-long');
+...
+		if (!(await underLimit(this.env, `chat:${this.name}`))) {
+			logRefused(this.name, 'rate-limit');
+...
+		if (tokensToday(this) >= dailyBudget(this.env)) {
+			logRefused(this.name, 'budget');
+:::
 
 The same rule reaches back to course B: **b-03's step log now records shape
 only.** It logged tool inputs, results and the answer, which is fine on
@@ -140,16 +179,27 @@ Ours: 24 test files, 106 tests passed.
 `wrangler dev` keeps the logs it captured and answers SQL over them, a
 local stand-in for the dashboard. Two turns (the Workers AI fallback
 answered, not Claude). The first message told Klippy a secret word,
-"swordfish", and the second asked the time. Then, per Klippy:
+"swordfish", and the second asked the time. The SQL has quotes inside
+quotes, so send it from a here-doc. Tokens per Klippy:
 
-:::terminal{cmd="curl -s -X POST localhost:8801/cdn-cgi/local/explorer/api/local/observability/query -d '{\"sql\": \"…tokens per agent…\"}'"}
+```sh
+curl -s -X POST localhost:8801/cdn-cgi/local/explorer/api/local/observability/query -d @- <<'EOF'
+{"sql": "SELECT json_extract(message, '$[0].agent') AS agent, count(*) AS turns, sum(json_extract(message, '$[0].tokens.total')) AS tokens, max(json_extract(message, '$[0].ms')) AS slowest_ms FROM logs WHERE json_extract(message, '$[0].event') = 'turn' GROUP BY agent ORDER BY tokens DESC"}
+EOF
+```
+
+Each row's `message` holds the logged object inside a JSON array, hence
+`$[0]`. (We wrote this here-doc form for the lesson; our recording sent the
+same SQL inline.) The labels on the blocks below shorten the SQL:
+
+:::terminal{cmd="… tokens per agent …"}
 ['agent', 'turns', 'tokens', 'slowest_ms']
 ['f04-logs-28742', 2, 7117, 7206]
 :::
 
-One of the two lines, whole:
+One of the two lines, whole (taken out of its `['[…]']` row wrapper):
 
-:::terminal{cmd="… WHERE event = 'turn'"}
+:::terminal{cmd="… SELECT message FROM logs WHERE json_extract(message, '$[0].event') = 'turn' …"}
 {"event":"turn","agent":"f04-logs-28742","steps":2,"finish":"stop",[volt]"tools":["remember"][text],"toolErrors":0,"tokens":{"input":3442,"output":35,"cached":0,"total":3477},"model":"@cf/zai-org/glm-4.7-flash","ms":7206}
 :::
 
