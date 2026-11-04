@@ -34,7 +34,7 @@ The only code change: bits reads the tag from `/klippy/check`. In
 export const TAG = 'c-09';
 :::
 
-Run `pnpm test`: all 64 tests should pass.
+Run `pnpm test`: all 64 tests should pass. If the rate-limit test fails once, run it again: it counts in 60-second windows, and a run that crosses a window boundary can miss its 429 (fixed on Klippy's `main`).
 
 ### 2. The tour
 
