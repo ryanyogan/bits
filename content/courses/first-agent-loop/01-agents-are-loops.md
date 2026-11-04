@@ -8,13 +8,22 @@
 #   LLM picks the next tool)
 #   https://www.aihero.dev/what-is-an-agent
 # - bits app/runs/model.ts (the sandbox sends one user message and no tools)
+# - Klippy c-01: no code change from b-09 (docs/outputs/c-01.txt, 2026-11-03)
 # Toy: the compare rows are illustrative.
 title: "Agents are loops"
 order: 1
 minutes: 6
 xp: 40
 module: What an agent is
+tag: c-01
 ---
+
+This course turns Klippy, the assistant you gave tools in
+[Give your model tools](/courses/give-your-model-tools), into an agent: one
+Klippy per person, with a memory, a chat in your terminal, approvals and
+reminders. If you're joining here, start from tag `c-01` (the box above
+clones it), then run `pnpm install`. This first lesson needs no code.
+
 
 You already know how to hand Claude one tool and use its answer. An **agent**
 is what you get when you stop deciding the next step yourself and let the
@@ -96,12 +105,17 @@ Ask Claude to plan the tool calls for a weather question
 - run temperature=[1.0]
 - example T=1.0 "1. geocode(\"Chicago\") to get its latitude and longitude. 2. get_forecast(lat, lon, days=2), since day 1 is today and I need tomorrow. 3. Check tomorrow's rain chance and wind. If rain is likely or it's very windy, suggest the train; otherwise, bike."
 - example T=1.0 "First I'd call geocode with \"Chicago\". With those coordinates I'd call get_forecast for 2 days and read tomorrow's entry. Then I'd answer based on the rain and wind. I can't know the forecast until those calls return."
-- example T=1.0 "Plan: geocode(\"Chicago\") → coordinates. get_forecast(coordinates, days=2) → tomorrow's high, low, rain and wind. Decide: dry and calm means bike."
-- success "That's the plan step. Next you'll give the model real tools to act with." next="Next: tools, seen from the loop →"
+- example T=1.0 "1. geocode(\"Chicago\") → its coordinates. 2. get_forecast(lat, lon, days=2) → tomorrow's rain and wind. I can't know tomorrow's weather until that second call returns, so I won't answer yet."
+- success "That's the plan step. Next you'll write the loop that acts on it." next="Next: write the loop by hand →"
 :::
 
 Notice that a good plan says what it **can't know yet**. That gap is what the
 act and observe steps fill.
+
+You've already run a small loop without seeing it: in course B,
+`generateText` with `stopWhen: isStepCount(3)` called the model, ran the
+tools it asked for, and called it again. Next lesson you'll write that loop
+yourself, once, so you know what it does for you.
 
 :::rabbithole
 - read "Building effective agents" by="Anthropic" url="https://www.anthropic.com/engineering/building-effective-agents"
