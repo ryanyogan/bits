@@ -192,16 +192,21 @@ Next, the Worker's settings:
 :::
 
 - `name` is the Worker's name on Cloudflare. c3 took it from the folder,
-  `agent`; we changed it to `klippy`, so the address you deploy to later
-  starts with `klippy.`. Change yours too.
+  `agent`. **Change it to `klippy` in your file now**, so the address you
+  deploy to later starts with `klippy.`.
 - `main` is the file Cloudflare runs.
 - `compatibility_date` pins how the runtime behaves. Cloudflare never
   changes the behaviour your Worker was written for; you move the date
   forward when you want newer behaviour.
 - `observability` turns on logs you can read in the dashboard.
 
-And the app's own `package.json`. c3 wrote version ranges like
-`^4.157.0`; we removed the `^` so everyone installs exactly these:
+And the app's own `package.json`. c3 wrote two things you'll change. Its
+`test` script is plain `vitest`, which keeps watching for changes and never
+exits; make it `vitest run`, which runs the tests once. And it wrote
+version ranges like `^1.4.3`; drop the `^` and use exactly these versions,
+the ones this course was checked with. **Edit your
+`apps/agent/package.json` so these two blocks match**, then run
+`pnpm install` again from `klippy/`:
 
 :::code{file="apps/agent/package.json" lang="json" tag="a-02" label="apps/agent/package.json"}
 	"scripts": {
@@ -219,6 +224,9 @@ And the app's own `package.json`. c3 wrote version ranges like
 		"wrangler": "4.157.0"
 	}
 :::
+
+If you skip this, `pnpm test` in the next lesson sits there watching
+instead of finishing (press `q` to quit it).
 
 `wrangler` is Cloudflare's command-line tool: `wrangler dev` runs the
 Worker on your laptop and `wrangler deploy` ships it. `vitest` and its

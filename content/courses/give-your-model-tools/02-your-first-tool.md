@@ -199,6 +199,11 @@ Copy [`test/weather.spec.ts`](https://github.com/ryanyogan/klippy/blob/b-02/apps
 and the updated [`test/fake-model.ts`](https://github.com/ryanyogan/klippy/blob/b-02/apps/agent/test/fake-model.ts)
 from the repo, then run `pnpm test`. Ours: 16 passed.
 
+One habit for the whole course: each lesson's tests live in the repo at that
+lesson's tag, and earlier test files sometimes grow too. The simplest way to
+stay in step is to copy the whole `apps/agent/test/` folder from the tag at
+the end of each lesson.
+
 Commit. Your code matches tag `b-02`
 ([changes from b-01](https://github.com/ryanyogan/klippy/compare/b-01...b-02)).
 

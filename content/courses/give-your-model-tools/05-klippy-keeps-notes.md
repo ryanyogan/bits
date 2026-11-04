@@ -146,9 +146,16 @@ export const notes = table({
 data-table talks to databases through a **driver**, and it has no D1
 driver of its own. **The driver is included in the repo**, as
 `packages/data-table-d1`: copy that folder from Klippy at tag `b-05` into
-your `packages/` (for example, clone Klippy next to your folder and run
-`cp -r ../klippy-ref/packages/data-table-d1 packages/`). You don't need to
-read it to use it.
+your `packages/`. From `klippy/`, clone Klippy next to your folder and copy
+it across:
+
+```sh
+git clone --branch b-05 https://github.com/ryanyogan/klippy ../klippy-ref
+cp -r ../klippy-ref/packages/data-table-d1 packages/
+```
+
+You don't need to read it to use it. Keep `../klippy-ref` around: it's also
+the easiest place to copy each lesson's tests from.
 
 Then add the three packages to the agent, from `klippy/`:
 
