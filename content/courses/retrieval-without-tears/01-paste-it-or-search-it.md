@@ -97,16 +97,16 @@ Answer a question from a pasted policy, and nothing else
 - check "Asks a question" /\?/
 - expect "Keeps the answer short" words<=120
 - rubric "Every claim in the answer comes from the policy text" must grounded
-- rubric "Says plainly when the policy doesn't cover the question, instead of guessing" must
-- rubric "Answers the question that was asked" should
+- rubric "Answers the question from the policy, or says plainly that the policy doesn't cover it" must grounded=false
+- rubric "If part of the question isn't in the policy, it says so instead of guessing" should
 - hint "Claude will happily fill gaps from general knowledge. Does your prompt tell it where its answer may come from?"
 - hint "Some questions aren't in the policy at all. What should Claude do then? Say so in the prompt."
 - hint "Policy first, then one line limiting Claude to it, then the question, then what to say if the policy doesn't answer it."
 - reference "Orbit Bikes returns policy: You can return any bike within 30 days of delivery for a full refund, if it has under 50 km on the odometer. E-bike batteries have a separate 2-year warranty. Refunds go back to the original payment method within 5 business days.\n\nUsing only the policy above, answer: I got my bike 40 days ago and have ridden 20 km. Can I return it?\nIf the policy doesn't say, tell me it doesn't instead of guessing."
 - run temperature=[1.0]
 - example T=1.0 "No. The policy only allows returns within 30 days of delivery, so 40 days is outside the window."
-- example T=1.0 "The policy doesn't say anything about shipping times, so I can't answer that from it."
-- example T=1.0 "Yes, as long as it's within 30 days of delivery and has under 50 km on the odometer. Your refund goes back to your original payment method within 5 business days."
+- example T=1.0 "No. You're under the 50 km limit, but the policy only allows returns within 30 days of delivery, and it's been 40."
+- example T=1.0 "Not under this policy: returns must be within 30 days of delivery, so at 40 days the window has closed."
 - success "Small corpus, no search needed. Next: what to do when it won't fit." next="Next: ingest with a Workflow →"
 :::
 

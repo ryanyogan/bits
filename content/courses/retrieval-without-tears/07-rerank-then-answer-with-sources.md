@@ -125,7 +125,7 @@ Answer from numbered passages, cite them, and admit the gap
 - check "Asks for citations" /\bcite|citation|\bsources?\b|reference|passage numbers?|in brackets/i
 - expect "Cites the passages by number" cites 1-3
 - rubric "Says the passages don't cover shipping to Canada" must evidence
-- rubric "Each claim cites the passage it comes from" must
+- rubric "Each claim taken from the passages cites the passage number it comes from" must grounded=false
 - rubric "Answers whether the battery can be claimed" should
 - hint "Claude can only cite what it can point to. Are the passages numbered in your prompt, and have you asked for those numbers?"
 - hint "Half of the question isn't in the passages. What should Claude do with that half?"
