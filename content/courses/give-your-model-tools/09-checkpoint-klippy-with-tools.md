@@ -67,6 +67,9 @@ export const TAG = 'b-09';
 
 ### 3. Run every test
 
+`test/check.spec.ts` checks the tag too, so copy `apps/agent/test/` from tag
+`b-09` first (or change `'a-05'` to `'b-09'` in that file). Then:
+
 ```sh
 pnpm typecheck
 pnpm test

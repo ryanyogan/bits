@@ -114,8 +114,8 @@ export function model(env: Env) {
   Cloudflare. `reasoningEffort: null` turns its thinking step off, for
   short, quick answers.
 
-**The one-line switch.** Claude needs your Anthropic key in your gateway,
-and that costs money per call. Without a key, the Claude call fails and the
+**The one-line switch.** Claude needs your Anthropic key in your gateway
+(or credits added to the gateway itself), and that costs money per call. Without a key, the Claude call fails and the
 free model answers instead, so Klippy works either way. To use only the
 free model, make line 6 `return ai('@cf/zai-org/glm-4.7-flash', {
 reasoningEffort: null });` (and drop the fallback). To use Claude, store
@@ -227,8 +227,18 @@ different answer each time. Klippy's tests swap in a fake model from
 `ai/test` that always says the same thing. Copy
 [`test/fake-model.ts`](https://github.com/ryanyogan/klippy/blob/a-04/apps/agent/test/fake-model.ts)
 and [`test/ask.spec.ts`](https://github.com/ryanyogan/klippy/blob/a-04/apps/agent/test/ask.spec.ts)
-from the repo, and add `remoteBindings: false` to `vitest.config.mts`, so
-tests never reach your account. Here's the part that checks the refusals:
+from the repo into `apps/agent/test/`. Then add one line to
+`apps/agent/vitest.config.mts`, so tests never reach your account:
+
+:::code{file="apps/agent/vitest.config.mts" lang="ts" tag="a-04" highlight="3-4" label="apps/agent/vitest.config.mts"}
+		cloudflareTest({
+			wrangler: { configPath: "./wrangler.jsonc" },
+			// Tests never call real models: they stay offline and free.
+			remoteBindings: false,
+		}),
+:::
+
+Here's the part of `ask.spec.ts` that checks the refusals:
 
 :::code{file="apps/agent/test/ask.spec.ts" lang="ts" tag="a-04" highlight="1-7" label="apps/agent/test/ask.spec.ts"}
 	it.each([

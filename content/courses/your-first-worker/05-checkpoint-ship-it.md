@@ -156,9 +156,9 @@ Then `/ask` in `index.ts` checks both locks before anything else:
 The order matters: the cheap checks (token, limit, body) run before the
 expensive one (the model). A caller without the token never costs you a
 model call. Update the imports at the top of `index.ts` to
-`import { ask, MAX_QUESTION } from './ask';`, `import { check } from
-'./check';` and `import { clientAddress, isOwner, underLimit } from
-'./guard';`, and delete the old `generateText` and `model` imports.
+`import { ask, MAX_QUESTION } from './ask';` and
+`import { clientAddress, isOwner, underLimit } from './guard';`, and delete
+the old `generateText` and `model` imports.
 
 ### 4. Your token, locally
 
@@ -226,7 +226,8 @@ export async function check(url: URL, env: Env) {
   each course. `Cache-Control: no-store` stops anything in between from
   keeping an old answer.
 
-Route it in `index.ts`, after `/ask`:
+Route it in `index.ts`, after `/ask`, and add
+`import { check } from './check';` at the top:
 
 :::code{file="apps/agent/src/index.ts" lang="ts" tag="a-05" label="apps/agent/src/index.ts"}
 		if (url.pathname === '/klippy/check' && request.method === 'GET') {
@@ -278,10 +279,25 @@ Content-Type: application/json
 
 The second check took 7 milliseconds in our dev log, against 2.3 seconds for
 the first: same probe, from the cache, with the new nonce. The answers came
-from the free fallback model, as in the last lesson. Run `pnpm test` too:
-Klippy's repo has tests for both locks and for the check
-([`check.spec.ts`](https://github.com/ryanyogan/klippy/blob/a-05/apps/agent/test/check.spec.ts)
-proves two checks make one model call). Ours: 14 passed.
+from the free fallback model, as in the last lesson.
+
+Now the tests. `/ask` needs a token now, so last lesson's tests would all get
+a 401. Give the tests a known token of their own in
+`apps/agent/vitest.config.mts`:
+
+:::code{file="apps/agent/vitest.config.mts" lang="ts" tag="a-05" highlight="4-5" label="apps/agent/vitest.config.mts"}
+			wrangler: { configPath: "./wrangler.jsonc" },
+			// Tests never call real models: they stay offline and free.
+			remoteBindings: false,
+			// A known token for tests (your real one lives in .dev.vars and in Cloudflare's secrets).
+			miniflare: { bindings: { KLIPPY_TOKEN: "test-token" } },
+:::
+
+Then copy the updated `test/ask.spec.ts` and the new
+[`test/check.spec.ts`](https://github.com/ryanyogan/klippy/blob/a-05/apps/agent/test/check.spec.ts)
+from the repo at tag `a-05` (the simplest way: copy the whole
+`apps/agent/test/` folder). They send that token, test both locks, and
+prove two checks make one model call. Run `pnpm test`. Ours: 14 passed.
 
 If every `/ask` says 401, check that `.dev.vars` is in `apps/agent`, not
 the root, and restart `pnpm dev`: secrets are read at start.
