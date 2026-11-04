@@ -1,192 +1,129 @@
 ---
-# sources (checked 2026-10-27):
-# - Anthropic, Tool use with Claude ("How tool use works": stop_reason "tool_use", a tool_use
-#   block, your code runs it, a second request sends a tool_result; TypeScript round-trip example)
-#   https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview
-# - Anthropic, Handle tool calls (tool_use has id, name, input; reply with a user message whose
-#   content starts with tool_result blocks carrying tool_use_id; results must immediately follow
-#   the tool_use turn)
-#   https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls
-# - Anthropic SDK for TypeScript 1.3.0 types (Anthropic.Tool, Anthropic.ToolUseBlock,
-#   Anthropic.MessageParam), checked by compiling the lesson code
-# Terminal block: example output written for this lesson, not a recorded run.
-title: "One round trip"
+# sources (checked 2026-11-03):
+# - Anthropic, How tool use works (tool_use with an id, tool_result with tool_use_id, the loop
+#   runs in your code for client tools) https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works
+# - AI SDK, generateText: steps, onStepEnd (onStepFinish is a deprecated alias in ai 7), finishReason
+#   https://ai-sdk.dev/docs/reference/ai-sdk-core/generate-text
+# - Klippy b-02 → b-03, recorded output docs/outputs/b-03.txt (2026-11-03, ai 7.0.162). The Workers AI
+#   fallback answered, not Claude.
+title: "Watch one round trip"
 order: 3
-minutes: 8
-xp: 40
-module: Why tools
+minutes: 15
+xp: 50
+module: First tools
+device: desk
+tag: b-02
+verified: 2026-11-03
+versions:
+  ai: "7.0.162"
+  wrangler: "4.157.0"
 ---
 
-Here's what happens when Claude uses a tool, from your code's point of view.
-It takes **two requests**.
+Klippy answered with real weather, but you didn't see how. One `curl` became
+two model calls and a trip to Open-Meteo, all hidden inside `generateText`.
+In this lesson you'll log each step, so you can watch the round trip
+happen.
 
-**Request one.** You send the question and the tools. Claude decides it needs
-the weather, so instead of an answer it sends back a reply with
-`stop_reason: "tool_use"` and a **`tool_use` block**: an `id`, the tool's
-`name`, and the `input` it wants to pass.
+### 1. Log each step
 
-**Your code runs the tool.** Claude has only asked. Nothing has been
-fetched yet.
+`generateText` can call a function at the end of every step. Add
+`onStepEnd` to the call in `apps/agent/src/ask.ts`, after `stopWhen`:
 
-**Request two.** You send the conversation back with two more turns: Claude's
-reply exactly as it came, then a user turn holding a **`tool_result` block**
-with the same `tool_use_id` and your result. Now Claude writes the answer.
-
-:::code{file="weather.ts" lang="ts" copy highlight="14-48" label="the round trip"}
-import Anthropic from "@anthropic-ai/sdk";
-import { tools } from "./tools";
-
-const client = new Anthropic(); // reads ANTHROPIC_API_KEY
-
-// A stand-in for a real weather API (the checkpoint uses a real one).
-function getWeather(city: string) {
-  return { city, temp_c: 5, sky: "overcast" };
-}
-
-const question = process.argv[2] ?? "Do I need a coat in Chicago?";
-const messages: Anthropic.MessageParam[] = [{ role: "user", content: question }];
-
-// Request one: question + tools.
-const first = await client.messages.create({
-  model: "claude-haiku-5-5",
-  max_tokens: 4096,
-  tools,
-  messages,
-});
-
-const call = first.content.find((block) => block.type === "tool_use");
-if (first.stop_reason !== "tool_use" || !call) {
-  // Claude answered without a tool. That's allowed.
-  for (const block of first.content) if (block.type === "text") console.log(block.text);
-  process.exit(0);
-}
-
-// Your code runs the tool. Claude only asked.
-const { city } = call.input as { city: string };
-const result = getWeather(city);
-
-// Request two: Claude's reply as it came, then the result.
-messages.push(
-  { role: "assistant", content: first.content },
-  {
-    role: "user",
-    content: [{ type: "tool_result", tool_use_id: call.id, content: JSON.stringify(result) }],
-  },
-);
-const second = await client.messages.create({
-  model: "claude-haiku-5-5",
-  max_tokens: 4096,
-  tools,
-  messages,
-});
-
-for (const block of second.content) if (block.type === "text") console.log(block.text);
+:::code{file="apps/agent/src/ask.ts" lang="ts" tag="b-03" highlight="4-16" label="apps/agent/src/ask.ts"}
+		tools: { getWeather },
+		// Step 1: Claude may call a tool. Step 2: it answers with the result. Then stop.
+		stopWhen: isStepCount(2),
+		// Log one line per step, so you can watch the round trip in the `pnpm dev` terminal.
+		onStepEnd: (step) => {
+			console.log(
+				JSON.stringify({
+					step: step.stepNumber,
+					finish: step.finishReason, // "tool-calls": Claude wants a tool. "stop": it answered.
+					toolCalls: step.toolCalls.map((call) => ({ tool: call.toolName, input: call.input })),
+					toolResults: step.toolResults.map((result) => ({ tool: result.toolName, output: result.output })),
+					text: step.text,
+					tokens: step.usage.totalTokens,
+				}),
+			);
+		},
+	});
 :::
 
-:::code{file="tools.ts" lang="ts" copy}
-import type Anthropic from "@anthropic-ai/sdk";
+- `step.stepNumber` counts from 0.
+- `step.finishReason` says why the step ended: `tool-calls` means the model
+  asked for a tool; `stop` means it answered.
+- `toolCalls` and `toolResults` are what the model asked for and what your
+  code sent back.
+- `step.usage.totalTokens` is what that step cost, in tokens.
+- `JSON.stringify` puts each step on one line, easy to read and to search.
 
-// The tool from the last lesson, shortened.
-export const tools: Anthropic.Tool[] = [
-  {
-    name: "get_weather",
-    description:
-      "Get the current weather for one city. Use it whenever the user asks " +
-      "about weather, temperature or what to wear outdoors right now.",
-    input_schema: {
-      type: "object",
-      properties: {
-        city: { type: "string", description: "City name, e.g. Paris, France" },
-      },
-      required: ["city"],
-    },
-  },
-];
+(Older examples use `onStepFinish`. In `ai` 7 that's a deprecated alias of
+`onStepEnd`.)
+
+### 2. Watch it
+
+Ask about the weather again, then look at the terminal running `pnpm dev`.
+Here's what we saw (reply in the second terminal, the two log lines in the
+first):
+
+:::terminal{cmd="curl -s -X POST http://localhost:8801/ask -H &quot;Authorization: Bearer demo-token-for-the-recording&quot; -d '{&quot;question&quot;:&quot;What is the weather in Lisbon?&quot;}'"}
+{"answer":"The current weather in Lisbon, Portugal is 14.7°C with light winds of 10.4 km/h and clear skies.","model":"[synapse]@cf/zai-org/glm-4.7-flash[text]"}
 :::
 
-:::terminal{cmd='npx tsx weather.ts "Do I need a coat in Chicago?"'}
-[muted]example output, written for this lesson (not a live run)
-[ion]→ request 1[quiet]  stop_reason=[volt]"tool_use"
-[quiet]  { type: "tool_use", id: "toolu_01A0…", name: "get_weather", input: { city: "Chicago" } }
-[volt]← your code[quiet]  getWeather("Chicago") → { temp_c: 5, sky: "overcast" }
-[ion]→ request 2[quiet]  stop_reason=[volt]"end_turn"
-Yes. It's 5°C and overcast in Chicago, so bring a coat.
+:::terminal{cmd="pnpm dev"}
+[ion]{"step":0,"finish":"tool-calls"[text],"toolCalls":[{"tool":"getWeather","input":{"place":"Lisbon"}}],"toolResults":[{"tool":"getWeather","output":{"place":"Lisbon, Portugal","temperatureC":14.7,"windKmh":10.4,"conditions":"clear sky"}}],"text":"I'll get the current weather information for Lisbon for you.","tokens":246}
+[volt]{"step":1,"finish":"stop"[text],"toolCalls":[],"toolResults":[],"text":"The current weather in Lisbon, Portugal is 14.7°C with light winds of 10.4 km/h and clear skies.","tokens":317}
+[muted][wrangler:info] POST /ask 200 OK (7390ms)
 :::
 
-Notice what the second request carries: the whole conversation, again. The
-API doesn't remember the first request, so you send the question, Claude's
-tool call and your result together.
+Read it line by line. This is the whole idea of tool use:
 
----
+1. **Step 0.** The model read the question and the tool's description,
+   and asked for `getWeather` with `{ place: "Lisbon" }`. The step ended
+   with `tool-calls`.
+2. **Your code ran.** The SDK saw the request, ran your `execute`, and got
+   the weather back from Open-Meteo. That's `toolResults`.
+3. **Step 1.** The SDK called the model again with everything so far: the
+   question, the model's request and your result. The model wrote the
+   answer, and the step ended with `stop`.
 
-Three rules keep the API happy. Break one and the request fails with an
-error.
+Two details worth noticing. Step 0 also had some text ("I'll get the
+current weather…"), but your reply only has step 1's: `generateText`
+returns the last step's text. And step 1 cost more tokens than step 0,
+because each step sends the whole conversation again, now with the tool
+result in it. The model remembers nothing between calls.
 
-**Send Claude's reply back unchanged.** Push `first.content` as it came, not
-just the `tool_use` block. The reply can hold other blocks, like a sentence
-of text before the call, and they belong in the history.
+The model here is the free fallback, as before. Claude follows the same
+two steps.
 
-**Answer every call, straight away.** The very next message after a
-`tool_use` must be a user message with its `tool_result`. Nothing can sit in
-between.
+### 3. What's on the wire
 
-**Results go first.** If you add your own text to that user message, it goes
-after the `tool_result` blocks, never before.
+Under the AI SDK, Claude's API does this with two kinds of block. In step
+0, Claude's reply holds a `tool_use` block with an `id`, like `toolu_01`,
+the tool's name and its input. In step 1, your result goes back as a
+`tool_result` block that quotes that id as `tool_use_id`. The SDK writes
+both for you, but when you read Claude's docs or debug a raw request,
+that's what you'll see.
 
 :::quiz{id="matching-id" xp=20}
-How does Claude know which call your result answers?
+Claude asks for two tools in one step. How does it know which result answers which call?
 
 - [ ] Results are matched by the order they arrive in
   Not quite. Order isn't what links them.
-- [x] The tool_result's tool_use_id matches the tool_use block's id
-  Right. Every call has an id, and your result quotes it back.
-- [ ] The tool_result repeats the tool's name
+- [x] Each tool_result's tool_use_id matches the id of its tool_use block
+  Right. Every call has an id, and its result quotes it back.
+- [ ] Each tool_result repeats the tool's name
   Not quite. A tool_result has no name field. The id does the matching.
 :::
 
-Your turn. Here's what request one gave you, and what your code got back:
+If no JSON lines appear, check that `onStepEnd` is inside the object you
+pass to `generateText`, and that you're looking at the `pnpm dev`
+terminal, not the curl one.
 
-```json
-{ "type": "tool_use", "id": "toolu_01", "name": "get_weather", "input": { "city": "Chicago" } }
-```
-
-```json
-{ "temp_c": 5, "sky": "overcast" }
-```
-
-The user had asked “Should I bring a coat in Chicago today?”. Ask Claude
-to write the `messages` array for request two, as JSON.
-
-:::prompt{id="request-two" xp=20 coach}
-Get Claude to write the messages for the second request
-- goal "Get Claude to write request two's messages as JSON: the question, Claude's call sent back unchanged, then your result answering it by id"
-- placeholder "Request one returned this tool_use: {…}. My get_weather code returned {…}. The user asked: … Write the messages array for request two, as JSON only."
-- draft "How do I send the weather back to Claude?"
-- check "Pastes the call" /toolu_01/
-- check "Pastes the call" /get_weather/
-- check "Pastes the result" /overcast/i
-- check "Asks for the messages" /messages/i
-- expect "Parses as JSON" json
-- expect "Has a tool_result" match /tool_result/
-- expect "Answers the call by its id" match /tool_use_id/
-- rubric "Sends Claude's tool_use back as an assistant message before the result" must evidence
-- rubric "The tool_result quotes the tool_use's id, toolu_01" must evidence
-- rubric "Starts with the user's original question" should
-- hint "Claude needs the three pieces: the question, its own call, your result. Are all three in your prompt?"
-- hint "Ask for the whole conversation as it will be sent, in order, not only the result."
-- hint "Paste the tool_use block and your result, then ask: write the messages array for request two, in order, as JSON only."
-- reference "The user asked: \"Should I bring a coat in Chicago today?\"\nRequest one came back with this block:\n{ \"type\": \"tool_use\", \"id\": \"toolu_01\", \"name\": \"get_weather\", \"input\": { \"city\": \"Chicago\" } }\nMy get_weather code returned: { \"temp_c\": 5, \"sky\": \"overcast\" }\n\nWrite the messages array for request two to the Messages API, in order, as JSON only."
-- run temperature=[1.0]
-- example T=1.0 "[\n  { \"role\": \"user\", \"content\": \"Should I bring a coat in Chicago today?\" },\n  { \"role\": \"assistant\", \"content\": [{ \"type\": \"tool_use\", \"id\": \"toolu_01\", \"name\": \"get_weather\", \"input\": { \"city\": \"Chicago\" } }] },\n  { \"role\": \"user\", \"content\": [{ \"type\": \"tool_result\", \"tool_use_id\": \"toolu_01\", \"content\": \"{\\\"temp_c\\\": 5, \\\"sky\\\": \\\"overcast\\\"}\" }] }\n]"
-- success "Question, call, result: the API remembers nothing, so you send all three." next="Next: descriptions Claude follows →"
-:::
-
-That's one call and one answer. Real assistants often need several calls in a
-row (look up a city, then its weather, then a packing list). That's the
-**agent loop**, and it gets its own course. Here, you'll get the single call
-right first.
+Commit. Your code matches tag `b-03`
+([changes from b-02](https://github.com/ryanyogan/klippy/compare/b-02...b-03)).
 
 :::rabbithole
-- read "Handle tool calls" by="Anthropic" url="https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls"
 - read "How tool use works" by="Anthropic" url="https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works"
+- read "generateText reference" by="AI SDK" url="https://ai-sdk.dev/docs/reference/ai-sdk-core/generate-text"
 :::

@@ -1,5 +1,5 @@
 ---
-# sources (checked 2026-10-27):
+# sources (checked 2026-10-27; course intro 2026-11-03):
 # - Anthropic, Tool use with Claude (tool use = function calling; Claude decides when to call
 #   from the request and the tool's description; client tools run in your app, server tools
 #   such as web_search and code_execution run on Anthropic's infrastructure)
@@ -7,13 +7,21 @@
 # - Anthropic, Models overview (Claude Haiku 5.5 reliable knowledge cutoff: Jun 2026)
 #   https://platform.claude.com/docs/en/about-claude/models/overview
 # - bits app/runs/model.ts (the sandbox sends one user message, no tools)
+# - Klippy b-01: no code change from a-05 (docs/outputs/b-01.txt, 2026-11-03)
 # Compare toy: both replies are illustrative.
 title: "Why models need tools"
 order: 1
 minutes: 6
 xp: 40
 module: Why tools
+tag: b-01
 ---
+
+This course gives Klippy, the assistant you shipped in
+[Your first Worker](/courses/your-first-worker), its first tools: the
+weather, the time, notes and links. If you're joining here, start from tag
+`b-01` (the box above clones it), then run `pnpm install`. This first lesson
+needs no code: it's about why tools exist at all.
 
 On its own, Claude is a very good text predictor. That gets you a long way,
 but there are three things it can't do by predicting text, however good the
@@ -71,9 +79,9 @@ Which of these questions really needs a tool?
 One more distinction before we build. **Client tools** run in your code:
 you write the function and you run it when Claude asks. **Server tools** run
 on Anthropic's side, like web search and code execution: you switch them on
-and Claude uses them without your code doing the work. Most of this course is
-about client tools, because they're how you connect Claude to **your**
-systems. Server tools get their own lesson near the end.
+and Claude uses them without your code doing the work. This course is about
+client tools, because they're how you connect Claude to **your** systems.
+In lesson 8 you'll plug in a ready-made one instead of writing it.
 
 Your turn. The sandbox on this page runs Claude with **no tools at all**.
 Ask it for something only a tool could know, like the weather somewhere
@@ -95,9 +103,9 @@ Ask Claude for live information, and let it say it can't check
 - reference "What's the weather in Lisbon right now? If you can't check live data, say so plainly and don't guess."
 - run temperature=[1.0]
 - example T=1.0 "I can't check live weather, so I don't know what Lisbon is like right now. A weather app or website will have the current conditions."
-- example T=1.0 "I don't have access to real-time data, so I can't tell you Lisbon's weather right now. Late October there is usually mild, around 15–20°C, but check a forecast to be sure."
+- example T=1.0 "I don't have access to real-time data, so I can't tell you Lisbon's weather right now. A weather app or your local forecast service will have the current conditions."
 - example T=1.0 "I'm not able to look that up: I have no internet access or live data here. Try a weather service for Lisbon's current conditions."
-- success "That's the gap a tool fills. Next, you'll describe one." next="Next: describing a tool →"
+- success "That's the gap a tool fills. Next, you'll describe one." next="Next: Klippy's first tool →"
 :::
 
 :::rabbithole
