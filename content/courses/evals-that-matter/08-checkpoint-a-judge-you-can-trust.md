@@ -91,7 +91,7 @@ Write a judge for meeting summaries that agrees with the owner on all three
 - rubric "The notes say B doesn't name who orders the tyre stock" must evidence
 - rubric "The notes say C claims Sunday opening was decided, when the meeting chose to wait" must evidence
 - rubric "The prompt spells out the pass rule: owners on every action item, and only decisions actually made" must on=prompt
-- rubric "The prompt asks the judge to say why for each verdict" should on=prompt
+- rubric "The prompt asks for a reason with each verdict" should on=prompt
 - hint "Read your prompt as the judge. Could it tell exactly why B fails, from your rule alone?"
 - hint for="Agrees with the owner on B: fail" "B looks almost like A. What does A say about the tyre stock that B doesn't?"
 - hint for="Agrees with the owner on C: fail" "Compare C's last sentence with what the meeting decided about Sundays."
