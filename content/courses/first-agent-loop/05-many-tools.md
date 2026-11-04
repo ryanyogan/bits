@@ -59,7 +59,7 @@ declare const geocode: Tool, getForecast: Tool; // defined in the checkpoint
 
 Ask about **two** cities and Claude asks for both geocodes **in the same
 turn**. You met parallel tool use in the tools course
-([Many calls, some fail](/courses/give-your-model-tools/many-calls-some-fail)), and your loop
+([Strict inputs, honest failures](/courses/give-your-model-tools/strict-inputs-honest-failures)), and your loop
 already follows its rules: `Promise.all(calls.map(runTool))` runs every call
 and sends all the results back in one user message. What's new in a loop is
 what parallel calls save: **turns**.
