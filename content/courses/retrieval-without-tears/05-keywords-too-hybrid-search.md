@@ -7,7 +7,7 @@
 # - Cormack, Clarke & Büttcher, Reciprocal Rank Fusion (SIGIR 2009; k = 60)
 #   https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf
 # - Anthropic, Introducing Contextual Retrieval (embeddings + BM25 beat embeddings alone)
-#   https://www.anthropic.com/engineering/contextual-retrieval
+#   https://www.anthropic.com/research/contextual-retrieval
 # - Klippy e-04 → e-05, recorded output docs/outputs/e-05.txt (2026-11-03).
 title: "Keywords too: hybrid search"
 order: 5
@@ -40,7 +40,13 @@ CREATE VIRTUAL TABLE chunks_fts USING fts5(text, content = 'chunks', content_row
 CREATE TRIGGER chunks_fts_insert AFTER INSERT ON chunks BEGIN
   INSERT INTO chunks_fts (rowid, text) VALUES (new.id, new.text);
 END;
-...
+CREATE TRIGGER chunks_fts_delete AFTER DELETE ON chunks BEGIN
+  INSERT INTO chunks_fts (chunks_fts, rowid, text) VALUES ('delete', old.id, old.text);
+END;
+CREATE TRIGGER chunks_fts_update AFTER UPDATE ON chunks BEGIN
+  INSERT INTO chunks_fts (chunks_fts, rowid, text) VALUES ('delete', old.id, old.text);
+  INSERT INTO chunks_fts (rowid, text) VALUES (new.id, new.text);
+END;
 -- Index the chunks saved before this migration.
 INSERT INTO chunks_fts (chunks_fts) VALUES ('rebuild');
 :::
@@ -48,17 +54,22 @@ INSERT INTO chunks_fts (chunks_fts) VALUES ('rebuild');
 - `content = 'chunks'`: the index points at the chunks table, so the text
   isn't stored twice.
 - `porter`: stemming, so "carrots" matches "carrot".
-- Three triggers keep it in step with every insert, delete and update
-  (the insert trigger is shown; copy all three from the tag).
+- Three triggers keep it in step with every insert, delete and update.
+  An external-content index can't delete by itself: you insert a row
+  with the special `'delete'` command and the old text.
 - `'rebuild'` indexes the chunks you saved before this migration.
 
 Apply it: `pnpm exec wrangler d1 migrations apply DB --local`.
 
 ### 2. Search by words, safely
 
-Create `apps/agent/src/retrieval/search.ts`:
+Create `apps/agent/src/retrieval/search.ts`. The two imports are for
+step 4 (you'll write `rrf.ts` and `vectorSearch` in a moment):
 
-:::code{file="apps/agent/src/retrieval/search.ts" lang="ts" tag="e-05" highlight="3-6" label="apps/agent/src/retrieval/search.ts"}
+:::code{file="apps/agent/src/retrieval/search.ts" lang="ts" tag="e-05" highlight="6-9" label="apps/agent/src/retrieval/search.ts"}
+import { rrf } from './rrf';
+import { vectorSearch } from './vectors';
+
 // The chunk ids that share words with the question, best first (bm25), from this owner's chunks only.
 export async function keywordSearch(d1: D1Database, owner: string, question: string, limit = 20): Promise<number[]> {
 	// Each word in quotes, joined by OR: FTS5 treats quoted text as plain words, so the question can't inject syntax.
@@ -114,10 +125,12 @@ it's the usual default.
 
 ### 4. Hybrid search, then the rows
 
-Back in `search.ts`, run both searches in parallel, fuse, and fetch the
-rows:
+Back in `search.ts`, below `keywordSearch`: the shape of a hit, then run
+both searches in parallel, fuse, and fetch the rows:
 
-:::code{file="apps/agent/src/retrieval/search.ts" lang="ts" tag="e-05" highlight="3-5" label="apps/agent/src/retrieval/search.ts"}
+:::code{file="apps/agent/src/retrieval/search.ts" lang="ts" tag="e-05" highlight="5-7" label="apps/agent/src/retrieval/search.ts"}
+export type Hit = { chunkId: number; sourceId: number; title: string; url: string | null; kind: string; text: string };
+
 // Hybrid search: keywords (exact names, codes, rare words) and meaning (paraphrases), merged by rank.
 export async function hybridSearch(env: Env, owner: string, question: string, limit = 10): Promise<Hit[]> {
 	const [byWords, byMeaning] = await Promise.all([keywordSearch(env.DB, owner, question), vectorSearch(env, owner, question)]);
@@ -145,13 +158,33 @@ export async function hydrate(d1: D1Database, owner: string, ids: number[]): Pro
 have done it, but a wall you can check twice, you check twice. It also
 drops vectors whose chunk is gone.
 
-To try it, `agent.ts` gets `GET /agents/klippy/<name>/search?q=`
-(rate-limited, since each search costs an embedding; copy it from the
-tag).
+To try it, `agent.ts` gets `GET /agents/klippy/<name>/search?q=`,
+rate-limited, since each search costs an embedding. Add
+`import { hybridSearch } from './retrieval/search';` under the other
+imports, then put the route at the top of `onRequest`:
+
+:::code{file="apps/agent/src/agent.ts" lang="ts" tag="e-05" highlight="5-9" label="apps/agent/src/agent.ts"}
+	async onRequest(request: Request) {
+		const url = new URL(request.url);
+		const action = url.pathname.split('/').pop();
+		// GET /agents/klippy/<name>/search?q=...: what hybrid search finds for a question (to try it, and for e-08).
+		if (request.method === 'GET' && action === 'search') {
+			const q = (url.searchParams.get('q') ?? '').trim();
+			if (!q || q.length > MAX_QUESTION) return Response.json({ error: `Send ?q=, up to ${MAX_QUESTION} characters` }, { status: 400 });
+			if (!(await underLimit(this.env, `search:${this.name}`))) return Response.json({ error: 'Too many requests. Wait a minute.' }, { status: 429 });
+			return Response.json({ hits: await hybridSearch(this.env, this.name, q) });
+		}
+		if (request.method !== 'POST' || action !== 'file') {
+:::
+
+The file check below it now uses `action` instead of working out the
+path again.
 
 ### 5. Run it
 
-Apply the migration, restart `wrangler dev`, and ask the route a question:
+Restart `wrangler dev` and ask the route a question. We trim the answer
+with [`jq`](https://jqlang.org/); without it, drop the `| jq …` part and
+read the whole JSON:
 
 :::terminal{cmd="curl -s -G -H &quot;Authorization: Bearer $T&quot; --data-urlencode &quot;q=What does Pip like to eat?&quot; http://localhost:8801/agents/klippy/me/search | jq -c '.hits[:3][] | {chunkId, title, starts: .text[0:60]}'"}
 [volt]{"chunkId":11,"title":"pip.md","starts":"# Pip\n\nPip is my dog. She likes carrots and hates baths."}[text]
@@ -195,7 +228,7 @@ Your code matches tag `e-05`
 ([changes from e-04](https://github.com/ryanyogan/klippy/compare/e-04...e-05)).
 
 :::rabbithole
-- read "Introducing Contextual Retrieval" by="Anthropic" url="https://www.anthropic.com/engineering/contextual-retrieval"
+- read "Introducing Contextual Retrieval" by="Anthropic" url="https://www.anthropic.com/research/contextual-retrieval"
 - read "SQLite FTS5 extension" by="SQLite" url="https://www.sqlite.org/fts5.html"
 - read "Reciprocal Rank Fusion" by="Cormack, Clarke & Büttcher" deep url="https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf"
 :::

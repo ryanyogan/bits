@@ -5,7 +5,7 @@
 #   https://platform.claude.com/docs/en/about-claude/models/overview
 # - Anthropic, Introducing Contextual Retrieval (2024-09-19): under ~200k tokens (~500 pages),
 #   include the whole knowledge base in the prompt and use prompt caching; RAG for larger ones
-#   https://www.anthropic.com/engineering/contextual-retrieval
+#   https://www.anthropic.com/research/contextual-retrieval
 # - Anthropic, Pricing (Claude Haiku 5.5, prompts up to 100K tokens: $0.10 / MTok input,
 #   $0.125 / MTok 5-minute cache write, $0.01 / MTok cache hit; prompts over 100K cost 5x)
 #   https://platform.claude.com/docs/en/about-claude/pricing

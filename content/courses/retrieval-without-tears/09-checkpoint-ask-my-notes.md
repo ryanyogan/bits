@@ -114,6 +114,13 @@ the eval files ([`test/eval/`](https://github.com/ryanyogan/klippy/tree/e-09/app
 and [`vitest.eval.config.mts`](https://github.com/ryanyogan/klippy/blob/e-09/apps/agent/vitest.eval.config.mts)),
 [`test/vectors.spec.ts`](https://github.com/ryanyogan/klippy/blob/e-09/apps/agent/test/vectors.spec.ts)
 and [`test/env.d.ts`](https://github.com/ryanyogan/klippy/blob/e-09/apps/agent/test/env.d.ts).
+Lesson 8 never had you add the script, so add it to the `scripts` in
+`apps/agent/package.json`:
+
+```json
+"eval:retrieval": "vitest run --config vitest.eval.config.mts"
+```
+
 Now it's safe to measure:
 
 :::terminal{cmd="pnpm eval:retrieval --reporter=verbose"}
@@ -180,7 +187,7 @@ upload of 4076.39 KiB (781.91 KiB gzipped), with the two new bindings
 among the rest: `env.INGEST (IngestWorkflow)`, a Workflow, and
 `env.VECTORIZE (klippy-notes)`, a Vectorize index. And the check, locally:
 
-:::terminal{cmd="curl -s 'http://localhost:8801/klippy/check?nonce=checkpoint-e09'"}
+:::terminal{cmd="curl -s &quot;http://localhost:8801/klippy/check?nonce=checkpoint-e09&quot;"}
 {"nonce":"checkpoint-e09",[volt]"tag":"e-09"[text],"probe":{"answer":"Hi bits! You're looking incredibly elegant in binary.","model":"@cf/zai-org/glm-4.7-flash"}}
 :::
 
@@ -219,5 +226,5 @@ That's Klippy answering from your notes. Your code matches tag `e-09`
 
 :::rabbithole
 - read "D1 migrations" by="Cloudflare" url="https://developers.cloudflare.com/d1/reference/migrations/"
-- read "Introducing Contextual Retrieval" by="Anthropic" url="https://www.anthropic.com/engineering/contextual-retrieval"
+- read "Introducing Contextual Retrieval" by="Anthropic" url="https://www.anthropic.com/research/contextual-retrieval"
 :::

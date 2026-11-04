@@ -102,7 +102,9 @@ export function recallAt(k: number, results: string[][], answers: string[]) {
 :::
 
 It's pure, so `test/recall.spec.ts` checks the arithmetic in the normal
-test run.
+test run. Copy [`corpus.ts`](https://github.com/ryanyogan/klippy/blob/e-08/apps/agent/test/eval/corpus.ts)
+and create `recall.ts` now: neither one touches an index, and both stay
+the same at `e-09`.
 
 ### 4. The eval, and its bug
 
@@ -178,8 +180,9 @@ differ, then change one thing at a time and watch the number.
 ### 6. Prove it
 
 Copy [`test/recall.spec.ts`](https://github.com/ryanyogan/klippy/blob/e-08/apps/agent/test/recall.spec.ts)
-and run `pnpm test`: ours was 21 files, 95 tests passed. Copy the eval
-files only at `e-09` (next lesson), not from this tag.
+and run `pnpm test`: ours was 21 files, 95 tests passed. Don't copy
+`retrieval.eval.ts`, `vitest.eval.config.mts` or the `eval:retrieval`
+script from this tag: lesson 9 gives you the fixed ones.
 
 :::quiz{id="eval-own-index" xp=20}
 Why must the eval use its own Vectorize index, not just a fresh owner?

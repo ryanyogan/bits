@@ -3,7 +3,7 @@
 # - Cloudflare Workflows, overview and step.do retries (durable steps, retried and resumed)
 #   https://developers.cloudflare.com/workflows/
 # - Cloudflare Agents, Run Workflows (AgentWorkflow, agent.runWorkflow)
-#   https://developers.cloudflare.com/agents/api-reference/run-workflows/
+#   https://developers.cloudflare.com/agents/agent-class/run-workflows/
 # - Workers AI, Markdown conversion (env.AI.toMarkdown: HTML, PDF and more)
 #   https://developers.cloudflare.com/workers-ai/features/markdown-conversion/
 # - Klippy e-01 → e-02, recorded output docs/outputs/e-02.txt (2026-11-03).
@@ -69,9 +69,28 @@ CREATE INDEX sources_owner ON sources (owner, created_at);
 :::
 
 `ON DELETE CASCADE`: delete a note and its source goes too. Add the
-matching `sources` table to `packages/db/src/index.ts`
-([diff](https://github.com/ryanyogan/klippy/compare/e-01...e-02)), then, in
-`apps/agent`:
+matching table at the end of `packages/db/src/index.ts`, so the app can
+read and write it:
+
+:::code{file="packages/db/src/index.ts" lang="ts" tag="e-02" label="packages/db/src/index.ts"}
+// The same columns as migrations/0002_sources.sql.
+export const sources = table({
+	name: 'sources',
+	columns: {
+		id: c.integer().primaryKey(),
+		owner: c.text(),
+		kind: c.enum(['note', 'link', 'file']),
+		title: c.text(),
+		url: c.text().nullable(),
+		note_id: c.integer().nullable(),
+		body: c.text().nullable(),
+		status: c.enum(['queued', 'ready', 'failed']),
+		created_at: c.integer(),
+	},
+});
+:::
+
+Then, in `apps/agent`:
 
 ```sh
 pnpm exec wrangler d1 migrations apply DB --local
@@ -79,7 +98,39 @@ pnpm exec wrangler d1 migrations apply DB --local
 
 ### 3. The Workflow
 
-Create `apps/agent/src/ingest/workflow.ts`:
+First, the helper that reads one link. Create
+`apps/agent/src/ingest/read.ts`:
+
+:::code{file="apps/agent/src/ingest/read.ts" lang="ts" tag="e-02" label="apps/agent/src/ingest/read.ts"}
+import { fetchWeb } from 'agents/webfetch';
+import { MAX_BODY } from './sources';
+
+// Read one saved link as Markdown. fetchWeb (from the Agents SDK) refuses private and local addresses and converts
+// HTML or a PDF to Markdown with env.AI. No redirects: Klippy reads exactly the page you saved.
+export async function readLinkAsMarkdown(env: Env, url: string) {
+	const page = await fetchWeb({ url }, { binding: env.AI, maxBytes: 1_000_000, maxRedirects: 0, timeoutMs: 15_000 });
+	if (page.status >= 400) throw new Error(`${url} answered ${page.status}`);
+	return { title: page.title ?? url, body: page.content.slice(0, MAX_BODY) };
+}
+:::
+
+`MAX_BODY` comes from `src/ingest/sources.ts`, which you copy in step 4.
+Copy it now if your editor complains.
+
+Then create `apps/agent/src/ingest/workflow.ts`. It starts with its
+imports and the one thing a run is given, a source id:
+
+:::code{file="apps/agent/src/ingest/workflow.ts" lang="ts" tag="e-02" label="apps/agent/src/ingest/workflow.ts"}
+import { sources } from '@klippy/db';
+import { AgentWorkflow, type AgentWorkflowEvent, type AgentWorkflowStep } from 'agents/workflows';
+import { createD1Database } from 'data-table-d1';
+import type { Klippy } from '../agent';
+import { readLinkAsMarkdown } from './read';
+
+export type IngestParams = { sourceId: number };
+:::
+
+Below that, the class:
 
 :::code{file="apps/agent/src/ingest/workflow.ts" lang="ts" tag="e-02" highlight="5-16" label="apps/agent/src/ingest/workflow.ts"}
 export class IngestWorkflow extends AgentWorkflow<Klippy, IngestParams> {
@@ -105,6 +156,8 @@ export class IngestWorkflow extends AgentWorkflow<Klippy, IngestParams> {
 			await step.do('failed', () => db.update(sources, sourceId, { status: 'failed' }));
 			throw error;
 		}
+	}
+}
 :::
 
 - `AgentWorkflow<Klippy, …>` is the Agents SDK's Workflow class: it knows
@@ -112,9 +165,9 @@ export class IngestWorkflow extends AgentWorkflow<Klippy, IngestParams> {
 - `'load'`: read the source. Anything not `queued` is skipped, so a
   repeat run does nothing.
 - `'fetch'`: links only. Three retries, 5, 10, then 20 seconds apart.
-  `readLinkAsMarkdown` (in `src/ingest/read.ts`) uses `fetchWeb` from
-  `agents/webfetch`, the function behind course B's `readLink`: no private
-  hosts, no redirects, 1 MB, converted to Markdown by Workers AI.
+  `readLinkAsMarkdown` uses `fetchWeb` from `agents/webfetch`, the
+  function behind course B's `readLink`: no private hosts, no redirects,
+  1 MB, converted to Markdown by Workers AI.
 - Out of retries, the source is marked `failed`, so Klippy never pretends
   it read the page.
 
@@ -137,9 +190,24 @@ Copy `src/ingest/sources.ts` (`queueSource`: at most 30 sources a day per
 Klippy, 60,000 characters each) and `src/ingest/file.ts` from the tag. Then
 wire up the three doors.
 
-**Links.** A new tool, `src/tools/sources.ts`:
+**Links.** First, export `linksIn` from `src/tools/link.ts`, so the new
+tool can reuse it. Add `export` in front of the function:
 
-:::code{file="apps/agent/src/tools/sources.ts" lang="ts" tag="e-02" highlight="10-14" label="apps/agent/src/tools/sources.ts"}
+:::code{file="apps/agent/src/tools/link.ts" lang="ts" tag="e-02" label="apps/agent/src/tools/link.ts"}
+export function linksIn(text: string) {
+:::
+
+Then a new tool, `src/tools/sources.ts`:
+
+:::code{file="apps/agent/src/tools/sources.ts" lang="ts" tag="e-02" highlight="18-22" label="apps/agent/src/tools/sources.ts"}
+import { tool } from 'ai';
+import { z } from 'zod';
+import type { Klippy } from '../agent';
+import { queueSource } from '../ingest/sources';
+import { linksIn } from './link';
+
+// Save a link to read later: Klippy queues it and an IngestWorkflow fetches it in the background.
+// Like readLink, only the exact links in your latest message: a page or a note can't make it save (and so fetch) a URL.
 export function saveLinkTool(agent: Klippy, env: Env, question: string) {
 	const allowed = linksIn(question);
 	return tool({
@@ -160,10 +228,18 @@ export function saveLinkTool(agent: Klippy, env: Env, question: string) {
 
 `saveLink` fetches a URL later, so it's a way out for your data. A page
 that says "save `https://evil.example/?notes=…`" gets nowhere: like
-`readLink`, it accepts only links **you** typed (`linksIn`, now exported
-from `tools/link.ts`). In `agent.ts` it also asks first
+`readLink`, it accepts only links **you** typed (`linksIn`). In `agent.ts` it also asks first
 (`needsApproval: true`), and it sits with the private tools behind
 `afterPage`, so a page in the chat locks it.
+
+Add the three imports this step uses at the top of `src/agent.ts`, under
+the others:
+
+:::code{file="apps/agent/src/agent.ts" lang="ts" tag="e-02" label="apps/agent/src/agent.ts"}
+import { saveLinkTool } from './tools/sources';
+import { queueSource } from './ingest/sources';
+import { fileToMarkdown } from './ingest/file';
+:::
 
 **Notes.** `saveNote` now queues each saved note as a source too:
 
@@ -274,6 +350,6 @@ Your code matches tag `e-02`
 
 :::rabbithole
 - read "Cloudflare Workflows" by="Cloudflare" url="https://developers.cloudflare.com/workflows/"
-- read "Run Workflows from an agent" by="Cloudflare" url="https://developers.cloudflare.com/agents/api-reference/run-workflows/"
+- read "Run Workflows from an agent" by="Cloudflare" url="https://developers.cloudflare.com/agents/agent-class/run-workflows/"
 - read "Markdown conversion" by="Cloudflare" deep url="https://developers.cloudflare.com/workers-ai/features/markdown-conversion/"
 :::

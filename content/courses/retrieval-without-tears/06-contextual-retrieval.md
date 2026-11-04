@@ -2,7 +2,7 @@
 # sources (checked 2026-11-03):
 # - Anthropic, Introducing Contextual Retrieval (2024-09-19): prepend chunk-specific context before embedding and
 #   BM25 indexing; contextual embeddings + contextual BM25 cut failed retrievals by 49%, 67% with reranking
-#   https://www.anthropic.com/engineering/contextual-retrieval
+#   https://www.anthropic.com/research/contextual-retrieval
 # - Anthropic, Prompt caching (Claude Haiku 5.5: minimum 512 tokens; 5-minute lifetime; 5-minute writes 1.25x base
 #   input, hits 0.1x)
 #   https://platform.claude.com/docs/en/build-with-claude/prompt-caching
@@ -83,9 +83,11 @@ CREATE VIRTUAL TABLE chunks_fts USING fts5(context, text, content = 'chunks', co
 :::
 
 Copy the rest (the three triggers, now over `context, text`, and the
-`rebuild`) from the tag. A migration never edits an old one: it replaces
-what it must. Add `context` to the `chunks` table in `packages/db`, and
-`pnpm add @ai-sdk/anthropic@4.0.96` in `apps/agent`.
+`rebuild`) from [the tag's file](https://github.com/ryanyogan/klippy/blob/e-06/packages/db/migrations/0005_chunk_context.sql).
+A migration never edits an old one: it replaces what it must. Then run
+`pnpm add @ai-sdk/anthropic@4.0.96` in `apps/agent`. (The reference repo
+also lists the `chunks` columns in `packages/db/src/index.ts`, `context`
+included. Nothing imports that table, so you can skip it.)
 
 ### 3. Claude, with caching in reach
 
@@ -96,7 +98,8 @@ lives 5 minutes, costs 1.25× to write, and about 0.1× to read.
 
 Caching needs Anthropic's own request format, so `src/model.ts` gets a
 second model, built with Anthropic's provider and sent through the same AI
-Gateway:
+Gateway. Add `import { createAnthropic } from '@ai-sdk/anthropic';` at the
+top of `model.ts`, then:
 
 :::code{file="apps/agent/src/model.ts" lang="ts" tag="e-06" highlight="4-9" label="apps/agent/src/model.ts"}
 // For the ingest step that writes a line of context per chunk (e-06): Claude Haiku through the same gateway, but as
@@ -118,7 +121,9 @@ can't travel that way.
 
 ### 4. One sentence per chunk
 
-Create `apps/agent/src/ingest/context.ts`:
+Copy [`src/ingest/context.ts`](https://github.com/ryanyogan/klippy/blob/e-06/apps/agent/src/ingest/context.ts)
+from the tag (36 lines, with its imports, the two caps and the
+prompt). The part that matters:
 
 :::code{file="apps/agent/src/ingest/context.ts" lang="ts" tag="e-06" highlight="10-12" label="apps/agent/src/ingest/context.ts"}
 export async function contextFor(env: Env, document: string, chunk: string, model: LanguageModel = contextModel(env)) {
@@ -153,7 +158,8 @@ export async function contextFor(env: Env, document: string, chunk: string, mode
 
 ### 5. In the Workflow, one step per chunk
 
-In `workflow.ts`, between `'chunk'` and `'embed'`:
+In `workflow.ts`, add `import { contextFor } from './context';` with the
+other imports, then, between `'chunk'` and `'embed'`:
 
 :::code{file="apps/agent/src/ingest/workflow.ts" lang="ts" tag="e-06" highlight="5-12" label="apps/agent/src/ingest/workflow.ts"}
 			// Contextual retrieval: one sentence of context per chunk, one step each, so a retry never redoes a finished one.
@@ -176,13 +182,26 @@ In `workflow.ts`, between `'chunk'` and `'embed'`:
   rest read it. Parallel calls would all miss.
 - A one-chunk source (most notes) is its own context: no call.
 
-Last, `upsertChunks` embeds `context` + blank line + `text`, so the vector
-carries the context too
-([diff](https://github.com/ryanyogan/klippy/compare/e-05...e-06)).
+Last, the vector should carry the context too. Two small edits
+([diff](https://github.com/ryanyogan/klippy/compare/e-05...e-06)):
+
+- In the `'embed'` step just below, select it:
+  `SELECT id, owner, source_id, context, text FROM chunks …`.
+- In `src/retrieval/vectors.ts`, `ChunkRow` gains `context?: string`, and
+  `upsertChunks` embeds the context, a blank line, then the text:
+
+:::code{file="apps/agent/src/retrieval/vectors.ts" lang="ts" tag="e-06" label="apps/agent/src/retrieval/vectors.ts"}
+	// The context sentence goes in front of the chunk, so the vector carries where the chunk came from.
+	const vectors = await embed(env, rows.map((row) => (row.context ? `${row.context}\n\n${row.text}` : row.text)));
+:::
+
+Skip the `SELECT` change and nothing fails: the vectors just quietly
+leave the context out.
 
 ### 6. Run it, and read the log honestly
 
-Apply the migration, then send the UI brief again:
+Apply the migration, then send the UI brief again (it became source 6)
+and read its contexts. The first five of its ten rows:
 
 :::terminal{cmd="wrangler d1 execute DB --local --json --command &quot;SELECT position, context FROM chunks WHERE source_id = 6 ORDER BY position&quot;"}
 {"position":0,"context":"This chunk is the document header and states its date, context, and purpose."}
@@ -194,12 +213,16 @@ Apply the migration, then send the UI brief again:
 
 Chunk 3, the screens table, now says it's about the app's routes and
 their access control. These lines came from the **Workers AI fallback**,
-not Claude. And the log, from a two-chunk file:
+not Claude.
 
-:::terminal{cmd="wrangler dev (log)"}
-{"event":"context",[synapse]"model":"@cf/zai-org/glm-4.7-flash"[text],"inputTokens":95,[synapse]"cachedTokens":0[text]}
-{"event":"context",[synapse]"model":"@cf/zai-org/glm-4.7-flash"[text],"inputTokens":93,"cachedTokens":0}
-:::
+Then we sent a small two-section file, `trip.md`, and watched the
+terminal running `wrangler dev`. It printed these two lines, one per
+context call:
+
+```json
+{"event":"context","model":"@cf/zai-org/glm-4.7-flash","inputTokens":95,"cachedTokens":0}
+{"event":"context","model":"@cf/zai-org/glm-4.7-flash","inputTokens":93,"cachedTokens":0}
+```
 
 **What we didn't record: caching.** Our gateway had no Anthropic key, so
 every call fell back to `glm-4.7-flash`, which has no cache, and
@@ -230,7 +253,7 @@ Your code matches tag `e-06`
 ([changes from e-05](https://github.com/ryanyogan/klippy/compare/e-05...e-06)).
 
 :::rabbithole
-- read "Introducing Contextual Retrieval" by="Anthropic" url="https://www.anthropic.com/engineering/contextual-retrieval"
+- read "Introducing Contextual Retrieval" by="Anthropic" url="https://www.anthropic.com/research/contextual-retrieval"
 - read "Prompt caching" by="Anthropic" url="https://platform.claude.com/docs/en/build-with-claude/prompt-caching"
 - read "Enhancing RAG with contextual retrieval (cookbook)" by="Anthropic" deep url="https://platform.claude.com/cookbook/capabilities-contextual-embeddings-guide"
 :::
