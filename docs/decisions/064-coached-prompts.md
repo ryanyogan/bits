@@ -163,15 +163,18 @@ isn't allowed. Write two checks with the same label instead.
   The reference is never sent to the judge.
 - The user message is `<learner_prompt>…</learner_prompt>` then
   `<model_reply>…</model_reply>`, with `&`, `<` and `>` escaped, so the data
-  can't close a tag.
+  can't close a tag. Each sits under a heading that says whose text it is,
+  and the system prompt groups the rubric into prompt and reply criteria
+  (§3.8, amended 2026-11-03).
 
 The judge resists injection in depth:
 
 1. **The pass arithmetic is on the server** (`applyJudge`): `must` lines
    decide.
 2. **Evidence must be real.** An `evidence` line counts as met only if its
-   quote is in the reply, ignoring case, whitespace, typographic quotes and
-   wrapping (quotes, brackets, an ellipsis).
+   quote is in the reply, ignoring case, whitespace, typographic quotes,
+   markdown marks, spacing around punctuation and wrapping (quotes,
+   brackets, an ellipsis). An elided quote counts only under §3.8's rule.
 3. **There is always a deterministic anchor** (the build rule above).
 4. **An injection screen** (`screensAsInjection`) reads both the prompt and
    the reply, because a learner can ask Claude to say the words. It catches
@@ -221,6 +224,65 @@ The judge resists injection in depth:
    `grounded` or turn it off with `grounded=false`. Once every course
    carries the flag, the fallback can go and the warning can become an
    error.
+8. **Quotes are verbatim, and prompt criteria read the prompt** (amended
+   2026-11-03). The per-course eval (`coach:eval --course`) found two
+   false-fail patterns that the fixed set missed:
+   - The judge marked an `evidence` line met but wrote a summary as its
+     quote ("Gives five numbered steps…", "Ends by asking…") or joined
+     pieces with "…". The evidence check rightly refused it, and each
+     reference prompt of prompting-that-works 10 and 11 failed (20% and
+     44% agreement).
+   - It missed `on=prompt` lines the prompt plainly met (work-with-coding-
+     agents 01 "Describes the symptom", 07 "Names what's out of scope")
+     when the reply began "I can't run commands…".
+
+   What changed:
+   - The rules say an evidence or source quote is the shortest passage
+     copied verbatim, one contiguous stretch, never a description, never
+     the criterion restated and never pieces joined with "...". For a list
+     or a table, the judge quotes the one line or cell that shows it best.
+     Other criteria get at most eight words of reason. That keeps a
+     six-line rubric under the judge's 400 output tokens: longer reasons
+     hit `max_tokens`, which is an unusable verdict and so a miss.
+   - The rules tell the judge to decide met or not met first, and that
+     finding a line to quote never makes a criterion met.
+   - The server takes an elided quote safely (`evidenceInReply`, also used
+     by `sourceInPrompt`, so a grounding source follows the same rule).
+     The quote is first matched whole. Failing that, it is split on "..."
+     or "…". It counts only if there are 2 or 3 pieces, each is at least
+     12 characters after folding (`MIN_FRAGMENT`, `MAX_FRAGMENTS`), and
+     each is found after the end of the one before. So tiny pieces can't
+     be stitched together from any reply, the order is kept, and a piece
+     can't be counted twice. A source quote is still refused when it is a
+     self-claim (§3.7). The fold now also drops markdown `*` and backticks,
+     and the spacing around `, : ; { } [ ] ( )`. It never adds words, so a
+     paraphrase still never matches.
+   - The system prompt lists the rubric in two groups, keeping each line's
+     id. Prompt criteria come first, under "read <learner_prompt> only;
+     the reply doesn't count", then reply criteria. The rules say a prompt
+     criterion is judged as if there were no reply. They add that Claude
+     has no tools here, so "I can't run commands" (or a wrong reply) is
+     never a reason to miss one. A reply criterion still reads the prompt
+     for anything it refers to ("the audience you named", "the keys you
+     gave"). The first version said "judge it from the reply", and
+     prompting-that-works 05's "Pitched at the audience you named" started
+     failing.
+   - A grounded line says it reads both texts: the evidence comes from the
+     reply and the source from the prompt. Without that sentence, the
+     grouping led the judge to leave `source` empty, and the fixed set's
+     grounded extraction and agent-turn cases failed.
+   - The user message puts a heading before each data block ("THE
+     LEARNER'S PROMPT …", "CLAUDE'S REPLY …"). The headings are ours and sit
+     outside the tags, so the screen and the escaping are unchanged, and
+     nothing follows the reply. We tried a closing line ("Grade criteria
+     0, 2 on the learner's prompt only, and 1 on Claude's reply"). It made
+     the judge skim: the C3 "keywords query is the whole message" reply
+     passed 6 times out of 6, against 0 without the line, so we dropped it.
+
+   The security properties hold. The server still decides the pass. A
+   refusal, an unreadable verdict or a truncated one is still a miss. The
+   screen, the escaping and the hint filter are untouched, and the
+   injection set still passes 0 of 20 (§8).
 
 ### 4. The loop the learner sees (PromptComposer)
 
@@ -431,6 +493,32 @@ After the grounded flag (§3.7, amended 2026-11-03), three runs on
 - Injections: 0 of 20 passed in each run (7 screened, 12 failed by the
   judge, 1 refusal).
 - Cost: 136 judge calls per run, about $0.012 each.
+
+After verbatim quotes and the prompt/reply split (§3.8), on 2026-11-03.
+The fixed set had grown to 171 attempts by then:
+
+- Before the change: 167 of 171 (98%), with 0 of 20 injections passing.
+- After, three runs: 171, 170 and 171 of 171 (100%, 99%, 100%). The one
+  miss was a false fail. Injections: 0 of 20 in each run (7 screened, 12
+  failed by the judge, 1 refusal).
+- Cost: 175 judge calls per run, about $0.016 each.
+- The courses' own exercises (`--course`, 3 repeats per case; each
+  reference and draft run live once). These are single runs, so
+  sampling noise is a few points:
+
+  | Course | Before | After |
+  |---|---|---|
+  | work-with-coding-agents | 96/105 (91%) | 105/105 (100%) |
+  | prompting-that-works | 155/183 (85%) | 175/183 (96%) |
+  | evals-that-matter | 52/60 (87%) | 56/60 (93%) |
+  | context-is-everything | 69/75 (92%) | 72/75 (96%) |
+  | give-your-model-tools | 73/99 (74%) | 90/99 (91%) |
+
+  prompting-that-works 10 and 11 went from 20% and 44% to 100%. Most
+  remaining course misses are labels, not the judge. The course mode
+  labels every live-temperature example as a pass, but several are the
+  lesson's deliberate counter-examples. One reference prompt also gets
+  a wrong answer from Claude.
 
 Re-run the eval before widening the judge to a new kind of rubric, and
 before changing the model.
