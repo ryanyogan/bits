@@ -77,8 +77,9 @@ customer's own files, are easier to index than to re-paste.
 One more option: let the model search for itself. Agents can call a search
 tool when they need something. Claude Code finds files with `grep` and
 `glob` instead of a prebuilt index. That's still retrieval, done just in
-time. This course builds the classic pipeline, because it powers most "ask
-my docs" features and every idea in it carries over to search tools.
+time. This course builds the classic pipeline into Klippy, as a search tool
+it calls. Today, Klippy's `listNotes` pastes your 20 newest notes into the
+chat. Note 21 is invisible, and so is every page and PDF you'll send it.
 
 Your turn: the "just paste it" approach. The policy is already in the box.
 Add a question, and tell Claude to answer **only from the policy**, and to
@@ -95,7 +96,7 @@ Answer a question from a pasted policy, and nothing else
 - check "Includes the policy" /business days|2-year/i
 - check "Asks a question" /\?/
 - expect "Keeps the answer short" words<=120
-- rubric "Every claim in the answer comes from the policy text" must
+- rubric "Every claim in the answer comes from the policy text" must grounded
 - rubric "Says plainly when the policy doesn't cover the question, instead of guessing" must
 - rubric "Answers the question that was asked" should
 - hint "Claude will happily fill gaps from general knowledge. Does your prompt tell it where its answer may come from?"
@@ -106,7 +107,7 @@ Answer a question from a pasted policy, and nothing else
 - example T=1.0 "No. The policy only allows returns within 30 days of delivery, so 40 days is outside the window."
 - example T=1.0 "The policy doesn't say anything about shipping times, so I can't answer that from it."
 - example T=1.0 "Yes, as long as it's within 30 days of delivery and has under 50 km on the odometer. Your refund goes back to your original payment method within 5 business days."
-- success "Small corpus, no search needed. Next: what to do when it won't fit." next="Next: chunking →"
+- success "Small corpus, no search needed. Next: what to do when it won't fit." next="Next: ingest with a Workflow →"
 :::
 
 :::rabbithole
