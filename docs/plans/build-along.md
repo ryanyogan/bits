@@ -1,5 +1,37 @@
 # Build-along courses: plan (2026-11-03, accepted)
 
+> **CURRENT STATE (2026-11-04, paused by the owner)**
+> - **Klippy is public:** https://github.com/ryanyogan/klippy, tags a-01..f-08, with CI green. The owner checklist is in `docs/handoff-R.md` there.
+> - **All six build-along courses are live after review**, each reviewed as a beginner plus a steel-man check (`build-along/qa/`, `build-along/review/`):
+>   - your-first-worker v1
+>   - give-your-model-tools v12
+>   - first-agent-loop v12
+>   - build-the-front-end-with-agents v1
+>   - retrieval-without-tears v10
+>   - ship-an-agent-to-the-edge v9
+>
+>   The MCP course is listed as coming soon.
+> - **Engine merged and deployed (Worker e49a3728):**
+>   - :::verify (072);
+>   - metadata (073);
+>   - try-it landing (074);
+>   - data-table-d1 (075, published only in the repo; no npm per the owner);
+>   - code tags + snippet check (076);
+>   - the judge quote fix (064 §3.8);
+>   - `coach:eval --course`.
+> - **Owner items, none blocking:**
+>   - an Anthropic key on the `default` gateway (BYOK), then re-record Klippy outputs with Claude, including the e-06 caching;
+>   - deploy Klippy and apply remote D1 migrations 0002–0005;
+>   - the `CLOUDFLARE_*` secrets for Klippy CI;
+>   - a gateway spend limit.
+> - **Possible next steps:**
+>   - build the MCP course (G);
+>   - the release-prep `grounded` flags in context-is-everything;
+>   - check the budget in `prepareStep` too (overshoot of one call instead of one turn);
+>   - re-record the f-04/f-05 observability curls with a here-doc;
+>   - an owner column on notes if Klippy ever goes multi-user.
+
+
 Status: **accepted** (owner answers 2026-11-03). Decision record: `docs/decisions/071-build-along-courses.md`.
 Phase 2 (§7) has not started.
 
