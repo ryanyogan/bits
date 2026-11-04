@@ -74,9 +74,9 @@ Pack the window: job, tagged document, quote first, honest gaps, short answer, q
 - hint "Give it a line for gaps: “If the sheet doesn't say, tell the customer you're not sure.”"
 - reference "You answer customer questions for Moon Café, using only the sheet below.\n\n<document><source>moon-cafe-info.txt</source><document_content>Open Mon–Fri 7am–6pm, Sat 8am–4pm, closed Sunday. Oat milk is free. Dogs welcome on the terrace.</document_content></document>\n\nFirst quote the line that answers the question in <quotes> tags. If the sheet doesn't say, tell the customer you're not sure. Answer in under 30 words.\n\nCustomer: Are you open on Sunday?"
 - run temperature=[1.0]
-- example T=1.0 "<quotes>“closed Sunday”</quotes> Sorry, we're closed on Sundays. On Saturday we're open 8am–4pm."
+- example T=1.0 "<quotes>“Open Mon–Fri 7am–6pm, Sat 8am–4pm, closed Sunday.”</quotes> Sorry, we're closed on Sundays. On Saturday we're open 8am–4pm."
 - example T=1.0 "Quote: “Sat 8am–4pm, closed Sunday.” No, Moon Café is closed on Sunday. Come by Saturday until 4pm!"
-- example T=1.0 "<quotes>“closed Sunday”</quotes> We're closed Sundays, but open Monday from 7am."
+- example T=1.0 "<quotes>“Open Mon–Fri 7am–6pm, Sat 8am–4pm, closed Sunday.”</quotes> We're closed Sundays, but open Monday from 7am."
 - success "Docs in tags, question last, quotes first, honest about gaps. That's a packed window." next="Finish the course →"
 :::
 Finish this checkpoint and the **Context is everything** badge is yours. You

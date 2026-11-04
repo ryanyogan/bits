@@ -81,9 +81,9 @@ Write a tool description, then ask what call Claude would make
 - hint "Write three short lines (what it does, when to use it, what it can't do) and name its input, then add the user message."
 - reference "Tool get_weather: returns the current temperature and conditions for one city. Input: city (the city name, with country if it's ambiguous, e.g. Leeds, UK). Use it when the user asks about the weather now. Don't use it for forecasts: it has no data about tomorrow.\n\nUser: “Should I bring an umbrella in Leeds tomorrow?”\n\nReply with only the JSON input you would send to get_weather, or the words no tool and one short reason."
 - run temperature=[1.0]
-- example T=1.0 "{\"city\": \"Leeds, UK\"}"
+- example T=1.0 "no tool. get_weather only returns current conditions, and the question is about tomorrow."
 - example T=1.0 "no tool. The tool only gives current conditions, and you asked about tomorrow."
-- example T=1.0 "{\"city\": \"Leeds\", \"unit\": \"celsius\"}"
+- example T=1.0 "no tool: the description says it has no data about tomorrow, so a call wouldn't answer the umbrella question."
 - success "This is the decision Claude makes on every request. Your description is all it has to go on." next="Next: choosing when Claude calls →"
 :::
 

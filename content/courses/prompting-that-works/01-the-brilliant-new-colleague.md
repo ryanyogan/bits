@@ -82,9 +82,9 @@ Rewrite the vague request so a brilliant new colleague could do it first time
 - hint "Name the reader, where it appears, three real facts with numbers, and a word limit."
 - reference "Write a product description for our water bottle's shop page. It's for hikers who carry everything on their back. Facts: 750 ml, double-walled steel, keeps water cold for 24 hours, weighs 340 g, leakproof lid. Keep it under 40 words and use only these facts."
 - run temperature=[1.0]
-- example T=1.0 "Cold for 24 hours, light enough to forget it's there. The 750 ml Trailhead is double-walled steel with a lid that won't leak in your pack."
+- example T=1.0 "Cold for 24 hours, light enough to forget it's there. This 750 ml bottle is double-walled steel with a lid that won't leak in your pack."
 - example T=1.0 "Built for long trails: 750 ml, double-walled steel, 24 hours cold, 340 g. The leakproof lid means it rides in your bag, not your hand."
-- example T=1.0 "Trailhead keeps water ice-cold for a full day out. 750 ml of steel, leakproof, and just 340 g."
+- example T=1.0 "Keeps water cold for 24 hours on the trail. 750 ml of double-walled steel, a leakproof lid, and just 340 g."
 - success "Specific in, specific out. Every lesson after this builds on that." next="Next: say why →"
 :::
 Run it a couple of times. The wording changes from run to run, but the facts

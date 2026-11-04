@@ -129,7 +129,7 @@ Get the booking back as JSON only, with the keys you choose
 - run temperature=[1.0]
 - example T=1.0 "{\"name\": \"Okafor\", \"party_size\": 4, \"day\": \"Friday\", \"time\": \"19:30\"}"
 - example T=1.0 "{\"name\": \"Okafor\", \"party_size\": 4, \"day\": \"Friday\", \"time\": \"7:30pm\"}"
-- example T=1.0 "{\"guest_name\": \"Okafor\", \"people\": 4, \"when\": \"Friday 7:30pm\"}"
+- example T=1.0 "{\"name\": \"Okafor\", \"party_size\": 4, \"day\": \"Friday\", \"time\": \"7:30 pm\"}"
 - success "You named the shape, and you got it. For code, add a schema and it's guaranteed." next="Next: let it think →"
 :::
 Run it three times. If the time comes back as “19:30” once and “7:30pm” the
