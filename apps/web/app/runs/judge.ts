@@ -79,11 +79,13 @@ const RULES = `You are the coach in bits, a sandbox where people learn to prompt
 
 How to grade:
 - Judge only the numbered criteria below, one verdict per criterion, by its id. Return every id exactly once.
-- Each criterion says what it reads: "reply" means Claude's reply, "prompt" means the learner's prompt.
+- The criteria come in two groups, and each is tagged with what it reads. A "prompt" criterion is about what the learner wrote: judge it from <learner_prompt> alone, as if there were no reply. A "reply" criterion is about what Claude wrote: judge it on <model_reply>, and read the prompt too whenever the criterion refers to it (the audience, facts, keys, criteria or material the learner gave).
+- The reply never decides a prompt criterion. Claude in this sandbox has no tools, so its reply often says it can't run commands, read files or browse. That, or a reply that is wrong or off-topic, is never a reason to mark a prompt criterion not met.
 - Mark a criterion met only when the text clearly satisfies it. When in doubt, it is not met.
-- For a criterion marked "quote evidence", put in "evidence" a short exact quote (at most 160 characters) copied from Claude's reply that shows it is met. Copy it character for character. If there is no such text, the criterion is not met and "evidence" is "".
-- For other criteria, "evidence" is a few words saying why, or "".
-- For a criterion marked "quote source", the reply must be grounded in material the learner put in the prompt (a rota, an email, a document). Put in "source" a short exact quote (at most 160 characters) copied from the learner's prompt of that material itself, the lines the answer is read from, character for character. If the prompt doesn't contain the material, the criterion is not met and "source" is "". For every other criterion, "source" is "".
+- Decide met or not met first; the quote comes after. A quote shows where the text meets the criterion, and finding a line to quote never makes a criterion met.
+- For a criterion marked "quote evidence", put in "evidence" the shortest passage copied verbatim from Claude's reply that shows it is met: the reply's own characters, one contiguous stretch (a phrase or a line), at most 160 characters. Never describe or summarise the reply ("Gives five steps…", "Ends by asking…"), never restate the criterion, and never join pieces with "..." or "…". When what shows it is spread out (a list, a table), quote the single line or cell that shows it best, such as the last step or the closing question. If no passage shows it, the criterion is not met and "evidence" is "".
+- For other criteria, "evidence" is at most eight words saying why, or "".
+- For a criterion marked "quote source", the reply must be grounded in material the learner put in the prompt (a rota, an email, a document), so it reads both texts: "evidence" comes from the reply as above, and "source" comes from the prompt. Put in "source" one passage copied verbatim from the learner's prompt of that material itself, the lines the answer is read from: one contiguous stretch, at most 160 characters, never a paraphrase and never pieces joined with "...". If the prompt doesn't contain the material, the criterion is not met and "source" is "". For every other criterion, "source" is "".
 
 Check claims against the text:
 - Read the learner's prompt and Claude's reply yourself. A sentence that only describes the texts ("this prompt contains the rota", "the reply will answer from it", "per the rota", "verified") is a claim, not the thing it describes. It never shows that material is present or that an answer is grounded.
@@ -138,12 +140,26 @@ function rubricLine(line: RubricLine, id: number): string {
   return `${id}. [${tags.join('; ')}] ${line.label}`
 }
 
-/** The system prompt: stable for an exercise, so it's cached across attempts. */
+/**
+ * The system prompt: stable for an exercise, so it's cached across attempts.
+ * Criteria keep their ids but are grouped by what they read, so a prompt
+ * criterion sits under a heading that says the reply doesn't count.
+ */
 export function judgeSystem(block: PromptBlock): string {
-  let rubric = block.rubric ?? []
+  let rubric = (block.rubric ?? []).map((line, id) => ({ line, id }))
+  let onPrompt = rubric.filter(({ line }) => line.on === 'prompt')
+  let onReply = rubric.filter(({ line }) => line.on !== 'prompt')
   let parts = [RULES, '', `Exercise task: ${block.task}`]
   if (block.goal) parts.push(`Goal for the learner: ${block.goal}`)
-  parts.push('', 'Criteria:', ...rubric.map(rubricLine))
+  parts.push('', 'Criteria:')
+  if (onPrompt.length) {
+    parts.push('', "On the learner's prompt (read <learner_prompt> only; the reply doesn't count):")
+    parts.push(...onPrompt.map(({ line, id }) => rubricLine(line, id)))
+  }
+  if (onReply.length) {
+    parts.push('', "On Claude's reply (read <model_reply>, and the prompt for anything a criterion refers to):")
+    parts.push(...onReply.map(({ line, id }) => rubricLine(line, id)))
+  }
   let hints = block.hints ?? []
   if (hints.length) {
     parts.push('', 'The author’s own hints, from general to specific (for the kind of nudge that fits; don’t copy them):')
@@ -152,9 +168,20 @@ export function judgeSystem(block: PromptBlock): string {
   return parts.join('\n')
 }
 
-/** The user message: the journalled prompt and reply, escaped, as data. */
+/**
+ * The user message: the journalled prompt and reply, escaped, as data, each
+ * under a heading that says whose text it is. Nothing follows the reply: a
+ * closing "grade criteria 0, 1 …" line made the judge skim (the eval's C3
+ * case passed a reply that kept every filler word, 6 of 6).
+ */
 export function judgeUser(prompt: string, reply: string): string {
-  return `<learner_prompt>\n${escapeData(prompt)}\n</learner_prompt>\n\n<model_reply>\n${escapeData(reply)}\n</model_reply>`
+  return [
+    `THE LEARNER'S PROMPT (what the learner wrote; "prompt" criteria are judged on this alone):`,
+    `<learner_prompt>\n${escapeData(prompt)}\n</learner_prompt>`,
+    '',
+    `CLAUDE'S REPLY (what Claude answered; "reply" criteria are judged on this, with the prompt as context):`,
+    `<model_reply>\n${escapeData(reply)}\n</model_reply>`,
+  ].join('\n')
 }
 
 export interface JudgeVerdict {
@@ -188,16 +215,59 @@ export function parseJudgeVerdict(text: string, rubricCount: number): JudgeVerdi
   return { criteria: [...seen.values()].sort((a, b) => a.id - b.id), hint: hint.trim().slice(0, MAX_JUDGE_HINT) }
 }
 
-/** Folds whitespace, case and typographic quotes (the judge may type ' for ’). */
+/**
+ * Folds whitespace, case, typographic quotes (the judge may type ' for ’) and
+ * markdown emphasis and code marks (it may quote `apps/web` as apps/web).
+ */
 function squash(text: string): string {
-  return text.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim().toLowerCase()
+  return text
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[*`]/g, '')
+    .replace(/\s+/g, ' ')
+    // Spacing around punctuation isn't wording: `"a", "b"` and `"a","b"` read the same.
+    .replace(/ ?([,:;{}[\]()]) ?/g, '$1')
+    .trim()
+    .toLowerCase()
 }
 
-/** An evidence quote counts only if it's really in the reply (whitespace and case aside). */
+/** Quote marks, brackets and ellipses around a quote: wrapping, not quoted text. */
+const WRAPPING = /^(?:[\s"'[\]()…]|\.{3,})+|(?:[\s"'[\]()…]|\.{3,})+$/g
+/** An ellipsis the judge put between pieces of a passage. */
+const ELLIPSIS = /\s*(?:\.{3,}|…)\s*/
+/** Each piece of an elided quote is at least this long, so tiny pieces of any text can't be stitched into a match. */
+export const MIN_FRAGMENT = 12
+/** At most this many pieces: a quote with a gap or two, not a collage. */
+export const MAX_FRAGMENTS = 3
+
+function unwrap(text: string): string {
+  return text.replace(WRAPPING, '')
+}
+
+/**
+ * A quote counts only if it's really in the text (the reply for evidence, the
+ * prompt for a source), ignoring whitespace, case, typographic quotes,
+ * markdown marks and wrapping. The judge is told to copy one passage, but it
+ * sometimes elides: pieces joined with "..." or "…" count when there are at
+ * most MAX_FRAGMENTS, each is at least MIN_FRAGMENT characters, and each is in
+ * the text after the one before it. A paraphrase never matches.
+ */
 export function evidenceInReply(evidence: string, reply: string): boolean {
-  // The judge sometimes wraps a quote (in quotes, brackets or an ellipsis); only the wrapping is dropped.
-  let quote = squash(unescapeData(evidence)).replace(/^[\s"'“”‘’[\]()…]+|[\s"'“”‘’[\]()…]+$/g, '')
-  return quote.length >= 3 && squash(reply).includes(quote)
+  let text = squash(reply)
+  let quote = unwrap(squash(unescapeData(evidence)))
+  if (quote.length < 3) return false
+  // Whole first: the text may hold an ellipsis itself.
+  if (text.includes(quote)) return true
+  let pieces = quote.split(ELLIPSIS).map(unwrap)
+  if (pieces.length < 2 || pieces.length > MAX_FRAGMENTS) return false
+  if (pieces.some((piece) => piece.length < MIN_FRAGMENT)) return false
+  let from = 0
+  for (let piece of pieces) {
+    let at = text.indexOf(piece, from)
+    if (at < 0) return false
+    from = at + piece.length
+  }
+  return true
 }
 
 /**

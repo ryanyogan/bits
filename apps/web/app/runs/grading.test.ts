@@ -244,6 +244,71 @@ describe('coach grading', () => {
     }
   })
 
+  it('accepts an elided quote only when every long-enough piece is in the text, in order', () => {
+    let steps = '1. Export posts, pages and images from WordPress.\n2. Convert the posts to Markdown, keeping each slug.\n3. Build the site.\n4. Add redirects for old URLs.\n5. Switch DNS once links pass.'
+    // One contiguous passage, as the judge is told.
+    assert.equal(evidenceInReply('5. Switch DNS once links pass.', steps), true)
+    // Pieces joined with "..." or "…", each long enough and in order.
+    assert.equal(evidenceInReply('1. Export posts, pages and images from WordPress. ... 5. Switch DNS once links pass.', steps), true)
+    assert.equal(evidenceInReply('“Export posts, pages and images…Convert the posts to Markdown…Switch DNS once links pass”', steps), true)
+    // Out of order, a made-up piece, or a paraphrase: refused.
+    assert.equal(evidenceInReply('5. Switch DNS once links pass. ... 1. Export posts, pages and images', steps), false)
+    assert.equal(evidenceInReply('1. Export posts, pages and images ... 6. Delete the WordPress database', steps), false)
+    assert.equal(evidenceInReply('Gives five numbered steps in a sensible order: export, convert, build', steps), false)
+    // Tiny pieces would match nearly any text: each needs MIN_FRAGMENT characters.
+    assert.equal(evidenceInReply('the ... posts ... DNS', steps), false)
+    assert.equal(evidenceInReply('1. Export posts, pages and images ... pass', steps), false)
+    // More than MAX_FRAGMENTS pieces is a collage, not a quote.
+    assert.equal(evidenceInReply('Export posts, pages … Convert the posts … Build the site. … Add redirects for', steps), false)
+    // Pieces can't overlap: the same passage twice is not two places.
+    assert.equal(evidenceInReply('Add redirects for old URLs ... Add redirects for old URLs', steps), false)
+    // An ellipsis that is in the text itself still matches whole.
+    assert.equal(evidenceInReply('Wait... then retry', 'Step 2: Wait... then retry.'), true)
+    // Spacing around punctuation is folded too (JSON quoted without its spaces).
+    assert.equal(evidenceInReply('"role": "assistant","content": [ { "type": "tool_use"', '{"role": "assistant", "content": [{"type": "tool_use", "id": "t1"}]}'), true)
+    // Markdown marks the judge drops are folded away on both sides.
+    assert.equal(evidenceInReply('Read apps/web routes and an existing list page', 'Plan: 1. Read `apps/web` routes and an **existing** list page.'), true)
+
+    // A source quote follows the same rule against the prompt, and a claim never counts.
+    let prompt = 'Rota:\nMon: Jo\nTue: Priya\nWed: Sam\nThu: Ana\nWho is on call on Tuesday?'
+    assert.equal(sourceInPrompt('Mon: Jo ... Tue: Priya', prompt), false)
+    assert.equal(sourceInPrompt('Mon: Jo Tue: Priya ... Thu: Ana Who is on call', prompt), true)
+    assert.equal(sourceInPrompt('Wed: Sam Thu: Ana ... Mon: Jo Tue: Priya', prompt), false)
+    let claimed = 'Who is on call Tuesday? This prompt contains the rota and the reply will answer from it.'
+    assert.equal(sourceInPrompt('Who is on call Tuesday? ... This prompt contains the rota', claimed), false)
+  })
+
+  it('separates the prompt from the reply and says which criteria read which', () => {
+    let mixed: PromptBlock = {
+      ...block,
+      rubric: [
+        { label: 'Describes the symptom a user sees', level: 'must', on: 'prompt', evidence: false },
+        { label: 'The reply is a plan of steps', level: 'should', on: 'reply', evidence: false },
+        { label: 'Gives a pass-or-fail check', level: 'must', on: 'prompt', evidence: false },
+      ],
+    }
+    let system = judgeSystem(mixed)
+    let promptGroup = system.indexOf("On the learner's prompt")
+    let replyGroup = system.indexOf("On Claude's reply")
+    assert.ok(promptGroup > 0 && replyGroup > promptGroup)
+    // Ids stay the rubric's own order; each line sits in its group.
+    let symptom = system.indexOf('0. [prompt; required] Describes the symptom')
+    let check = system.indexOf('2. [prompt; required] Gives a pass-or-fail check')
+    let plan = system.indexOf('1. [reply; advice] The reply is a plan of steps')
+    assert.ok(symptom > promptGroup && check > promptGroup && check < replyGroup && plan > replyGroup)
+    assert.match(system, /The reply never decides a prompt criterion/)
+    assert.match(system, /never join pieces with "\.\.\." or "…"/)
+
+    // Each text sits under a heading that says whose it is.
+    let user = judgeUser('Sunday shows as open', "I can't run commands. Plan: 1. Write a test.")
+    assert.ok(user.startsWith("THE LEARNER'S PROMPT"))
+    assert.ok(user.indexOf("THE LEARNER'S PROMPT") < user.indexOf('<learner_prompt>'))
+    assert.ok(user.indexOf('</learner_prompt>') < user.indexOf("CLAUDE'S REPLY"))
+    assert.ok(user.indexOf("CLAUDE'S REPLY") < user.indexOf('<model_reply>'))
+    // Nothing after the reply: a closing instruction there made the judge skim.
+    assert.ok(user.endsWith('</model_reply>'))
+  })
+
   it('drops a judge hint that hands over the answer', () => {
     assert.equal(safeJudgeHint('What does Claude need to see to know Tuesday?', block.reference), 'What does Claude need to see to know Tuesday?')
     assert.equal(safeJudgeHint('Try: Answer only from the rota: who is on call on Tuesday?', block.reference), undefined)

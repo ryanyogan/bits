@@ -4,6 +4,11 @@
 //   node --import remix/node-tsx scripts/coach-eval.ts [--vars <.dev.vars>] [--repeats N]
 //   node --import remix/node-tsx scripts/coach-eval.ts --course <slug> [--lessons 10-13] [--repeats N]
 //
+//   node --import remix/node-tsx scripts/coach-eval.ts --only "C3 hybrid" [--repeats N]
+//
+// `--only` runs just the fixed exercises whose kind contains the text, with no
+// injection set: for iterating on one case, never as the gate.
+//
 // `--course` grades one course's own coached exercises instead of the fixed
 // cases: each block's reference is labelled pass, its draft fail, and its
 // live-temperature examples pass as replies to the reference
@@ -48,6 +53,7 @@ let { values } = parseArgs({
     repeats: { type: 'string', default: '3' },
     course: { type: 'string' },
     lessons: { type: 'string' },
+    only: { type: 'string' },
   },
 })
 let repeats = Math.max(1, Number(values.repeats) || 3)
@@ -97,7 +103,9 @@ interface Graded {
   via: 'deterministic' | 'screen' | 'judge' | 'unusable'
   criteria: VerdictCriterion[]
   /** The judge's own rubric verdicts, before `applyJudge` checks evidence and grounding. */
-  judged?: { met: boolean; evidence: string }[]
+  judged?: { met: boolean; evidence: string; source: string }[]
+  /** Why a verdict was unusable: the stop reason and the output size. */
+  why?: string
 }
 
 let usage = { input: 0, output: 0, calls: 0 }
@@ -132,7 +140,10 @@ async function grade(env: ModelEnv, block: PromptBlock, prompt: string, reply: s
   let parsed = result.stopReason === 'refusal' ? undefined : parseJudgeVerdict(result.text, block.rubric?.length ?? 0)
   // As in production: a refusal or an unreadable verdict is a miss ("try
   // again"), never a pass. Counted separately so it shows in the report.
-  if (!parsed) return { passed: false, via: 'unusable', criteria: deterministic.criteria }
+  if (!parsed) {
+    let why = `stop_reason ${result.stopReason}, ${result.usage.output} output tokens`
+    return { passed: false, via: 'unusable', criteria: deterministic.criteria, why }
+  }
   let applied = applyJudge(block, deterministic.criteria, parsed, reply, prompt)
   return { passed: applied.passed, via: 'judge', criteria: applied.criteria, judged: parsed.criteria }
 }
@@ -189,12 +200,13 @@ function describeMiss(label: string, item: CourseCase, outcome: Graded, reply: s
     let judged = c.kind === 'rubric' ? outcome.judged?.[rubricIndex++] : undefined
     if (c.met !== false) continue
     // The judge said met, but the server refused its quote (evidence or grounding).
-    let why = judged?.met ? ` [judge: met; quote refused: "${oneLine(judged.evidence, 60)}"]` : ''
+    let source = judged?.source ? `; source: "${oneLine(judged.source, 160)}"` : ''
+    let why = judged?.met ? ` [judge: met; quote refused: "${oneLine(judged.evidence, 160)}"${source}]` : ''
     unmet.push(`${c.kind}: ${c.label}${why}`)
   }
   let detail = unmet.length ? `\n      unmet: ${unmet.join('; ')}` : ''
   let source = item.reply === undefined ? 'live reply' : 'reply'
-  return `  ${label}: label ${item.pass ? 'pass' : 'fail'}, got ${outcome.passed ? 'pass' : 'fail'} via ${outcome.via}${detail}\n      ${source}: ${oneLine(reply)}`
+  return `  ${label}: label ${item.pass ? 'pass' : 'fail'}, got ${outcome.passed ? 'pass' : 'fail'} via ${outcome.via}${outcome.why ? ` (${outcome.why})` : ''}${detail}\n      ${source}: ${oneLine(reply)}`
 }
 
 function printCost() {
@@ -219,7 +231,8 @@ async function main() {
   let total = 0
   let unusable = 0
   let disagreements: string[] = []
-  for (let exercise of exercises) {
+  // `--only <text>`: just the exercises whose kind contains it, and no injection set (for iterating).
+  for (let exercise of exercises.filter((e) => !values.only || e.kind.includes(values.only))) {
     let block = compile(exercise.source)
     let ok = 0
     let n = 0
@@ -231,7 +244,14 @@ async function main() {
         if (outcome.via === 'unusable') unusable++
         if (outcome.passed === item.pass) ok++
         else {
-          let missed = outcome.criteria.filter((c) => c.kind === 'rubric' && c.met !== item.pass).map((c) => c.label)
+          let rubric = outcome.criteria.filter((c) => c.kind === 'rubric')
+          let missed = rubric.flatMap((c, i) => {
+            if (c.met === item.pass) return []
+            let judged = outcome.judged?.[i]
+            let quotes = [judged?.evidence && `quoted: "${oneLine(judged.evidence, 160)}"`, judged?.source && `source: "${oneLine(judged.source, 160)}"`]
+            let shown = quotes.filter(Boolean).join('; ')
+            return [shown ? `${c.label} [judge ${judged?.met ? 'met' : 'not met'}; ${shown}]` : c.label]
+          })
           disagreements.push(`  ${exercise.kind} / ${item.name}: label ${item.pass ? 'pass' : 'fail'}, got ${outcome.passed ? 'pass' : 'fail'} via ${outcome.via}${missed.length ? ` (${missed.join('; ')})` : ''}`)
         }
       }
@@ -242,6 +262,7 @@ async function main() {
   }
   console.log(`${'all'.padEnd(36)} ${agree}/${total} agree (${Math.round((agree / total) * 100)}%), ${unusable} unusable verdict(s)`)
   if (disagreements.length) console.log(`\nDisagreements:\n${disagreements.join('\n')}`)
+  if (values.only) return printCost()
 
   let injections = JSON.parse(await fs.readFile(path.join(here, 'coach-eval', 'injections.json'), 'utf8')) as {
     cases: { name: string; prompt: string; reply: string }[]
