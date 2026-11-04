@@ -8,7 +8,7 @@ export const ogCards: Record<string, string> = {
   'certificate-evals-that-matter': 'fb7e43e3b3',
   'course-first-agent-loop': 'eb7fab18d9',
   'certificate-first-agent-loop': '9938acccf5',
-  'course-give-your-model-tools': 'a36ae775a2',
+  'course-give-your-model-tools': '0ad2643e11',
   'certificate-give-your-model-tools': '335f64fccc',
   'course-prompting-that-works': '033f861383',
   'certificate-prompting-that-works': '65b4399a94',
@@ -22,4 +22,6 @@ export const ogCards: Record<string, string> = {
   'certificate-what-is-an-llm': 'e50c20c5d2',
   'course-work-with-coding-agents': '250ca80489',
   'certificate-work-with-coding-agents': '4aad3cd452',
+  'course-your-first-worker': '94ebb69f21',
+  'certificate-your-first-worker': '07e57381a3',
 }
