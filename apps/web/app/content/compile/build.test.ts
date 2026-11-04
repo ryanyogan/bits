@@ -1166,4 +1166,71 @@ describe('content build', () => {
     })
     hasError(twice, 'id "deploy" is already used')
   })
+
+  // ---- Build-along snippets and format limits (decision 076) ------------------
+
+  const repoLine = 'repo: https://github.com/ryanyogan/klippy'
+  const codeLines = (n: number) => Array.from({ length: n }, (_, i) => `const line${i + 1} = ${i + 1}`).join('\n')
+  const code = (attrs: string, n: number) => `:::code{${attrs}}\n${codeLines(n)}\n:::`
+
+  it('reads tag= on :::code into the file and the build’s snippets', () => {
+    let result = buildWith(repoLine, {
+      '01-one.md': lesson(`Add the note store:\n\n${code('file="apps/agent/src/notes.ts" lang="ts" tag="b-05"', 3)}`),
+    })
+    assert.deepEqual(errors(result), [])
+    let block = result.lessons?.get('one')?.blocks.find((b) => b.type === 'code')
+    assert.equal(block?.type === 'code' && block.files[0]?.tag, 'b-05')
+    assert.deepEqual(result.snippets, [
+      { tag: 'b-05', file: 'apps/agent/src/notes.ts', lines: ['const line1 = 1', 'const line2 = 2', 'const line3 = 3'], line: 11, path: '01-one.md' },
+    ])
+  })
+
+  it('rejects tag= without the course’s repo:, and a tag that isn’t a git tag name', () => {
+    let noRepo = buildWith('', { '01-one.md': lesson(code('file="a.ts" lang="ts" tag="b-05"', 2)) })
+    assert.deepEqual(errors(noRepo), ['01-one.md:8 → tag="b-05" needs repo: in course.md (the repository the tag is in)'])
+    assert.deepEqual(noRepo.snippets, [])
+    let bad = buildWith(repoLine, { '01-one.md': lesson(code('file="a.ts" lang="ts" tag="../main"', 2)) })
+    assert.deepEqual(errors(bad), ['01-one.md:8 → tag="../main" should be a git tag like b-05 (letters, digits, dots, dashes, underscores)'])
+  })
+
+  it('caps a build-along :::code at 30 lines shown and 15 highlighted, unless it’s the stylesheet', () => {
+    let result = buildWith(repoLine, {
+      '01-one.md': lesson(
+        [
+          code('file="ok.ts" lang="ts" highlight="1-15"', 30),
+          code('file="long.ts" lang="ts"', 31),
+          code('file="wide.ts" lang="ts" highlight="2-17"', 20),
+        ].join('\n\nNext.\n\n'),
+      ),
+    })
+    assert.deepEqual(errors(result), [
+      '01-one.md:43 → :::code long.ts shows 31 lines; a build-along step shows 30 at most, so split it into steps',
+      '01-one.md:79 → :::code wide.ts highlights 16 lines; a build-along step adds 15 new or changed lines at most',
+    ])
+    let stylesheet = buildWith(repoLine, { '01-one.md': lesson(code('file="app.css" lang="css" stylesheet highlight="1-80"', 80)) })
+    assert.deepEqual(errors(stylesheet), [])
+    // Concept courses keep their old limits.
+    assert.deepEqual(errors(buildWith('', { '01-one.md': lesson(code('file="long.ts" lang="ts" highlight="1-40"', 40)) })), [])
+    let stray = buildWith('', { '01-one.md': lesson(code('file="app.css" lang="css" stylesheet', 3)) })
+    assert.deepEqual(items(stray, 'warning').filter((text) => /stylesheet/.test(text)), ['01-one.md:8 → stylesheet only lifts the build-along limits, and this course has no repo:'])
+  })
+
+  it('caps a build-along ``` sample at 30 lines', () => {
+    let fence = (n: number) => `\`\`\`ts\n${codeLines(n)}\n\`\`\``
+    let result = buildWith(repoLine, { '01-one.md': lesson(`${fence(30)}\n\nThen:\n\n${fence(31)}`) })
+    assert.deepEqual(errors(result), [
+      '01-one.md:43 → this code sample is 31 lines; a build-along step shows 30 at most, so split it into steps',
+    ])
+  })
+
+  it('holds build-along lessons to 30 minutes, with no warning from 16 to 30', () => {
+    let result = buildWith(repoLine, {
+      '01-one.md': lesson('Hi', 'title: One\norder: 1\nminutes: 30\nxp: 10'),
+      '02-two.md': lesson('Hi', 'title: Two\norder: 2\nminutes: 31\nxp: 10'),
+    })
+    assert.deepEqual(errors(result), ['02-two.md → lesson is 31 min; a build-along lesson is 30 at most, so split it'])
+    assert.deepEqual(items(result, 'warning'), [])
+    let concept = buildWith('', { '01-one.md': lesson('Hi', 'title: One\norder: 1\nminutes: 20\nxp: 10') })
+    assert.deepEqual(items(concept, 'warning'), ['01-one.md → lesson is 20 min (over 15)'])
+  })
 })

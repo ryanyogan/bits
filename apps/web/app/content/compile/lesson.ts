@@ -54,7 +54,7 @@ import { temperatureLabel } from '../../actions/courses/lesson/ui/exercise.ts'
 import { isVerifyPath, MAX_VERIFY_PATH } from '../../verify/path.ts'
 import { clampXp, MAX_BLOCK_XP } from '../limits.ts'
 import type { LessonKind } from '../types.ts'
-import { LessonFrontmatter, parseClock, readFrontmatter } from './frontmatter.ts'
+import { isGitTag, LessonFrontmatter, parseClock, readFrontmatter } from './frontmatter.ts'
 import { highlight, isKnownLanguage, languageOf } from './highlight.ts'
 import { checkPattern } from './regex.ts'
 import { aboutAbsence, looksGrounded } from './rubric-labels.ts'
@@ -110,7 +110,26 @@ export interface CompiledLesson {
   stats: { prompts: number; patterns: number; video?: { path: string; found: boolean; duration?: number } }
   /** Reading minutes at each depth, when the lesson has depth blocks (decision 053). */
   minsByDepth?: Record<LessonDepth, number>
+  /** `:::code` blocks with `tag=`, for `pnpm content snippets` (decision 076). */
+  snippets: TaggedSnippet[]
 }
+
+/** A `:::code{file tag}` block: its lines must be in `file` at `tag` in the course repo (decision 076). */
+export interface TaggedSnippet {
+  tag: string
+  /** The path in the repo, from `file=`. */
+  file: string
+  lines: string[]
+  /** The lesson line of the first code line. */
+  line: number
+}
+
+/**
+ * Build-along format limits (decision 076, `docs/plans/build-along.md` §4),
+ * for courses with `repo:`. `stylesheet` lifts the code limits for the one
+ * full stylesheet course D gives.
+ */
+export const TUTORIAL_LIMITS = { minutes: 30, shown: 30, highlighted: 15 } as const
 
 /** An uploaded, ready video a lesson's `video:` path links to (decision 029). */
 export interface LinkedVideo {
@@ -126,6 +145,8 @@ export interface LessonContext {
   report: FileReport
   /** The ready upload for a `video:` path in this course, if there is one. */
   videos?: (path: string) => LinkedVideo | undefined
+  /** The course has `repo:`: a build-along course, held to the tutorial limits (decision 076). */
+  tutorial?: boolean
 }
 
 /** Compiles one lesson file. Returns undefined when its frontmatter is unusable. */
@@ -145,11 +166,17 @@ export function compileLesson(file: SourceFile, context: LessonContext): Compile
   }
 
   let stats: CompiledLesson['stats'] = { prompts: 0, patterns: 0 }
-  let blocks = compileBlocks(body, lines, report, stats, { illustrative: meta?.illustrative === true })
+  let snippets: TaggedSnippet[] = []
+  let tutorial = context.tutorial === true
+  let blocks = compileBlocks(body, lines, report, stats, { illustrative: meta?.illustrative === true, tutorial, snippets })
   if (!meta) return undefined
 
   let slug = meta.slug ?? lessonSlugFromPath(file.path)
-  if (meta.minutes > 15) report.warning(`lesson is ${meta.minutes} min (over 15)`)
+  if (tutorial) {
+    if (meta.minutes > TUTORIAL_LIMITS.minutes) {
+      report.error(`lesson is ${meta.minutes} min; a build-along lesson is ${TUTORIAL_LIMITS.minutes} at most, so split it`)
+    }
+  } else if (meta.minutes > 15) report.warning(`lesson is ${meta.minutes} min (over 15)`)
 
   let video: LessonVideo | undefined
   if (meta.video) {
@@ -193,7 +220,7 @@ export function compileLesson(file: SourceFile, context: LessonContext): Compile
   }
   if (video) content.video = video
   if (meta.replies) content.replies = meta.replies
-  let compiled: CompiledLesson = { meta, slug, content, kinds: kindsOf(content, meta.project === true), stats }
+  let compiled: CompiledLesson = { meta, slug, content, kinds: kindsOf(content, meta.project === true), stats, snippets }
   let byDepth = minsByDepth(content)
   if (byDepth) compiled.minsByDepth = byDepth
   return compiled
@@ -282,6 +309,10 @@ const BLOCK_NAMES = [
 /** Lesson-wide defaults for blocks (from the frontmatter). */
 interface BlockDefaults {
   illustrative: boolean
+  /** A build-along course (decision 076): format limits apply. */
+  tutorial?: boolean
+  /** Collects `:::code` blocks with `tag=`. */
+  snippets?: TaggedSnippet[]
 }
 
 /**
@@ -383,7 +414,7 @@ function compileBlocks(
         break
       }
       case 'code': {
-        let sample = proseFence(node, lines, report, depth)
+        let sample = proseFence(node, lines, report, depth, defaults.tutorial)
         if (sample) addProse(sample)
         break
       }
@@ -545,7 +576,7 @@ const MAX_SAMPLE_LINES = 40
  * A bare ``` fence: a static, highlighted sample. An indented code block
  * (four spaces) is still an error, since it is nearly always an accident.
  */
-function proseFence(node: Code, lines: string[], report: FileReport, depth?: LessonDepth): ProseFence | undefined {
+function proseFence(node: Code, lines: string[], report: FileReport, depth?: LessonDepth, tutorial?: boolean): ProseFence | undefined {
   let line = node.position?.start.line ?? 1
   let end = node.position?.end.line ?? line
   let open = /^\s*(`{3,}|~{3,})/.exec(lines[line - 1] ?? '')
@@ -577,7 +608,9 @@ function proseFence(node: Code, lines: string[], report: FileReport, depth?: Les
     return undefined
   }
   let count = source.split('\n').length
-  if (count > MAX_SAMPLE_LINES) report.warning(`this code sample is ${count} lines; over ${MAX_SAMPLE_LINES}, a :::code editor reads better`, line)
+  if (tutorial && count > TUTORIAL_LIMITS.shown) {
+    report.error(`this code sample is ${count} lines; a build-along step shows ${TUTORIAL_LIMITS.shown} at most, so split it into steps`, line)
+  } else if (count > MAX_SAMPLE_LINES) report.warning(`this code sample is ${count} lines; over ${MAX_SAMPLE_LINES}, a :::code editor reads better`, line)
   return { sample: highlight(source, lang), lang, language: languageOf(lang).name }
 }
 
@@ -606,7 +639,7 @@ function compileDirective(
       stats.prompts++
       return compilePrompt(node, body, report, stats)
     case 'code':
-      return compileCode(node, body, report)
+      return compileCode(node, body, report, defaults)
     case 'ask':
       return compileAsk(node, body, report, stats)
     case 'quiz':
@@ -1107,9 +1140,9 @@ function stripMarkdown(text: string): string {
 
 // ---- :::code -----------------------------------------------------------------
 
-function compileCode(node: Directive, raw: RawBody, report: FileReport): CodeBlock | undefined {
+function compileCode(node: Directive, raw: RawBody, report: FileReport, defaults: BlockDefaults): CodeBlock | undefined {
   let line = node.position?.start.line ?? 1
-  let attrs = attributes(node, ['file', 'lang', 'copy', 'type-mode', 'highlight', 'label', 'focus'], report)
+  let attrs = attributes(node, ['file', 'lang', 'copy', 'type-mode', 'highlight', 'label', 'focus', 'tag', 'stylesheet'], report)
   let file = attrs.string('file')
   if (!file) {
     report.error(':::code needs a file name, like :::code{file="agent.ts" lang="ts"}', line)
@@ -1151,6 +1184,27 @@ function compileCode(node: Directive, raw: RawBody, report: FileReport): CodeBlo
   if (focus !== undefined) {
     if (focus < 1 || focus > body.lines.length) report.error(`focus=${focus} is outside the code`, line)
     else codeFile.focusLine = focus
+  }
+  let tag = attrs.string('tag')
+  if (tag !== undefined) {
+    if (!isGitTag(tag)) report.error(`tag="${tag}" should be a git tag like b-05 (letters, digits, dots, dashes, underscores)`, line)
+    else if (!defaults.tutorial) report.error(`tag="${tag}" needs repo: in course.md (the repository the tag is in)`, line)
+    else {
+      codeFile.tag = tag
+      defaults.snippets?.push({ tag, file, lines: body.lines, line: body.first })
+    }
+  }
+  let stylesheet = attrs.flag('stylesheet')
+  if (stylesheet && !defaults.tutorial) report.warning('stylesheet only lifts the build-along limits, and this course has no repo:', line)
+  if (defaults.tutorial && !stylesheet) {
+    let { shown, highlighted } = TUTORIAL_LIMITS
+    if (body.lines.length > shown) {
+      report.error(`:::code ${file} shows ${body.lines.length} lines; a build-along step shows ${shown} at most, so split it into steps`, line)
+    }
+    let marked = codeFile.highlight ? codeFile.highlight.to - codeFile.highlight.from + 1 : 0
+    if (marked > highlighted) {
+      report.error(`:::code ${file} highlights ${marked} lines; a build-along step adds ${highlighted} new or changed lines at most`, line)
+    }
   }
   return { type: 'code', files: [codeFile] }
 }

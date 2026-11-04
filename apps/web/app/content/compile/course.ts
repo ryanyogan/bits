@@ -15,7 +15,7 @@ import {
 } from '../types.ts'
 import { CourseFrontmatter, parseGithubRepo, readFrontmatter } from './frontmatter.ts'
 import { applyLessonMeta, newestVerified, type FreshnessOptions } from './lesson-meta.ts'
-import { compileLesson, parseMarkdown, type CompiledLesson, type LinkedVideo } from './lesson.ts'
+import { compileLesson, parseMarkdown, type CompiledLesson, type LinkedVideo, type TaggedSnippet } from './lesson.ts'
 import { Report, type ReportItem, type SourceFile } from './report.ts'
 
 export interface CourseBuild {
@@ -31,6 +31,8 @@ export interface CourseBuild {
   warnings: number
   /** Files in the folder. */
   files: number
+  /** Every `:::code` with `tag=`, with its lesson file (decision 076: `pnpm content snippets`). */
+  snippets: (TaggedSnippet & { path: string })[]
   /** Present only when there are no errors. */
   manifest?: CourseManifest
   lessons?: Map<string, LessonContent>
@@ -89,6 +91,7 @@ export function buildCourse(sourceFiles: SourceFile[], options: BuildOptions): C
       files,
       report: report.forFile(file.path),
       videos: options.videos && ((path) => options.videos!(slug, path)),
+      tutorial: course?.meta?.repo !== undefined,
     })
     if (lesson) {
       applyLessonMeta(lesson, { repo, freshness: options.freshness, text: file.text ?? '', report: report.forFile(file.path) })
@@ -122,6 +125,7 @@ export function buildCourse(sourceFiles: SourceFile[], options: BuildOptions): C
     errors: report.errors,
     warnings: report.warnings,
     files: sourceFiles.length,
+    snippets: compiled.flatMap((lesson) => lesson.snippets.map((snippet) => ({ ...snippet, path: lesson.file }))),
   }
   if (report.errors || !course?.meta || !modules) return build
 
