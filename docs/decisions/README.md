@@ -79,3 +79,4 @@ that supersedes the old one, and mark the old one `Superseded by NNN`.
 | 073 | [Course and lesson metadata: freshness, desk, coming soon, order, start from tag](073-course-metadata.md) |
 | 074 | ["Try it now" on the landing: lesson 1's coached exercise, with its own live caps](074-landing-try-it.md) |
 | 075 | [data-table-d1: bits' D1 driver as its own MIT package](075-data-table-d1-package.md) |
+| 076 | [Build-along snippets: `tag=` on `:::code`, the snippet check, and the format limits](076-build-along-snippets.md) |

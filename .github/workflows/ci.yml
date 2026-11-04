@@ -36,6 +36,17 @@ jobs:
       - run: pnpm --filter @bits/ui exec playwright install --with-deps --only-shell chromium
       - run: pnpm typecheck
       - run: pnpm test
+      # Build-along snippets match the reference repo (decision 076). Off
+      # until the repo variable KLIPPY_REF names a pinned Klippy commit.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        if: vars.KLIPPY_REF != ''
+        with:
+          repository: ryanyogan/klippy
+          ref: ${{ vars.KLIPPY_REF }}
+          path: klippy
+          fetch-depth: 0
+      - if: vars.KLIPPY_REF != ''
+        run: pnpm content snippets --all --repo "$GITHUB_WORKSPACE/klippy"
       - run: pnpm build
       # The deploy jobs ship exactly what was checked here.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

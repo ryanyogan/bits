@@ -163,6 +163,8 @@ export interface CodeBlockFile {
   /** `highlight="12-32"`; `label` only when the author gave one (the footer already shows the range). */
   highlight?: { from: number; to: number; label?: string }
   focusLine?: number
+  /** `tag=`: the course repo's tag this snippet comes from (decision 076). */
+  tag?: string
   /** Highlighted at build time. */
   lines: CodeSegment[][]
 }

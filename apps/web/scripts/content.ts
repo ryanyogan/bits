@@ -7,6 +7,10 @@
 //                                                 more than 120 days ago, or never
 //                                                 (decision 073; the weekly
 //                                                 freshness workflow runs this)
+//   pnpm content snippets <dir…> --repo ../klippy  every :::code with tag= must
+//                                                 match its file= at that tag in
+//                                                 a local checkout (decision 076;
+//                                                 KLIPPY_DIR stands in for --repo)
 //
 // Options: --as <email> records that user as the uploader and course author;
 // --force saves a new version even when the build matches the newest one
@@ -32,6 +36,7 @@ import { getPlatformProxy } from 'wrangler'
 import { buildCourse, todayIso } from '../app/content/compile/index.ts'
 import { listCourseFolders, readCourseFolder } from './lib/content-folder.ts'
 import { previewResources, readConfigShape } from './lib/preview-resources.ts'
+import { checkSnippets } from './lib/snippets.ts'
 import { readUploadState, uploadCourseFolder } from './lib/upload.ts'
 
 const appDir = path.resolve(import.meta.dirname, '..')
@@ -49,15 +54,16 @@ const { values, positionals } = parseArgs({
     force: { type: 'boolean', default: false },
     as: { type: 'string' },
     'max-age': { type: 'string' },
+    repo: { type: 'string' },
     help: { type: 'boolean', short: 'h', default: false },
   },
 })
 
 const [command, ...folders] = positionals
 const usage =
-  'usage: pnpm content <validate|upload> <dir…> [--all] [--publish] [--as email] [--force] [--remote | --preview] [--max-age days (validate)]'
+  'usage: pnpm content <validate|upload|snippets> <dir…> [--all] [--publish] [--as email] [--force] [--remote | --preview] [--max-age days (validate)] [--repo checkout (snippets)]'
 
-if (values.help || (command !== 'validate' && command !== 'upload')) {
+if (values.help || (command !== 'validate' && command !== 'upload' && command !== 'snippets')) {
   console.log(usage)
   process.exit(values.help ? 0 : 1)
 }
@@ -82,7 +88,29 @@ const freshness = {
 
 let failed = 0
 
-if (command === 'validate') {
+if (command === 'snippets') {
+  // Snippets match the reference repo (decision 076): a local checkout with its tags.
+  let repo = values.repo ?? process.env.KLIPPY_DIR
+  if (!repo) {
+    console.error(`snippets needs a checkout of the course repo: --repo <path> or KLIPPY_DIR\n${usage}`)
+    process.exit(1)
+  }
+  let repoDir = path.resolve(cwd, repo)
+  let checked = 0
+  for (let dir of dirs) {
+    let build = buildCourse(await readCourseFolder(dir), { folder: path.basename(dir) })
+    if (!build.snippets.length) continue
+    let problems = await checkSnippets(repoDir, build.snippets)
+    checked += build.snippets.length
+    print(
+      dir,
+      build.slug,
+      problems.map((problem) => ({ level: 'error' as const, file: problem.path, line: problem.line, text: problem.text })),
+    )
+    if (problems.length) failed++
+  }
+  console.log(`${checked} tagged snippet${checked === 1 ? '' : 's'} checked against ${path.relative(cwd, repoDir) || '.'}`)
+} else if (command === 'validate') {
   let orders = new Map<number, string[]>()
   for (let dir of dirs) {
     let build = buildCourse(await readCourseFolder(dir), { folder: path.basename(dir), freshness })
