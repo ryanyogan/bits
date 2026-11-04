@@ -46,8 +46,10 @@ rm apps/agent/scripts/loop.ts apps/agent/test/loop.spec.ts
 pnpm --filter agent remove @anthropic-ai/sdk tsx
 ```
 
-Delete the `"loop": …` line from `apps/agent/package.json`, and the
-`ANTHROPIC_API_KEY` line from `.dev.vars`. Keep `"type": "module"`.
+Delete the `"loop": …` line from `apps/agent/package.json`, and the comma
+it leaves at the end of the line above (JSON allows no trailing comma).
+Delete the `ANTHROPIC_API_KEY` line from `.dev.vars`. Keep
+`"type": "module"`.
 
 ### 1. The agent package and its two settings
 
@@ -82,11 +84,24 @@ And at the end, after `d1_databases` (which now needs a comma):
   Like a D1 migration, a deployed tag is never edited: a later change is a
   new tag.
 
-Run `pnpm run cf-typegen` in `apps/agent` so `env.Klippy` is typed.
+You'll regenerate the types once the class is exported, in step 4.
 
 ### 2. Klippy, the agent
 
-Make `apps/agent/src/agent.ts`. First, the class:
+Make `apps/agent/src/agent.ts`. It starts with its imports: the agent
+class, the AI SDK, the limits and model from course B, and the two tools.
+
+:::code{file="apps/agent/src/agent.ts" lang="ts" tag="c-03" label="apps/agent/src/agent.ts"}
+import { AIChatAgent } from '@cloudflare/ai-chat';
+import { convertToModelMessages, isStepCount, streamText, type UIMessage } from 'ai';
+import { MAX_QUESTION } from './ask';
+import { underLimit } from './guard';
+import { model } from './model';
+import { getTime } from './tools/time';
+import { getWeather } from './tools/weather';
+:::
+
+Then the class:
 
 :::code{file="apps/agent/src/agent.ts" lang="ts" tag="c-03" highlight="3-5" label="apps/agent/src/agent.ts"}
 // One Klippy per name. Each instance is its own Durable Object, with its own conversation in its own SQLite,
@@ -181,9 +196,14 @@ export { Klippy } from './agent';
 		}
 :::
 
-`routeAgentRequest` reads the URL: `/agents/klippy/alice` reaches the
-Klippy called `alice`, creating it the first time. Every one of those
-requests spends your model budget, so the token check comes first.
+Put that block in `fetch`, right after the `/` route. `routeAgentRequest`
+reads the URL: `/agents/klippy/alice` reaches the Klippy called `alice`,
+creating it the first time. Every one of those requests spends your model
+budget, so the token check comes first.
+
+Now that `index.ts` exports `Klippy`, run `pnpm run cf-typegen` in
+`apps/agent`. Run before the export, it types `env.Klippy` as a bare
+namespace and the tests won't typecheck.
 
 ### 5. The one place the token may ride in a URL
 
