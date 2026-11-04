@@ -161,6 +161,7 @@ export function codeEditorProps(view: LessonView, block: CodeBlock) {
     badge: file.badge,
     badgeTone: file.badge === '#' ? 'muted' : 'ion',
     language: file.language,
+    tag: file.tag,
     lines: file.lines,
   }))
   return {

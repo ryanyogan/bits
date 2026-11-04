@@ -21,6 +21,8 @@ export interface CodeFile {
   badgeTone?: 'ion' | 'muted'
   /** Language name in the status bar, e.g. "TypeScript". */
   language: string
+  /** The reference repo's tag this file is from, e.g. "b-05" (decision 076), shown in the status bar. */
+  tag?: string
   lines: CodeSegment[][]
 }
 
@@ -230,6 +232,7 @@ export const CodeEditor = clientEntry(
               <div mix={statusStyle}>
                 <span>{active?.language ?? ''}</span>
                 <span>UTF-8</span>
+                {active?.tag ? <span>{`at ${active.tag}`}</span> : null}
                 {highlight && activeTab === first?.name ? (
                   <span mix={statusRange}>{`● lines ${highlight.from}–${highlight.to}: ${highlight.label}`}</span>
                 ) : null}

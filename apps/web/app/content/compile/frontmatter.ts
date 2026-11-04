@@ -42,11 +42,10 @@ const exactVersion = () =>
     'Expected an exact version in quotes, like "4.45.2" (no ranges)',
   )
 /** A git tag in the course repo: letters, digits, `.`, `_`, `-` (like a-03). */
-const gitTag = () =>
-  string().refine(
-    (value) => /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value) && !value.includes('..') && !value.endsWith('.lock'),
-    'Expected a git tag like a-03 (letters, digits, dots, dashes, underscores)',
-  )
+export function isGitTag(value: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value) && !value.includes('..') && !value.endsWith('.lock')
+}
+const gitTag = () => string().refine(isGitTag, 'Expected a git tag like a-03 (letters, digits, dots, dashes, underscores)')
 /** The course's reference repo: an https GitHub repository URL. */
 const githubRepo = () =>
   string().refine(

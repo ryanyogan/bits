@@ -71,6 +71,7 @@ pnpm db:migrate:local     # wrangler d1 migrations apply (local state shared by 
 pnpm db:migrate:remote    # manual fallback: production migrations (CI runs them before each deploy)
 pnpm db:seed:local        # demo user demo@bits.local / @demo, then upload + publish content/courses/*
 pnpm content validate <dir…>            # build course folders, print path:line problems
+pnpm content snippets <dir…> --repo <checkout>  # tagged :::code lines must be in file= at tag= (decision 076)
 pnpm content upload <dir…> [--publish]  # save as the next version unless unchanged (local; --remote for deployed, --preview for the Workers Previews DB/bucket; --force)
 pnpm og                   # screenshot /cards/* into apps/web/public/og/*.png + app/ui/og-cards.generated.ts (commit both)
 pnpm cf-typegen           # regenerate apps/web/worker-configuration.d.ts after wrangler.jsonc changes
@@ -715,6 +716,23 @@ Island rule: JSX passed as an island prop is serialized, so it must not carry
     never prefetched) and the git commands in a copyable sample. A tag
     without `repo:` is an error.
   - The rules live in `compile/lesson-meta.ts`, not `compile/lesson.ts`.
+- Build-along snippets and limits (decision 076): a course with `repo:`
+  is a build-along course.
+  - `:::code{file="apps/agent/src/notes.ts" lang="ts" tag="b-05"}`:
+    `file=` is the path in the repo and `tag=` the tag the lines come
+    from. The editor's status bar shows "at b-05". `tag=` without the
+    course's `repo:` is an error. ``` samples take no tag.
+  - `pnpm content snippets <dir…> --repo ../klippy` (or `KLIPPY_DIR`)
+    checks every tagged snippet against `git show <tag>:<file>` in a
+    local checkout: its lines must be there, consecutive and in order
+    (trailing spaces ignored). A `…`/`...` line (`// …`, `# ...`) stands
+    for skipped code. CI runs it once the `KLIPPY_REF` repo variable
+    names a pinned Klippy commit. The build itself never runs git.
+  - Limits, as errors, in build-along courses only: `minutes` ≤ 30 (no
+    "over 15" warning), a `:::code` shows ≤ 30 lines and highlights ≤ 15,
+    and a ``` sample is ≤ 30 lines. `stylesheet` on a `:::code` lifts
+    its limits (course D's one full stylesheet; a reviewer holds it to
+    one). `TUTORIAL_LIMITS` in `compile/lesson.ts`.
 - Tests: the test platform uploads and publishes every folder in
   `content/courses/` at startup, so a broken course fails every test run.
   It also publishes `content/fixtures/plain-course/` (tests only): tests
