@@ -74,11 +74,13 @@ Know what this limit is. Cloudflare's docs say it's **approximate and per
 location**: counts sync between datacenters, so requests can get past it
 for a moment. It stops bursts. It's not a bill.
 
-### 2. An exact daily budget
+### 2. A daily budget with an exact count
 
-For an exact limit, Cloudflare points to a Durable Object, and each Klippy
+For an exact count, Cloudflare points to a Durable Object, and each Klippy
 already is one, with its own SQLite. One Klippy, one writer, wherever the
-request came from, so the count can't drift. Set the budget as a var:
+request came from, so the count can't drift. (The count is exact; the cap
+isn't. You'll see below why a day can go over by one turn.) Set the budget
+as a var:
 
 :::code{file="apps/agent/wrangler.jsonc" lang="json" tag="f-03" highlight="3" label="apps/agent/wrangler.jsonc"}
 	"vars": {
@@ -86,6 +88,9 @@ request came from, so the count can't drift. Set the budget as a var:
 		"DAILY_TOKEN_BUDGET": "200000"
 	},
 :::
+
+Then run `pnpm run cf-typegen` in `apps/agent` too, so `Env` knows the new
+var. Without it, typecheck fails in `budget.ts`.
 
 And keep a day's total in a table:
 
@@ -113,6 +118,12 @@ export function spend(agent: Klippy, tokens: number) {
 export function dailyBudget(env: Pick<Env, 'DAILY_TOKEN_BUDGET'>) {
 	return Number(env.DAILY_TOKEN_BUDGET) || 0;
 }
+:::
+
+Import it in `agent.ts`:
+
+:::code{file="apps/agent/src/agent.ts" lang="ts" tag="f-03" label="apps/agent/src/agent.ts"}
+import { dailyBudget, spend, tokensToday } from './budget';
 :::
 
 Check it **before** the model is called, so a turn that can't afford it
@@ -169,6 +180,7 @@ Then the budget, with a tiny one for the test (`wrangler dev --var
 DAILY_TOKEN_BUDGET:500`; the Workers AI fallback answered, not Claude):
 
 :::terminal{cmd="KLIPPY_URL=http://localhost:8801 pnpm chat f03-budget-920"}
+Talking to Klippy "f03-budget-920" (0 messages so far). /clear to start over, Ctrl+D to quit.
 you> [synapse]klippy>[text] Hello there! How can I help you today?
 you> [synapse]klippy>[text] [volt]I've used today's budget. Talk tomorrow (it resets at midnight UTC).[text]
 you> [synapse]klippy>[text] [volt]I've used today's budget. Talk tomorrow (it resets at midnight UTC).[text]
@@ -177,9 +189,10 @@ you> [synapse]klippy>[text] [volt]I've used today's budget. Talk tomorrow (it re
 The first turn ran (0 is under 500 when it starts) and spent more than 500
 on its own: the system prompt and ten tool descriptions go with every call.
 The next two were refused without a model call. Checking before and charging
-after means the last turn of a day can go over by one turn. That's the price
-of not knowing a turn's size up front, and it's another reason lesson 4
-charges an estimate first.
+after means the last turn of a day can go over by one turn. That stays true
+after lessons 4 and 5: they make sure every call is charged, but the check
+that refuses still runs once, before each turn. So the budget caps a day at
+about its size plus one turn (at most 8 calls), not to the token.
 
 :::quiz{id="rate-limit-key" xp=20}
 Why is USER_LIMITER keyed on your GitHub id and not on the caller's IP address?
@@ -189,7 +202,7 @@ Why is USER_LIMITER keyed on your GitHub id and not on the caller's IP address?
 - [x] Many people share one address, and one person can have many
   Right. Who you are is the fair key, and Cloudflare's docs advise the same.
 - [ ] Because the rate limit is exact per user
-  Not quite. It's approximate and per location. The exact limit is the daily budget.
+  Not quite. It's approximate and per location. The exact count is the daily budget's.
 :::
 
 Your code matches tag `f-03`

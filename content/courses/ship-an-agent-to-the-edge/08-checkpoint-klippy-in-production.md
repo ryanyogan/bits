@@ -28,7 +28,8 @@ versions:
 
 Klippy is ready for the internet. The agent has no public address, every
 model call is labelled and the check probe is cached by key, a per-user
-limit and an exact daily budget hold, each turn logs its shape, a test
+limit and a daily budget hold (every call is charged before it's made),
+each turn logs its shape, a test
 proves a fooled model can't write or send data out, and CI can deploy
 `main` and preview pull requests. Name the tag, take the tour, and then
 **deploy it yourself**: bits checks your live web app.
@@ -62,10 +63,10 @@ id 1), a file goes in through the web app and search finds it:
 :::
 
 Then the chat, in a browser. "What time does my Lisbon flight leave? Check
-my notes." got:
+my notes." got this (the tool card, then the reply):
 
-:::terminal{cmd="the chat, after searchNotes"}
-[synapse]Klippy:[text] Your Lisbon flight leaves at 18:40 (6:40 PM) from Terminal 2 on Friday. Used 2 sources [1] trip-f08.md [2] pip-f01.md
+:::terminal{cmd="the chat, as the page read it"}
+[synapse]Klippy:[text] searchNotes Done Your Lisbon flight leaves at 18:40 (6:40 PM) from Terminal 2 on Friday. Used 2 sources [1] trip-f08.md [2] pip-f01.md
 :::
 
 Then "Save a note: pack the passport for Lisbon". The tool card said

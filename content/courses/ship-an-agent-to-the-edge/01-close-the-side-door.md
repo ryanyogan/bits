@@ -118,6 +118,14 @@ and add the upload form to
 [`notes-page.tsx`](https://github.com/ryanyogan/klippy/blob/f-01/apps/web/app/actions/notes/notes-page.tsx)
 (with `sent` in its
 [`schema.ts`](https://github.com/ryanyogan/klippy/blob/f-01/apps/web/app/actions/notes/schema.ts)).
+The page now needs `sent`, so the notes controller passes it on, or
+typecheck fails:
+
+:::code{file="apps/web/app/actions/notes/controller.tsx" lang="tsx" tag="f-01" label="apps/web/app/actions/notes/controller.tsx"}
+			const { q, deleted, sent } = query.value;
+...
+			return context.render(<NotesPage user={context.auth.identity} notes={rows} q={q} deleted={deleted === '1'} sent={sent === '1'} />);
+:::
 
 **Why a service binding, not a Durable Object binding?** The web app could
 also bind the agent's Durable Object class directly and call
@@ -160,9 +168,14 @@ HTTP/1.1 [volt]303 See Other[text]
 Location: /notes?sent=1
 :::
 
-Signed out, the same request gets a `302` to `/login`. A 1.2 MB file gets
+Keep `;type=text/markdown`: without it curl sends the file as
+`application/octet-stream`, and the agent answers `415` ("Send plain text,
+Markdown, HTML or a PDF."). Signed out, the same request gets a `302` to
+`/login`. A 1.2 MB file gets
 `Files can be up to 1 MB.` (413). A minute later, once the ingest Workflow
-has run, search finds the file:
+has run, search finds the file. Its `title` is the file's name: yours
+will say `pip.md`. Our recording says `pip-f01.md`, and our notes don't show
+why, so we've left it as recorded:
 
 :::terminal{cmd="curl -b <cookie> 'localhost:8802/sources/search?q=what+does+Pip+eat'"}
 {"hits":[{"chunkId":1,"sourceId":1,[volt]"title":"pip-f01.md"[text],"url":null,"kind":"file","context":"","text":"# Pip\n\nPip is my rabbit. Pip eats carrots and parsley every morning at 7."}]}
